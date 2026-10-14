@@ -408,7 +408,7 @@ So eignet sich derselbe Bogen für Elterngespräche (z. B. ohne Bemerkung) und f
 | | Automatisch sperren nach … Minuten (0 = nie) | 15 |
 | Standardwerte für neue Tests | LIMIT Sek I (4- ab … %) | 50 |
 | | LIMIT MSS (04 Punkte ab … %) | 45 |
-| | Punkte-Genauigkeit | halbe Punkte |
+| | Punkte-Genauigkeit | ganze Punkte |
 | Speicherort & Sicherungen | Name dieses Geräts | – |
 | | Anzahl aufbewahrter Sicherungen | 10 |
 | | Sicherung höchstens alle … Minuten | 10 |

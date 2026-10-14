@@ -7,7 +7,7 @@
   // SCHEMA erhöhen, sobald sich das Datenmodell so ändert, dass ältere App-Versionen
   // die Daten falsch verstehen würden. Ältere Versionen öffnen solche Datenbanken dann nicht.
   const SCHEMA = 1;
-  const APP_VERSION = '1.1.0';
+  const APP_VERSION = '1.1.1';
 
   class NewerSchemaError extends Error {}
 
@@ -26,7 +26,7 @@
         autoLockMin: 15,
         limitSek1: 50,
         limitMss: 45,
-        precision: 0.5,
+        precision: 1,
         keepBackups: 10,
         backupEveryMin: 10,
         gradeColors: true,
@@ -194,6 +194,7 @@
     c8.students = parseNames(names.join('\n'));
     const t = newTest(c8, 'HJ1', db.settings);
     t.name = 'KA 1 – Terme';
+    t.test.precision = 0.5; // Demo-Daten enthalten halbe Punkte
     t.test.tasks = [
       { id: 'a1', name: '1a', max: 4 },
       { id: 'a2', name: '1b', max: 6 },
