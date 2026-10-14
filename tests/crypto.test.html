@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="de">
+<head><meta charset="utf-8"><title>Tests Verschlüsselung</title></head>
+<body>
+<pre id="out">läuft …</pre>
+<script src="../js/crypto.js"></script>
+<script>
+  (async () => {
+    const { Vault, normalizeRecoveryKey } = NM.crypto;
+    const lines = [];
+    let fails = 0;
+    const ok = (name, cond) => { if (!cond) fails++; lines.push((cond ? 'OK   ' : 'FAIL ') + name); };
+    const rejects = async (name, p) => { try { await p; ok(name, false); } catch (e) { ok(name + ' (' + e.message + ')', true); } };
+
+    const data = { courses: [{ name: '8b Mathe', students: ['Müller, Anna'] }], ä: 'Umlaute ✓' };
+    const { vault, recoveryKey } = await Vault.create('geheim123');
+    ok('Wiederherstellungsschlüssel Format', /^([A-Z2-9]{4}-){7}[A-Z2-9]{4}$/.test(recoveryKey));
+    const file = JSON.parse(JSON.stringify(await vault.seal(data, { savedAt: 'x' })));
+    ok('Klartext nicht in Datei', !JSON.stringify(file).includes('Müller'));
+
+    const v2 = await Vault.unlock(file, 'geheim123');
+    ok('Entsperren mit Passwort', JSON.stringify(await v2.open(file)) === JSON.stringify(data));
+    await rejects('Falsches Passwort wird abgelehnt', Vault.unlock(file, 'falsch'));
+
+    const v3 = await Vault.unlockWithRecovery(file, recoveryKey.toLowerCase().replace(/-/g, ' '));
+    ok('Entsperren mit Wiederherstellungsschlüssel (Schreibweise egal)', JSON.stringify(await v3.open(file)) === JSON.stringify(data));
+    await rejects('Falscher Wiederherstellungsschlüssel abgelehnt', Vault.unlockWithRecovery(file, 'AAAA-BBBB'));
+
+    await v3.setPassword('neuesPasswort');
+    const file2 = JSON.parse(JSON.stringify(await v3.seal(data)));
+    await rejects('Altes Passwort nach Änderung ungültig', Vault.unlock(file2, 'geheim123'));
+    const v4 = await Vault.unlock(file2, 'neuesPasswort');
+    ok('Neues Passwort funktioniert', JSON.stringify(await v4.open(file2)) === JSON.stringify(data));
+    ok('Alte Sicherung mit gleichem Datenschlüssel lesbar', JSON.stringify(await v4.open(file)) === JSON.stringify(data));
+
+    const tampered = JSON.parse(JSON.stringify(file2));
+    tampered.data.ct = tampered.data.ct.slice(0, -4) + 'AAAA';
+    await rejects('Manipulierte Datei wird erkannt', v4.open(tampered));
+    await rejects('Fremde Datei abgelehnt', Vault.unlock({ format: 'xyz' }, 'x'));
+
+    lines.unshift(fails === 0 ? 'ALLE TESTS BESTANDEN' : fails + ' FEHLGESCHLAGEN');
+    document.getElementById('out').textContent = lines.join('\n');
+    document.title = 'fertig';
+  })().catch((e) => (document.getElementById('out').textContent = 'FEHLER ' + e.stack));
+</script>
+</body>
+</html>

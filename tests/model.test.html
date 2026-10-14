@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="de">
+<head><meta charset="utf-8"><title>Tests Datenmodell</title></head>
+<body>
+<pre id="out"></pre>
+<script src="../js/util.js"></script>
+<script src="../js/grades.js"></script>
+<script src="../js/model.js"></script>
+<script>
+  const M = NM.model;
+  const lines = [];
+  let fails = 0;
+  const ok = (name, cond) => { if (!cond) fails++; lines.push((cond ? 'OK   ' : 'FAIL ') + name); };
+  const throws = (name, fn, cls) => { try { fn(); ok(name, false); } catch (e) { ok(name, !cls || e instanceof cls); } };
+
+  // Migration einer älteren Datenbank ohne neuere Felder
+  const old = { schema: 1, years: [{ id: 'y', name: '2025/26' }], courses: [{ id: 'c', yearId: 'y', jahrgang: 8, students: [] }] };
+  const m = M.migrate(JSON.parse(JSON.stringify(old)));
+  ok('Fehlende Einstellungen ergänzt', m.settings.limitSek1 === 50 && m.settings.autoLockMin === 15);
+  ok('Fehlende Kursfelder ergänzt', m.courses[0].wHalf1 === 1 && m.courses[0].wHalf2 === 2 && Array.isArray(m.courses[0].assessments));
+  ok('Programmversion vermerkt', m.savedWith === M.APP_VERSION);
+  ok('Datenbank ohne schema-Feld wird geöffnet', !!M.migrate({ years: [], courses: [] }));
+
+  // Schutz vor älterer App-Version
+  throws('Neueres Datenformat wird abgelehnt', () => M.migrate({ schema: M.SCHEMA + 1, savedWith: '9.0.0', years: [], courses: [] }), M.NewerSchemaError);
+  try { M.migrate({ schema: M.SCHEMA + 1, savedWith: '9.0.0' }); } catch (e) { ok('Meldung nennt beide Versionen', e.message.includes('9.0.0') && e.message.includes(M.APP_VERSION)); }
+  const newer = { schema: M.SCHEMA + 1, years: [], courses: [], neuesFeld: 1 };
+  try { M.migrate(newer); } catch (e) { /* erwartet */ }
+  ok('Abgelehnte Datenbank bleibt unverändert', newer.schema === M.SCHEMA + 1 && !newer.settings);
+  throws('Kaputter Inhalt wird abgelehnt', () => M.migrate(null));
+
+  // Unbekannte Felder bleiben erhalten (Vorwärtsverträglichkeit innerhalb eines Schemas)
+  const extra = M.migrate({ schema: 1, years: [], courses: [], zusatz: { a: 1 } });
+  ok('Unbekannte Felder bleiben erhalten', extra.zusatz && extra.zusatz.a === 1);
+
+  // Namensliste
+  const names = M.parseNames('1\tMüller\tAnna\nSchmidt, Jonas\nLena Weber\n\n');
+  ok('Namen erkannt', names.map((s) => s.last + '|' + s.first).join(';') === 'Müller|Anna;Schmidt|Jonas;Weber|Lena');
+
+  lines.unshift(fails === 0 ? 'ALLE TESTS BESTANDEN' : fails + ' FEHLGESCHLAGEN');
+  document.getElementById('out').textContent = lines.join('\n');
+  document.title = 'fertig';
+</script>
+</body>
+</html>

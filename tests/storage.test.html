@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="de">
+<head><meta charset="utf-8"><title>Tests Speicher</title></head>
+<body>
+<pre id="out">läuft …</pre>
+<script src="../js/storage.js"></script>
+<script>
+  // Testet FolderStore gegen das Origin Private File System (gleiche API wie ein echter Ordner)
+  (async () => {
+    const S = NM.storage;
+    const lines = [];
+    let fails = 0;
+    const ok = (name, cond) => { if (!cond) fails++; lines.push((cond ? 'OK   ' : 'FAIL ') + name); };
+    const root = await navigator.storage.getDirectory();
+    for await (const [n] of root.entries()) await root.removeEntry(n, { recursive: true });
+    const dir = await root.getDirectoryHandle('SynologyDrive', { create: true });
+    const store = new S.FolderStore(dir);
+
+    ok('Leerer Ordner: keine Datenbank', !(await store.exists()));
+    await store.write({ format: 'notenmanager-db', v: 1 }, { keepBackups: 3, backupEveryMin: 0 });
+    ok('Datenbank geschrieben', await store.exists());
+    ok('Lesen liefert Inhalt', (await store.read()).v === 1);
+
+    // Mehrfach speichern → rollierende Sicherungen (max. 3)
+    for (let i = 2; i <= 6; i++) {
+      await new Promise((r) => setTimeout(r, 1100)); // Zeitstempel im Dateinamen sekundengenau
+      await store.write({ format: 'notenmanager-db', v: i }, { keepBackups: 3, backupEveryMin: 0 });
+    }
+    const backups = await store.listBackups();
+    ok('Höchstens 3 Sicherungen behalten (' + backups.length + ')', backups.length === 3);
+    ok('Neueste Sicherung = vorletzter Stand', (await store.readBackup(backups[0])).v === 5);
+
+    // Externe Änderung (anderes Gerät via Synology) erkennen
+    await new Promise((r) => setTimeout(r, 1100));
+    const fh = await dir.getFileHandle(S.DB_FILE);
+    const w = await fh.createWritable();
+    await w.write(JSON.stringify({ format: 'notenmanager-db', v: 99 }));
+    await w.close();
+    ok('Externe Änderung erkannt', await store.changedExternally());
+    let conflict = false;
+    try { await store.write({ v: 7 }); } catch (e) { conflict = e instanceof S.ConflictError; }
+    ok('Speichern verweigert (ConflictError)', conflict);
+    ok('Fremde Version nicht überschrieben', (await store.read()).v === 99);
+    await store.write({ format: 'notenmanager-db', v: 8 }, { force: true });
+    ok('Überschreiben mit force', (await store.read()).v === 8);
+
+    // Lock-Datei
+    ok('Kein fremder Lock', (await store.foreignLock()) === null);
+    await store.writeLock();
+    ok('Eigener Lock gilt nicht als fremd', (await store.foreignLock()) === null);
+    const lf = await dir.getFileHandle('notenmanager.lock.json');
+    const lw = await lf.createWritable();
+    await lw.write(JSON.stringify({ deviceId: 'anderes', device: 'Laptop Schule', since: new Date().toISOString(), heartbeat: new Date().toISOString() }));
+    await lw.close();
+    const fl = await store.foreignLock();
+    ok('Fremder Lock erkannt', fl && fl.device === 'Laptop Schule');
+    const lw2 = await lf.createWritable();
+    await lw2.write(JSON.stringify({ deviceId: 'anderes', device: 'Alt', since: '2020-01-01T00:00:00Z', heartbeat: '2020-01-01T00:00:00Z' }));
+    await lw2.close();
+    ok('Veralteter Lock wird ignoriert', (await store.foreignLock()) === null);
+    await store.releaseLock();
+    ok('Fremden Lock nicht gelöscht', !!(await store.readLock()));
+
+    // Synology-Konfliktkopie
+    await dir.getFileHandle('notenmanager_DiskStation_Oct-14-2026_Conflict.nmdb', { create: true });
+    ok('Konfliktkopie gefunden', (await store.findConflicts()).length === 1);
+
+    lines.unshift(fails === 0 ? 'ALLE TESTS BESTANDEN' : fails + ' FEHLGESCHLAGEN');
+    document.getElementById('out').textContent = lines.join('\n');
+    document.title = 'fertig';
+  })().catch((e) => { document.getElementById('out').textContent = 'FEHLER ' + e.name + ': ' + e.message + ' ' + (e.stack || ''); document.title = 'fertig'; });
+</script>
+</body>
+</html>

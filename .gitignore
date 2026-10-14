@@ -1,0 +1,19 @@
+# ── Niemals einchecken: echte Schülerdaten ──
+# Datenbanken, Sicherungen, Lock-Dateien
+*.nmdb
+notenmanager.lock.json
+Sicherungen/
+# Entschlüsselte Klartext-Ausgaben und Exporte
+*_klartext.json
+*.csv
+# Excel-Vorlagen mit echten Namen (und LibreOffice-Sperrdateien)
+*.xlsx
+*.xls
+*.ods
+.~lock.*
+
+# ── Sonstiges ──
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db

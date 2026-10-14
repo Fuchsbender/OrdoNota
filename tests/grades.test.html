@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="de">
+<head><meta charset="utf-8"><title>Tests Notenlogik</title></head>
+<body>
+<pre id="out"></pre>
+<script src="../js/grades.js"></script>
+<script>
+  const G = NM.grades;
+  const lines = [];
+  let fails = 0;
+  function eq(name, actual, expected) {
+    const ok = JSON.stringify(actual) === JSON.stringify(expected);
+    if (!ok) fails++;
+    lines.push((ok ? 'OK   ' : 'FAIL ') + name + (ok ? '' : '  → erhalten ' + JSON.stringify(actual) + ', erwartet ' + JSON.stringify(expected)));
+  }
+
+  // Skalen
+  eq('MSS 15 = 1+', G.label(15, 'mss') + '/' + G.wholeGrade(15) + G.tendency(15), '15/1+');
+  eq('MSS 0 = 6', G.wholeGrade(0), 6);
+  eq('Sek I Labels', G.levels('sek1').map((l) => l.label), ['1','1-','2+','2','2-','3+','3','3-','4+','4','4-','5+','5','5-','6']);
+  eq('Dezimal 13 → 1,33', G.pointsToDecimal(13), 1.33);
+  eq('Dezimal 12 → 1,67', G.pointsToDecimal(12), 1.67);
+  eq('Dezimal 1 → 5,33', G.pointsToDecimal(1), 5.33);
+  eq('Dezimal 0 → 6', G.pointsToDecimal(0), 6);
+
+  // Eingabe
+  eq('parse 2- (Sek I)', G.parse('2-', 'sek1'), 10);
+  eq('parse 1 (Sek I)', G.parse('1', 'sek1'), 14);
+  eq('parse 1+ (Sek I) ungültig', G.parse('1+', 'sek1'), undefined);
+  eq('parse 6 (Sek I)', G.parse('6', 'sek1'), 0);
+  eq('parse 6- ungültig', G.parse('6-', 'sek1'), undefined);
+  eq('parse 2,3 → 2-', G.parse('2,3', 'sek1'), 10);
+  eq('parse 00 (MSS)', G.parse('00', 'mss'), 0);
+  eq('parse 15 (MSS)', G.parse('15', 'mss'), 15);
+  eq('parse 16 (MSS) ungültig', G.parse('16', 'mss'), undefined);
+  eq('parse leer', G.parse('  ', 'sek1'), null);
+
+  // Rundung Sek I: 1,83–2,16 → 2; 2,17–2,49 → 2-; 2,5 → 2- (zugunsten)
+  eq('2,16 → 2', G.label(G.roundDecimal(2.16, 'sek1'), 'sek1'), '2');
+  eq('2,17 → 2-', G.label(G.roundDecimal(2.17, 'sek1'), 'sek1'), '2-');
+  eq('2,49 → 2-', G.label(G.roundDecimal(2.49, 'sek1'), 'sek1'), '2-');
+  eq('2,5 → 2- (Gleichstand → besser)', G.label(G.roundDecimal(2.5, 'sek1'), 'sek1'), '2-');
+  eq('2,51 → 3+', G.label(G.roundDecimal(2.51, 'sek1'), 'sek1'), '3+');
+  eq('1,84 → 2', G.label(G.roundDecimal(1.84, 'sek1'), 'sek1'), '2');
+  eq('1,83 → 2+', G.label(G.roundDecimal(1.83, 'sek1'), 'sek1'), '2+');
+  eq('0,9 → 1 (kein 1+)', G.label(G.roundDecimal(0.9, 'sek1'), 'sek1'), '1');
+  eq('5,66 → 5-', G.label(G.roundDecimal(5.66, 'sek1'), 'sek1'), '5-');
+  eq('5,7 → 6', G.label(G.roundDecimal(5.7, 'sek1'), 'sek1'), '6');
+  eq('MSS 10,5 → 11', G.roundPoints(10.5, 'mss'), 11);
+  eq('MSS 10,49 → 10', G.roundPoints(10.49, 'mss'), 10);
+
+  // Schlüssel MSS (LIMIT 45): wie Excel
+  const mss = G.keyPercents('mss', 45);
+  eq('MSS Schlüssel %', mss, [0, 22.5, 30, 37.5, 45, 49.67, 54.33, 59, 63.67, 68.33, 73, 77.67, 82.33, 87, 91.67, 96.33]);
+  // Schlüssel Sek I (LIMIT 50)
+  const s1 = G.keyPercents('sek1', 50);
+  eq('Sek I Schlüssel %', s1, [0, 25, 33, 42, 50, 55, 59, 64, 68, 73, 77, 82, 86, 91, 95]);
+  eq('Sek I Schlüssel % LIMIT 40', G.keyPercents('sek1', 40), [0, 20, 27, 33, 40, 45, 51, 56, 62, 67, 73, 78, 84, 89, 95]);
+
+  // Test mit Bonus und Kappung
+  const test = {
+    limit: 50, precision: 0.5, custom: {},
+    tasks: [ { id: 'a', max: 10 }, { id: 'b', max: 10 }, { id: 'c', max: 4, bonus: true } ],
+    results: {
+      s1: { scores: { a: 10, b: 10, c: 4 } },
+      s2: { scores: { a: 5, b: 5 } },
+      s3: { scores: { a: 2, b: 2 } },
+      s4: { status: 'fehlt' },
+      s5: { status: 'taeuschung' },
+      s6: { scores: { a: 4, b: 3, c: 3 } },
+    },
+  };
+  eq('Max ohne Bonus', G.testMaxScore(test), 20);
+  eq('Volle Punkte + Bonus → 1 (gekappt)', G.label(G.testResult(test, 's1', 'sek1').p, 'sek1'), '1');
+  eq('50 % → 4-', G.label(G.testResult(test, 's2', 'sek1').p, 'sek1'), '4-');
+  eq('20 % → 6', G.label(G.testResult(test, 's3', 'sek1').p, 'sek1'), '6');
+  eq('fehlt → keine Note', G.testResult(test, 's4', 'sek1').p, null);
+  eq('Täuschung → 6', G.testResult(test, 's5', 'sek1').p, 0);
+  eq('Bonus zählt zur Summe', G.testResult(test, 's6', 'sek1').score, 10);
+  const st = G.testStats(test, ['s1','s2','s3','s4','s5','s6'], 'sek1');
+  eq('Notenspiegel n', st.n, 5);
+  eq('Drittel: 2 schwache von 5, Täuschung ausgenommen → greift nicht', st.drittel, false);
+
+  // EPO (Werte aus EPO Apr-Mai26_KuM.xlsx, Tabelle3)
+  const epo = { lessons: [1,2,3,4,5,6,7].map((i) => ({ id: 'l' + i })), entries: {
+    sa: { l1:{r:'+'}, l2:{r:'0'}, l3:{r:'+'}, l4:{r:'+'}, l5:{r:'0'}, l6:{r:'0'}, l7:{r:'+'} },
+    sb: { l1:{r:'+'}, l2:{r:'0'}, l3:{r:'0'}, l4:{r:'0'}, l5:{r:'k'}, l6:{r:'-'}, l7:{r:'+'} },
+    sc: { l1:{r:'++'}, l2:{r:'++'}, l3:{r:'++'}, l4:{r:'+'}, l5:{r:'++'}, l6:{r:'++'}, l7:{r:'++'} },
+    sd: { l1:{r:'0'}, l2:{r:'-'}, l3:{r:'-'}, l4:{r:'0'}, l5:{r:'k'}, l6:{r:'k'}, l7:{r:'-'} },
+    hw: { l1:{r:'+', hw:'h'}, l2:{r:'+', hw:'u'} },
+  } };
+  eq('EPO Beispiel A 18/28 → 8', [G.epoResult(epo, 'sa', 'mss').sum, G.epoResult(epo, 'sa', 'mss').max, G.epoResult(epo, 'sa', 'mss').p], [18, 28, 8]);
+  eq('EPO Beispiel B 13/24 → 6', G.epoResult(epo, 'sb', 'mss').p, 6);
+  eq('EPO Beispiel C → 15', G.epoResult(epo, 'sc', 'mss').p, 15);
+  eq('EPO Beispiel D 7/20 → 2', G.epoResult(epo, 'sd', 'mss').p, 2);
+  eq('EPO Hausaufgaben abgezogen', G.epoResult(epo, 'hw', 'mss').sum, 3);
+  eq('EPO Zelle "++u"', G.parseEpoCell('++u'), { r: '++', hw: 'u' });
+  eq('EPO Zelle "h"', G.parseEpoCell('h'), { r: '', hw: 'h' });
+  eq('EPO Zelle "x" ungültig', G.parseEpoCell('x'), undefined);
+  eq('EPO Sek I nutzt Sek-I-Schlüssel', G.label(G.epoResult(Object.assign({ limit: 50 }, epo), 'sa', 'sek1').p, 'sek1'), '3-');
+
+  // Kursrechnung
+  const course = {
+    jahrgang: 8, wKa: 50, wOther: 50,
+    assessments: [
+      { id: 'k1', kind: 'manual', half: 'HJ1', cat: 'ka', weight: 1, manual: { grades: { s: { p: 11 } } } },        // 2
+      { id: 'k2', kind: 'manual', half: 'HJ1', cat: 'ka', weight: 1, manual: { grades: { s: { p: 8 } } } },         // 3
+      { id: 'o1', kind: 'manual', half: 'HJ1', cat: 'other', weight: 2, manual: { grades: { s: { p: 14 } } } },     // 1 (×2)
+      { id: 'o2', kind: 'manual', half: 'HJ1', cat: 'other', weight: 1, manual: { grades: { s: { p: 5 } } } },      // 4
+      { id: 'k3', kind: 'manual', half: 'HJ2', cat: 'ka', weight: 1, manual: { grades: { s: { p: 11 } } } },        // 2
+      { id: 'o3', kind: 'manual', half: 'HJ2', cat: 'other', weight: 1, manual: { grades: { s: { p: 11 } } } },     // 2
+    ],
+    overrides: {},
+  };
+  const h1 = G.halfResult(course, 'HJ1', 's');
+  eq('HJ1 KA-Schnitt 2,5', G.round2(h1.ka), 2.5);
+  eq('HJ1 Sonstige (1·2 + 4)/3 = 2', G.round2(h1.other), 2);
+  eq('HJ1 roh 2,25 → 2-', [G.round2(h1.raw), G.label(h1.final, 'sek1')], [2.25, '2-']);
+  const y = G.yearResult(course, 's');
+  eq('Jahr ⅓·2,25 + ⅔·2 = 2,08 → 2', [G.round2(y.raw), G.label(y.final, 'sek1')], [2.08, '2']);
+  course.overrides = { HJ1: { s: { p: 8 } } };
+  eq('Jahr nutzt gesetzte HJ1-Note (3): ⅓·3 + ⅔·2 = 2,33 → 2-', G.label(G.yearResult(course, 's').final, 'sek1'), '2-');
+  const gk = { jahrgang: 12, wKa: 33.33, wOther: 66.67, assessments: [
+    { id: 'a', kind: 'manual', half: '12/1', cat: 'ka', weight: 1, manual: { grades: { s: { p: 6 } } } },
+    { id: 'b', kind: 'manual', half: '12/1', cat: 'other', weight: 1, manual: { grades: { s: { p: 12 } } } },
+  ] };
+  eq('GK 12/1: ⅓·6 + ⅔·12 = 10', G.halfResult(gk, '12/1', 's').final, 10);
+  eq('MSS 12 ohne Jahresnote', G.hasYearGrade(gk), false);
+  eq('Jahrgang 11 mit Jahresnote', G.hasYearGrade({ jahrgang: 11 }), true);
+  eq('Halbjahre 13', G.halvesFor({ jahrgang: 13 }), ['13']);
+
+  lines.unshift(fails === 0 ? 'ALLE TESTS BESTANDEN' : fails + ' FEHLGESCHLAGEN');
+  document.getElementById('out').textContent = lines.join('\n');
+</script>
+</body>
+</html>
