@@ -7,7 +7,7 @@
   // SCHEMA erhöhen, sobald sich das Datenmodell so ändert, dass ältere App-Versionen
   // die Daten falsch verstehen würden. Ältere Versionen öffnen solche Datenbanken dann nicht.
   const SCHEMA = 1;
-  const APP_VERSION = '1.1.1';
+  const APP_VERSION = '1.1.2';
 
   class NewerSchemaError extends Error {}
 
@@ -149,8 +149,8 @@
         limit: level === 'mss' ? settings.limitMss : settings.limitSek1,
         precision: settings.precision,
         tasks: [
-          { id: uid(), name: '1', max: 5 },
-          { id: uid(), name: '2', max: 5 },
+          { id: uid(), name: 'A1', max: 5 },
+          { id: uid(), name: 'A2', max: 5 },
         ],
         custom: {},
         results: {},
@@ -196,10 +196,10 @@
     t.name = 'KA 1 – Terme';
     t.test.precision = 0.5; // Demo-Daten enthalten halbe Punkte
     t.test.tasks = [
-      { id: 'a1', name: '1a', max: 4 },
-      { id: 'a2', name: '1b', max: 6 },
-      { id: 'a3', name: '2', max: 10 },
-      { id: 'a4', name: '3', max: 8 },
+      { id: 'a1', name: 'A1a', max: 4 },
+      { id: 'a2', name: 'A1b', max: 6 },
+      { id: 'a3', name: 'A2', max: 10 },
+      { id: 'a4', name: 'A3', max: 8 },
       { id: 'a5', name: 'Bonus', max: 3, bonus: true },
     ];
     c8.students.forEach((s, i) => {
@@ -230,9 +230,9 @@
     const k = newTest(c12, '12/1', db.settings);
     k.name = 'Kursarbeit 1';
     k.test.tasks = [
-      { id: 'b1', name: '1', max: 12 },
-      { id: 'b2', name: '2', max: 18 },
-      { id: 'b3', name: '3', max: 15 },
+      { id: 'b1', name: 'A1', max: 12 },
+      { id: 'b2', name: 'A2', max: 18 },
+      { id: 'b3', name: 'A3', max: 15 },
     ];
     c12.students.forEach((s, i) => (k.test.results[s.id] = { scores: { b1: 12 - i, b2: 18 - i * 1.5, b3: 15 - i * 2 } }));
     c12.assessments.push(k);

@@ -267,6 +267,9 @@ details.details-card[open] > summary { margin-bottom: 12px; }
 .table th.group { text-align: center; border-left: 1px solid var(--border); color: var(--text); }
 .table th.result, .table td.result { border-left: 1px solid var(--border); }
 .table td.avg-col, .table th.avg-col { background: var(--surface-2); color: var(--muted); border-right: 1px solid var(--border); }
+.table th.num { text-align: right; }
+.table th.center { text-align: center; }
+.table th.task-col, .table td.task-col { width: 1%; padding-left: 6px; padding-right: 6px; }
 .table th.bonus, .table td input.bonus { color: var(--warn); }
 .col-head { display: inline-flex; flex-direction: column; align-items: center; line-height: 1.2; }
 .col-name { color: var(--text); font-weight: 600; max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
@@ -288,7 +291,9 @@ details.details-card[open] > summary { margin-bottom: 12px; }
 .cell-input:focus { outline: 2px solid var(--accent); outline-offset: -1px; background: var(--surface); }
 .cell-input.invalid { border-color: var(--danger); background: var(--danger-soft); }
 .cell-input.text-input { width: 100%; min-width: 120px; text-align: left; }
-.cell-input.num-input { width: 58px; text-align: right; }
+.cell-input.num-input { width: 58px; text-align: right; border-color: var(--border); background: var(--surface-2); }
+.cell-input.num-input:hover { border-color: var(--border-strong); }
+.cell-input.num-input.invalid { border-color: var(--danger); background: var(--danger-soft); }
 .cell-input.custom { border-color: var(--warn); background: var(--warn-soft); }
 .cell-input.status { color: var(--muted); font-size: 12px; }
 .grade-input[style*='--g-hue'], .grade-badge[style*='--g-hue'] {

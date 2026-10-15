@@ -224,7 +224,7 @@
           {
             class: 'btn btn-ghost',
             onclick: () => {
-              t.tasks.push({ id: uid(), name: String(t.tasks.filter((x) => !x.bonus).length + 1), max: 5 });
+              t.tasks.push({ id: uid(), name: nextTaskName(t.tasks), max: 5 });
               NM.app.commit();
             },
           },
@@ -245,6 +245,12 @@
     );
   }
 
+  // Nächste freie Bezeichnung A1, A2, … (nach der höchsten vorhandenen Nummer)
+  function nextTaskName(tasks) {
+    const nums = tasks.filter((x) => !x.bonus).map((x) => /^A?(\d+)/i.exec(x.name || '')).filter(Boolean).map((m) => Number(m[1]));
+    return 'A' + ((nums.length ? Math.max(...nums) : 0) + 1);
+  }
+
   function resultsCard(course, a, level) {
     const t = a.test;
     const students = M.activeStudents(course);
@@ -253,7 +259,7 @@
       'tr',
       null,
       h('th', { class: 'sticky-col' }, 'Name'),
-      t.tasks.map((task) => h('th', { class: 'num' + (task.bonus ? ' bonus' : '') }, h('span', { class: 'col-head' }, h('span', { class: 'col-name' }, task.name || '–'), h('span', { class: 'col-sub' }, fmtScore(task.max) + (task.bonus ? ' B' : ''))))),
+      t.tasks.map((task) => h('th', { class: 'center task-col' + (task.bonus ? ' bonus' : '') }, h('span', { class: 'col-head' }, h('span', { class: 'col-name' }, task.name || '–'), h('span', { class: 'col-sub' }, fmtScore(task.max) + (task.bonus ? ' B' : ''))))),
       h('th', { class: 'num' }, 'Σ'),
       h('th', { class: 'num' }, '%'),
       h('th', { class: 'center' }, 'Note'),
@@ -271,7 +277,7 @@
         t.tasks.map((task, ci) =>
           h(
             'td',
-            { class: 'num' },
+            { class: 'center task-col' },
             UI.numberInput({
               value: r.scores[task.id],
               grid: 'test-' + a.id,
@@ -309,7 +315,7 @@
       t.tasks.map((task) => {
         const vals = students.map((s) => (t.results[s.id] && t.results[s.id].scores ? t.results[s.id].scores[task.id] : null)).filter((v) => v !== null && v !== undefined && v !== '');
         const avg = vals.length ? vals.reduce((x, y) => x + Number(y), 0) / vals.length : null;
-        return h('td', { class: 'num muted small' }, avg === null || !task.max ? '' : fmtNum((avg / task.max) * 100, 0) + ' %');
+        return h('td', { class: 'center muted small' }, avg === null || !task.max ? '' : fmtNum((avg / task.max) * 100, 0) + ' %');
       }),
       h('td', { colspan: 4 })
     );
