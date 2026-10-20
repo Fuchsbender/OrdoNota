@@ -95,7 +95,8 @@
             'div',
             { class: 'inline' },
             h('button', { class: 'btn btn-primary', onclick: () => addLesson(a) }, '+ Stunde'),
-            h('button', { class: 'btn', onclick: () => NM.print.epo(course, a) }, '🖨 Drucken'),
+            h('button', { class: 'btn', onclick: () => NM.print.epo(course, a) }, '🖨 Liste'),
+            h('button', { class: 'btn', title: 'Ein Zettel pro Person zum Ausschneiden, mit Feld für Datum und Unterschrift', onclick: () => NM.print.epoSlips(course, a) }, '🖨 Schülerzettel'),
             h(
               'button',
               {

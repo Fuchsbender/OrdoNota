@@ -196,6 +196,48 @@
     );
   }
 
+  /** EPO-Zettel zum Ausschneiden: je Person Kopf mit Kurs/Zeitraum/Legende, Bewertungen je Datum, Ergebnis, Unterschrift. */
+  function epoSlips(course, a) {
+    const level = G.courseLevel(course);
+    const e = a.epo;
+    const lessons = e.lessons.slice().sort((x, y) => (x.date || '').localeCompare(y.date || ''));
+    const pts = Object.assign({}, G.EPO_DEFAULT_POINTS, e.points);
+    const signed = (v) => (v > 0 ? '+' : '') + fmtScore(v).replace('-', '−');
+    const period = lessons.length ? `${fmtDate(lessons[0].date)} – ${fmtDate(lessons[lessons.length - 1].date)}` : 'keine Stunden';
+    const legend = [...G.EPO_RATINGS.map((k) => `${k} = ${fmtScore(pts[k])}`), 'k = abwesend', `u = HA unvollständig (${signed(pts.u)})`, `h = HA vergessen (${signed(pts.h)})`].join(' · ');
+    // Bei vielen Stunden umbrechen, damit die Tabelle auf A4 hochkant passt
+    const PER_ROW = 16;
+    const chunks = [];
+    for (let i = 0; i < lessons.length; i += PER_ROW) chunks.push(lessons.slice(i, i + PER_ROW));
+    const slips = M.activeStudents(course).map((s) => {
+      const row = e.entries[s.id] || {};
+      const res = G.epoResult(e, s.id, level);
+      return h(
+        'div',
+        { class: 'p-slip p-epo-slip' },
+        h('div', { class: 'p-slip-head' }, h('strong', null, M.studentName(s)), h('span', null, `${M.courseTitle(course)} · ${a.name} · ${period}`)),
+        h('div', { class: 'p-note' }, legend),
+        chunks.map((ls) =>
+          h(
+            'table',
+            { class: 'p-table p-epo-slip-table' },
+            h('tr', null, ls.map((l) => h('th', null, NM.util.fmtDateShort(l.date)))),
+            h('tr', null, ls.map((l) => h('td', { class: 'c' }, G.epoCellText(row[l.id]))))
+          )
+        ),
+        h(
+          'div',
+          { class: 'p-slip-result' },
+          res.attended ? `Punkte ${fmtScore(res.sum)} von ${fmtScore(res.max)} (${fmtNum(res.pct, 0)} %) · ` : 'Noch keine Bewertung · ',
+          `abwesend: ${res.absent} · HA unvollständig: ${res.u} · HA vergessen: ${res.h}`,
+          res.p === null ? null : [' · Note ', h('strong', { class: 'p-big' }, G.label(res.p, level))]
+        ),
+        h('div', { class: 'p-sign' }, h('span', null, 'Datum'), h('span', null, 'Unterschrift'))
+      );
+    });
+    doPrint(`${a.name} – Schülerzettel`, h('div', { class: 'p-slips' }, slips));
+  }
+
   // ---------- Kursliste ----------
 
   function course(c, half) {
@@ -410,5 +452,5 @@
     );
   }
 
-  NM.print = { test, epo, course, studentsDialog };
+  NM.print = { test, epo, epoSlips, course, studentsDialog };
 })((globalThis.NM = globalThis.NM || {}));
