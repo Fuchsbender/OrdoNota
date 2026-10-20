@@ -12,13 +12,16 @@
       host = h('div', { id: 'print-root' });
       document.body.appendChild(host);
     }
-    clear(host).appendChild(content);
+    // Seitenrand 0 unterdrückt die Kopf-/Fußzeilen des Browsers (Datum, URL, Seitenzahl).
+    // Den Rand oben/unten liefern thead/tfoot, die der Browser auf jeder Seite wiederholt.
+    const spacer = () => h('tr', null, h('td', null, h('div', { class: 'p-frame-space' })));
+    clear(host).appendChild(h('table', { class: 'p-frame' }, h('thead', null, spacer()), h('tbody', null, h('tr', null, h('td', null, content))), h('tfoot', null, spacer())));
     let pageStyle = document.getElementById('print-page-style');
     if (!pageStyle) {
       pageStyle = h('style', { id: 'print-page-style' });
       document.head.appendChild(pageStyle);
     }
-    pageStyle.textContent = `@page { size: A4 ${landscape ? 'landscape' : 'portrait'}; margin: 12mm; }`;
+    pageStyle.textContent = `@page { size: A4 ${landscape ? 'landscape' : 'portrait'}; margin: 0; }`;
     const oldTitle = document.title;
     document.title = title;
     document.body.classList.add('printing');
