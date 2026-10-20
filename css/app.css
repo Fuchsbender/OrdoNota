@@ -291,8 +291,8 @@ details.details-card[open] > summary { margin-bottom: 12px; }
 .cell-input:focus { outline: 2px solid var(--accent); outline-offset: -1px; background: var(--surface); }
 .cell-input.invalid { border-color: var(--danger); background: var(--danger-soft); }
 .cell-input.text-input { width: 100%; min-width: 120px; text-align: left; }
-.cell-input.num-input { width: 58px; text-align: right; border-color: var(--border); background: var(--surface-2); }
-.cell-input.num-input:hover { border-color: var(--border-strong); }
+.cell-input.num-input { width: 58px; text-align: right; border-color: var(--border-strong); background: var(--bg); }
+.cell-input.num-input:hover { border-color: var(--muted); }
 .cell-input.num-input.invalid { border-color: var(--danger); background: var(--danger-soft); }
 .cell-input.custom { border-color: var(--warn); background: var(--warn-soft); }
 .cell-input.status { color: var(--muted); font-size: 12px; }
