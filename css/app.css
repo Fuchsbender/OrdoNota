@@ -306,6 +306,8 @@ body.no-grade-colors .grade-input[style*='--g-hue'], body.no-grade-colors .grade
 body.no-grade-colors .grade-input[style*='--g-hue'] { background: transparent; }
 .cell-select { height: 28px; border: 1px solid transparent; border-radius: 5px; background: transparent; color: var(--muted); font: inherit; font-size: 12px; max-width: 180px; }
 .cell-select:hover, .cell-select:focus { border-color: var(--border-strong); color: var(--text); }
+/* Aufklappliste: sonst weißer Browser-Hintergrund mit heller Schrift aus dem dunklen Design */
+select option { background: var(--surface); color: var(--text); }
 
 /* ---------- Kurs & Schüler ---------- */
 
