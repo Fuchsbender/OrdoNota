@@ -314,8 +314,7 @@
       { class: 'foot' },
       h('td', { class: 'sticky-col' }, 'Ø gelöst'),
       t.tasks.map((task) => {
-        const vals = students.map((s) => (t.results[s.id] && t.results[s.id].scores ? t.results[s.id].scores[task.id] : null)).filter((v) => v !== null && v !== undefined && v !== '');
-        const avg = vals.length ? vals.reduce((x, y) => x + Number(y), 0) / vals.length : null;
+        const avg = taskAverage(t, students, task);
         return h('td', { class: 'center muted small' }, avg === null || !task.max ? '' : fmtNum((avg / task.max) * 100, 0) + ' %');
       }),
       h('td', { colspan: 4 })
@@ -435,13 +434,32 @@
     );
   }
 
+  /** Durchschnittlich erreichte Punkte einer Aufgabe (nur eingetragene Werte); null = keine. */
+  function taskAverage(t, students, task) {
+    const vals = students.map((s) => (t.results[s.id] && t.results[s.id].scores ? t.results[s.id].scores[task.id] : null)).filter((v) => v !== null && v !== undefined && v !== '');
+    return vals.length ? vals.reduce((x, y) => x + Number(y), 0) / vals.length : null;
+  }
+
   /** Vollbild-Ansicht für den Beamer: Notenspiegel und Punkteverteilung, keine Namen. */
   function beamerView(course, a, level) {
     const t = a.test;
     const max = G.testMaxScore(t);
     const step = Number(t.precision) || 1;
     const key = G.testKey(level, t.limit, max, t.precision, t.custom);
-    const st = G.testStats(t, M.activeStudents(course).map((s) => s.id), level);
+    const students = M.activeStudents(course);
+    const st = G.testStats(t, students.map((s) => s.id), level);
+    const taskRows = t.tasks.map((task) => {
+      const avg = taskAverage(t, students, task);
+      const pct = avg === null || !task.max ? null : Math.min(100, (avg / task.max) * 100);
+      return h(
+        'div',
+        { class: 'task-bar' + (task.bonus ? ' bonus' : '') },
+        h('span', { class: 'task-bar-name' }, (task.name || '–') + (task.bonus && !/bonus/i.test(task.name || '') ? ' (Bonus)' : '')),
+        h('div', { class: 'task-bar-track' }, h('div', { class: 'task-bar-fill', style: `width:${pct || 0}%` })),
+        h('span', { class: 'task-bar-val' }, avg === null ? '–' : `${fmtNum(avg, 1)} / ${fmtScore(task.max)}`),
+        h('span', { class: 'task-bar-pct muted' }, pct === null ? '' : fmtNum(pct, 0) + ' %')
+      );
+    });
     // Bereich je Stufe: von der eigenen Schwelle bis knapp unter die nächsthöhere
     const ordered = key.slice().sort((x, y) => y.p - x.p);
     const rows = ordered.map((k, i) => {
@@ -484,7 +502,9 @@
             h('div', null, h('span', { class: 'muted' }, 'Ø Note'), h('strong', null, fmtNum(st.avgDec, 2))),
             level === 'mss' ? h('div', null, h('span', { class: 'muted' }, 'Ø Punkte'), h('strong', null, fmtNum(st.avgPoints, 2))) : null,
             h('div', null, h('span', { class: 'muted' }, 'Höchstpunktzahl'), h('strong', null, fmtScore(max)))
-          )
+          ),
+          taskRows.length ? h('h2', { class: 'beamer-sub' }, 'Ø erreicht je Aufgabe') : null,
+          taskRows.length ? h('div', { class: 'task-bars' }, taskRows) : null
         ),
         h(
           'section',

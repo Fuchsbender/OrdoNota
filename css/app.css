@@ -343,16 +343,24 @@ body.no-grade-colors .dist-bar { background: var(--accent); }
 .beamer h2 { font-size: 1.15em; margin: 0 0 1.5vh; color: var(--muted); }
 .beamer-close { position: absolute; top: 2vh; right: 2vw; }
 .beamer-body { display: grid; grid-template-columns: 3fr 2fr; gap: 4vw; align-items: start; }
-.beamer .dist { height: 45vh; gap: 1.2vw; }
+.beamer .dist { height: 32vh; gap: 1.2vw; }
 .beamer .dist-bar { max-width: none; }
 .beamer .dist-n, .beamer .dist-label { font-size: 1.2em; }
-.beamer .stats { grid-template-columns: repeat(auto-fit, minmax(8em, 1fr)); }
+.beamer .stats { grid-template-columns: repeat(auto-fit, minmax(5.5em, 1fr)); }
 .beamer .stats span { font-size: 0.75em; }
-.beamer .stats strong { font-size: 1.5em; }
+.beamer .stats strong { font-size: 1.3em; }
 .beamer .table { font-size: min(1em, 2.5vh); }
 .beamer .table th { font-size: 0.75em; position: static; }
 .beamer .table td { padding: 0.12em 0.6em; line-height: 1.25; }
 .beamer .grade-badge { min-width: 2.4em; padding: 0 6px; }
+.beamer .beamer-sub { margin-top: 3vh; }
+.task-bars { display: grid; grid-template-columns: auto 1fr auto auto; gap: 0.5vh 0.8em; align-items: center; font-size: min(1em, 2.4vh); }
+.task-bar { display: contents; }
+.task-bar-name { font-weight: 600; }
+.task-bar.bonus .task-bar-name { color: var(--warn); }
+.task-bar-track { height: 1.1em; background: var(--surface-2); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+.task-bar-fill { height: 100%; background: var(--accent); }
+.task-bar-val, .task-bar-pct { text-align: right; font-variant-numeric: tabular-nums; }
 @media (max-width: 800px) { .beamer-body { grid-template-columns: 1fr; } }
 .alert { padding: 10px 12px; border-radius: var(--radius-sm); font-size: 13px; }
 .alert-danger { background: var(--danger-soft); color: var(--danger); }
