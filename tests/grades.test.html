@@ -79,6 +79,8 @@
   eq('Bonus zählt zur Summe', G.testResult(test, 's6', 'sek1').score, 10);
   const st = G.testStats(test, ['s1','s2','s3','s4','s5','s6'], 'sek1');
   eq('Notenspiegel n', st.n, 5);
+  eq('Standardabweichung Noten (1; 4,33; 6; 6; 4,33)', G.round2(st.sdDec), 1.83);
+  eq('Anteil unter 4: 2 von 5', st.weakPct, 40);
   eq('Drittel: 2 schwache von 5, Täuschung ausgenommen → greift nicht', st.drittel, false);
 
   // EPO (Werte aus EPO Apr-Mai26_KuM.xlsx, Tabelle3)

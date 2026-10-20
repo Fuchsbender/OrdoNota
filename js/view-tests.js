@@ -424,7 +424,9 @@
         h('div', null, h('span', { class: 'muted' }, 'Teilnehmende'), h('strong', null, st.n)),
         h('div', null, h('span', { class: 'muted' }, 'Ø Note'), h('strong', null, fmtNum(st.avgDec, 2))),
         level === 'mss' ? h('div', null, h('span', { class: 'muted' }, 'Ø Punkte'), h('strong', null, fmtNum(st.avgPoints, 2))) : null,
-        h('div', null, h('span', { class: 'muted' }, '5 und 6'), h('strong', null, st.weak))
+        sdTile(st, level),
+        h('div', null, h('span', { class: 'muted' }, '5 und 6'), h('strong', null, st.weak)),
+        weakTile(st)
       ),
       iHint(course),
       st.drittel
@@ -433,6 +435,16 @@
           ? h('div', { class: 'alert alert-ok' }, 'Drittelparagraph greift nicht.')
           : null
     );
+  }
+
+  /** Standardabweichung in der Einheit des Schnitts (Sek I: Note, MSS: Punkte). */
+  function sdTile(st, level) {
+    const v = level === 'mss' ? st.sdPoints : st.sdDec;
+    return h('div', { title: 'Standardabweichung ' + (level === 'mss' ? 'der Punkte' : 'der Noten') }, h('span', { class: 'muted' }, 'Std.-Abw.'), h('strong', null, fmtNum(v, 2)));
+  }
+
+  function weakTile(st) {
+    return h('div', { title: 'Anteil mit Note 5 oder 6' }, h('span', { class: 'muted' }, 'unter 4'), h('strong', null, st.weakPct === null ? '–' : fmtNum(st.weakPct, 0) + ' %'));
   }
 
   /** Hinweis, wenn Personen mit I-Status aus der Statistik herausgenommen sind. */
@@ -526,6 +538,8 @@
             h('div', null, h('span', { class: 'muted' }, 'Teilnehmende'), h('strong', null, st.n)),
             h('div', null, h('span', { class: 'muted' }, 'Ø Note'), h('strong', null, fmtNum(st.avgDec, 2))),
             level === 'mss' ? h('div', null, h('span', { class: 'muted' }, 'Ø Punkte'), h('strong', null, fmtNum(st.avgPoints, 2))) : null,
+            sdTile(st, level),
+            weakTile(st),
             h('div', null, h('span', { class: 'muted' }, 'Höchstpunktzahl'), h('strong', null, fmtScore(max)))
           ),
           taskRows.length ? h('h2', { class: 'beamer-sub' }, 'Ø erreicht je Aufgabe') : null,

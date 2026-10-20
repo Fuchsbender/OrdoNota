@@ -225,6 +225,8 @@
     let n = 0;
     let sumDec = 0;
     let sumP = 0;
+    let sqDec = 0;
+    let sqP = 0;
     let excluded = 0;
     for (const sid of studentIds) {
       const r = testResult(test, sid, level);
@@ -234,16 +236,23 @@
       whole[wholeGrade(r.p)]++;
       sumDec += pointsToDecimal(r.p);
       sumP += r.p;
+      sqDec += pointsToDecimal(r.p) ** 2;
+      sqP += r.p ** 2;
       if (r.status === 'taeuschung') excluded++;
     }
     const weak = whole[5] + whole[6];
+    // Standardabweichung der Grundgesamtheit (alle gewerteten Arbeiten, Teiler n)
+    const sd = (sq, sum) => (n ? Math.sqrt(Math.max(0, sq / n - (sum / n) ** 2)) : null);
     return {
       n,
       counts,
       whole,
       avgDec: n ? sumDec / n : null,
       avgPoints: n ? sumP / n : null,
+      sdDec: sd(sqDec, sumDec),
+      sdPoints: sd(sqP, sumP),
       weak,
+      weakPct: n ? (weak / n) * 100 : null,
       drittel: n > 0 && weak - excluded > n / 3,
     };
   }

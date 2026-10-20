@@ -93,6 +93,7 @@
         h('tbody', null, h('tr', null, h('td', null, 'Anzahl'), [1, 2, 3, 4, 5, 6].map((g) => h('td', { class: 'n' }, st.whole[g])), h('td', { class: 'n' }, st.n), h('td', { class: 'n' }, fmtNum(st.avgDec, 2))))
       ),
       level === 'mss' ? h('p', null, 'Ø Punkte: ', h('strong', null, fmtNum(st.avgPoints, 2))) : null,
+      h('p', null, 'Standardabweichung ', level === 'mss' ? '(Punkte)' : '(Noten)', ': ', h('strong', null, fmtNum(level === 'mss' ? st.sdPoints : st.sdDec, 2)), ' · Anteil unter 4: ', h('strong', null, st.weakPct === null ? '–' : fmtNum(st.weakPct, 0) + ' %')),
       iNote(course),
       h('p', null, st.drittel ? h('strong', null, 'Drittelparagraph greift!') : 'Drittelparagraph greift nicht.', ` (${st.weak} von ${st.n} mit 5 oder 6)`)
     );
