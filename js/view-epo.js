@@ -187,7 +187,8 @@
     const epo = a.epo;
     const students = M.activeStudents(course);
     const lessons = sortedLessons(epo);
-    const current = lessons[lessons.length - 1];
+    const ui = NM.app.state.ui;
+    const current = ui.epoQuick ? lessons[lessons.length - 1] : null;
     const head = h(
       'tr',
       null,
@@ -263,6 +264,22 @@
         'div',
         { class: 'card-head' },
         h('h2', null, 'Bewertung je Stunde'),
+        lessons.length && students.length
+          ? h(
+              'button',
+              {
+                class: 'btn btn-sm quick-toggle' + (ui.epoQuick ? ' active' : ''),
+                'aria-pressed': ui.epoQuick ? 'true' : 'false',
+                title: 'Schaltflächen zum Bewerten der neuesten Stunde ein-/ausblenden',
+                onclick: () => {
+                  ui.epoQuick = !ui.epoQuick;
+                  NM.app.saveUi();
+                  NM.app.rerender();
+                },
+              },
+              ui.epoQuick ? '▾ Schnellwahl ausblenden' : '▸ Schnellwahl einblenden'
+            )
+          : null,
         h(
           'span',
           { class: 'legend' },
