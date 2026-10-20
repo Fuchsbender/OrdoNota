@@ -250,6 +250,28 @@
     doPrint(`${a.name} – Schülerzettel`, h('div', { class: 'p-slips' }, slips));
   }
 
+  // ---------- Sitzplan ----------
+
+  function seating(c) {
+    const { st, students, cells } = NM.views.seating.layout(c);
+    const names = NM.views.seating.cardNames(students);
+    const desk = h('div', { class: 'p-seat-desk' }, 'Lehrerpult');
+    const rows = [];
+    for (let y = 0; y < st.rows; y++) {
+      const tr = h('tr');
+      for (let x = 0; x < st.cols; x++) {
+        const sid = cells[x + ',' + y];
+        tr.appendChild(h('td', { class: sid ? 'p-seat' : 'p-seat empty' }, sid ? names[sid] : ''));
+      }
+      rows.push(tr);
+    }
+    doPrint(
+      `${M.courseTitle(c)} – Sitzplan`,
+      h('div', { class: 'p-page' }, header(c, 'Sitzplan', ''), st.desk === 'top' ? desk : null, h('table', { class: 'p-seat-grid' }, h('tbody', null, rows)), st.desk === 'bottom' ? desk : null),
+      { landscape: st.cols > st.rows }
+    );
+  }
+
   // ---------- Kursliste ----------
 
   function course(c, half) {
@@ -464,5 +486,5 @@
     );
   }
 
-  NM.print = { test, epo, epoSlips, course, studentsDialog };
+  NM.print = { test, epo, epoSlips, seating, course, studentsDialog };
 })((globalThis.NM = globalThis.NM || {}));

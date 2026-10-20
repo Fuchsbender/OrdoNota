@@ -25,6 +25,7 @@
     { id: 'tests', label: 'Tests' },
     { id: 'epo', label: 'Mitarbeit/EPO' },
     { id: 'overview', label: 'Notenübersicht' },
+    { id: 'seating', label: 'Sitzplan' },
     { id: 'settings', label: 'Einstellungen' },
   ];
 

@@ -1,6 +1,6 @@
 # Notenmanager – Dokumentation
 
-Version 1.1.15 · Stand Oktober 2026
+Version 1.2.0 · Stand Oktober 2026
 
 Der Notenmanager verwaltet Noten für die Sekundarstufe I (Noten 1–6 mit Tendenz) und die Mainzer Studienstufe (MSS, Punkte 00–15) an Schulen in Rheinland-Pfalz. Er läuft vollständig lokal im Browser, verschlüsselt alle Daten mit einem Passwort und legt sie in einem Ordner ab, den der Synology Drive Client auf die DiskStation spiegelt.
 
@@ -18,7 +18,7 @@ Der Notenmanager verwaltet Noten für die Sekundarstufe I (Noten 1–6 mit Tende
 6. [Reiter „Kurs & Schüler“](#6-reiter-kurs--schüler)
 7. [Reiter „Tests“](#7-reiter-tests)
 8. [Reiter „Mitarbeit/EPO“](#8-reiter-mitarbeitepo)
-9. [Reiter „Notenübersicht“](#9-reiter-notenübersicht)
+9. [Reiter „Notenübersicht“](#9-reiter-notenübersicht) (mit 9.3 Reiter „Sitzplan“)
 10. [Drucken und Exportieren](#10-drucken-und-exportieren)
 11. [Reiter „Einstellungen“](#11-reiter-einstellungen)
 12. [Tastaturbedienung](#12-tastaturbedienung)
@@ -381,6 +381,16 @@ Ungültige Eingaben werden rot markiert und nicht übernommen.
 
 Der Umschalter **„Jahresnote“** (nur Jahrgang 5–11) zeigt je Person beide Halbjahresnoten, die gerechnete Jahresnote und das Feld „Gesetzt“. Für die Rechnung wird je Halbjahr die **gesetzte** Halbjahresnote verwendet, wenn eine existiert, sonst der **ungerundete** Schnitt (Details in [Abschnitt 16](#16-halbjahres--und-jahresnote)).
 
+### 9.3 Reiter „Sitzplan“
+
+Für jeden Kurs lässt sich ein Sitzplan anlegen. Jede aktive Person erscheint als Karte mit ihrem **Vornamen** (bei gleichen Vornamen im Kurs mit Initiale des Nachnamens, z. B. „Anna M.“).
+
+- **Spalten** und **Reihen** legen die Größe des Rasters fest (bis 16 × 12). **Lehrerpult** oben oder unten.
+- Karten aus **„Noch ohne Platz“** (rechts) mit Maus oder Finger auf einen Platz ziehen. Auf einen besetzten Platz gezogen, **tauschen** die beiden die Plätze. Zurück in die Ablage ziehen nimmt eine Person vom Plan. Beim Ziehen an den oberen/unteren Rand scrollt die Seite mit.
+- **🎲 Freie Plätze füllen** verteilt alle noch nicht platzierten Personen in zufälliger Reihenfolge auf die freien Plätze. **Alle abräumen** setzt den Plan zurück.
+- **🖨 Drucken** gibt den Plan auf einer A4-Seite aus.
+- Wird das Raster verkleinert, kommen Personen außerhalb des neuen Rasters in die Ablage. Neue Personen im Kurs erscheinen automatisch in der Ablage, inaktive verschwinden vom Plan.
+
 ## 10. Drucken und Exportieren
 
 Alle Ausdrucke öffnen den Druckdialog des Browsers. Dort können Sie auch **„Als PDF speichern“** wählen. Breite Tabellen werden automatisch im Querformat gedruckt.
@@ -391,6 +401,7 @@ Alle Ausdrucke öffnen den Druckdialog des Browsers. Dort können Sie auch **„
 | Notenübersicht | 🖨 Schülerbögen | Eine Seite je Person (Auswahl siehe unten) |
 | Notenübersicht | ⬇ CSV/Excel | Alle Noten und Ergebnisse des Kurses als CSV (Semikolon, öffnet direkt in Excel) |
 | Tests | 🖨 Schlüssel / Liste / Schülerzettel | siehe 7.6 |
+| Sitzplan | 🖨 Drucken | Sitzplan mit Vornamen und Lehrerpult, A4 (quer, wenn mehr Spalten als Reihen) |
 | Mitarbeit/EPO | 🖨 Liste | Bewertungsraster mit Ergebnis je Person |
 | Mitarbeit/EPO | 🖨 Schülerzettel | Ein Zettel pro Person zum Ausschneiden (mehrere pro Blatt, gestrichelte Schnittlinie): Name, Kurs, Blockname und Zeitraum, Punktelegende, Bewertungen mit Datum im Tabellenkopf, Ergebnis mit Note sowie Linien für Datum und Unterschrift |
 
@@ -751,7 +762,7 @@ Reines HTML/CSS/JavaScript ohne Build-Schritt und ohne externe Bibliotheken. Die
 | `js/model.js` | `NM.model` | Datenmodell: neue Datenbank/Kurse/Leistungen, Migration, Namensliste parsen, Demo-Daten |
 | `js/ui.js` | `NM.ui` | Wiederverwendbare Bausteine: Halbjahres-Umschalter, Noten-Eingabezellen, Badges, Leistungs-Dialog |
 | `js/app.js` | `NM.app` | Anwendungskern: Anmeldung, Sitzung, Autosave, Sperre, Layout, Navigation, Neuzeichnen mit Fokus-Erhalt, Tabellen-Tastatur |
-| `js/view-*.js` | `NM.views.*` | Je ein Reiter: `course`, `tests`, `epo`, `overview`, `settings` |
+| `js/view-*.js` | `NM.views.*` | Je ein Reiter: `course`, `tests`, `epo`, `overview`, `seating`, `settings` |
 | `js/print.js` | `NM.print` | Druckansichten |
 | `css/app.css` | – | Gestaltung inkl. Hell/Dunkel (Farb-Tokens auf `:root`) und Druck-CSS |
 
@@ -780,7 +791,7 @@ Berechnete Werte (Schnitte, Testnoten, EPO-Noten) werden **nie gespeichert**, so
   "kdf": "PBKDF2-SHA256",
   "savedAt": "2026-10-14T21:57:03.123Z",
   "device": "Laptop Schule",
-  "app": "1.1.15",
+  "app": "1.2.0",
   "pw":   { "salt": "<b64>", "iter": 600000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "rec":  { "salt": "<b64>", "iter": 100000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "data": { "iv": "<b64>", "ct": "<b64: verschlüsseltes JSON des Datenmodells>" }
@@ -803,7 +814,7 @@ Entschlüsselter Inhalt (`schema: 1`):
 ```js
 {
   schema: 1,                             // Datenformat (siehe 25.2)
-  savedWith: "1.1.15",                    // App-Version beim letzten Speichern
+  savedWith: "1.2.0",                    // App-Version beim letzten Speichern
   created: "<ISO>", savedAt: "<ISO>",
   settings: { autoLockMin, limitSek1, limitMss, precision, keepBackups, backupEveryMin, gradeColors },
   years:   [ { id, name: "2026/27" } ],
@@ -819,7 +830,8 @@ Course = {
   students: [ { id, last, first, active, iStatus? } ],
   assessments: [ Assessment ],
   overrides: { "<Halbjahr>"|"Jahr": { "<studentId>": { p, reason } } },
-  comments:  { "<studentId>": "Text" }
+  comments:  { "<studentId>": "Text" },
+  seating?:  { cols, rows, desk: "top" | "bottom", pos: { "<studentId>": { x, y } } }
 }
 
 Assessment = {
@@ -894,7 +906,7 @@ In `js/model.js` stehen zwei Nummern:
 
 | Konstante | Bedeutung | Wann erhöhen |
 |---|---|---|
-| `APP_VERSION` (z. B. `1.1.15`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.1.15` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
+| `APP_VERSION` (z. B. `1.2.0`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.2.0` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
 | `SCHEMA` (z. B. `1`) | Version des Datenformats | nur, wenn eine **ältere** App-Version die neuen Daten falsch verstehen würde (z. B. ein Feld ändert seine Bedeutung) |
 
 Öffnet eine App eine Datenbank mit höherem `SCHEMA`, verweigert sie das mit einer Meldung (siehe 20.10). Neue, nur *zusätzliche* Felder brauchen kein neues `SCHEMA`: Ältere Versionen lassen unbekannte Felder unverändert und speichern sie mit.
