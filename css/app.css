@@ -336,6 +336,24 @@ body.no-grade-colors .dist-bar { background: var(--accent); }
 .stats > div { display: flex; flex-direction: column; background: var(--surface-2); border-radius: var(--radius-sm); padding: 6px 8px; }
 .stats span { font-size: 11px; }
 .stats strong { font-size: 16px; }
+
+/* Beamer-Ansicht (Tests): groß, ohne Namen */
+.beamer { position: fixed; inset: 0; z-index: 100; overflow: auto; background: var(--bg); color: var(--text); padding: 3vh 4vw; font-size: clamp(16px, 1.6vw, 26px); }
+.beamer h1 { font-size: 1.8em; margin: 0 0 3vh; }
+.beamer h2 { font-size: 1.15em; margin: 0 0 1.5vh; color: var(--muted); }
+.beamer-close { position: absolute; top: 2vh; right: 2vw; }
+.beamer-body { display: grid; grid-template-columns: 3fr 2fr; gap: 4vw; align-items: start; }
+.beamer .dist { height: 45vh; gap: 1.2vw; }
+.beamer .dist-bar { max-width: none; }
+.beamer .dist-n, .beamer .dist-label { font-size: 1.2em; }
+.beamer .stats { grid-template-columns: repeat(auto-fit, minmax(8em, 1fr)); }
+.beamer .stats span { font-size: 0.75em; }
+.beamer .stats strong { font-size: 1.5em; }
+.beamer .table { font-size: min(1em, 2.5vh); }
+.beamer .table th { font-size: 0.75em; position: static; }
+.beamer .table td { padding: 0.12em 0.6em; line-height: 1.25; }
+.beamer .grade-badge { min-width: 2.4em; padding: 0 6px; }
+@media (max-width: 800px) { .beamer-body { grid-template-columns: 1fr; } }
 .alert { padding: 10px 12px; border-radius: var(--radius-sm); font-size: 13px; }
 .alert-danger { background: var(--danger-soft); color: var(--danger); }
 .alert-ok { background: var(--ok-soft); color: var(--ok); }

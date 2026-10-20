@@ -127,6 +127,7 @@
           h(
             'div',
             { class: 'inline' },
+            h('button', { class: 'btn', title: 'Notenspiegel und Punkteverteilung ohne Namen im Vollbild', onclick: () => beamerView(course, a, level) }, '⛶ Beamer'),
             h('button', { class: 'btn', onclick: () => NM.print.test(course, a, 'key') }, '🖨 Schlüssel'),
             h('button', { class: 'btn', onclick: () => NM.print.test(course, a, 'list') }, '🖨 Liste'),
             h('button', { class: 'btn', onclick: () => NM.print.test(course, a, 'students') }, '🖨 Schülerzettel'),
@@ -432,6 +433,79 @@
         )
       )
     );
+  }
+
+  /** Vollbild-Ansicht für den Beamer: Notenspiegel und Punkteverteilung, keine Namen. */
+  function beamerView(course, a, level) {
+    const t = a.test;
+    const max = G.testMaxScore(t);
+    const step = Number(t.precision) || 1;
+    const key = G.testKey(level, t.limit, max, t.precision, t.custom);
+    const st = G.testStats(t, M.activeStudents(course).map((s) => s.id), level);
+    // Bereich je Stufe: von der eigenen Schwelle bis knapp unter die nächsthöhere
+    const ordered = key.slice().sort((x, y) => y.p - x.p);
+    const rows = ordered.map((k, i) => {
+      const upper = i === 0 ? max : ordered[i - 1].min - step;
+      const range = upper < k.min ? '–' : upper === k.min ? fmtScore(k.min) : `${fmtScore(k.min)} – ${fmtScore(upper)}`;
+      return h(
+        'tr',
+        null,
+        h('td', null, UI.gradeBadge(k.p, level)),
+        level === 'mss' ? h('td', { class: 'muted' }, G.wholeGrade(k.p) + G.tendency(k.p)) : null,
+        h('td', { class: 'num' }, range),
+        h('td', { class: 'num strong' }, st.counts[k.p] || '')
+      );
+    });
+    const close = () => {
+      document.removeEventListener('keydown', onKey);
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+      overlay.remove();
+    };
+    const onKey = (e) => {
+      if (e.key === 'Escape') close();
+    };
+    const overlay = h(
+      'div',
+      { class: 'beamer', role: 'dialog', 'aria-label': 'Beamer-Ansicht' },
+      h('button', { class: 'btn beamer-close', onclick: close, title: 'Schließen (Esc)' }, '✕ Schließen'),
+      h('h1', null, a.name || 'Test', h('span', { class: 'muted' }, ' · ' + fmtDate(a.date))),
+      h(
+        'div',
+        { class: 'beamer-body' },
+        h(
+          'section',
+          null,
+          h('h2', null, 'Notenspiegel'),
+          distribution(st, level),
+          h(
+            'div',
+            { class: 'stats' },
+            h('div', null, h('span', { class: 'muted' }, 'Teilnehmende'), h('strong', null, st.n)),
+            h('div', null, h('span', { class: 'muted' }, 'Ø Note'), h('strong', null, fmtNum(st.avgDec, 2))),
+            level === 'mss' ? h('div', null, h('span', { class: 'muted' }, 'Ø Punkte'), h('strong', null, fmtNum(st.avgPoints, 2))) : null,
+            h('div', null, h('span', { class: 'muted' }, 'Höchstpunktzahl'), h('strong', null, fmtScore(max)))
+          )
+        ),
+        h(
+          'section',
+          null,
+          h('h2', null, 'Punkteverteilung'),
+          h(
+            'table',
+            { class: 'table compact' },
+            h('thead', null, h('tr', null, h('th', null, level === 'mss' ? 'Punkte' : 'Note'), level === 'mss' ? h('th', null, 'Note') : null, h('th', { class: 'num' }, 'Rohpunkte'), h('th', { class: 'num' }, 'Anzahl'))),
+            h('tbody', null, rows)
+          )
+        )
+      )
+    );
+    document.body.appendChild(overlay);
+    document.addEventListener('keydown', onKey);
+    if (overlay.requestFullscreen) overlay.requestFullscreen().catch(() => {});
+    // Vollbild per Esc verlassen schließt auch die Ansicht
+    overlay.addEventListener('fullscreenchange', () => {
+      if (!document.fullscreenElement) close();
+    });
   }
 
   NM.views.tests = { render };
