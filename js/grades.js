@@ -356,7 +356,7 @@
     const list = (course.assessments || []).filter((a) => a.half === half);
     const collect = (cat) =>
       list
-        .filter((a) => a.cat === cat)
+        .filter((a) => a.cat === cat && !a.ungraded)
         .map((a) => {
           const p = assessmentPoints(a, sid, level);
           return { v: p === null ? null : calcValue(p, level), w: Number(a.weight) || 0 };

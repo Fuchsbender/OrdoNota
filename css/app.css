@@ -261,6 +261,9 @@ details.details-card[open] > summary { margin-bottom: 12px; }
 .name-cell { font-weight: 520; min-width: 170px; }
 .row-nr { display: inline-block; width: 22px; color: var(--muted); font-size: 12px; font-weight: 400; }
 .table tr.inactive td { opacity: 0.5; }
+.table th.ungraded, .table td.ungraded { opacity: 0.45; }
+.i-mark { display: inline-block; margin-left: 6px; padding: 0 5px; border-radius: 4px; font-size: 11px; font-weight: 700; line-height: 16px; color: var(--accent); background: var(--accent-soft); border: 1px solid var(--accent); vertical-align: 1px; }
+.field-check { height: 34px; margin: 0; }
 .table tr.row-muted td:not(:last-child) { opacity: 0.55; }
 .table tr.foot td { background: var(--surface-2); font-size: 12px; }
 .table tr.overridden td.result { background: var(--override); }
@@ -460,6 +463,8 @@ dialog.modal h2 { font-size: 17px; margin-bottom: 14px; }
 .p-grade[style*='--g-hue'] { background: hsl(var(--g-hue) 60% 88%); }
 body.no-grade-colors .p-grade[style*='--g-hue'] { background: none; }
 .p-empty { color: #999; }
+.p-table .p-ungraded { color: #888; }
+.p-table td.p-ungraded .p-grade { background: none; color: #888; }
 .p-cols { display: grid; grid-template-columns: auto 1fr; gap: 24px; align-items: start; }
 .p-note { font-size: 8.5pt; color: #444; }
 .p-section { break-inside: avoid; margin-bottom: 8px; }

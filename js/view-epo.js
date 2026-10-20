@@ -216,7 +216,7 @@
       return h(
         'tr',
         null,
-        h('td', { class: 'sticky-col name-cell' }, M.studentName(s)),
+        h('td', { class: 'sticky-col name-cell' }, UI.studentLabel(s)),
         lessons.map((l, ci) => {
           const c = row[l.id];
           return h(

@@ -125,6 +125,8 @@
     { id: 'b', kind: 'manual', half: '12/1', cat: 'other', weight: 1, manual: { grades: { s: { p: 12 } } } },
   ] };
   eq('GK 12/1: ⅓·6 + ⅔·12 = 10', G.halfResult(gk, '12/1', 's').final, 10);
+  gk.assessments.push({ id: 'c', kind: 'manual', half: '12/1', cat: 'ka', weight: 1, ungraded: true, manual: { grades: { s: { p: 0 } } } });
+  eq('Nicht gewertete Leistung zählt nicht', G.halfResult(gk, '12/1', 's').final, 10);
   eq('MSS 12 ohne Jahresnote', G.hasYearGrade(gk), false);
   eq('Jahrgang 11 mit Jahresnote', G.hasYearGrade({ jahrgang: 11 }), true);
   eq('Halbjahre 13', G.halvesFor({ jahrgang: 13 }), ['13']);

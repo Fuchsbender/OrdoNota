@@ -46,6 +46,8 @@
   }
 
   const badge = (p, level) => (p === null || p === undefined ? h('span', { class: 'p-empty' }, '–') : h('span', { class: 'p-grade', style: gradeStyle(p) }, G.label(p, level)));
+  // Name für Lehrerlisten, mit I-Markierung (nicht auf Zetteln/Bögen für Schüler)
+  const pname = (s) => M.studentName(s) + (s.iStatus ? ' (I)' : '');
   const val = (v) => (v === null || v === undefined ? '–' : fmtNum(v, 2));
 
   // ---------- Test ----------
@@ -115,7 +117,7 @@
           'tr',
           null,
           h('td', { class: 'n' }, i + 1),
-          h('td', null, M.studentName(s)),
+          h('td', null, pname(s)),
           t.tasks.map((task) => h('td', { class: 'n' }, r.scores ? fmtScore(r.scores[task.id]) : '')),
           h('td', { class: 'n' }, res.score === null ? '' : fmtScore(res.score)),
           h('td', { class: 'n' }, res.score === null || !G.testMaxScore(t) ? '' : fmtNum((res.score / G.testMaxScore(t)) * 100, 0)),
@@ -174,7 +176,7 @@
         'tr',
         null,
         h('td', { class: 'n' }, i + 1),
-        h('td', null, M.studentName(s)),
+        h('td', null, pname(s)),
         lessons.map((l) => h('td', { class: 'c' }, G.epoCellText(row[l.id]))),
         h('td', { class: 'n' }, res.attended ? `${res.sum}/${res.max}` : ''),
         h('td', { class: 'n' }, res.pct === null ? '' : fmtNum(res.pct, 0)),
@@ -252,7 +254,7 @@
         const r1 = G.halfResult(c, h1, s.id);
         const r2 = G.halfResult(c, h2, s.id);
         const y = G.yearResult(c, s.id);
-        return h('tr', null, h('td', { class: 'n' }, i + 1), h('td', null, M.studentName(s)), h('td', { class: 'c' }, badge(r1.final, level)), h('td', { class: 'c' }, badge(r2.final, level)), h('td', { class: 'n' }, val(y.raw)), h('td', { class: 'c' }, badge(y.final, level), y.override !== null ? ' *' : ''));
+        return h('tr', null, h('td', { class: 'n' }, i + 1), h('td', null, pname(s)), h('td', { class: 'c' }, badge(r1.final, level)), h('td', { class: 'c' }, badge(r2.final, level)), h('td', { class: 'n' }, val(y.raw)), h('td', { class: 'c' }, badge(y.final, level), y.override !== null ? ' *' : ''));
       });
       return doPrint(
         `${M.courseTitle(c)} – Jahresnoten`,
@@ -269,15 +271,15 @@
     const ka = list.filter((a) => a.cat === 'ka').sort((a, b) => (a.date || '').localeCompare(b.date || ''));
     const other = list.filter((a) => a.cat === 'other').sort((a, b) => (a.date || '').localeCompare(b.date || ''));
     const showKa = Number(c.wKa) > 0 || ka.length > 0;
-    const th = (a) => h('th', null, a.name, h('br'), h('small', null, [NM.util.fmtDateShort(a.date), Number(a.weight) !== 1 ? '×' + fmtScore(a.weight) : ''].filter(Boolean).join(' ')));
+    const th = (a) => h('th', { class: a.ungraded ? 'p-ungraded' : null }, a.name, h('br'), h('small', null, [NM.util.fmtDateShort(a.date), Number(a.weight) !== 1 ? '×' + fmtScore(a.weight) : '', a.ungraded ? 'nicht gewertet' : ''].filter(Boolean).join(' ')));
     const rows = students.map((s, i) => {
       const r = G.halfResult(c, half, s.id);
-      const cell = (a) => h('td', { class: 'c' }, badge(G.assessmentPoints(a, s.id, level), level));
+      const cell = (a) => h('td', { class: 'c' + (a.ungraded ? ' p-ungraded' : '') }, badge(G.assessmentPoints(a, s.id, level), level));
       return h(
         'tr',
         null,
         h('td', { class: 'n' }, i + 1),
-        h('td', null, M.studentName(s)),
+        h('td', null, pname(s)),
         showKa ? ka.map(cell) : null,
         showKa ? h('td', { class: 'n avg' }, val(r.ka)) : null,
         other.map(cell),
@@ -366,7 +368,7 @@
                   list.map((a) => {
                     const p = G.assessmentPoints(a, s.id, level);
                     const status = a.kind === 'test' ? (a.test.results[s.id] || {}).status : a.kind === 'manual' ? (a.manual.grades[s.id] || {}).status : '';
-                    return h('tr', null, h('td', null, fmtDate(a.date)), h('td', null, a.name, a.kind !== 'manual' ? h('small', null, ' (' + M.kindLabel(a) + ')') : null), h('td', null, UI.catLabel(a.cat)), h('td', { class: 'n' }, fmtScore(a.weight)), h('td', { class: 'c' }, p === null ? UI.STATUS_SHORT[status] || '–' : badge(p, level)));
+                    return h('tr', null, h('td', null, fmtDate(a.date)), h('td', null, a.name, a.kind !== 'manual' ? h('small', null, ' (' + M.kindLabel(a) + ')') : null, a.ungraded ? h('small', null, ' – nicht gewertet') : null), h('td', null, UI.catLabel(a.cat)), h('td', { class: 'n' }, fmtScore(a.weight)), h('td', { class: 'c' }, p === null ? UI.STATUS_SHORT[status] || '–' : badge(p, level)));
                   })
                 )
               )

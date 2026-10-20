@@ -169,8 +169,13 @@
       'span',
       { class: 'col-head' },
       h('span', { class: 'col-name' }, a.name),
-      h('span', { class: 'col-sub' }, [a.date ? NM.util.fmtDateShort(a.date) : null, Number(a.weight) !== 1 ? '×' + NM.util.fmtScore(a.weight) : null].filter(Boolean).join(' · '))
+      h('span', { class: 'col-sub' }, [a.date ? NM.util.fmtDateShort(a.date) : null, Number(a.weight) !== 1 ? '×' + NM.util.fmtScore(a.weight) : null, a.ungraded ? 'nicht gewertet' : null].filter(Boolean).join(' · '))
     );
+  }
+
+  /** Name mit Markierung „I“ für Schülerinnen und Schüler mit I-Status. */
+  function studentLabel(s) {
+    return [NM.model.studentName(s), s.iStatus ? h('span', { class: 'i-mark', title: 'I-Status' }, 'I') : null];
   }
 
   /** Liste von Leistungen eines Typs als auswählbare Karten. */
@@ -203,6 +208,7 @@
     gradeBadge,
     valueText,
     gradeInput,
+    studentLabel,
     numberInput,
     statusSelect,
     STATUS,

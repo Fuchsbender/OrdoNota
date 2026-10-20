@@ -163,6 +163,20 @@
           { class: 'center' },
           h('input', {
             type: 'checkbox',
+            checked: !!s.iStatus,
+            title: 'I-Status (wird in allen Listen mit „I“ markiert)',
+            onchange: (e) => {
+              if (e.target.checked) s.iStatus = true;
+              else delete s.iStatus;
+              NM.app.commit();
+            },
+          })
+        ),
+        h(
+          'td',
+          { class: 'center' },
+          h('input', {
+            type: 'checkbox',
             checked: s.active !== false,
             title: 'Aktiv (abgewählt = Zu-/Abgang, Noten bleiben erhalten, erscheinen aber nicht in Ausdrucken)',
             onchange: (e) => {
@@ -190,7 +204,7 @@
             h(
               'table',
               { class: 'table compact' },
-              h('thead', null, h('tr', null, h('th', null, 'Nr.'), h('th', null, 'Nachname'), h('th', null, 'Vorname'), h('th', { class: 'center' }, 'Aktiv'), h('th', null, ''))),
+              h('thead', null, h('tr', null, h('th', null, 'Nr.'), h('th', null, 'Nachname'), h('th', null, 'Vorname'), h('th', { class: 'center', title: 'I-Status' }, 'I-Status'), h('th', { class: 'center' }, 'Aktiv'), h('th', null, ''))),
               h('tbody', null, rows)
             )
           )

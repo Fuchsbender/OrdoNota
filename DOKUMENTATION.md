@@ -1,6 +1,6 @@
 # Notenmanager – Dokumentation
 
-Version 1.1.12 · Stand Oktober 2026
+Version 1.1.13 · Stand Oktober 2026
 
 Der Notenmanager verwaltet Noten für die Sekundarstufe I (Noten 1–6 mit Tendenz) und die Mainzer Studienstufe (MSS, Punkte 00–15) an Schulen in Rheinland-Pfalz. Er läuft vollständig lokal im Browser, verschlüsselt alle Daten mit einem Passwort und legt sie in einem Ordner ab, den der Synology Drive Client auf die DiskStation spiegelt.
 
@@ -223,6 +223,8 @@ Doppelte Namen werden übersprungen. Die Liste wird alphabetisch sortiert.
 
 **Bearbeiten:** Nach- und Vornamen direkt in der Tabelle ändern.
 
+**I-Status:** Ein Haken in der Spalte **„I-Status“** markiert die Person in allen Tabellen mit einem **I** hinter dem Namen, in Lehrerlisten (Test-Ergebnisliste, Kursliste, EPO-Liste) mit „(I)“. Auf Schülerzetteln und Schülerbögen erscheint die Markierung nicht. Auf die Berechnung hat sie keinen Einfluss.
+
 **Zu- und Abgänge:** Bei einem Abgang den Haken **„Aktiv“** entfernen. Die Person bleibt mit allen Noten gespeichert, erscheint aber nicht mehr in Eingabetabellen, Ausdrucken und Exporten. **✕** löscht die Person samt aller Noten endgültig.
 
 ### 6.3 Kurs verwalten
@@ -243,6 +245,7 @@ Doppelte Namen werden übersprungen. Die Liste wird alphabetisch sortiert.
 | Bezeichnung | z. B. „KA 1 – Terme“ |
 | Datum | Testdatum |
 | Bereich | **Klassen-/Kursarbeit** oder **Sonstige** (z. B. HÜ) |
+| Wertung | Haken **„nicht gewertet“**: Der Test bleibt mit allen Ergebnissen, Schlüssel und Notenspiegel erhalten, erscheint in der Notenübersicht und in der Kursliste aber nur ausgegraut und zählt **nicht** zur Halbjahresnote. |
 | Gewicht | Standard 1; z. B. 0,5 für eine kurze Überprüfung |
 | Punkte-Genauigkeit | Ganze, halbe oder Zehntel-Punkte. Gilt für Notenschlüssel und Summen. |
 | LIMIT | Sek I: Prozentsatz für die **4-**; MSS: Prozentsatz für **04 Punkte**. Neue Tests übernehmen den Standard aus den Einstellungen. |
@@ -777,7 +780,7 @@ Berechnete Werte (Schnitte, Testnoten, EPO-Noten) werden **nie gespeichert**, so
   "kdf": "PBKDF2-SHA256",
   "savedAt": "2026-10-14T21:57:03.123Z",
   "device": "Laptop Schule",
-  "app": "1.1.12",
+  "app": "1.1.13",
   "pw":   { "salt": "<b64>", "iter": 600000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "rec":  { "salt": "<b64>", "iter": 100000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "data": { "iv": "<b64>", "ct": "<b64: verschlüsseltes JSON des Datenmodells>" }
@@ -800,7 +803,7 @@ Entschlüsselter Inhalt (`schema: 1`):
 ```js
 {
   schema: 1,                             // Datenformat (siehe 25.2)
-  savedWith: "1.1.12",                    // App-Version beim letzten Speichern
+  savedWith: "1.1.13",                    // App-Version beim letzten Speichern
   created: "<ISO>", savedAt: "<ISO>",
   settings: { autoLockMin, limitSek1, limitMss, precision, keepBackups, backupEveryMin, gradeColors },
   years:   [ { id, name: "2026/27" } ],
@@ -813,7 +816,7 @@ Course = {
   type: "sek1" | "lk" | "gk" | "noka",
   wKa, wOther,                           // Gewichte in %
   wHalf1, wHalf2,                        // Jahresnote (Standard 1 : 2)
-  students: [ { id, last, first, active } ],
+  students: [ { id, last, first, active, iStatus? } ],
   assessments: [ Assessment ],
   overrides: { "<Halbjahr>"|"Jahr": { "<studentId>": { p, reason } } },
   comments:  { "<studentId>": "Text" }
@@ -823,7 +826,7 @@ Assessment = {
   id, kind: "manual" | "test" | "epo",
   half: "HJ1" | "HJ2" | "11/1" | … | "13",
   cat: "ka" | "other",
-  name, date: "YYYY-MM-DD", weight,
+  name, date: "YYYY-MM-DD", weight, ungraded?,   // ungraded: zählt nicht zur Note
   manual?: { grades: { "<sid>": { p } | { status } } },
   test?:   { limit, precision, tasks: [ { id, name, max, bonus? } ],
              custom: { "<p>": Mindestpunktzahl },
@@ -891,7 +894,7 @@ In `js/model.js` stehen zwei Nummern:
 
 | Konstante | Bedeutung | Wann erhöhen |
 |---|---|---|
-| `APP_VERSION` (z. B. `1.1.12`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.1.12` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
+| `APP_VERSION` (z. B. `1.1.13`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.1.13` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
 | `SCHEMA` (z. B. `1`) | Version des Datenformats | nur, wenn eine **ältere** App-Version die neuen Daten falsch verstehen würde (z. B. ein Feld ändert seine Bedeutung) |
 
 Öffnet eine App eine Datenbank mit höherem `SCHEMA`, verweigert sie das mit einer Meldung (siehe 20.10). Neue, nur *zusätzliche* Felder brauchen kein neues `SCHEMA`: Ältere Versionen lassen unbekannte Felder unverändert und speichern sie mit.

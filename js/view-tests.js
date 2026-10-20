@@ -33,7 +33,7 @@
         addLabel: '+ Neuer Test',
         sub: (a) => {
           const st = G.testStats(a.test, M.activeStudents(course).map((s) => s.id), level);
-          return [fmtDate(a.date), UI.catLabel(a.cat), st.n ? 'Ø ' + fmtNum(level === 'mss' ? st.avgPoints : st.avgDec, 2) : null].filter(Boolean).join(' · ');
+          return [fmtDate(a.date), UI.catLabel(a.cat), a.ungraded ? 'nicht gewertet' : null, st.n ? 'Ø ' + fmtNum(level === 'mss' ? st.avgPoints : st.avgDec, 2) : null].filter(Boolean).join(' · ');
         },
       })
     );
@@ -67,6 +67,25 @@
             { class: 'input', onchange: set((v) => (a.cat = v)) },
             h('option', { value: 'ka', selected: a.cat === 'ka' }, 'Klassen-/Kursarbeit'),
             h('option', { value: 'other', selected: a.cat === 'other' }, 'Sonstige (z. B. HÜ)')
+          )
+        ),
+        h(
+          'label',
+          { class: 'field' },
+          h('span', null, 'Wertung'),
+          h(
+            'label',
+            { class: 'check field-check', title: 'Der Test erscheint ausgegraut in der Notenübersicht und zählt nicht zur Halbjahresnote.' },
+            h('input', {
+              type: 'checkbox',
+              checked: !!a.ungraded,
+              onchange: (e) => {
+                if (e.target.checked) a.ungraded = true;
+                else delete a.ungraded;
+                NM.app.commit();
+              },
+            }),
+            ' nicht gewertet'
           )
         ),
         h(
@@ -274,7 +293,7 @@
       return h(
         'tr',
         { class: blocked ? 'row-muted' : '' },
-        h('td', { class: 'sticky-col name-cell' }, M.studentName(s)),
+        h('td', { class: 'sticky-col name-cell' }, UI.studentLabel(s)),
         t.tasks.map((task, ci) =>
           h(
             'td',

@@ -51,7 +51,7 @@
     const th = (a) =>
       h(
         'th',
-        { class: 'center assess-head kind-' + a.kind },
+        { class: 'center assess-head kind-' + a.kind + (a.ungraded ? ' ungraded' : ''), title: a.ungraded ? 'Nicht gewertet – zählt nicht zur Note' : null },
         h(
           'button',
           { class: 'link head-btn', title: 'Bearbeiten (Name, Datum, Gewicht, Bereich)', onclick: () => UI.editAssessmentMeta(course, a) },
@@ -99,7 +99,7 @@
       if (a.kind !== 'manual') {
         const p = G.assessmentPoints(a, s.id, level);
         const status = a.kind === 'test' ? (a.test.results[s.id] || {}).status : '';
-        return h('td', { class: 'center' }, p === null ? (status ? h('span', { class: 'muted small' }, UI.STATUS_SHORT[status]) : h('span', { class: 'muted' }, '·')) : UI.gradeBadge(p, level, 'ro'));
+        return h('td', { class: 'center' + (a.ungraded ? ' ungraded' : '') }, p === null ? (status ? h('span', { class: 'muted small' }, UI.STATUS_SHORT[status]) : h('span', { class: 'muted' }, '·')) : UI.gradeBadge(p, level, 'ro'));
       }
       const g = a.manual.grades[s.id] || {};
       const shown = g.status ? UI.STATUS_SHORT[g.status] : g.p === undefined || g.p === null ? '' : G.label(g.p, level);
@@ -143,7 +143,7 @@
       return h(
         'tr',
         { class: r.override !== null ? 'overridden' : '' },
-        h('td', { class: 'sticky-col name-cell' }, h('span', { class: 'row-nr' }, ri + 1), M.studentName(s)),
+        h('td', { class: 'sticky-col name-cell' }, h('span', { class: 'row-nr' }, ri + 1), UI.studentLabel(s)),
         showKa ? ka.map((a) => cell(a, s, ri)) : null,
         showKa ? h('td', { class: 'num avg-col' }, UI.valueText(r.ka, level)) : null,
         other.map((a) => cell(a, s, ri)),
@@ -285,7 +285,7 @@
       return h(
         'tr',
         { class: y.override !== null ? 'overridden' : '' },
-        h('td', { class: 'sticky-col name-cell' }, h('span', { class: 'row-nr' }, ri + 1), M.studentName(s)),
+        h('td', { class: 'sticky-col name-cell' }, h('span', { class: 'row-nr' }, ri + 1), UI.studentLabel(s)),
         halfCell(r1),
         halfCell(r2),
         h('td', { class: 'num result' }, h('span', { class: 'raw' }, UI.valueText(y.raw, level)), ' ', UI.gradeBadge(y.rounded, level)),
