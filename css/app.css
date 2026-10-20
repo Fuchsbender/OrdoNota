@@ -473,6 +473,9 @@ body.no-grade-colors .p-grade[style*='--g-hue'] { background: none; }
 .p-slip-result { font-size: 10pt; }
 .p-big { font-size: 14pt; }
 .p-epo td.c { min-width: 18px; }
+.p-epo-slip-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; border-bottom: 1pt solid #000; padding-bottom: 3px; margin-bottom: 6px; }
+#print-root .p-epo-slip-head h2 { font-size: 14pt; margin: 0; }
+.p-epo-slip-head .p-sub { margin: 0; text-align: right; }
 .p-epo-slip .p-note { margin-bottom: 4px; }
 .p-epo-slip-table { margin-bottom: 4px; }
 .p-epo-slip-table th, .p-epo-slip-table td { min-width: 30px; text-align: center; }

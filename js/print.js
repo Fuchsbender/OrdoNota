@@ -218,7 +218,7 @@
       return h(
         'div',
         { class: 'p-slip p-epo-slip' },
-        h('div', { class: 'p-slip-head' }, h('strong', null, M.studentName(s)), h('span', null, `${M.courseTitle(course)} · ${a.name} · ${period}`)),
+        h('div', { class: 'p-epo-slip-head' }, h('h2', null, M.studentName(s)), h('div', { class: 'p-sub' }, `${M.courseTitle(course)} · ${a.name} · ${period}`)),
         h('div', { class: 'p-note' }, legend),
         chunks.map((ls) =>
           h(
