@@ -18,32 +18,33 @@ Der Notenmanager verwaltet Noten für die Sekundarstufe I (Noten 1–6 mit Tende
 6. [Reiter „Kurs & Schüler“](#6-reiter-kurs--schüler)
 7. [Reiter „Tests“](#7-reiter-tests)
 8. [Reiter „Mitarbeit/EPO“](#8-reiter-mitarbeitepo)
-9. [Reiter „Notenübersicht“](#9-reiter-notenübersicht) (mit 9.3 Reiter „Sitzplan“)
-10. [Drucken und Exportieren](#10-drucken-und-exportieren)
-11. [Reiter „Einstellungen“](#11-reiter-einstellungen)
-12. [Tastaturbedienung](#12-tastaturbedienung)
+9. [Reiter „Notenübersicht“](#9-reiter-notenübersicht)
+10. [Reiter „Sitzplan“](#10-reiter-sitzplan)
+11. [Drucken und Exportieren](#11-drucken-und-exportieren)
+12. [Reiter „Einstellungen“](#12-reiter-einstellungen)
+13. [Tastaturbedienung](#13-tastaturbedienung)
 
 **Teil B – Rechenregeln**
 
-13. [Notenskalen](#13-notenskalen)
-14. [Notenschlüssel für Tests](#14-notenschlüssel-für-tests)
-15. [Mitarbeit/EPO-Berechnung](#15-mitarbeitepo-berechnung)
-16. [Halbjahres- und Jahresnote](#16-halbjahres--und-jahresnote)
-17. [Rundung](#17-rundung)
+14. [Notenskalen](#14-notenskalen)
+15. [Notenschlüssel für Tests](#15-notenschlüssel-für-tests)
+16. [Mitarbeit/EPO-Berechnung](#16-mitarbeitepo-berechnung)
+17. [Halbjahres- und Jahresnote](#17-halbjahres--und-jahresnote)
+18. [Rundung](#18-rundung)
 
 **Teil C – Sicherheit, Sicherungen, Fehlerbehebung**
 
-18. [Verschlüsselung und Datenschutz](#18-verschlüsselung-und-datenschutz)
-19. [Sicherungen und Wiederherstellung](#19-sicherungen-und-wiederherstellung)
-20. [Fehlerbehebung und häufige Fragen](#20-fehlerbehebung-und-häufige-fragen)
+19. [Verschlüsselung und Datenschutz](#19-verschlüsselung-und-datenschutz)
+20. [Sicherungen und Wiederherstellung](#20-sicherungen-und-wiederherstellung)
+21. [Fehlerbehebung und häufige Fragen](#21-fehlerbehebung-und-häufige-fragen)
 
 **Teil D – Technische Dokumentation**
 
-21. [Aufbau der Anwendung](#21-aufbau-der-anwendung)
-22. [Dateiformat der Datenbank](#22-dateiformat-der-datenbank)
-23. [Datenmodell](#23-datenmodell)
-24. [Tests](#24-tests)
-25. [Erweitern und Anpassen](#25-erweitern-und-anpassen)
+22. [Aufbau der Anwendung](#22-aufbau-der-anwendung)
+23. [Dateiformat der Datenbank](#23-dateiformat-der-datenbank)
+24. [Datenmodell](#24-datenmodell)
+25. [Tests](#25-tests)
+26. [Erweitern und Anpassen](#26-erweitern-und-anpassen)
 
 ---
 
@@ -51,13 +52,14 @@ Der Notenmanager verwaltet Noten für die Sekundarstufe I (Noten 1–6 mit Tende
 
 ## 1. Überblick
 
-Der Notenmanager deckt drei Anwendungsfälle ab:
+Der Notenmanager deckt vier Anwendungsfälle ab:
 
 | Anwendungsfall | Reiter | Ergebnis |
 |---|---|---|
 | Tests mit Rohpunkten auswerten | **Tests** | Note je Person, Notenschlüssel, Notenspiegel, Drittelparagraph |
 | Mitarbeit über eine feste Zahl von Stunden bewerten | **Mitarbeit/EPO** | Note je Person aus den Stundenbewertungen |
 | Alle Noten gewichtet zur Zeugnisnote zusammenführen | **Notenübersicht** | Halbjahresnote, Jahresnote, gesetzte Noten |
+| Sitzordnung für einen oder mehrere Räume planen | **Sitzplan** | Sitzplan mit Vornamen (und Fotos) zum Ziehen und Drucken |
 
 Ergebnisse aus Tests und EPO-Blöcken erscheinen **automatisch** in der Notenübersicht. Dort lassen sich zusätzlich Einzelnoten direkt eintragen (z. B. Heft, Referat, Hausaufgabenüberprüfung).
 
@@ -88,7 +90,7 @@ index.html        ← die App (per Doppelklick öffnen)
 css/              ← Gestaltung
 js/               ← Programmlogik
 tests/            ← automatische Tests (nur für Entwicklung)
-tools/            ← Notfall-Entschlüsselung ohne App (siehe 19.1)
+tools/            ← Notfall-Entschlüsselung ohne App (siehe 20.1)
 README.md         ← Kurzfassung
 DOKUMENTATION.md  ← dieses Dokument
 ```
@@ -146,8 +148,8 @@ Die Datenbank ist **eine** verschlüsselte Datei. Synology Drive kann Änderunge
 | Situation | Was die App tut |
 |---|---|
 | Die App ist auf einem anderen Gerät geöffnet | Beim Entsperren erscheint „Datenbank ist woanders geöffnet“ mit Gerätename und Uhrzeit. Sie können abbrechen oder trotzdem öffnen. Hinweise, die älter als 15 Minuten sind, werden ignoriert, z. B. wenn ein Gerät abgestürzt ist. |
-| Die Datei wurde während der Arbeit von außen geändert | Beim nächsten Speichern erscheint „Datenbank wurde extern geändert“ mit drei Möglichkeiten (siehe 20.3). |
-| Synology hat eine Konfliktkopie angelegt | Beim Entsperren erscheint ein Hinweis mit dem Dateinamen der Konfliktkopie (siehe 20.4). |
+| Die Datei wurde während der Arbeit von außen geändert | Beim nächsten Speichern erscheint „Datenbank wurde extern geändert“ mit drei Möglichkeiten (siehe 21.3). |
+| Synology hat eine Konfliktkopie angelegt | Beim Entsperren erscheint ein Hinweis mit dem Dateinamen der Konfliktkopie (siehe 21.4). |
 
 Technisch schreibt die App dazu die Datei `notenmanager.lock.json` in den Datenordner. Sie wird alle 3 Minuten aktualisiert und beim Sperren gelöscht.
 
@@ -170,6 +172,7 @@ Technisch schreibt die App dazu die Datei `notenmanager.lock.json` in den Dateno
 | **Speicherstatus** | „Speichert …“, „Gespeichert 10:14“, „Ungespeicherte Änderungen“ oder rot „Nicht gespeichert!“ |
 | **☾** | Hell/Dunkel umschalten |
 | **🔒 Sperren** | Speichert, entfernt den Geräte-Hinweis und sperrt die Datenbank |
+| **Reiter** | Kurs & Schüler, Tests, Mitarbeit/EPO, Notenübersicht, Sitzplan, Einstellungen (in der Skizze aus Platzgründen gekürzt) |
 | **Kursliste** | Kurse des gewählten Schuljahres, sortiert nach Jahrgang. Zeigt Stufe (Sek I/MSS) und Zahl der aktiven Schüler/innen. |
 | **Halbjahres-Umschalter** | In Tests, EPO und Notenübersicht: HJ1/HJ2 bzw. 11/1, 11/2, 12/1, 12/2, 13; in der Notenübersicht zusätzlich „Jahresnote“ |
 
@@ -277,7 +280,7 @@ Rechts steht der Notenschlüssel mit Mindestpunktzahl („ab Pkt.“), Prozent u
 
 - **Schwelle von Hand ändern:** Wert in „ab Pkt.“ überschreiben. Geänderte Schwellen sind gelb markiert.
 - **Zurücksetzen** stellt den berechneten Schlüssel wieder her.
-- Die Formeln stehen in [Abschnitt 14](#14-notenschlüssel-für-tests).
+- Die Formeln stehen in [Abschnitt 15](#15-notenschlüssel-für-tests).
 
 ### 7.5 Notenspiegel und Drittelparagraph
 
@@ -354,6 +357,7 @@ Name │ Klassen-/Kursarbeiten │ Ø │ Sonstige Leistungen          │ Ø �
 |---|---|
 | Spalten mit ✎ bzw. ◷ | Ergebnisse aus Tests bzw. EPO-Blöcken; nur anzeigen, bearbeitet wird im jeweiligen Reiter („Test ›“ / „EPO ›“ springt dorthin) |
 | Spalten ohne Symbol | direkt eingetragene Einzelnoten (bearbeitbar) |
+| ausgegraute Spalte | Test mit Haken „nicht gewertet“ (siehe 7.1); wird angezeigt, zählt aber nicht |
 | Ø | gewichteter Schnitt des Bereichs (Sek I: Dezimalnote, MSS: Punkte) |
 | Gerechnet | ungerundeter Gesamtschnitt + gerundete Note |
 | Gesetzt | Ihre Zeugnisnote, falls sie von der gerechneten abweicht (leer = gerechnete Note gilt) |
@@ -379,19 +383,35 @@ Ungültige Eingaben werden rot markiert und nicht übernommen.
 
 ### 9.2 Jahresnote
 
-Der Umschalter **„Jahresnote“** (nur Jahrgang 5–11) zeigt je Person beide Halbjahresnoten, die gerechnete Jahresnote und das Feld „Gesetzt“. Für die Rechnung wird je Halbjahr die **gesetzte** Halbjahresnote verwendet, wenn eine existiert, sonst der **ungerundete** Schnitt (Details in [Abschnitt 16](#16-halbjahres--und-jahresnote)).
+Der Umschalter **„Jahresnote“** (nur Jahrgang 5–11) zeigt je Person beide Halbjahresnoten, die gerechnete Jahresnote und das Feld „Gesetzt“. Für die Rechnung wird je Halbjahr die **gesetzte** Halbjahresnote verwendet, wenn eine existiert, sonst der **ungerundete** Schnitt (Details in [Abschnitt 17](#17-halbjahres--und-jahresnote)).
 
-### 9.3 Reiter „Sitzplan“
+## 10. Reiter „Sitzplan“
 
-Für jeden Kurs lassen sich **mehrere Sitzpläne für verschiedene Räume** anlegen. Oben stehen die Räume als Karten (Größe und Zahl der belegten Plätze); ein Klick wechselt den Raum, **„+ Neuer Raum“** legt einen weiteren an (mit der Rastergröße des aktuellen Raums, aber leer). Die Bezeichnung lässt sich im Feld **„Raum / Bezeichnung“** ändern, **🗑** löscht den gewählten Raum (nur wenn es mehr als einen gibt). Welcher Raum zuletzt gewählt war, merkt sich jedes Gerät. Ein Sitzplan aus Version 1.2/1.3 wird beim Öffnen automatisch zu „Raum 1“. Jede aktive Person erscheint als Karte mit ihrem **Vornamen** (bei gleichen Vornamen im Kurs mit Initiale des Nachnamens, z. B. „Anna M.“).
+Für jeden Kurs lassen sich Sitzpläne für einen oder mehrere Räume anlegen. Jede aktive Person erscheint als Karte mit ihrem **Vornamen** (bei gleichen Vornamen im Kurs mit Initiale des Nachnamens, z. B. „Anna M.“), auf Wunsch mit Foto.
 
-- **Spalten** und **Reihen** legen die Größe des Rasters fest (bis 16 × 12). **Lehrerpult** oben oder unten.
-- Karten aus **„Noch ohne Platz“** (rechts) mit Maus oder Finger auf einen Platz ziehen. Auf einen besetzten Platz gezogen, **tauschen** die beiden die Plätze. Zurück in die Ablage ziehen nimmt eine Person vom Plan. Beim Ziehen an den oberen/unteren Rand scrollt die Seite mit.
-- **🎲 Freie Plätze füllen** verteilt alle noch nicht platzierten Personen in zufälliger Reihenfolge auf die freien Plätze. **Alle abräumen** setzt den Plan zurück.
-- **🖨 Drucken** gibt den Plan auf einer A4-Seite aus (mit Fotos, soweit vorhanden).
-- **Gespeicherte Stände** (rechts): **„💾 Stand speichern …“** legt eine Kopie der aktuellen Sitzordnung des gewählten Raums unter einem Namen ab (z. B. „Raum 204 ab Herbstferien“), um später darauf zurückzugreifen. **Laden** ersetzt die Sitzordnung des gerade gewählten Raums nach Rückfrage, **✕** löscht den Stand. Die Stände gelten für den ganzen Kurs; der Raum, aus dem sie stammen, steht dabei. Personen, die es im gespeicherten Plan noch nicht gab, landen beim Laden in der Ablage.
+### 10.1 Räume
 
-**Fotos**
+- Oben stehen die Räume als Karten mit Rastergröße und Zahl der belegten Plätze. Ein Klick wechselt den Raum.
+- **„+ Neuer Raum“** legt einen weiteren Raum an (die Bezeichnung wird abgefragt; Rastergröße wie im aktuellen Raum, aber leer).
+- **Raum / Bezeichnung** benennt den Raum um, **🗑** löscht ihn (nur wenn es mehr als einen gibt).
+- Jeder Raum hat eigene Sitzordnung, Rastergröße und Pultposition. Welcher Raum zuletzt gewählt war, merkt sich jedes Gerät.
+- Ein Sitzplan aus Version 1.2/1.3 wird beim Öffnen der Datenbank automatisch zu „Raum 1“.
+
+### 10.2 Sitzordnung
+
+- **Spalten** und **Reihen** legen die Größe des Rasters fest (bis 16 × 12), **Lehrerpult** oben oder unten.
+- Karten aus **„Noch ohne Platz“** (rechts) mit Maus oder Finger auf einen Platz ziehen. Auf einen besetzten Platz gezogen, **tauschen** die beiden die Plätze. Zurück in die Ablage gezogen, ist die Person wieder vom Plan genommen. Beim Ziehen an den oberen/unteren Rand scrollt die Seite mit.
+- **🎲 Freie Plätze füllen** verteilt alle noch nicht platzierten Personen in zufälliger Reihenfolge auf die freien Plätze. **Alle abräumen** setzt die Sitzordnung des Raums zurück (mit Rückfrage).
+- **🖨 Drucken** gibt den Plan des gewählten Raums auf einer A4-Seite aus (Raumname in der Überschrift, mit Fotos, soweit vorhanden).
+- Wird das Raster verkleinert, kommen Personen außerhalb des neuen Rasters in die Ablage. Neue Personen im Kurs erscheinen automatisch in der Ablage, inaktive verschwinden vom Plan.
+
+### 10.3 Gespeicherte Stände
+
+- **„💾 Stand speichern …“** legt eine Kopie der aktuellen Sitzordnung des gewählten Raums unter einem Namen ab (z. B. „ab Herbstferien“).
+- **Laden** ersetzt die Sitzordnung des gerade gewählten Raums nach Rückfrage durch den Stand, **✕** löscht ihn.
+- Die Stände gelten für den ganzen Kurs; der Raum, aus dem sie stammen, steht dabei. Personen, die es im Stand noch nicht gab, landen beim Laden in der Ablage.
+
+### 10.4 Fotos
 
 - **Einfügen:** Foto kopieren (z. B. in WebUntis: Rechtsklick auf das Foto → „Bild kopieren“), im Sitzplan die Karte **anklicken** (blauer Rahmen) und **Strg+V** drücken.
 - **Ziehen:** Eine Bilddatei aus dem Dateimanager oder ein Bild aus einem anderen Browser-Tab auf die Karte ziehen. Ob das Ziehen direkt aus WebUntis klappt, hängt davon ab, wie WebUntis das Bild ausliefert; sonst erscheint ein Hinweis, und der Weg über „Bild kopieren“ + Strg+V funktioniert.
@@ -399,11 +419,10 @@ Für jeden Kurs lassen sich **mehrere Sitzpläne für verschiedene Räume** anle
 - Gleichnamige Personen in anderen Kursen desselben Schuljahres, die noch kein Foto haben, bekommen es automatisch mit.
 - **Entfernen:** Mit der Maus über die Karte fahren und auf **×** klicken.
 - **Datenschutz:** Schülerfotos sind personenbezogene Daten. Ob sie in einer eigenen Anwendung gespeichert werden dürfen, regelt die Schule (Schulleitung bzw. Datenschutzbeauftragte/r).
-- Wird das Raster verkleinert, kommen Personen außerhalb des neuen Rasters in die Ablage. Neue Personen im Kurs erscheinen automatisch in der Ablage, inaktive verschwinden vom Plan.
 
-## 10. Drucken und Exportieren
+## 11. Drucken und Exportieren
 
-Alle Ausdrucke öffnen den Druckdialog des Browsers. Dort können Sie auch **„Als PDF speichern“** wählen. Breite Tabellen werden automatisch im Querformat gedruckt.
+Alle Ausdrucke öffnen den Druckdialog des Browsers. Dort können Sie auch **„Als PDF speichern“** wählen. Breite Tabellen werden automatisch im Querformat gedruckt. Die Kopf- und Fußzeilen des Browsers (Datum, Dateipfad, Seitenzahl) werden unterdrückt; der Rand von 12 mm bleibt auf jeder Seite erhalten.
 
 | Wo | Knopf | Inhalt |
 |---|---|---|
@@ -411,6 +430,7 @@ Alle Ausdrucke öffnen den Druckdialog des Browsers. Dort können Sie auch **„
 | Notenübersicht | 🖨 Schülerbögen | Eine Seite je Person (Auswahl siehe unten) |
 | Notenübersicht | ⬇ CSV/Excel | Alle Noten und Ergebnisse des Kurses als CSV (Semikolon, öffnet direkt in Excel) |
 | Tests | 🖨 Schlüssel / Liste / Schülerzettel | siehe 7.6 |
+| Tests | ⛶ Beamer | Vollbild ohne Namen: Notenspiegel, Punkteverteilung, Ø je Aufgabe (siehe 7.5) |
 | Sitzplan | 🖨 Drucken | Sitzplan des gewählten Raums mit Vornamen, Fotos und Lehrerpult, A4 (quer, wenn mehr Spalten als Reihen) |
 | Mitarbeit/EPO | 🖨 Liste | Bewertungsraster mit Ergebnis je Person |
 | Mitarbeit/EPO | 🖨 Schülerzettel | Ein Zettel pro Person zum Ausschneiden (mehrere pro Blatt, gestrichelte Schnittlinie): Name, Kurs, Blockname und Zeitraum, Punktelegende, Bewertungen mit Datum im Tabellenkopf, Ergebnis mit Note sowie Linien für Datum und Unterschrift |
@@ -428,7 +448,7 @@ So eignet sich derselbe Bogen für Elterngespräche (z. B. ohne Bemerkung) und f
 
 **CSV-Export:** Spalten Nr, Nachname, Vorname, danach je Halbjahr alle Einzelleistungen, Ø KA, Ø Sonstige, gerechnet, Note, zuletzt (falls vorhanden) Jahr gerechnet und Jahresnote. Die Datei ist **nicht verschlüsselt**. Behandeln Sie sie entsprechend und löschen Sie sie nach Gebrauch.
 
-## 11. Reiter „Einstellungen“
+## 12. Reiter „Einstellungen“
 
 | Bereich | Einstellung | Standard |
 |---|---|---|
@@ -448,7 +468,7 @@ So eignet sich derselbe Bogen für Elterngespräche (z. B. ohne Bemerkung) und f
 
 Gerätename und Farbschema gelten **pro Gerät/Browser**. Alles andere ist in der Datenbank gespeichert und gilt auf allen Geräten.
 
-## 12. Tastaturbedienung
+## 13. Tastaturbedienung
 
 | Taste | Wirkung in Eingabetabellen |
 |---|---|
@@ -464,7 +484,7 @@ Beim Betreten einer Zelle ist der Inhalt markiert. Einfach lostippen überschrei
 
 # Teil B – Rechenregeln
 
-## 13. Notenskalen
+## 14. Notenskalen
 
 Intern speichert die App **jede Note als Punktzahl 0–15**. Angezeigt wird je nach Jahrgang:
 
@@ -489,11 +509,11 @@ Intern speichert die App **jede Note als Punktzahl 0–15**. Angezeigt wird je n
 
 **Sek I kennt kein 1+.** Die höchste Sek-I-Stufe ist „1“ (= 14 Punkte). Die Sek I hat damit 15 Stufen, die MSS 16.
 
-## 14. Notenschlüssel für Tests
+## 15. Notenschlüssel für Tests
 
 Bezeichnungen: **L** = LIMIT in %, **H** = Höchstpunktzahl des Tests (ohne Bonus).
 
-### 14.1 MSS (identisch mit der bisherigen Excel-Vorlage)
+### 15.1 MSS (identisch mit der bisherigen Excel-Vorlage)
 
 | Punkte | Schwelle in % |
 |---|---|
@@ -512,7 +532,7 @@ Prozentwerte auf 2 Nachkommastellen gerundet.
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | ab % | 96,33 | 91,67 | 87 | 82,33 | 77,67 | 73 | 68,33 | 63,67 | 59 | 54,33 | 49,67 | 45 | 37,5 | 30 | 22,5 | 0 |
 
-### 14.2 Sek I
+### 15.2 Sek I
 
 | Note | Schwelle in % |
 |---|---|
@@ -537,19 +557,19 @@ Prozentwerte auf ganze Prozent gerundet.
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | ab % | 95 | 89 | 84 | 78 | 73 | 67 | 62 | 56 | 51 | 45 | 40 | 33 | 27 | 20 | 0 |
 
-### 14.3 Von Prozent zu Punkten
+### 15.3 Von Prozent zu Punkten
 
 1. **Mindestpunktzahl** je Stufe = Schwelle% · H, auf die Punkte-Genauigkeit des Tests gerundet (ganze/halbe/Zehntel).
 2. **Erreichte Summe** = Summe aller Aufgaben inkl. Bonus, ebenfalls auf die Genauigkeit gerundet.
 3. **Note** = höchste Stufe, deren Mindestpunktzahl erreicht ist. Bonuspunkte über H hinaus führen höchstens zur Bestnote.
 4. Von Hand gesetzte Schwellen (gelb) ersetzen die berechnete Mindestpunktzahl der jeweiligen Stufe.
 
-### 14.4 Drittelparagraph
+### 15.4 Drittelparagraph
 
 Greift, wenn gilt: (Anzahl Noten 5 und 6 − Anzahl „Täuschung/Verweigerung“) **>** (Anzahl gewerteter Arbeiten) / 3.
-Als 5 und 6 zählen alle Stufen von 5+ bis 6 (Punkte 0–3). „fehlt“ und „Nachschreiben“ zählen nicht mit.
+Als 5 und 6 zählen alle Stufen von 5+ bis 6 (Punkte 0–3). „fehlt“ und „Nachschreiben“ zählen nicht mit, ebenso wenig Personen mit I-Status (siehe 6.2).
 
-## 15. Mitarbeit/EPO-Berechnung
+## 16. Mitarbeit/EPO-Berechnung
 
 Für jede Person und jeden EPO-Block:
 
@@ -573,7 +593,7 @@ Stunden mit `k` oder ohne Eintrag zählen nicht zu Max. Hausaufgaben-Vermerke we
 
 **Beispiel (MSS):** 7 Stunden, Bewertungen `+ 0 + + 0 0 +` → Summe 4·3 + 3·2 = 18, Max 7·4 = 28, Prozent 64,3 % → **08 Punkte**.
 
-## 16. Halbjahres- und Jahresnote
+## 17. Halbjahres- und Jahresnote
 
 **Schritt 1 – Bereichsschnitte** (je Halbjahr)
 
@@ -582,7 +602,7 @@ Stunden mit `k` oder ohne Eintrag zählen nicht zu Max. Hausaufgaben-Vermerke we
 Ø Sonstige = Σ (Wert × Gewicht) / Σ Gewicht   über alle sonstigen Leistungen
 ```
 
-„Wert“ ist in der Sek I die Dezimalnote (13 → 1,33), in der MSS die Punktzahl. Leistungen ohne Note („fehlt“, „Nachschreiben“, leer) werden übersprungen.
+„Wert“ ist in der Sek I die Dezimalnote (13 → 1,33), in der MSS die Punktzahl. Leistungen ohne Note („fehlt“, „Nachschreiben“, leer) werden übersprungen, ebenso Tests mit Haken „nicht gewertet“.
 
 **Schritt 2 – Halbjahresnote**
 
@@ -610,7 +630,7 @@ Für HJ1/HJ2 wird die **gesetzte** Halbjahresnote verwendet, falls vorhanden, so
 | HJ2 gerechnet | 2,00 | → **2** |
 | Jahr | (2,25 + 2·2,00)/3 = 2,08 | → **2** |
 
-## 17. Rundung
+## 18. Rundung
 
 Gerundet wird **erst am Ende**. Zwischenwerte bleiben ungerundet.
 
@@ -638,7 +658,7 @@ Schnitte besser als 1,00 (bei Sek I nicht möglich) ergeben 1.
 
 # Teil C – Sicherheit, Sicherungen, Fehlerbehebung
 
-## 18. Verschlüsselung und Datenschutz
+## 19. Verschlüsselung und Datenschutz
 
 | Aspekt | Umsetzung |
 |---|---|
@@ -658,7 +678,7 @@ Schnitte besser als 1,00 (bei Sek I nicht möglich) ergeben 1.
 - Ausdrucke und CSV-Exporte sind **unverschlüsselt**. Sicher aufbewahren und vernichten bzw. löschen.
 - Die verschlüsselte Datei auf der DiskStation ist ohne Passwort nicht lesbar. Der Zugang zur DiskStation sollte trotzdem selbst gut geschützt sein.
 
-## 19. Sicherungen und Wiederherstellung
+## 20. Sicherungen und Wiederherstellung
 
 **Automatische Sicherungen:** Bevor die App die Datenbank überschreibt, legt sie die bisherige Version im Unterordner `Sicherungen/` ab, höchstens alle 10 Minuten. Die ältesten Sicherungen über der eingestellten Anzahl (Standard 10) werden gelöscht. Sicherungen sind genauso verschlüsselt wie die Datenbank.
 
@@ -680,7 +700,7 @@ Notenmanager-Daten/
 
 > Zusätzlich empfiehlt sich die Versionierung von Synology Drive (auf der DiskStation einstellbar) als zweite Sicherungsebene.
 
-### 19.1 Notfall-Entschlüsselung ohne App
+### 20.1 Notfall-Entschlüsselung ohne App
 
 Die Datenbank verwendet nur Standardverfahren. Mit dem Werkzeug `tools/entschluesseln.py` lässt sie sich **ohne die App** entschlüsseln, mit Passwort oder Wiederherstellungsschlüssel. Ihre Daten sind also nie an diese App gebunden. Das Werkzeug funktioniert auch mit Sicherungen aus `Sicherungen/`.
 
@@ -709,15 +729,15 @@ Das Passwort wird verdeckt abgefragt und nirgends gespeichert. Die CSV-Dateien e
 
 > ⚠️ Die Ausgabe ist **unverschlüsselt**. Nur auf einem vertrauenswürdigen Rechner verwenden und nach Gebrauch löschen.
 
-## 20. Fehlerbehebung und häufige Fragen
+## 21. Fehlerbehebung und häufige Fragen
 
-### 20.1 „Browser wird nicht unterstützt“
+### 21.1 „Browser wird nicht unterstützt“
 Die App wurde in Firefox oder Safari geöffnet. `index.html` mit Chrome, Edge, Brave oder Thorium öffnen.
 
-### 20.2 „Kein Zugriff auf den Ordner“
+### 21.2 „Kein Zugriff auf den Ordner“
 Der Browser hat den Ordnerzugriff nicht erlaubt. Erneut auf **Entsperren** klicken und die Rückfrage mit *Erlauben* bestätigen. Hilft das nicht: **„Anderen Ordner wählen“** und den Datenordner neu auswählen.
 
-### 20.3 „Datenbank wurde extern geändert“
+### 21.3 „Datenbank wurde extern geändert“
 Die Datei wurde geändert, seit Sie sie geöffnet haben, meist weil Synology eine Version eines anderen Geräts heruntergeladen hat.
 
 | Auswahl | Wirkung |
@@ -726,31 +746,31 @@ Die Datei wurde geändert, seit Sie sie geöffnet haben, meist weil Synology ein
 | **Überschreiben** | Speichert Ihre Version. Die Version des anderen Geräts wird vorher als Sicherung abgelegt. |
 | **Später** | Nichts passiert. Beim nächsten Speichern erscheint die Frage erneut. |
 
-### 20.4 „Konfliktkopie gefunden“
+### 21.4 „Konfliktkopie gefunden“
 Synology Drive hat eine Datei wie `notenmanager_DiskStation_…_Conflict.nmdb` angelegt, weil auf zwei Geräten gleichzeitig gespeichert wurde.
 1. Prüfen, ob in der Hauptdatei Änderungen fehlen.
 2. Falls ja: Konfliktkopie in den Ordner `Sicherungen/` verschieben, über Einstellungen öffnen bzw. wiederherstellen und die fehlenden Noten übertragen.
 3. Die Konfliktkopie danach löschen. Dann verschwindet der Hinweis.
 
-### 20.5 „Datenbank ist woanders geöffnet“
+### 21.5 „Datenbank ist woanders geöffnet“
 Auf dem genannten Gerät ist die App noch offen (oder wurde nicht gesperrt). Am besten dort sperren, kurz warten, bis Synology synchronisiert hat, und erneut öffnen. Ist das Gerät nicht erreichbar und sicher nicht in Benutzung: **„Trotzdem öffnen“**.
 
-### 20.6 „Nicht gespeichert!“ (rot in der Kopfzeile)
+### 21.6 „Nicht gespeichert!“ (rot in der Kopfzeile)
 Das Schreiben ist fehlgeschlagen, z. B. weil der Ordner nicht erreichbar oder der Datenträger voll ist. Die Daten sind noch im Browser. Ursache beheben. Bei der nächsten Änderung wird erneut gespeichert. Den Browser in diesem Zustand **nicht schließen** (die App warnt beim Schließen).
 
-### 20.7 Warum kann ich in der Sek I kein „1+“ eingeben?
+### 21.7 Warum kann ich in der Sek I kein „1+“ eingeben?
 Die Sek I kennt kein 1+. Die beste Note ist 1. Ein Test mit vollen Punkten ergibt in der Sek I eine 1.
 
-### 20.8 Warum ist die gerechnete Note anders als in meiner alten Excel-Liste?
+### 21.8 Warum ist die gerechnete Note anders als in meiner alten Excel-Liste?
 Mögliche Gründe:
 - Excel rundete teils mit 0,33-Näherungen und ließ in der Sek I 1+ (= 0,67) zu. Das ist korrigiert.
 - Jede Einzelnote hat jetzt standardmäßig Gewicht 1 innerhalb ihres Bereichs. Früher wurden Untergruppen (z. B. „HÜ-Note“) teils erst gemittelt.
 - Gesetzte Halbjahresnoten fließen jetzt in die Jahresnote ein.
 
-### 20.9 Kann ich die App auf dem iPad/Handy nutzen?
+### 21.9 Kann ich die App auf dem iPad/Handy nutzen?
 Nein. Mobile Browser können nicht direkt in Ordner schreiben. Die App ist für Desktop und Laptop gedacht.
 
-### 20.10 „Diese Datenbank wurde mit einer neueren Version gespeichert“
+### 21.10 „Diese Datenbank wurde mit einer neueren Version gespeichert“
 Auf einem anderen Gerät läuft eine neuere Version des Notenmanagers, die das Datenformat erweitert hat. Die ältere Version öffnet die Datenbank absichtlich nicht, damit sie keine Daten falsch versteht oder beim Speichern verliert. Lösung: Die Programmdateien (`index.html`, `css/`, `js/`) auf diesem Gerät durch die neue Version ersetzen. Liegt der Programmordner im Synology-Drive-Ordner, passiert das automatisch.
 
 Die Version der App steht unter Einstellungen → Hinweise.
@@ -759,7 +779,7 @@ Die Version der App steht unter Einstellungen → Hinweise.
 
 # Teil D – Technische Dokumentation
 
-## 21. Aufbau der Anwendung
+## 22. Aufbau der Anwendung
 
 Reines HTML/CSS/JavaScript ohne Build-Schritt und ohne externe Bibliotheken. Die Skripte sind **klassische Skripte** (keine ES-Module), damit die App per `file://` (Doppelklick) läuft. Alle Module hängen sich an den globalen Namensraum `NM`.
 
@@ -789,7 +809,7 @@ Berechnete Werte (Schnitte, Testnoten, EPO-Noten) werden **nie gespeichert**, so
 
 **Pro Gerät im Browser gespeichert** (`localStorage`/IndexedDB, nicht in der Datenbank): Ordner-Handle, Geräte-ID und -name, gewählter Kurs/Reiter/Halbjahr, Farbschema.
 
-## 22. Dateiformat der Datenbank
+## 23. Dateiformat der Datenbank
 
 `notenmanager.nmdb` ist JSON:
 
@@ -817,13 +837,13 @@ Berechnete Werte (Schnitte, Testnoten, EPO-Noten) werden **nie gespeichert**, so
 { "deviceId": "…", "device": "Laptop Schule", "since": "<ISO>", "heartbeat": "<ISO>" }
 ```
 
-## 23. Datenmodell
+## 24. Datenmodell
 
 Entschlüsselter Inhalt (`schema: 1`):
 
 ```js
 {
-  schema: 1,                             // Datenformat (siehe 25.2)
+  schema: 1,                             // Datenformat (siehe 26.2)
   savedWith: "1.4.0",                    // App-Version beim letzten Speichern
   created: "<ISO>", savedAt: "<ISO>",
   settings: { autoLockMin, limitSek1, limitMss, precision, keepBackups, backupEveryMin, gradeColors },
@@ -865,9 +885,9 @@ Assessment = {
 
 `NM.model.migrate()` ergänzt beim Öffnen fehlende Felder. Neue Felder bitte dort mit Standardwert nachtragen.
 
-## 24. Tests
+## 25. Tests
 
-### 24.1 Alle Tests auf einmal (empfohlen)
+### 25.1 Alle Tests auf einmal (empfohlen)
 
 ```bash
 uv run --with websocket-client --with cryptography python tests/run_tests.py
@@ -877,7 +897,7 @@ python3 tests/run_tests.py
 
 Das Skript startet einen unsichtbaren Chromium-Browser (Chrome, Edge, Chromium, Brave oder Thorium wird automatisch gefunden) und prüft:
 
-1. alle Testseiten (siehe 24.2),
+1. alle Testseiten (siehe 25.2),
 2. den Start der App im Demo-Modus und alle Reiter für einen Sek-I- und einen MSS-Kurs ohne JavaScript-Fehler,
 3. das Notfallwerkzeug: Eine von der App echt verschlüsselte Datenbank wird mit `tools/entschluesseln.py` per Passwort und per Wiederherstellungsschlüssel entschlüsselt und mit dem Original verglichen. Dazu kommen falsches Passwort, manipulierte Datei und CSV-Ausgabe.
 
@@ -885,7 +905,7 @@ Am Ende steht `ERGEBNIS: x von y bestanden`. Der Exit-Code ist 0, wenn alles bes
 
 > **Regel:** Vor jedem Einspielen einer geänderten Version müssen alle Tests bestehen.
 
-### 24.2 Einzelne Testseiten
+### 25.2 Einzelne Testseiten
 
 | Datei | Prüft | Ausführen |
 |---|---|---|
@@ -896,9 +916,9 @@ Am Ende steht `ERGEBNIS: x von y bestanden`. Der Exit-Code ist 0, wenn alles bes
 
 Die erste Zeile zeigt **„ALLE TESTS BESTANDEN“** oder die Zahl der Fehlschläge. Fehlgeschlagene Prüfungen sind mit `FAIL` markiert.
 
-## 25. Erweitern und Anpassen
+## 26. Erweitern und Anpassen
 
-### 25.1 Versionsverwaltung mit Git
+### 26.1 Versionsverwaltung mit Git
 
 Der Programmordner ist ein Git-Repository. Jede Änderung wird als Commit festgehalten und lässt sich nachvollziehen oder rückgängig machen:
 
@@ -911,7 +931,7 @@ git revert <commit>          # einen Commit rückgängig machen
 
 **Niemals im Repository:** Echte Schülerdaten. Die `.gitignore` schließt Datenbanken (`*.nmdb`), Lock-Dateien, `Sicherungen/`, entschlüsselte Klartext-Dateien, CSV-Exporte und die Excel-Vorlagen (`*.xlsx`) aus, denn diese enthalten echte Namen. Vor einem `git add` bei neuen Dateitypen mit `git status` prüfen, was aufgenommen wird. Das Repository bitte nicht auf öffentliche Dienste hochladen, ohne vorher sicherzustellen, dass keine personenbezogenen Daten enthalten sind.
 
-### 25.2 Versionsnummern und Datenformat
+### 26.2 Versionsnummern und Datenformat
 
 In `js/model.js` stehen zwei Nummern:
 
@@ -920,9 +940,9 @@ In `js/model.js` stehen zwei Nummern:
 | `APP_VERSION` (z. B. `1.4.0`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.4.0` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
 | `SCHEMA` (z. B. `1`) | Version des Datenformats | nur, wenn eine **ältere** App-Version die neuen Daten falsch verstehen würde (z. B. ein Feld ändert seine Bedeutung) |
 
-Öffnet eine App eine Datenbank mit höherem `SCHEMA`, verweigert sie das mit einer Meldung (siehe 20.10). Neue, nur *zusätzliche* Felder brauchen kein neues `SCHEMA`: Ältere Versionen lassen unbekannte Felder unverändert und speichern sie mit.
+Öffnet eine App eine Datenbank mit höherem `SCHEMA`, verweigert sie das mit einer Meldung (siehe 21.10). Neue, nur *zusätzliche* Felder brauchen kein neues `SCHEMA`: Ältere Versionen lassen unbekannte Felder unverändert und speichern sie mit.
 
-### 25.3 Sicher erweitern – Checkliste
+### 26.3 Sicher erweitern – Checkliste
 
 1. Vorher **Sicherung** anlegen (Einstellungen → Jetzt sichern).
 2. Änderung in einem eigenen Git-Zweig vornehmen (`git switch -c funktion-xyz`).
@@ -932,7 +952,7 @@ In `js/model.js` stehen zwei Nummern:
 6. Erst im Demo-Modus (`index.html?demo`) ausprobieren, dann mit der echten Datenbank.
 7. `APP_VERSION` erhöhen, committen, auf allen Geräten einspielen.
 
-### 25.4 Wo was geändert wird
+### 26.4 Wo was geändert wird
 
 - **Rechenregeln ändern:** ausschließlich in `js/grades.js`. Danach `tests/grades.test.html` anpassen und ausführen.
 - **Neuer Reiter:** Datei `js/view-name.js` mit `NM.views.name = { render(view, { course, db }) }` anlegen, in `index.html` einbinden und in `TABS` in `js/app.js` eintragen.

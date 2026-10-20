@@ -1,6 +1,6 @@
 # Notenmanager
 
-Notenverwaltung für Sek I und MSS (Rheinland-Pfalz). Läuft lokal im Browser, speichert verschlüsselt in einen Ordner, den der Synology Drive Client auf die DiskStation spiegelt.
+Notenverwaltung für Sek I und MSS (Rheinland-Pfalz) mit Sitzplänen. Läuft lokal im Browser, speichert verschlüsselt in einen Ordner, den der Synology Drive Client auf die DiskStation spiegelt.
 
 **Ausführliche Anleitung, alle Rechenregeln und technische Details: [DOKUMENTATION.md](DOKUMENTATION.md)**
 
@@ -35,6 +35,8 @@ Ausprobieren ohne echte Daten: `index.html?demo` (nichts wird gespeichert).
 - Sek I: 4- ab LIMIT (z. B. 40–50 %), darüber 11 gleiche Schritte bis 100 %; 5- bei ½·LIMIT, 5+/5/5- gleichmäßig dazwischen; Schwellen auf ganze Prozent.
 - Schwellen lassen sich je Test von Hand überschreiben. Bonusaufgaben zählen zur erreichten, nicht zur Höchstpunktzahl (Ergebnis wird bei der Bestnote gekappt).
 - Drittelparagraph: Warnung, wenn mehr als ⅓ der Arbeiten 5 oder 6 sind (Täuschung/Verweigerung nicht mitgezählt).
+- Statistik je Test: Notenspiegel, Ø, Standardabweichung (Teiler n), Anteil unter 4. Personen mit I-Status zählen in der Statistik nicht mit.
+- Tests lassen sich als „nicht gewertet“ markieren: Sie bleiben sichtbar (ausgegraut), zählen aber nicht zur Note.
 
 **Mitarbeit/EPO** – je Stunde `++ + 0 - --` (4…0 Punkte), `k` = abwesend (zählt nicht), Zusatz `u` (HA unvollständig, −1) bzw. `h` (HA vergessen, −2), z. B. `+h`. Prozent = Punkte / (anwesende Stunden × 4). MSS: 5-%-Stufen wie bisher; Sek I: Sek-I-Schlüssel. Alles je Block einstellbar.
 
@@ -46,10 +48,11 @@ Ausprobieren ohne echte Daten: `index.html?demo` (nichts wird gespeichert).
 
 ## Bedienung – Kurzfassung
 
-- **Kurs & Schüler**: Kursdaten, Gewichtung, Namen aus Excel einfügen (eine Zeile pro Person). Abgänge nur „Aktiv“ abwählen – Noten bleiben erhalten.
-- **Tests**: Aufgaben mit Höchstpunkten, Rohpunkte eintragen; Schlüssel, Notenspiegel, Ausdrucke (Schlüssel, Liste, Schülerzettel).
-- **Mitarbeit/EPO**: „+ Stunde“, dann pro Person das Kürzel tippen; „füllen“ setzt alle leeren Zellen einer Stunde.
+- **Kurs & Schüler**: Kursdaten, Gewichtung, Namen aus Excel einfügen (eine Zeile pro Person). Abgänge nur „Aktiv“ abwählen – Noten bleiben erhalten. Haken „I-Status“ markiert Personen mit einem **I**.
+- **Tests**: Aufgaben mit Höchstpunkten, Rohpunkte eintragen; Schlüssel, Notenspiegel, Statistik, Ausdrucke (Schlüssel, Liste, Schülerzettel) und **⛶ Beamer**-Ansicht ohne Namen (Notenspiegel, Punkteverteilung, Ø je Aufgabe).
+- **Mitarbeit/EPO**: „+ Stunde“, dann pro Person das Kürzel tippen oder per **Schnellwahl** klicken; „füllen“ setzt alle leeren Zellen einer Stunde. Ausdrucke: Liste und Schülerzettel zum Ausschneiden (mit Datum/Unterschrift).
 - **Notenübersicht**: alle Noten des Halbjahres; direkte Noten eintragen (`2-`, `11`, oder `f` = fehlt, `ns` = Nachschreiben, `t` = Täuschung/Verweigerung). Kursliste, Schülerbögen, CSV-Export für Excel.
+- **Sitzplan**: mehrere Räume pro Kurs; Vornamen-Karten per Ziehen auf ein Raster setzen, tauschen, zufällig füllen, Stände speichern/laden, Fotos (Strg+V oder Bild auf die Karte ziehen), Druck.
 - Tastatur: Enter/↓ = nächste Person, Tab = nächste Spalte.
 
 ## Sicherheit
@@ -57,7 +60,7 @@ Ausprobieren ohne echte Daten: `index.html?demo` (nichts wird gespeichert).
 - AES-256-GCM; der Schlüssel wird mit PBKDF2-SHA256 (600 000 Runden) aus dem Passwort abgeleitet. Ohne Passwort oder Wiederherstellungsschlüssel ist die Datei nicht lesbar – auch nicht auf der DiskStation.
 - Automatische Sperre nach 15 Minuten ohne Aktivität (einstellbar).
 - **Nur ein Gerät gleichzeitig.** Die App warnt, wenn sie auf einem anderen Gerät offen ist, wenn die Datei zwischendurch von außen geändert wurde und wenn Synology eine Konfliktkopie angelegt hat.
-- Datenschutz: Für Schülerdaten auf privaten Geräten ist in RLP in der Regel eine Genehmigung der Schulleitung nötig.
+- Datenschutz: Für Schülerdaten auf privaten Geräten ist in RLP in der Regel eine Genehmigung der Schulleitung nötig. Das gilt besonders für Schülerfotos im Sitzplan.
 
 ## Notfall-Entschlüsselung ohne App
 
@@ -76,4 +79,4 @@ Alle Tests auf einmal (unsichtbarer Chromium-Browser):
 uv run --with websocket-client --with cryptography python tests/run_tests.py
 ```
 
-Einzeln: `tests/*.test.html` im Browser öffnen (`storage.test.html` nur über `http://localhost`). Details: DOKUMENTATION.md, Abschnitt 24–25.
+Einzeln: `tests/*.test.html` im Browser öffnen (`storage.test.html` nur über `http://localhost`). Details: DOKUMENTATION.md, Abschnitt 25–26.
