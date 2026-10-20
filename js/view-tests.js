@@ -32,7 +32,7 @@
         },
         addLabel: '+ Neuer Test',
         sub: (a) => {
-          const st = G.testStats(a.test, M.activeStudents(course).map((s) => s.id), level);
+          const st = G.testStats(a.test, M.statStudents(course).map((s) => s.id), level);
           return [fmtDate(a.date), UI.catLabel(a.cat), a.ungraded ? 'nicht gewertet' : null, st.n ? 'Ø ' + fmtNum(level === 'mss' ? st.avgPoints : st.avgDec, 2) : null].filter(Boolean).join(' · ');
         },
       })
@@ -333,7 +333,7 @@
       { class: 'foot' },
       h('td', { class: 'sticky-col' }, 'Ø gelöst'),
       t.tasks.map((task) => {
-        const avg = taskAverage(t, students, task);
+        const avg = taskAverage(t, M.statStudents(course), task);
         return h('td', { class: 'center muted small' }, avg === null || !task.max ? '' : fmtNum((avg / task.max) * 100, 0) + ' %');
       }),
       h('td', { colspan: 4 })
@@ -352,8 +352,7 @@
     const t = a.test;
     const max = G.testMaxScore(t);
     const key = G.testKey(level, t.limit, max, t.precision, t.custom);
-    const ids = M.activeStudents(course).map((s) => s.id);
-    const st = G.testStats(t, ids, level);
+    const st = G.testStats(t, M.statStudents(course).map((s) => s.id), level);
     const anyCustom = key.some((k) => k.custom);
     const rows = key
       .slice()
@@ -427,12 +426,19 @@
         level === 'mss' ? h('div', null, h('span', { class: 'muted' }, 'Ø Punkte'), h('strong', null, fmtNum(st.avgPoints, 2))) : null,
         h('div', null, h('span', { class: 'muted' }, '5 und 6'), h('strong', null, st.weak))
       ),
+      iHint(course),
       st.drittel
         ? h('div', { class: 'alert alert-danger' }, h('strong', null, 'Drittelparagraph greift! '), 'Mehr als ein Drittel der Arbeiten ist mangelhaft oder ungenügend (Täuschung/Verweigerung nicht mitgezählt). Die Arbeit muss von der Schulleitung genehmigt werden.')
         : st.n
           ? h('div', { class: 'alert alert-ok' }, 'Drittelparagraph greift nicht.')
           : null
     );
+  }
+
+  /** Hinweis, wenn Personen mit I-Status aus der Statistik herausgenommen sind. */
+  function iHint(course) {
+    const n = M.activeStudents(course).length - M.statStudents(course).length;
+    return n ? h('p', { class: 'muted small' }, `Ohne ${n} ${n === 1 ? 'Person' : 'Personen'} mit I-Status.`) : null;
   }
 
   function distribution(st, level) {
@@ -465,7 +471,7 @@
     const max = G.testMaxScore(t);
     const step = Number(t.precision) || 1;
     const key = G.testKey(level, t.limit, max, t.precision, t.custom);
-    const students = M.activeStudents(course);
+    const students = M.statStudents(course);
     const st = G.testStats(t, students.map((s) => s.id), level);
     const taskRows = t.tasks.map((task) => {
       const avg = taskAverage(t, students, task);

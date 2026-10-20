@@ -1,6 +1,6 @@
 # Notenmanager – Dokumentation
 
-Version 1.1.13 · Stand Oktober 2026
+Version 1.1.14 · Stand Oktober 2026
 
 Der Notenmanager verwaltet Noten für die Sekundarstufe I (Noten 1–6 mit Tendenz) und die Mainzer Studienstufe (MSS, Punkte 00–15) an Schulen in Rheinland-Pfalz. Er läuft vollständig lokal im Browser, verschlüsselt alle Daten mit einem Passwort und legt sie in einem Ordner ab, den der Synology Drive Client auf die DiskStation spiegelt.
 
@@ -223,7 +223,7 @@ Doppelte Namen werden übersprungen. Die Liste wird alphabetisch sortiert.
 
 **Bearbeiten:** Nach- und Vornamen direkt in der Tabelle ändern.
 
-**I-Status:** Ein Haken in der Spalte **„I-Status“** markiert die Person in allen Tabellen mit einem **I** hinter dem Namen, in Lehrerlisten (Test-Ergebnisliste, Kursliste, EPO-Liste) mit „(I)“. Auf Schülerzetteln und Schülerbögen erscheint die Markierung nicht. Auf die Berechnung hat sie keinen Einfluss.
+**I-Status:** Ein Haken in der Spalte **„I-Status“** markiert die Person in allen Tabellen mit einem **I** hinter dem Namen, in Lehrerlisten (Test-Ergebnisliste, Kursliste, EPO-Liste) mit „(I)“. Auf Schülerzetteln und Schülerbögen erscheint die Markierung nicht. Noten von Personen mit I-Status zählen **nicht in die Statistik**: Notenspiegel, Ø Note, Anzahl je Note, Drittelparagraph, „Ø gelöst“ je Aufgabe und Beamer-Ansicht berücksichtigen sie nicht. Unter dem Notenspiegel steht dann „Ohne n Personen mit I-Status“ (nicht in der Beamer-Ansicht). Ihre eigenen Noten werden ganz normal berechnet.
 
 **Zu- und Abgänge:** Bei einem Abgang den Haken **„Aktiv“** entfernen. Die Person bleibt mit allen Noten gespeichert, erscheint aber nicht mehr in Eingabetabellen, Ausdrucken und Exporten. **✕** löscht die Person samt aller Noten endgültig.
 
@@ -283,7 +283,7 @@ Rechts steht der Notenschlüssel mit Mindestpunktzahl („ab Pkt.“), Prozent u
 
 Unter dem Schlüssel stehen das Balkendiagramm (Anzahl je ganzer Note 1–6), Teilnehmende, Ø Note (bei MSS zusätzlich Ø Punkte) und die Zahl der Noten 5 und 6.
 
-**Drittelparagraph:** Sind mehr als ein Drittel der gewerteten Arbeiten mangelhaft oder ungenügend, erscheint die rote Meldung **„Drittelparagraph greift!“**. Arbeiten mit Status „Täuschung/Verweigerung“ zählen dabei nicht als 5/6, wohl aber zur Gesamtzahl.
+**Drittelparagraph:** Sind mehr als ein Drittel der gewerteten Arbeiten mangelhaft oder ungenügend, erscheint die rote Meldung **„Drittelparagraph greift!“**. Arbeiten mit Status „Täuschung/Verweigerung“ zählen dabei nicht als 5/6, wohl aber zur Gesamtzahl. Personen mit I-Status zählen in der gesamten Statistik nicht mit (siehe Abschnitt „Kurs & Schüler“).
 
 **Beamer-Ansicht:** Der Knopf **„⛶ Beamer“** öffnet im Vollbild nur den Notenspiegel (Balken, Teilnehmende, Ø Note, Höchstpunktzahl) und die Punkteverteilung (Rohpunkte von–bis und Anzahl je Notenstufe), darunter **Ø erreicht je Aufgabe** als Balken (Punkte und Prozent; nur eingetragene Werte zählen, wie in der Zeile „Ø gelöst“). Namen und Einzelergebnisse erscheinen nicht. Schließen mit **Esc** oder „✕ Schließen“. Die Ansicht ist eine Momentaufnahme; nach Änderungen neu öffnen.
 
@@ -780,7 +780,7 @@ Berechnete Werte (Schnitte, Testnoten, EPO-Noten) werden **nie gespeichert**, so
   "kdf": "PBKDF2-SHA256",
   "savedAt": "2026-10-14T21:57:03.123Z",
   "device": "Laptop Schule",
-  "app": "1.1.13",
+  "app": "1.1.14",
   "pw":   { "salt": "<b64>", "iter": 600000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "rec":  { "salt": "<b64>", "iter": 100000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "data": { "iv": "<b64>", "ct": "<b64: verschlüsseltes JSON des Datenmodells>" }
@@ -803,7 +803,7 @@ Entschlüsselter Inhalt (`schema: 1`):
 ```js
 {
   schema: 1,                             // Datenformat (siehe 25.2)
-  savedWith: "1.1.13",                    // App-Version beim letzten Speichern
+  savedWith: "1.1.14",                    // App-Version beim letzten Speichern
   created: "<ISO>", savedAt: "<ISO>",
   settings: { autoLockMin, limitSek1, limitMss, precision, keepBackups, backupEveryMin, gradeColors },
   years:   [ { id, name: "2026/27" } ],
@@ -894,7 +894,7 @@ In `js/model.js` stehen zwei Nummern:
 
 | Konstante | Bedeutung | Wann erhöhen |
 |---|---|---|
-| `APP_VERSION` (z. B. `1.1.13`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.1.13` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
+| `APP_VERSION` (z. B. `1.1.14`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.1.14` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
 | `SCHEMA` (z. B. `1`) | Version des Datenformats | nur, wenn eine **ältere** App-Version die neuen Daten falsch verstehen würde (z. B. ein Feld ändert seine Bedeutung) |
 
 Öffnet eine App eine Datenbank mit höherem `SCHEMA`, verweigert sie das mit einer Meldung (siehe 20.10). Neue, nur *zusätzliche* Felder brauchen kein neues `SCHEMA`: Ältere Versionen lassen unbekannte Felder unverändert und speichern sie mit.

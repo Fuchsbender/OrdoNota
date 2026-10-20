@@ -7,7 +7,7 @@
   // SCHEMA erhöhen, sobald sich das Datenmodell so ändert, dass ältere App-Versionen
   // die Daten falsch verstehen würden. Ältere Versionen öffnen solche Datenbanken dann nicht.
   const SCHEMA = 1;
-  const APP_VERSION = '1.1.13';
+  const APP_VERSION = '1.1.14';
 
   class NewerSchemaError extends Error {}
 
@@ -93,6 +93,11 @@
 
   function activeStudents(c) {
     return sortStudents(c.students.filter((s) => s.active !== false));
+  }
+
+  /** Personen, die in Statistiken zählen (Notenspiegel, Schnitte, Drittelparagraph): aktiv und ohne I-Status. */
+  function statStudents(c) {
+    return activeStudents(c).filter((s) => !s.iStatus);
   }
 
   function studentName(s) {
@@ -250,6 +255,7 @@
     courseTitle,
     sortStudents,
     activeStudents,
+    statStudents,
     studentName,
     parseNames,
     newManual,

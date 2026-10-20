@@ -37,6 +37,11 @@
   const names = M.parseNames('1\tMüller\tAnna\nSchmidt, Jonas\nLena Weber\n\n');
   ok('Namen erkannt', names.map((s) => s.last + '|' + s.first).join(';') === 'Müller|Anna;Schmidt|Jonas;Weber|Lena');
 
+  // Statistik ohne I-Status und ohne inaktive Personen
+  const stc = { students: [{ id: 'a', last: 'A' }, { id: 'b', last: 'B', iStatus: true }, { id: 'c', last: 'C', active: false }] };
+  ok('Statistik ohne I-Status/inaktiv', M.statStudents(stc).map((s) => s.id).join() === 'a');
+  ok('I-Status bleibt in der Liste aktiver Personen', M.activeStudents(stc).length === 2);
+
   lines.unshift(fails === 0 ? 'ALLE TESTS BESTANDEN' : fails + ' FEHLGESCHLAGEN');
   document.getElementById('out').textContent = lines.join('\n');
   document.title = 'fertig';

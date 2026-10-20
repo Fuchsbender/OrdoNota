@@ -55,7 +55,7 @@
   function keyTable(course, a, level, { counts = true } = {}) {
     const t = a.test;
     const key = G.testKey(level, t.limit, G.testMaxScore(t), t.precision, t.custom);
-    const st = G.testStats(t, M.activeStudents(course).map((s) => s.id), level);
+    const st = G.testStats(t, M.statStudents(course).map((s) => s.id), level);
     return h(
       'table',
       { class: 'p-table p-key' },
@@ -82,7 +82,7 @@
   }
 
   function statsBlock(course, a, level) {
-    const st = G.testStats(a.test, M.activeStudents(course).map((s) => s.id), level);
+    const st = G.testStats(a.test, M.statStudents(course).map((s) => s.id), level);
     return h(
       'div',
       { class: 'p-stats' },
@@ -93,8 +93,14 @@
         h('tbody', null, h('tr', null, h('td', null, 'Anzahl'), [1, 2, 3, 4, 5, 6].map((g) => h('td', { class: 'n' }, st.whole[g])), h('td', { class: 'n' }, st.n), h('td', { class: 'n' }, fmtNum(st.avgDec, 2))))
       ),
       level === 'mss' ? h('p', null, 'Ø Punkte: ', h('strong', null, fmtNum(st.avgPoints, 2))) : null,
+      iNote(course),
       h('p', null, st.drittel ? h('strong', null, 'Drittelparagraph greift!') : 'Drittelparagraph greift nicht.', ` (${st.weak} von ${st.n} mit 5 oder 6)`)
     );
+  }
+
+  function iNote(course) {
+    const n = M.activeStudents(course).length - M.statStudents(course).length;
+    return n ? h('p', { class: 'p-note' }, `Ohne ${n} ${n === 1 ? 'Person' : 'Personen'} mit I-Status.`) : null;
   }
 
   function testMeta(a) {
