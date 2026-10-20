@@ -187,6 +187,7 @@
     const epo = a.epo;
     const students = M.activeStudents(course);
     const lessons = sortedLessons(epo);
+    const current = lessons[lessons.length - 1];
     const head = h(
       'tr',
       null,
@@ -199,6 +200,7 @@
           h('button', { class: 'link tiny', title: 'Leere Zellen dieser Stunde füllen', onclick: () => fillLesson(course, a, l) }, 'füllen')
         )
       ),
+      current ? h('th', { class: 'center quick-head', title: 'Bewertung der neuesten Stunde per Klick' }, 'Schnellwahl ' + (fmtDateShort(current.date) || '?')) : null,
       h('th', { class: 'num' }, 'Σ'),
       h('th', { class: 'num' }, 'Max'),
       h('th', { class: 'num' }, '%'),
@@ -244,6 +246,7 @@
             })
           );
         }),
+        current ? h('td', { class: 'center' }, quickButtons(epo, s.id, current.id)) : null,
         h('td', { class: 'num strong' }, res.attended ? res.sum : ''),
         h('td', { class: 'num muted' }, res.attended ? res.max : ''),
         h('td', { class: 'num muted' }, res.pct === null ? '' : fmtNum(res.pct, 0)),
@@ -281,6 +284,29 @@
           ? h('p', { class: 'muted' }, 'Bitte zuerst im Reiter „Kurs & Schüler“ Namen eintragen.')
           : h('div', { class: 'table-wrap', 'data-scroll-key': 'epo-grid' }, h('table', { class: 'table grid-table epo-table' }, h('thead', null, head), h('tbody', null, rows))),
       h('p', { class: 'muted small' }, 'Höchstpunktzahl = anwesende Stunden × ', pts['++'], '. Hausaufgaben-Vermerke werden abgezogen. Enter/↓ springt zur nächsten Person.')
+    );
+  }
+
+  /** Schaltflächen zum Bewerten einer Stunde; erneuter Klick auf die aktive Auswahl hebt sie auf. */
+  function quickButtons(epo, sid, lid) {
+    const c = (epo.entries[sid] || {})[lid] || { r: '', hw: '' };
+    const set = (r, hw) => {
+      epo.entries[sid] = epo.entries[sid] || {};
+      if (!r && !hw) delete epo.entries[sid][lid];
+      else epo.entries[sid][lid] = { r, hw };
+      NM.app.commit();
+    };
+    const btn = (label, active, cls, title, onclick) =>
+      h('button', { class: 'quick-btn' + (active ? ' active ' + cls : ''), title, onclick }, label);
+    return h(
+      'span',
+      { class: 'quick-group' },
+      ['++', '+', '0', '-', '--', 'k'].map((r) =>
+        btn(r, c.r === r, 'r-' + ratingClass({ r }), r === 'k' ? 'abwesend' : 'Mitarbeit ' + r, () => set(c.r === r ? '' : r, c.hw || ''))
+      ),
+      h('span', { class: 'quick-sep' }),
+      btn('u', c.hw === 'u', 'hw', 'Hausaufgaben unvollständig', () => set(c.r || '', c.hw === 'u' ? '' : 'u')),
+      btn('h', c.hw === 'h', 'hw', 'Hausaufgaben vergessen', () => set(c.r || '', c.hw === 'h' ? '' : 'h'))
     );
   }
 

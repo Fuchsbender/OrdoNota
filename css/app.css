@@ -355,6 +355,14 @@ body.no-grade-colors .r-pp, body.no-grade-colors .r-p, body.no-grade-colors .r-z
 .lesson-head { min-width: 52px; }
 .lesson-head .link { display: block; margin: 0 auto; }
 .lesson-head .link:first-child { color: var(--text); font-weight: 600; }
+.table th.quick-head, .table td:has(> .quick-group) { border-left: 1px solid var(--border); border-right: 1px solid var(--border); }
+.quick-group { display: inline-flex; align-items: center; gap: 2px; }
+.quick-btn { min-width: 28px; height: 26px; padding: 0 5px; border: 1px solid var(--border-strong); border-radius: 5px; color: var(--muted); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.quick-btn:not(.active) { background: var(--bg); }
+.quick-btn:hover { border-color: var(--muted); color: var(--text); }
+.quick-btn.active { border-color: var(--text); color: var(--g-text); }
+.quick-btn.active.r-k, .quick-btn.active.hw { background: var(--accent-soft); border-color: var(--accent); color: var(--text); }
+.quick-sep { width: 1px; height: 18px; margin: 0 4px; background: var(--border-strong); }
 
 /* ---------- Dialoge & Toasts ---------- */
 
