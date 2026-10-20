@@ -432,7 +432,8 @@ dialog.modal h2 { font-size: 17px; margin-bottom: 14px; }
 /* ---------- Sitzplan ---------- */
 .seat-wrap { overflow-x: auto; padding: 4px 0; }
 .seat-layout { display: grid; grid-template-columns: minmax(0, 1fr) 230px; gap: 16px; align-items: start; }
-.seat-room, .seat-side { margin-bottom: 0; }
+.seat-room { margin-bottom: 0; }
+.seat-side > .card { margin-bottom: 12px; }
 .seat-side { position: sticky; top: 56px; max-height: calc(100vh - 140px); overflow-y: auto; }
 @media (max-width: 900px) { .seat-layout { grid-template-columns: 1fr; } .seat-side { position: static; max-height: none; } }
 .seat-grid { display: grid; grid-template-columns: repeat(var(--cols), minmax(64px, 96px)); gap: 8px; justify-content: center; }
@@ -441,11 +442,22 @@ dialog.modal h2 { font-size: 17px; margin-bottom: 14px; }
 .seat-card { flex: 1; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; padding: 6px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface-2); box-shadow: var(--shadow); font-weight: 600; text-align: center; line-height: 1.2; overflow-wrap: anywhere; cursor: grab; user-select: none; touch-action: none; }
 .seat-card:hover { border-color: var(--accent); }
 .seat-card.seat-dragging { opacity: 0.35; }
+.seat-card { position: relative; flex-direction: column; gap: 3px; }
+.seat-card.seat-selected { outline: 3px solid var(--accent); outline-offset: 1px; }
+.seat-card.seat-over { border-color: var(--accent); background: var(--accent-soft); }
+.seat-card.has-photo { padding: 4px; }
+.seat-photo { width: 100%; flex: 1; min-height: 0; object-fit: cover; border-radius: 4px; pointer-events: none; }
+.seat-card.has-photo .seat-name { font-size: 12px; line-height: 1.1; }
+.seat-photo-del { position: absolute; top: 2px; right: 2px; width: 20px; height: 20px; padding: 0; border: 0; border-radius: 50%; background: rgba(0, 0, 0, 0.6); color: #fff; font-size: 14px; line-height: 20px; cursor: pointer; display: none; }
+.seat-card:hover .seat-photo-del { display: block; }
+.seat-ghost .seat-photo-del { display: none; }
+.seat-saved li .grow { flex: 1; min-width: 0; }
 .seat-ghost { position: fixed; z-index: 200; pointer-events: none; cursor: grabbing; opacity: 0.9; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3); }
 .seat-desk { margin: 10px auto; width: min(260px, 60%); padding: 8px; text-align: center; border-radius: var(--radius-sm); background: var(--surface-2); border: 1px solid var(--border-strong); color: var(--muted); font-weight: 600; }
 .seat-tray-title { font-size: 14px; margin: 0 0 8px; }
 .seat-tray { display: flex; flex-wrap: wrap; gap: 8px; min-height: 120px; padding: 8px; border: 1px dashed var(--border-strong); border-radius: var(--radius-sm); align-items: flex-start; }
 .seat-tray .seat-card { flex: 0 0 90px; height: 64px; aspect-ratio: auto; }
+.seat-tray .seat-card.has-photo { height: 110px; }
 
 /* ---------- Druck ---------- */
 
@@ -499,6 +511,8 @@ body.no-grade-colors .p-grade[style*='--g-hue'] { background: none; }
 .p-seat-grid { width: 100%; border-collapse: separate; border-spacing: 2mm; table-layout: fixed; }
 .p-seat-grid td { height: 18mm; border: 0.8pt solid #000; border-radius: 2mm; text-align: center; vertical-align: middle; font-size: 11pt; font-weight: 600; overflow-wrap: anywhere; }
 .p-seat-grid td.empty { border: 0.5pt dashed #bbb; }
+.p-seat-grid img { display: block; width: 16mm; height: 16mm; margin: 1mm auto 0.5mm; object-fit: cover; border-radius: 1mm; }
+.p-seat-grid.with-photos td { height: 24mm; font-size: 9.5pt; }
 .p-seat-desk { margin: 3mm auto; width: 60mm; padding: 2mm; text-align: center; border: 0.8pt solid #000; font-weight: 600; }
 .p-epo-slip-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; border-bottom: 1pt solid #000; padding-bottom: 3px; margin-bottom: 6px; }
 #print-root .p-epo-slip-head h2 { font-size: 14pt; margin: 0; }

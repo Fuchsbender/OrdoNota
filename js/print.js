@@ -261,13 +261,14 @@
       const tr = h('tr');
       for (let x = 0; x < st.cols; x++) {
         const sid = cells[x + ',' + y];
-        tr.appendChild(h('td', { class: sid ? 'p-seat' : 'p-seat empty' }, sid ? names[sid] : ''));
+        const s = sid && students.find((p) => p.id === sid);
+        tr.appendChild(h('td', { class: sid ? 'p-seat' : 'p-seat empty' }, s && s.photo ? h('img', { src: s.photo, alt: '' }) : null, sid ? names[sid] : ''));
       }
       rows.push(tr);
     }
     doPrint(
       `${M.courseTitle(c)} – Sitzplan`,
-      h('div', { class: 'p-page' }, header(c, 'Sitzplan', ''), st.desk === 'top' ? desk : null, h('table', { class: 'p-seat-grid' }, h('tbody', null, rows)), st.desk === 'bottom' ? desk : null),
+      h('div', { class: 'p-page' }, header(c, 'Sitzplan', ''), st.desk === 'top' ? desk : null, h('table', { class: 'p-seat-grid' + (students.some((s) => s.photo && Object.values(cells).includes(s.id)) ? ' with-photos' : '') }, h('tbody', null, rows)), st.desk === 'bottom' ? desk : null),
       { landscape: st.cols > st.rows }
     );
   }

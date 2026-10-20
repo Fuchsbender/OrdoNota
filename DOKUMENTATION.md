@@ -1,6 +1,6 @@
 # Notenmanager – Dokumentation
 
-Version 1.2.0 · Stand Oktober 2026
+Version 1.3.0 · Stand Oktober 2026
 
 Der Notenmanager verwaltet Noten für die Sekundarstufe I (Noten 1–6 mit Tendenz) und die Mainzer Studienstufe (MSS, Punkte 00–15) an Schulen in Rheinland-Pfalz. Er läuft vollständig lokal im Browser, verschlüsselt alle Daten mit einem Passwort und legt sie in einem Ordner ab, den der Synology Drive Client auf die DiskStation spiegelt.
 
@@ -388,7 +388,17 @@ Für jeden Kurs lässt sich ein Sitzplan anlegen. Jede aktive Person erscheint a
 - **Spalten** und **Reihen** legen die Größe des Rasters fest (bis 16 × 12). **Lehrerpult** oben oder unten.
 - Karten aus **„Noch ohne Platz“** (rechts) mit Maus oder Finger auf einen Platz ziehen. Auf einen besetzten Platz gezogen, **tauschen** die beiden die Plätze. Zurück in die Ablage ziehen nimmt eine Person vom Plan. Beim Ziehen an den oberen/unteren Rand scrollt die Seite mit.
 - **🎲 Freie Plätze füllen** verteilt alle noch nicht platzierten Personen in zufälliger Reihenfolge auf die freien Plätze. **Alle abräumen** setzt den Plan zurück.
-- **🖨 Drucken** gibt den Plan auf einer A4-Seite aus.
+- **🖨 Drucken** gibt den Plan auf einer A4-Seite aus (mit Fotos, soweit vorhanden).
+- **Gespeicherte Sitzpläne** (rechts): **„💾 Plan speichern …“** legt den aktuellen Plan unter einem Namen ab (z. B. „Raum 204 ab Herbstferien“). **Laden** ersetzt den aktuellen Plan nach Rückfrage durch den gespeicherten, **✕** löscht ihn. Personen, die es im gespeicherten Plan noch nicht gab, landen beim Laden in der Ablage.
+
+**Fotos**
+
+- **Einfügen:** Foto kopieren (z. B. in WebUntis: Rechtsklick auf das Foto → „Bild kopieren“), im Sitzplan die Karte **anklicken** (blauer Rahmen) und **Strg+V** drücken.
+- **Ziehen:** Eine Bilddatei aus dem Dateimanager oder ein Bild aus einem anderen Browser-Tab auf die Karte ziehen. Ob das Ziehen direkt aus WebUntis klappt, hängt davon ab, wie WebUntis das Bild ausliefert; sonst erscheint ein Hinweis, und der Weg über „Bild kopieren“ + Strg+V funktioniert.
+- Das Foto wird quadratisch zugeschnitten (bei Hochformat eher oben, wo das Gesicht ist), auf 160 × 160 Pixel verkleinert und **verschlüsselt in der Datenbank** gespeichert (etwa 5–20 KB pro Foto).
+- Gleichnamige Personen in anderen Kursen desselben Schuljahres, die noch kein Foto haben, bekommen es automatisch mit.
+- **Entfernen:** Mit der Maus über die Karte fahren und auf **×** klicken.
+- **Datenschutz:** Schülerfotos sind personenbezogene Daten. Ob sie in einer eigenen Anwendung gespeichert werden dürfen, regelt die Schule (Schulleitung bzw. Datenschutzbeauftragte/r).
 - Wird das Raster verkleinert, kommen Personen außerhalb des neuen Rasters in die Ablage. Neue Personen im Kurs erscheinen automatisch in der Ablage, inaktive verschwinden vom Plan.
 
 ## 10. Drucken und Exportieren
@@ -791,7 +801,7 @@ Berechnete Werte (Schnitte, Testnoten, EPO-Noten) werden **nie gespeichert**, so
   "kdf": "PBKDF2-SHA256",
   "savedAt": "2026-10-14T21:57:03.123Z",
   "device": "Laptop Schule",
-  "app": "1.2.0",
+  "app": "1.3.0",
   "pw":   { "salt": "<b64>", "iter": 600000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "rec":  { "salt": "<b64>", "iter": 100000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "data": { "iv": "<b64>", "ct": "<b64: verschlüsseltes JSON des Datenmodells>" }
@@ -814,7 +824,7 @@ Entschlüsselter Inhalt (`schema: 1`):
 ```js
 {
   schema: 1,                             // Datenformat (siehe 25.2)
-  savedWith: "1.2.0",                    // App-Version beim letzten Speichern
+  savedWith: "1.3.0",                    // App-Version beim letzten Speichern
   created: "<ISO>", savedAt: "<ISO>",
   settings: { autoLockMin, limitSek1, limitMss, precision, keepBackups, backupEveryMin, gradeColors },
   years:   [ { id, name: "2026/27" } ],
@@ -827,11 +837,12 @@ Course = {
   type: "sek1" | "lk" | "gk" | "noka",
   wKa, wOther,                           // Gewichte in %
   wHalf1, wHalf2,                        // Jahresnote (Standard 1 : 2)
-  students: [ { id, last, first, active, iStatus? } ],
+  students: [ { id, last, first, active, iStatus?, photo? } ],   // photo: JPEG als Data-URL, 160×160
   assessments: [ Assessment ],
   overrides: { "<Halbjahr>"|"Jahr": { "<studentId>": { p, reason } } },
   comments:  { "<studentId>": "Text" },
-  seating?:  { cols, rows, desk: "top" | "bottom", pos: { "<studentId>": { x, y } } }
+  seating?:  { cols, rows, desk: "top" | "bottom", pos: { "<studentId>": { x, y } } },
+  seatingSaved?: [ { id, name, savedAt, cols, rows, desk, pos } ]
 }
 
 Assessment = {
@@ -906,7 +917,7 @@ In `js/model.js` stehen zwei Nummern:
 
 | Konstante | Bedeutung | Wann erhöhen |
 |---|---|---|
-| `APP_VERSION` (z. B. `1.2.0`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.2.0` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
+| `APP_VERSION` (z. B. `1.3.0`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.3.0` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
 | `SCHEMA` (z. B. `1`) | Version des Datenformats | nur, wenn eine **ältere** App-Version die neuen Daten falsch verstehen würde (z. B. ein Feld ändert seine Bedeutung) |
 
 Öffnet eine App eine Datenbank mit höherem `SCHEMA`, verweigert sie das mit einer Meldung (siehe 20.10). Neue, nur *zusätzliche* Felder brauchen kein neues `SCHEMA`: Ältere Versionen lassen unbekannte Felder unverändert und speichern sie mit.

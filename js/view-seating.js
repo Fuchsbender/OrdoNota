@@ -1,8 +1,12 @@
 /* Notenmanager – Reiter „Sitzplan“: Namenskarten auf einem Raster per Ziehen anordnen. */
 (function (NM) {
   'use strict';
-  const { h, confirmDialog } = NM.util;
+  const { h, confirmDialog, promptDialog, toast, uid } = NM.util;
   const M = NM.model;
+
+  const PHOTO_PX = 160;
+  // Ausgewählte Karte (Klick ohne Ziehen) – Ziel für Strg+V
+  let selectedSid = null;
 
   const DEFAULTS = { cols: 8, rows: 5, desk: 'top', pos: {} };
 
@@ -42,7 +46,14 @@
   function render(view, { course }) {
     const { st, students, cells, unplaced } = layout(course);
     const names = cardNames(students);
-    const card = (s) => h('div', { class: 'seat-card', 'data-sid': s.id, title: M.studentName(s) }, h('span', null, names[s.id]));
+    const card = (s) =>
+      h(
+        'div',
+        { class: 'seat-card' + (s.photo ? ' has-photo' : '') + (s.id === selectedSid ? ' seat-selected' : ''), 'data-sid': s.id, title: M.studentName(s) + ' – anklicken und Strg+V fügt ein kopiertes Foto ein' },
+        s.photo ? h('img', { class: 'seat-photo', src: s.photo, alt: '', draggable: 'false' }) : null,
+        h('span', { class: 'seat-name' }, names[s.id]),
+        s.photo ? h('button', { class: 'seat-photo-del', title: 'Foto entfernen', 'aria-label': 'Foto entfernen', onclick: () => removePhoto(course, s) }, '×') : null
+      );
 
     const grid = h('div', { class: 'seat-grid', style: `--cols:${st.cols}` });
     for (let y = 0; y < st.rows; y++) {
@@ -131,17 +142,178 @@
           st.desk === 'bottom' ? desk : null,
           h('p', { class: 'muted small' }, 'Karten mit der Maus (oder dem Finger) auf einen Platz ziehen. Auf einen besetzten Platz gezogen, tauschen die beiden die Plätze.')
         ),
-        h('div', { class: 'card seat-side' }, h('h2', { class: 'seat-tray-title' }, 'Noch ohne Platz ', h('span', { class: 'muted' }, `(${unplaced.length})`)), tray)
+        h(
+          'div',
+          { class: 'seat-side' },
+          h('div', { class: 'card' }, h('h2', { class: 'seat-tray-title' }, 'Noch ohne Platz ', h('span', { class: 'muted' }, `(${unplaced.length})`)), tray),
+          savedCard(course, st),
+          h(
+            'div',
+            { class: 'card' },
+            h('h2', { class: 'seat-tray-title' }, 'Fotos'),
+            h('p', { class: 'muted small' }, 'Foto kopieren (z. B. in WebUntis: Rechtsklick → „Bild kopieren“), Karte anklicken, Strg+V. Oder eine Bilddatei bzw. ein Bild aus dem Browser auf die Karte ziehen. Fotos werden verkleinert und verschlüsselt gespeichert.')
+          )
+        )
       )
     );
     enableDrag(view, course, st);
+    enablePhotoDrop(view, course);
   }
+
+  // ---------- Gespeicherte Sitzpläne ----------
+
+  function savedCard(course, st) {
+    const list = (course.seatingSaved || []).slice().sort((a, b) => (b.savedAt || '').localeCompare(a.savedAt || ''));
+    return h(
+      'div',
+      { class: 'card' },
+      h('h2', { class: 'seat-tray-title' }, 'Gespeicherte Sitzpläne'),
+      h('button', { class: 'btn btn-sm', onclick: () => savePlan(course, st) }, '💾 Plan speichern …'),
+      list.length
+        ? h(
+            'ul',
+            { class: 'plain seat-saved' },
+            list.map((p) =>
+              h(
+                'li',
+                null,
+                h('div', { class: 'grow' }, h('strong', null, p.name), h('div', { class: 'muted small' }, `${p.savedAt ? new Date(p.savedAt).toLocaleDateString('de-DE') : ''} · ${Object.keys(p.pos || {}).length} Plätze`)),
+                h('button', { class: 'btn btn-sm', onclick: () => loadPlan(course, p) }, 'Laden'),
+                h('button', { class: 'icon-btn danger', title: 'Löschen', 'aria-label': 'Gespeicherten Plan löschen', onclick: () => deletePlan(course, p) }, '✕')
+              )
+            )
+          )
+        : h('p', { class: 'muted small' }, 'Noch keine gespeicherten Pläne.')
+    );
+  }
+
+  async function savePlan(course, st) {
+    const name = await promptDialog('Sitzplan speichern', 'Name, z. B. „Raum 204 ab Herbstferien“', 'Sitzplan ' + new Date().toLocaleDateString('de-DE'));
+    if (name === null) return;
+    course.seatingSaved = course.seatingSaved || [];
+    course.seatingSaved.push({ id: uid(), name: name.trim() || 'Sitzplan', savedAt: new Date().toISOString(), cols: st.cols, rows: st.rows, desk: st.desk, pos: JSON.parse(JSON.stringify(st.pos)) });
+    NM.app.commit();
+    toast('Sitzplan gespeichert.');
+  }
+
+  async function loadPlan(course, p) {
+    if (!(await confirmDialog('Sitzplan laden?', `„${p.name}“ ersetzt den aktuellen Sitzplan. Speichern Sie ihn vorher, wenn Sie ihn behalten möchten.`, { okLabel: 'Laden' }))) return;
+    course.seating = { cols: p.cols, rows: p.rows, desk: p.desk, pos: JSON.parse(JSON.stringify(p.pos || {})) };
+    NM.app.commit();
+  }
+
+  async function deletePlan(course, p) {
+    if (!(await confirmDialog('Gespeicherten Plan löschen?', `„${p.name}“ endgültig löschen?`, { okLabel: 'Löschen', danger: true }))) return;
+    course.seatingSaved = (course.seatingSaved || []).filter((x) => x.id !== p.id);
+    NM.app.commit();
+  }
+
+  // ---------- Fotos ----------
+
+  /** Bild (Blob oder URL) quadratisch zuschneiden, verkleinern, als JPEG-Data-URL. */
+  function toPhoto(src) {
+    return new Promise((resolve, reject) => {
+      const url = src instanceof Blob ? URL.createObjectURL(src) : src;
+      const img = new Image();
+      img.onload = () => {
+        const side = Math.min(img.naturalWidth, img.naturalHeight);
+        // Hochformat-Porträts: eher oben ausschneiden (Gesicht)
+        const sx = (img.naturalWidth - side) / 2;
+        const sy = img.naturalHeight > img.naturalWidth ? (img.naturalHeight - side) * 0.2 : (img.naturalHeight - side) / 2;
+        const c = document.createElement('canvas');
+        c.width = c.height = PHOTO_PX;
+        c.getContext('2d').drawImage(img, sx, sy, side, side, 0, 0, PHOTO_PX, PHOTO_PX);
+        if (src instanceof Blob) URL.revokeObjectURL(url);
+        try {
+          resolve(c.toDataURL('image/jpeg', 0.82));
+        } catch (e) {
+          reject(e); // fremdes Bild ohne Freigabe (Canvas „tainted“)
+        }
+      };
+      img.onerror = () => reject(new Error('Bild konnte nicht gelesen werden.'));
+      img.src = url;
+    });
+  }
+
+  /** Foto setzen; gleichnamige Personen anderer Kurse desselben Schuljahres ohne Foto bekommen es mit. */
+  function setPhoto(course, s, dataUrl) {
+    s.photo = dataUrl;
+    let others = 0;
+    for (const c of NM.app.coursesOfYear()) {
+      if (c === course) continue;
+      for (const o of c.students) {
+        if (!o.photo && o.last === s.last && o.first === s.first && (o.last || o.first)) {
+          o.photo = dataUrl;
+          others++;
+        }
+      }
+    }
+    NM.app.commit();
+    toast(others ? `Foto gespeichert (auch in ${others} weiteren Kurs${others === 1 ? '' : 'en'}).` : 'Foto gespeichert.');
+  }
+
+  async function removePhoto(course, s) {
+    if (!(await confirmDialog('Foto entfernen?', `Foto von ${M.studentName(s)} in diesem Kurs entfernen?`, { okLabel: 'Entfernen', danger: true }))) return;
+    delete s.photo;
+    NM.app.commit();
+  }
+
+  async function addPhotoFrom(course, sid, { file, url }) {
+    const s = course.students.find((p) => p.id === sid);
+    if (!s) return;
+    try {
+      setPhoto(course, s, await toPhoto(file || url));
+    } catch (e) {
+      toast('Das Bild ließ sich nicht übernehmen. Bitte im Browser Rechtsklick → „Bild kopieren“, dann Karte anklicken und Strg+V.', 'error', 7000);
+    }
+  }
+
+  /** Bilder per Drag & Drop (Dateien oder Bilder aus anderen Browser-Tabs) auf eine Karte. */
+  function enablePhotoDrop(root, course) {
+    const cardAt = (e) => e.target.closest && e.target.closest('.seat-card');
+    root.addEventListener('dragover', (e) => {
+      const c = cardAt(e);
+      if (!c) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+      c.classList.add('seat-over');
+    });
+    root.addEventListener('dragleave', (e) => {
+      const c = cardAt(e);
+      if (c && !c.contains(e.relatedTarget)) c.classList.remove('seat-over');
+    });
+    root.addEventListener('drop', (e) => {
+      const c = cardAt(e);
+      if (!c) return;
+      e.preventDefault();
+      c.classList.remove('seat-over');
+      const dt = e.dataTransfer;
+      const file = [...dt.files].find((f) => f.type.startsWith('image/'));
+      if (file) return addPhotoFrom(course, c.dataset.sid, { file });
+      const html = dt.getData('text/html');
+      const m = html && /<img[^>]+src="([^"]+)"/i.exec(html);
+      const url = (m && m[1].replace(/&amp;/g, '&')) || (dt.getData('text/uri-list') || '').split('\n')[0].trim();
+      if (url) return addPhotoFrom(course, c.dataset.sid, { url });
+      toast('Kein Bild erkannt.', 'error');
+    });
+  }
+
+  // Strg+V: kopiertes Bild auf die ausgewählte Karte
+  document.addEventListener('paste', (e) => {
+    if (NM.app.state.ui.tab !== 'seating' || !selectedSid) return;
+    const course = NM.app.currentCourse();
+    if (!course || !course.students.some((s) => s.id === selectedSid)) return;
+    const item = [...(e.clipboardData ? e.clipboardData.items : [])].find((i) => i.type.startsWith('image/'));
+    if (!item) return toast('In der Zwischenablage ist kein Bild. Im Browser Rechtsklick auf das Foto → „Bild kopieren“.', 'error', 6000);
+    e.preventDefault();
+    addPhotoFrom(course, selectedSid, { file: item.getAsFile() });
+  });
 
   /** Ziehen per Pointer-Events (Maus, Stift, Touch). */
   function enableDrag(root, course, st) {
     root.addEventListener('pointerdown', (e) => {
       const cardEl = e.target.closest('.seat-card');
-      if (!cardEl || e.button > 0) return;
+      if (!cardEl || e.button > 0 || e.target.closest('.seat-photo-del')) return;
       e.preventDefault();
       const sid = cardEl.dataset.sid;
       const r = cardEl.getBoundingClientRect();
@@ -191,6 +363,12 @@
         ghost.remove();
         cardEl.classList.remove('seat-dragging');
         if (over) over.classList.remove('seat-over');
+        // Klick ohne nennenswerte Bewegung: Karte auswählen (für Strg+V)
+        if (ev.type === 'pointerup' && Math.hypot(ev.clientX - e.clientX, ev.clientY - e.clientY) < 5) {
+          selectedSid = selectedSid === sid ? null : sid;
+          document.querySelectorAll('.seat-card').forEach((el) => el.classList.toggle('seat-selected', el.dataset.sid === selectedSid));
+          return;
+        }
         const t = ev.type === 'pointerup' ? target(ev) : null;
         if (!t) return;
         if (t.hasAttribute('data-tray')) {
