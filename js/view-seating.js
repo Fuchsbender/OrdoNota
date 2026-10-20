@@ -3,17 +3,30 @@
   'use strict';
   const { h, confirmDialog, promptDialog, toast, uid } = NM.util;
   const M = NM.model;
+  const UI = NM.ui;
 
   const PHOTO_PX = 160;
   // Ausgewählte Karte (Klick ohne Ziehen) – Ziel für Strg+V
   let selectedSid = null;
 
-  const DEFAULTS = { cols: 8, rows: 5, desk: 'top', pos: {} };
+  function newPlan(name, from) {
+    return { id: uid(), name, cols: from ? from.cols : 8, rows: from ? from.rows : 5, desk: from ? from.desk : 'top', pos: {} };
+  }
 
+  /** Sitzpläne (Räume) des Kurses; mindestens einer. */
+  function plans(course) {
+    if (!course.seatingPlans || !course.seatingPlans.length) course.seatingPlans = [newPlan('Raum 1')];
+    return course.seatingPlans;
+  }
+
+  /** Aktiver Sitzplan (pro Gerät gemerkt, wie der gewählte Test). */
   function seating(course) {
-    course.seating = Object.assign({}, DEFAULTS, course.seating);
-    course.seating.pos = course.seating.pos || {};
-    return course.seating;
+    const list = plans(course);
+    const ui = NM.app.state.ui;
+    ui.seatingId = ui.seatingId || {};
+    const p = list.find((x) => x.id === ui.seatingId[course.id]) || list[0];
+    p.pos = p.pos || {};
+    return p;
   }
 
   /** Vornamen; bei gleichen Vornamen im Kurs mit Initiale des Nachnamens. */
@@ -90,14 +103,41 @@
         })
       );
 
+    const ui = NM.app.state.ui;
     view.append(
       h('div', { class: 'view-head' }, h('h1', null, 'Sitzplan')),
+      UI.pickerList({
+        items: plans(course),
+        currentId: st.id,
+        onPick: (id) => {
+          ui.seatingId[course.id] = id;
+          NM.app.saveUi();
+          NM.app.rerender();
+        },
+        onAdd: () => addRoom(course, st),
+        addLabel: '+ Neuer Raum',
+        sub: (p) => `${p.cols} × ${p.rows} · ${Object.keys(p.pos || {}).filter((sid) => students.some((s) => s.id === sid)).length} belegt`,
+      }),
       h(
         'div',
         { class: 'card' },
         h(
           'div',
           { class: 'form-row' },
+          h(
+            'label',
+            { class: 'field grow' },
+            h('span', null, 'Raum / Bezeichnung'),
+            h('input', {
+              class: 'input',
+              value: st.name,
+              'data-focus-key': 'seat-name',
+              onchange: (e) => {
+                st.name = e.target.value.trim() || st.name;
+                NM.app.commit();
+              },
+            })
+          ),
           num('Spalten', 'cols', 1, 16),
           num('Reihen', 'rows', 1, 12),
           h(
@@ -126,7 +166,8 @@
               { class: 'inline' },
               h('button', { class: 'btn', title: 'Noch nicht platzierte Personen auf freie Plätze verteilen (zufällig)', onclick: () => fillRandom(course) }, '🎲 Freie Plätze füllen'),
               h('button', { class: 'btn', onclick: () => clearAll(course) }, 'Alle abräumen'),
-              h('button', { class: 'btn', onclick: () => NM.print.seating(course) }, '🖨 Drucken')
+              h('button', { class: 'btn', onclick: () => NM.print.seating(course) }, '🖨 Drucken'),
+              plans(course).length > 1 ? h('button', { class: 'icon-btn danger', title: 'Diesen Raum löschen', 'aria-label': 'Diesen Raum löschen', onclick: () => deleteRoom(course, st) }, '🗑') : null
             )
           )
         )
@@ -160,6 +201,24 @@
     enablePhotoDrop(view, course);
   }
 
+  // ---------- Räume ----------
+
+  async function addRoom(course, cur) {
+    const name = await promptDialog('Neuer Raum', 'Bezeichnung, z. B. „Raum 204“ oder „Chemiesaal“', 'Raum ' + (plans(course).length + 1));
+    if (name === null) return;
+    const p = newPlan(name.trim() || 'Raum', cur);
+    course.seatingPlans.push(p);
+    NM.app.state.ui.seatingId[course.id] = p.id;
+    NM.app.saveUi();
+    NM.app.commit();
+  }
+
+  async function deleteRoom(course, p) {
+    if (!(await confirmDialog('Raum löschen?', `Den Sitzplan „${p.name}“ endgültig löschen? Gespeicherte Stände bleiben erhalten.`, { okLabel: 'Löschen', danger: true }))) return;
+    course.seatingPlans = course.seatingPlans.filter((x) => x.id !== p.id);
+    NM.app.commit();
+  }
+
   // ---------- Gespeicherte Sitzpläne ----------
 
   function savedCard(course, st) {
@@ -167,8 +226,8 @@
     return h(
       'div',
       { class: 'card' },
-      h('h2', { class: 'seat-tray-title' }, 'Gespeicherte Sitzpläne'),
-      h('button', { class: 'btn btn-sm', onclick: () => savePlan(course, st) }, '💾 Plan speichern …'),
+      h('h2', { class: 'seat-tray-title' }, 'Gespeicherte Stände'),
+      h('button', { class: 'btn btn-sm', onclick: () => savePlan(course, st) }, '💾 Stand speichern …'),
       list.length
         ? h(
             'ul',
@@ -177,28 +236,29 @@
               h(
                 'li',
                 null,
-                h('div', { class: 'grow' }, h('strong', null, p.name), h('div', { class: 'muted small' }, `${p.savedAt ? new Date(p.savedAt).toLocaleDateString('de-DE') : ''} · ${Object.keys(p.pos || {}).length} Plätze`)),
+                h('div', { class: 'grow' }, h('strong', null, p.name), h('div', { class: 'muted small' }, [p.room, p.savedAt ? new Date(p.savedAt).toLocaleDateString('de-DE') : '', `${Object.keys(p.pos || {}).length} Plätze`].filter(Boolean).join(' · '))),
                 h('button', { class: 'btn btn-sm', onclick: () => loadPlan(course, p) }, 'Laden'),
                 h('button', { class: 'icon-btn danger', title: 'Löschen', 'aria-label': 'Gespeicherten Plan löschen', onclick: () => deletePlan(course, p) }, '✕')
               )
             )
           )
-        : h('p', { class: 'muted small' }, 'Noch keine gespeicherten Pläne.')
+        : h('p', { class: 'muted small' }, 'Noch keine gespeicherten Stände.')
     );
   }
 
   async function savePlan(course, st) {
-    const name = await promptDialog('Sitzplan speichern', 'Name, z. B. „Raum 204 ab Herbstferien“', 'Sitzplan ' + new Date().toLocaleDateString('de-DE'));
+    const name = await promptDialog('Stand speichern', 'Name, z. B. „ab Herbstferien“', `${st.name} ${new Date().toLocaleDateString('de-DE')}`);
     if (name === null) return;
     course.seatingSaved = course.seatingSaved || [];
-    course.seatingSaved.push({ id: uid(), name: name.trim() || 'Sitzplan', savedAt: new Date().toISOString(), cols: st.cols, rows: st.rows, desk: st.desk, pos: JSON.parse(JSON.stringify(st.pos)) });
+    course.seatingSaved.push({ id: uid(), name: name.trim() || 'Sitzplan', room: st.name, savedAt: new Date().toISOString(), cols: st.cols, rows: st.rows, desk: st.desk, pos: JSON.parse(JSON.stringify(st.pos)) });
     NM.app.commit();
     toast('Sitzplan gespeichert.');
   }
 
   async function loadPlan(course, p) {
-    if (!(await confirmDialog('Sitzplan laden?', `„${p.name}“ ersetzt den aktuellen Sitzplan. Speichern Sie ihn vorher, wenn Sie ihn behalten möchten.`, { okLabel: 'Laden' }))) return;
-    course.seating = { cols: p.cols, rows: p.rows, desk: p.desk, pos: JSON.parse(JSON.stringify(p.pos || {})) };
+    const st = seating(course);
+    if (!(await confirmDialog('Stand laden?', `„${p.name}“ ersetzt den aktuellen Sitzplan von „${st.name}“. Speichern Sie ihn vorher, wenn Sie ihn behalten möchten.`, { okLabel: 'Laden' }))) return;
+    Object.assign(st, { cols: p.cols, rows: p.rows, desk: p.desk, pos: JSON.parse(JSON.stringify(p.pos || {})) });
     NM.app.commit();
   }
 

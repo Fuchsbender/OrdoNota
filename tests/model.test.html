@@ -37,6 +37,12 @@
   const names = M.parseNames('1\tMüller\tAnna\nSchmidt, Jonas\nLena Weber\n\n');
   ok('Namen erkannt', names.map((s) => s.last + '|' + s.first).join(';') === 'Müller|Anna;Schmidt|Jonas;Weber|Lena');
 
+  // 1.3: alter Einzel-Sitzplan wird zum ersten Raum
+  const seatOld = M.migrate({ schema: 1, years: [], courses: [{ id: 'c', jahrgang: 8, students: [], seating: { cols: 6, rows: 4, desk: 'bottom', pos: { a: { x: 1, y: 2 } } } }] });
+  const sp = seatOld.courses[0].seatingPlans;
+  ok('Alter Sitzplan → Raum 1', sp && sp.length === 1 && sp[0].name === 'Raum 1' && sp[0].cols === 6 && sp[0].desk === 'bottom' && sp[0].pos.a.y === 2 && !!sp[0].id);
+  ok('Altes Feld seating entfernt', !('seating' in seatOld.courses[0]));
+
   // Statistik ohne I-Status und ohne inaktive Personen
   const stc = { students: [{ id: 'a', last: 'A' }, { id: 'b', last: 'B', iStatus: true }, { id: 'c', last: 'C', active: false }] };
   ok('Statistik ohne I-Status/inaktiv', M.statStudents(stc).map((s) => s.id).join() === 'a');

@@ -268,7 +268,7 @@
     }
     doPrint(
       `${M.courseTitle(c)} – Sitzplan`,
-      h('div', { class: 'p-page' }, header(c, 'Sitzplan', ''), st.desk === 'top' ? desk : null, h('table', { class: 'p-seat-grid' + (students.some((s) => s.photo && Object.values(cells).includes(s.id)) ? ' with-photos' : '') }, h('tbody', null, rows)), st.desk === 'bottom' ? desk : null),
+      h('div', { class: 'p-page' }, header(c, 'Sitzplan', st.name), st.desk === 'top' ? desk : null, h('table', { class: 'p-seat-grid' + (students.some((s) => s.photo && Object.values(cells).includes(s.id)) ? ' with-photos' : '') }, h('tbody', null, rows)), st.desk === 'bottom' ? desk : null),
       { landscape: st.cols > st.rows }
     );
   }

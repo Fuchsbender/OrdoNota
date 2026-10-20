@@ -1,6 +1,6 @@
 # Notenmanager – Dokumentation
 
-Version 1.3.0 · Stand Oktober 2026
+Version 1.4.0 · Stand Oktober 2026
 
 Der Notenmanager verwaltet Noten für die Sekundarstufe I (Noten 1–6 mit Tendenz) und die Mainzer Studienstufe (MSS, Punkte 00–15) an Schulen in Rheinland-Pfalz. Er läuft vollständig lokal im Browser, verschlüsselt alle Daten mit einem Passwort und legt sie in einem Ordner ab, den der Synology Drive Client auf die DiskStation spiegelt.
 
@@ -383,13 +383,13 @@ Der Umschalter **„Jahresnote“** (nur Jahrgang 5–11) zeigt je Person beide 
 
 ### 9.3 Reiter „Sitzplan“
 
-Für jeden Kurs lässt sich ein Sitzplan anlegen. Jede aktive Person erscheint als Karte mit ihrem **Vornamen** (bei gleichen Vornamen im Kurs mit Initiale des Nachnamens, z. B. „Anna M.“).
+Für jeden Kurs lassen sich **mehrere Sitzpläne für verschiedene Räume** anlegen. Oben stehen die Räume als Karten (Größe und Zahl der belegten Plätze); ein Klick wechselt den Raum, **„+ Neuer Raum“** legt einen weiteren an (mit der Rastergröße des aktuellen Raums, aber leer). Die Bezeichnung lässt sich im Feld **„Raum / Bezeichnung“** ändern, **🗑** löscht den gewählten Raum (nur wenn es mehr als einen gibt). Welcher Raum zuletzt gewählt war, merkt sich jedes Gerät. Ein Sitzplan aus Version 1.2/1.3 wird beim Öffnen automatisch zu „Raum 1“. Jede aktive Person erscheint als Karte mit ihrem **Vornamen** (bei gleichen Vornamen im Kurs mit Initiale des Nachnamens, z. B. „Anna M.“).
 
 - **Spalten** und **Reihen** legen die Größe des Rasters fest (bis 16 × 12). **Lehrerpult** oben oder unten.
 - Karten aus **„Noch ohne Platz“** (rechts) mit Maus oder Finger auf einen Platz ziehen. Auf einen besetzten Platz gezogen, **tauschen** die beiden die Plätze. Zurück in die Ablage ziehen nimmt eine Person vom Plan. Beim Ziehen an den oberen/unteren Rand scrollt die Seite mit.
 - **🎲 Freie Plätze füllen** verteilt alle noch nicht platzierten Personen in zufälliger Reihenfolge auf die freien Plätze. **Alle abräumen** setzt den Plan zurück.
 - **🖨 Drucken** gibt den Plan auf einer A4-Seite aus (mit Fotos, soweit vorhanden).
-- **Gespeicherte Sitzpläne** (rechts): **„💾 Plan speichern …“** legt den aktuellen Plan unter einem Namen ab (z. B. „Raum 204 ab Herbstferien“). **Laden** ersetzt den aktuellen Plan nach Rückfrage durch den gespeicherten, **✕** löscht ihn. Personen, die es im gespeicherten Plan noch nicht gab, landen beim Laden in der Ablage.
+- **Gespeicherte Stände** (rechts): **„💾 Stand speichern …“** legt eine Kopie der aktuellen Sitzordnung des gewählten Raums unter einem Namen ab (z. B. „Raum 204 ab Herbstferien“), um später darauf zurückzugreifen. **Laden** ersetzt die Sitzordnung des gerade gewählten Raums nach Rückfrage, **✕** löscht den Stand. Die Stände gelten für den ganzen Kurs; der Raum, aus dem sie stammen, steht dabei. Personen, die es im gespeicherten Plan noch nicht gab, landen beim Laden in der Ablage.
 
 **Fotos**
 
@@ -411,7 +411,7 @@ Alle Ausdrucke öffnen den Druckdialog des Browsers. Dort können Sie auch **„
 | Notenübersicht | 🖨 Schülerbögen | Eine Seite je Person (Auswahl siehe unten) |
 | Notenübersicht | ⬇ CSV/Excel | Alle Noten und Ergebnisse des Kurses als CSV (Semikolon, öffnet direkt in Excel) |
 | Tests | 🖨 Schlüssel / Liste / Schülerzettel | siehe 7.6 |
-| Sitzplan | 🖨 Drucken | Sitzplan mit Vornamen und Lehrerpult, A4 (quer, wenn mehr Spalten als Reihen) |
+| Sitzplan | 🖨 Drucken | Sitzplan des gewählten Raums mit Vornamen, Fotos und Lehrerpult, A4 (quer, wenn mehr Spalten als Reihen) |
 | Mitarbeit/EPO | 🖨 Liste | Bewertungsraster mit Ergebnis je Person |
 | Mitarbeit/EPO | 🖨 Schülerzettel | Ein Zettel pro Person zum Ausschneiden (mehrere pro Blatt, gestrichelte Schnittlinie): Name, Kurs, Blockname und Zeitraum, Punktelegende, Bewertungen mit Datum im Tabellenkopf, Ergebnis mit Note sowie Linien für Datum und Unterschrift |
 
@@ -801,7 +801,7 @@ Berechnete Werte (Schnitte, Testnoten, EPO-Noten) werden **nie gespeichert**, so
   "kdf": "PBKDF2-SHA256",
   "savedAt": "2026-10-14T21:57:03.123Z",
   "device": "Laptop Schule",
-  "app": "1.3.0",
+  "app": "1.4.0",
   "pw":   { "salt": "<b64>", "iter": 600000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "rec":  { "salt": "<b64>", "iter": 100000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "data": { "iv": "<b64>", "ct": "<b64: verschlüsseltes JSON des Datenmodells>" }
@@ -824,7 +824,7 @@ Entschlüsselter Inhalt (`schema: 1`):
 ```js
 {
   schema: 1,                             // Datenformat (siehe 25.2)
-  savedWith: "1.3.0",                    // App-Version beim letzten Speichern
+  savedWith: "1.4.0",                    // App-Version beim letzten Speichern
   created: "<ISO>", savedAt: "<ISO>",
   settings: { autoLockMin, limitSek1, limitMss, precision, keepBackups, backupEveryMin, gradeColors },
   years:   [ { id, name: "2026/27" } ],
@@ -841,8 +841,8 @@ Course = {
   assessments: [ Assessment ],
   overrides: { "<Halbjahr>"|"Jahr": { "<studentId>": { p, reason } } },
   comments:  { "<studentId>": "Text" },
-  seating?:  { cols, rows, desk: "top" | "bottom", pos: { "<studentId>": { x, y } } },
-  seatingSaved?: [ { id, name, savedAt, cols, rows, desk, pos } ]
+  seatingPlans?: [ { id, name, cols, rows, desk: "top" | "bottom", pos: { "<studentId>": { x, y } } } ],   // Räume
+  seatingSaved?: [ { id, name, room, savedAt, cols, rows, desk, pos } ]                          // gespeicherte Stände
 }
 
 Assessment = {
@@ -917,7 +917,7 @@ In `js/model.js` stehen zwei Nummern:
 
 | Konstante | Bedeutung | Wann erhöhen |
 |---|---|---|
-| `APP_VERSION` (z. B. `1.3.0`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.3.0` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
+| `APP_VERSION` (z. B. `1.4.0`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.4.0` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
 | `SCHEMA` (z. B. `1`) | Version des Datenformats | nur, wenn eine **ältere** App-Version die neuen Daten falsch verstehen würde (z. B. ein Feld ändert seine Bedeutung) |
 
 Öffnet eine App eine Datenbank mit höherem `SCHEMA`, verweigert sie das mit einer Meldung (siehe 20.10). Neue, nur *zusätzliche* Felder brauchen kein neues `SCHEMA`: Ältere Versionen lassen unbekannte Felder unverändert und speichern sie mit.
