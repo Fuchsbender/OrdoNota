@@ -1,4 +1,4 @@
-/* Notenmanager – Reiter „Ziehen“: zufällig Personen ziehen (z. B. Hausaufgaben einsammeln und bewerten). */
+/* OrdoNota – Reiter „Ziehen“: zufällig Personen ziehen (z. B. Hausaufgaben einsammeln und bewerten). */
 (function (NM) {
   'use strict';
   const { h, toast, confirmDialog, parseNum, fmtDate, fmtDateShort, todayISO, uid } = NM.util;

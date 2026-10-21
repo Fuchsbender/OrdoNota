@@ -1,4 +1,4 @@
-/* Notenmanager – Reiter „Sitzplan“: Namenskarten auf einem Raster per Ziehen anordnen. */
+/* OrdoNota – Reiter „Sitzplan“: Namenskarten auf einem Raster per Ziehen anordnen. */
 (function (NM) {
   'use strict';
   const { h, confirmDialog, promptDialog, toast, uid } = NM.util;

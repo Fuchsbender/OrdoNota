@@ -1,4 +1,4 @@
-/* Notenmanager – Reiter „Notenübersicht“: alle Noten, Gewichtung, Halbjahres- und Jahresnote. */
+/* OrdoNota – Reiter „Notenübersicht“: alle Noten, Gewichtung, Halbjahres- und Jahresnote. */
 (function (NM) {
   'use strict';
   const { h, toast, modal, fmtNum, gradeStyle, csv, download, safeFilename } = NM.util;

@@ -1,4 +1,4 @@
-/* Notenmanager – Druckansichten (Kursliste, Test, EPO, Schülerbögen). */
+/* OrdoNota – Druckansichten (Kursliste, Test, EPO, Schülerbögen). */
 (function (NM) {
   'use strict';
   const { h, clear, modal, fmtNum, fmtScore, fmtDate, gradeStyle } = NM.util;

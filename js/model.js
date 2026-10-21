@@ -1,4 +1,4 @@
-/* Notenmanager – Datenmodell: Erzeugen und Abfragen von Schuljahren, Kursen, Leistungen. */
+/* OrdoNota – Datenmodell: Erzeugen und Abfragen von Schuljahren, Kursen, Leistungen. */
 (function (NM) {
   'use strict';
   const { uid, todayISO } = NM.util;
@@ -7,7 +7,7 @@
   // SCHEMA erhöhen, sobald sich das Datenmodell so ändert, dass ältere App-Versionen
   // die Daten falsch verstehen würden. Ältere Versionen öffnen solche Datenbanken dann nicht.
   const SCHEMA = 1;
-  const APP_VERSION = '1.11.1';
+  const APP_VERSION = '1.12.0';
 
   class NewerSchemaError extends Error {}
 
@@ -41,7 +41,7 @@
     if (!db || typeof db !== 'object') throw new Error('Die Datenbank ist beschädigt (kein gültiger Inhalt).');
     if (Number(db.schema) > SCHEMA) {
       throw new NewerSchemaError(
-        `Diese Datenbank wurde mit einer neueren Version des Notenmanagers gespeichert` +
+        `Diese Datenbank wurde mit einer neueren Version von OrdoNota gespeichert` +
           (db.savedWith ? ` (${db.savedWith})` : '') +
           `. Diese App ist Version ${APP_VERSION}. Bitte aktualisieren Sie die Programmdateien auf diesem Gerät, bevor Sie die Datenbank öffnen – sonst könnten Daten verloren gehen.`
       );

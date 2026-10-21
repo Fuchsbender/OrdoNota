@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Notenmanager – Notfall-Entschlüsselung ohne App.
+"""OrdoNota – Notfall-Entschlüsselung ohne App.
 
-Entschlüsselt eine Notenmanager-Datenbank (.nmdb, auch Sicherungen) mit dem
+Entschlüsselt eine OrdoNota-Datenbank (.nmdb, auch Sicherungen) mit dem
 Passwort oder dem Wiederherstellungsschlüssel und schreibt den Inhalt als
 lesbares JSON. Damit sind die Daten auch dann zugänglich, wenn die App selbst
 nicht mehr läuft.
@@ -58,7 +58,7 @@ def entschluesseln(datei_obj, geheimnis, wiederherstellung=False):
     geheimnis: Passwort bzw. Wiederherstellungsschlüssel
     """
     if not isinstance(datei_obj, dict) or datei_obj.get("format") != FORMAT:
-        raise EntschluesselungsFehler("Diese Datei ist keine Notenmanager-Datenbank.")
+        raise EntschluesselungsFehler("Diese Datei ist keine OrdoNota-Datenbank.")
     if datei_obj.get("version", 1) > 1:
         raise EntschluesselungsFehler("Unbekannte Dateiversion – bitte neuere Version dieses Werkzeugs verwenden.")
     AESGCM = _aesgcm()
@@ -150,7 +150,7 @@ def schreibe_csv(daten, ordner):
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(description="Notenmanager-Datenbank ohne App entschlüsseln.")
+    ap = argparse.ArgumentParser(description="OrdoNota-Datenbank ohne App entschlüsseln.")
     ap.add_argument("datei", help="Pfad zur .nmdb-Datei (auch Sicherungen)")
     ap.add_argument("-w", "--wiederherstellung", action="store_true", help="mit Wiederherstellungsschlüssel statt Passwort")
     ap.add_argument("-o", "--ausgabe", help="Ausgabedatei (Standard: <datei>_klartext.json)")

@@ -1,8 +1,8 @@
-# Notenmanager – Dokumentation
+# OrdoNota – Dokumentation
 
-Version 1.11.1 · Stand Oktober 2026
+Version 1.12.0 · Stand Oktober 2026
 
-Der Notenmanager verwaltet Noten für die Sekundarstufe I (Noten 1–6 mit Tendenz) und die Mainzer Studienstufe (MSS, Punkte 00–15) an Schulen in Rheinland-Pfalz. Er läuft vollständig lokal im Browser, verschlüsselt alle Daten mit einem Passwort und legt sie in einem Ordner ab, den der Synology Drive Client auf die DiskStation spiegelt.
+OrdoNota (bis Version 1.11 „Notenmanager“) verwaltet Noten für die Sekundarstufe I (Noten 1–6 mit Tendenz) und die Mainzer Studienstufe (MSS, Punkte 00–15) an Schulen in Rheinland-Pfalz. Die App läuft vollständig lokal im Browser, verschlüsselt alle Daten mit einem Passwort und legt sie in einem Ordner ab, den der Synology Drive Client auf die DiskStation spiegelt.
 
 ---
 
@@ -53,7 +53,7 @@ Der Notenmanager verwaltet Noten für die Sekundarstufe I (Noten 1–6 mit Tende
 
 ## 1. Überblick
 
-Der Notenmanager deckt vier Anwendungsfälle ab:
+OrdoNota deckt vier Anwendungsfälle ab:
 
 | Anwendungsfall | Reiter | Ergebnis |
 |---|---|---|
@@ -104,7 +104,7 @@ Legen Sie im Synology-Drive-Ordner einen eigenen Unterordner für die Daten an, 
 
 ```
 SynologyDrive/
-└── Notenmanager-Daten/     ← diesen Ordner wählen Sie in der App
+└── OrdoNota-Daten/         ← diesen Ordner wählen Sie in der App
 ```
 
 > **Tipp:** Verwenden Sie für die Daten einen eigenen Ordner, getrennt vom Programmordner. Dann bleiben Programm-Updates und Daten sauber getrennt.
@@ -158,7 +158,7 @@ Technisch schreibt die App dazu die Datei `notenmanager.lock.json` in den Dateno
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
-│ Notenmanager  [Schuljahr 2026/27 ▾]      Gespeichert 10:14  ☾  🔒   │  ← Kopfzeile
+│ OrdoNota      [Schuljahr 2026/27 ▾]      Gespeichert 10:14  ☾  🔒   │  ← Kopfzeile
 ├─────────────┬────────────────────────────────────────────────────────┤
 │ KURSE       │ Kurs & Schüler | Tests | Mitarbeit/EPO | Notenübersicht │  ← Reiter
 │ ▸ 8b Mathe  │                                                        │
@@ -715,7 +715,7 @@ Schnitte besser als 1,00 (bei Sek I nicht möglich) ergeben 1.
 **Automatische Sicherungen:** Bevor die App die Datenbank überschreibt, legt sie die bisherige Version im Unterordner `Sicherungen/` ab, höchstens alle 10 Minuten. Die ältesten Sicherungen über der eingestellten Anzahl (Standard 10) werden gelöscht. Sicherungen sind genauso verschlüsselt wie die Datenbank.
 
 ```
-Notenmanager-Daten/
+OrdoNota-Daten/
 ├── notenmanager.nmdb
 ├── notenmanager.lock.json            (nur während die App offen ist)
 └── Sicherungen/
@@ -803,7 +803,7 @@ Mögliche Gründe:
 Nein. Mobile Browser können nicht direkt in Ordner schreiben. Die App ist für Desktop und Laptop gedacht.
 
 ### 21.10 „Diese Datenbank wurde mit einer neueren Version gespeichert“
-Auf einem anderen Gerät läuft eine neuere Version des Notenmanagers, die das Datenformat erweitert hat. Die ältere Version öffnet die Datenbank absichtlich nicht, damit sie keine Daten falsch versteht oder beim Speichern verliert. Lösung: Die Programmdateien (`index.html`, `css/`, `js/`) auf diesem Gerät durch die neue Version ersetzen. Liegt der Programmordner im Synology-Drive-Ordner, passiert das automatisch.
+Auf einem anderen Gerät läuft eine neuere Version von OrdoNota, die das Datenformat erweitert hat. Die ältere Version öffnet die Datenbank absichtlich nicht, damit sie keine Daten falsch versteht oder beim Speichern verliert. Lösung: Die Programmdateien (`index.html`, `css/`, `js/`) auf diesem Gerät durch die neue Version ersetzen. Liegt der Programmordner im Synology-Drive-Ordner, passiert das automatisch.
 
 Die Version der App steht unter Einstellungen → Hinweise.
 
@@ -817,6 +817,7 @@ Reines HTML/CSS/JavaScript ohne Build-Schritt und ohne externe Bibliotheken. Die
 
 | Datei | Namensraum | Aufgabe |
 |---|---|---|
+| `js/logo.js` | `NM.logo` | Logo als SVG: `full(h)` (Monogramm + Schriftzug), `mark(px)` (nur Monogramm), `favicon()`; Farbe folgt der Textfarbe. Quelle: `logo/ordonota-logo*.svg` |
 | `js/util.js` | `NM.util` | DOM-Helfer `h()`, Formatierung (deutsch), Dialoge, Toasts, Download, CSV |
 | `js/xlsx.js` | `NM.xlsx` | Excel-Dateien ohne Bibliothek: `workbook({ sheet, rows, widths })` → Blob (ZIP ohne Kompression, ein Blatt, Kopfzeile fett) |
 | `js/grades.js` | `NM.grades` | **Gesamte Notenlogik** (rein, ohne DOM): Skalen, Eingabe-Parser, Rundung, Notenschlüssel, Test-/EPO-Auswertung, Halbjahres-/Jahresnote |
@@ -844,6 +845,8 @@ Berechnete Werte (Schnitte, Testnoten, EPO-Noten) werden **nie gespeichert**, so
 
 ## 23. Dateiformat der Datenbank
 
+> **Name:** Seit Version 1.12 heißt die App **OrdoNota**. Die Dateien im Datenordner (`notenmanager.nmdb`, `notenmanager.lock.json`, Sicherungen `notenmanager_….nmdb`), die Formatkennung `notenmanager-db` und die Kennungen im Browser-Speicher behalten absichtlich ihren alten Namen, damit bestehende Datenbanken und Sicherungen ohne Umstellung weiter funktionieren. Ein vorhandener Datenordner (z. B. `Notenmanager-Daten`) kann ebenfalls seinen Namen behalten.
+
 `notenmanager.nmdb` ist JSON:
 
 ```json
@@ -854,7 +857,7 @@ Berechnete Werte (Schnitte, Testnoten, EPO-Noten) werden **nie gespeichert**, so
   "kdf": "PBKDF2-SHA256",
   "savedAt": "2026-10-14T21:57:03.123Z",
   "device": "Laptop Schule",
-  "app": "1.11.1",
+  "app": "1.12.0",
   "pw":   { "salt": "<b64>", "iter": 600000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "rec":  { "salt": "<b64>", "iter": 100000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "data": { "iv": "<b64>", "ct": "<b64: verschlüsseltes JSON des Datenmodells>" }
@@ -877,7 +880,7 @@ Entschlüsselter Inhalt (`schema: 1`):
 ```js
 {
   schema: 1,                             // Datenformat (siehe 26.2)
-  savedWith: "1.11.1",                    // App-Version beim letzten Speichern
+  savedWith: "1.12.0",                    // App-Version beim letzten Speichern
   created: "<ISO>", savedAt: "<ISO>",
   settings: { autoLockMin, limitSek1, limitMss, precision, keepBackups, backupEveryMin, gradeColors },
   years:   [ { id, name: "2026/27" } ],
@@ -974,7 +977,7 @@ In `js/model.js` stehen zwei Nummern:
 
 | Konstante | Bedeutung | Wann erhöhen |
 |---|---|---|
-| `APP_VERSION` (z. B. `1.11.1`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.11.1` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
+| `APP_VERSION` (z. B. `1.12.0`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.12.0` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
 | `SCHEMA` (z. B. `1`) | Version des Datenformats | nur, wenn eine **ältere** App-Version die neuen Daten falsch verstehen würde (z. B. ein Feld ändert seine Bedeutung) |
 
 Öffnet eine App eine Datenbank mit höherem `SCHEMA`, verweigert sie das mit einer Meldung (siehe 21.10). Neue, nur *zusätzliche* Felder brauchen kein neues `SCHEMA`: Ältere Versionen lassen unbekannte Felder unverändert und speichern sie mit.

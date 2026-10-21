@@ -1,4 +1,4 @@
-/* Notenmanager – Excel-Dateien (.xlsx) ohne Bibliothek: ein Tabellenblatt mit Text und Zahlen, Kopfzeile fett. */
+/* OrdoNota – Excel-Dateien (.xlsx) ohne Bibliothek: ein Tabellenblatt mit Text und Zahlen, Kopfzeile fett. */
 (function (NM) {
   'use strict';
 

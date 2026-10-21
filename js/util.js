@@ -1,4 +1,4 @@
-/* Notenmanager – kleine DOM- und Format-Helfer. */
+/* OrdoNota – kleine DOM- und Format-Helfer. */
 (function (NM) {
   'use strict';
 

@@ -1,4 +1,4 @@
-/* Notenmanager – Anwendungskern: Anmeldung, Speichern, Sperren, Layout, Navigation. */
+/* OrdoNota – Anwendungskern: Anmeldung, Speichern, Sperren, Layout, Navigation. */
 (function (NM) {
   'use strict';
   const { h, clear, toast, modal, confirmDialog, fmtTime } = NM.util;
@@ -76,7 +76,7 @@
     clear(root()).appendChild(
       authCard(
         'Browser wird nicht unterstützt',
-        h('p', null, 'Der Notenmanager speichert die Datenbank direkt in Ihrem Synology-Drive-Ordner. Das ist nur in Chromium-Browsern möglich (Google Chrome, Microsoft Edge, Brave, Thorium).'),
+        h('p', null, 'OrdoNota speichert die Datenbank direkt in Ihrem Synology-Drive-Ordner. Das ist nur in Chromium-Browsern möglich (Google Chrome, Microsoft Edge, Brave, Thorium).'),
         h('p', { class: 'muted' }, 'Bitte öffnen Sie index.html in einem dieser Browser.')
       )
     );
@@ -86,16 +86,10 @@
     return h(
       'div',
       { class: 'auth' },
-      h('div', { class: 'auth-card' }, h('div', { class: 'auth-logo' }, logo(), h('span', null, 'Notenmanager')), h('h1', null, title), content)
+      h('div', { class: 'auth-card' }, h('div', { class: 'auth-logo', html: NM.logo.full(44) }), h('h1', null, title), content)
     );
   }
 
-  function logo() {
-    return h('span', {
-      class: 'logo',
-      html: '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M5 3h11l3 3v15H5zM7 5v14h10V7h-2V5zm2 5h6v2H9zm0 4h6v2H9z"/></svg>',
-    });
-  }
 
   function renderStart(message) {
     const r = clear(root());
@@ -227,7 +221,7 @@
       const w = window.open('', '_blank', 'width=600,height=400');
       if (!w) return toast('Pop-up wurde blockiert.', 'error');
       w.document.write(
-        `<!doctype html><meta charset="utf-8"><title>Wiederherstellungsschlüssel</title><body style="font-family:sans-serif;padding:40px"><h2>Notenmanager – Wiederherstellungsschlüssel</h2><p>Erstellt am ${new Date().toLocaleString('de-DE')}</p><p style="font:600 22px monospace;letter-spacing:2px;border:2px solid #000;padding:16px;display:inline-block">${key}</p><p>Sicher aufbewahren. Mit diesem Schlüssel kann ein neues Passwort gesetzt werden.</p></body>`
+        `<!doctype html><meta charset="utf-8"><title>Wiederherstellungsschlüssel</title><body style="font-family:sans-serif;padding:40px"><h2>OrdoNota – Wiederherstellungsschlüssel</h2><p>Erstellt am ${new Date().toLocaleString('de-DE')}</p><p style="font:600 22px monospace;letter-spacing:2px;border:2px solid #000;padding:16px;display:inline-block">${key}</p><p>Sicher aufbewahren. Mit diesem Schlüssel kann ein neues Passwort gesetzt werden.</p></body>`
       );
       w.document.close();
       w.print();
@@ -609,7 +603,7 @@
     const top = h(
       'header',
       { class: 'topbar' },
-      h('div', { class: 'brand' }, logo(), h('span', null, 'Notenmanager')),
+      h('div', { class: 'brand' }, h('span', { class: 'brand-full', html: NM.logo.full(32) }), h('span', { class: 'brand-mark', html: NM.logo.mark(28) })),
       yearSel,
       h('div', { class: 'spacer' }),
       h('span', { id: 'save-status', class: 'save-status' }),

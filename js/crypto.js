@@ -1,4 +1,4 @@
-/* Notenmanager – Verschlüsselung (WebCrypto).
+/* OrdoNota – Verschlüsselung (WebCrypto).
  *
  * Aufbau der Datei:
  *   Ein zufälliger Datenschlüssel (AES-256-GCM) verschlüsselt die Daten.
@@ -161,8 +161,8 @@
   }
 
   function check(fileObj) {
-    if (!fileObj || fileObj.format !== FORMAT) throw new Error('Diese Datei ist keine Notenmanager-Datenbank.');
-    if (fileObj.version > 1) throw new Error('Die Datenbank stammt aus einer neueren Version des Notenmanagers.');
+    if (!fileObj || fileObj.format !== FORMAT) throw new Error('Diese Datei ist keine OrdoNota-Datenbank.');
+    if (fileObj.version > 1) throw new Error('Die Datenbank stammt aus einer neueren Version von OrdoNota.');
   }
 
   NM.crypto = { Vault, makeRecoveryKey, normalizeRecoveryKey };

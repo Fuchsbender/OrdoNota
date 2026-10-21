@@ -1,4 +1,4 @@
-/* Notenmanager – Reiter „Kurs & Schüler“. */
+/* OrdoNota – Reiter „Kurs & Schüler“. */
 (function (NM) {
   'use strict';
   const { h, toast, confirmDialog, modal, parseNum, uid, download, safeFilename } = NM.util;

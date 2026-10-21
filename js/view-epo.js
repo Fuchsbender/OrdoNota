@@ -1,4 +1,4 @@
-/* Notenmanager – Reiter „Mitarbeit/EPO“: Bewertung über eine feste Zahl von Unterrichtsstunden. */
+/* OrdoNota – Reiter „Mitarbeit/EPO“: Bewertung über eine feste Zahl von Unterrichtsstunden. */
 (function (NM) {
   'use strict';
   const { h, toast, confirmDialog, modal, parseNum, uid, fmtNum, fmtDate, fmtDateShort, todayISO } = NM.util;

@@ -1,4 +1,4 @@
-/* Notenmanager – Notenlogik (rein rechnerisch, ohne DOM).
+/* OrdoNota – Notenlogik (rein rechnerisch, ohne DOM).
  *
  * Alle Noten werden intern als Punkte 0–15 gespeichert.
  *   MSS:   15 = 1+, 14 = 1, 13 = 1-, … , 1 = 5-, 0 = 6

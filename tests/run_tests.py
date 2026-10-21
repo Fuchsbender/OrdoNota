@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Führt alle automatischen Tests des Notenmanagers in einem unsichtbaren Chromium-Browser aus.
+"""Führt alle automatischen Tests von OrdoNota in einem unsichtbaren Chromium-Browser aus.
 
 Aufruf (im Programmordner):
     uv run --with websocket-client --with cryptography python tests/run_tests.py

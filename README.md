@@ -1,4 +1,4 @@
-# Notenmanager
+# OrdoNota
 
 Notenverwaltung für Sek I und MSS (Rheinland-Pfalz) mit Sitzplänen. Läuft lokal im Browser, speichert verschlüsselt in einen Ordner, den der Synology Drive Client auf die DiskStation spiegelt.
 
@@ -7,7 +7,7 @@ Notenverwaltung für Sek I und MSS (Rheinland-Pfalz) mit Sitzplänen. Läuft lok
 ## Starten
 
 1. `index.html` per Doppelklick in **Chrome, Edge, Brave oder Thorium** öffnen (Firefox/Safari können nicht direkt in Ordner schreiben).
-2. Beim ersten Start **Datenordner wählen** – einen Ordner innerhalb des Synology-Drive-Ordners, z. B. `SynologyDrive/Notenmanager-Daten`.
+2. Beim ersten Start **Datenordner wählen** – einen Ordner innerhalb des Synology-Drive-Ordners, z. B. `SynologyDrive/OrdoNota-Daten`.
 3. Passwort festlegen und den **Wiederherstellungsschlüssel ausdrucken** (getrennt vom Rechner aufbewahren).
 4. Auf dem zweiten Gerät denselben (synchronisierten) Ordner wählen und mit demselben Passwort entsperren.
 

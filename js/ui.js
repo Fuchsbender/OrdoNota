@@ -1,4 +1,4 @@
-/* Notenmanager – wiederverwendbare Bausteine für die Ansichten. */
+/* OrdoNota – wiederverwendbare Bausteine für die Ansichten. */
 (function (NM) {
   'use strict';
   const { h, toast, modal, gradeStyle, parseNum, fmtDate } = NM.util;

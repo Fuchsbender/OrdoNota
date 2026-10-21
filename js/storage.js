@@ -1,4 +1,4 @@
-/* Notenmanager – Dateizugriff auf den (Synology-Drive-)Ordner.
+/* OrdoNota – Dateizugriff auf den (Synology-Drive-)Ordner.
  *
  * Im gewählten Ordner liegen:
  *   notenmanager.nmdb          verschlüsselte Datenbank

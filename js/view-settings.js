@@ -1,4 +1,4 @@
-/* Notenmanager – Reiter „Einstellungen“. */
+/* OrdoNota – Reiter „Einstellungen“. */
 (function (NM) {
   'use strict';
   const { h, toast, modal, confirmDialog, parseNum, promptDialog } = NM.util;
@@ -212,7 +212,7 @@
             class: 'btn',
             onclick: async () => {
               const obj = await st.vault.seal(db, { savedAt: new Date().toISOString(), device: S.deviceName() });
-              NM.util.download(`notenmanager_export_${new Date().toISOString().slice(0, 10)}.nmdb`, JSON.stringify(obj), 'application/octet-stream');
+              NM.util.download(`ordonota_export_${new Date().toISOString().slice(0, 10)}.nmdb`, JSON.stringify(obj), 'application/octet-stream');
             },
           },
           'Verschlüsselte Kopie herunterladen'
@@ -349,7 +349,7 @@
       'div',
       { class: 'card card-subtle' },
       h('h2', null, 'Hinweise'),
-      h('p', { class: 'muted small' }, `Notenmanager Version ${NM.model.APP_VERSION} · Datenformat ${NM.model.SCHEMA}`),
+      h('p', { class: 'muted small' }, `OrdoNota Version ${NM.model.APP_VERSION} · Datenformat ${NM.model.SCHEMA}`),
       h(
         'ul',
         null,

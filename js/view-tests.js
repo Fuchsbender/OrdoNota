@@ -1,4 +1,4 @@
-/* Notenmanager – Reiter „Tests“: Rohpunkte erfassen, Notenschlüssel, Notenspiegel. */
+/* OrdoNota – Reiter „Tests“: Rohpunkte erfassen, Notenschlüssel, Notenspiegel. */
 (function (NM) {
   'use strict';
   const { h, toast, confirmDialog, parseNum, uid, fmtNum, fmtScore, fmtDate, gradeStyle } = NM.util;
