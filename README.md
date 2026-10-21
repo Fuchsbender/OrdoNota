@@ -53,6 +53,7 @@ Ausprobieren ohne echte Daten: `index.html?demo` (nichts wird gespeichert).
 - **Mitarbeit/EPO**: „+ Stunde“, dann pro Person das Kürzel tippen oder per **Schnellwahl** klicken; „füllen“ setzt alle leeren Zellen einer Stunde. Ausdrucke: Liste und Schülerzettel zum Ausschneiden (mit Datum/Unterschrift).
 - **Notenübersicht**: alle Noten des Halbjahres; direkte Noten eintragen (`2-`, `11`, oder `f` = fehlt, `ns` = Nachschreiben, `t` = Täuschung/Verweigerung). Kursliste, Schülerbögen, CSV-Export für Excel.
 - **Sitzplan**: mehrere Räume pro Kurs; Vornamen-Karten per Ziehen auf ein Raster setzen, tauschen, zufällig füllen, Stände speichern/laden, Fotos (Strg+V oder Bild auf die Karte ziehen), Druck.
+- **Sortieren**: Klick auf einen Spaltenkopf (Name, Vorname, Aufgabe, Stunde, Note, …) sortiert, zweiter Klick dreht um; bei Köpfen mit eigener Funktion über das kleine ⇅. Leere Werte stehen unten, Ausdrucke bleiben alphabetisch.
 - Tastatur: Enter/↓ = nächste Person, Tab = nächste Spalte.
 
 ## Sicherheit

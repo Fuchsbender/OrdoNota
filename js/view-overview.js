@@ -38,10 +38,21 @@
   }
 
   function halfCard(course, half, level) {
-    const students = M.activeStudents(course);
     const list = course.assessments.filter((a) => a.half === half);
     const ka = list.filter((a) => a.cat === 'ka').sort(byDate);
     const other = list.filter((a) => a.cat === 'other').sort(byDate);
+    const all = M.activeStudents(course);
+    const results = new Map(all.map((s) => [s.id, G.halfResult(course, half, s.id)]));
+    const res = (s) => results.get(s.id);
+    const calc = calcFirst(level);
+    const sort = UI.sorter('ov', {
+      ...Object.fromEntries(list.map((a) => ['a:' + a.id, { get: (s) => G.assessmentPoints(a, s.id, level), first: 'desc' }])),
+      ka: { get: (s) => res(s).ka, first: calc },
+      other: { get: (s) => res(s).other, first: calc },
+      raw: { get: (s) => res(s).raw, first: calc },
+      override: { get: (s) => res(s).override, first: 'desc' },
+    });
+    const students = sort.rows(all);
     const showKa = Number(course.wKa) > 0 || ka.length > 0;
     let col = 0;
     const colIndex = new Map();
@@ -72,13 +83,14 @@
               },
               a.kind === 'test' ? 'Test ›' : 'EPO ›'
             )
-          : null
+          : null,
+        sort.toggle('a:' + a.id)
       );
 
     const head1 = h(
       'tr',
       { class: 'group-row' },
-      h('th', { class: 'sticky-col', rowspan: 2 }, 'Name'),
+      sort.nameHeads({ rowspan: 2 }),
       showKa ? h('th', { class: 'group', colspan: ka.length + 1 }, 'Klassen-/Kursarbeiten') : null,
       h('th', { class: 'group', colspan: other.length + 1 }, 'Sonstige Leistungen'),
       h('th', { class: 'group result', colspan: 3 }, half)
@@ -87,11 +99,11 @@
       'tr',
       null,
       showKa ? ka.map(th) : null,
-      showKa ? h('th', { class: 'num avg-col' }, 'Ø') : null,
+      showKa ? h('th', { class: 'num avg-col' }, sort.head('ka', 'Ø', 'Ø Klassen-/Kursarbeiten – sortieren')) : null,
       other.map(th),
-      h('th', { class: 'num avg-col' }, 'Ø'),
-      h('th', { class: 'num result' }, 'Gerechnet'),
-      h('th', { class: 'center result' }, 'Gesetzt'),
+      h('th', { class: 'num avg-col' }, sort.head('other', 'Ø', 'Ø Sonstige Leistungen – sortieren')),
+      h('th', { class: 'num result' }, sort.head('raw', 'Gerechnet')),
+      h('th', { class: 'center result' }, sort.head('override', 'Gesetzt')),
       h('th', { class: 'result' }, '')
     );
 
@@ -139,11 +151,11 @@
     };
 
     const rows = students.map((s, ri) => {
-      const r = G.halfResult(course, half, s.id);
+      const r = res(s);
       return h(
         'tr',
         { class: r.override !== null ? 'overridden' : '' },
-        h('td', { class: 'sticky-col name-cell' }, h('span', { class: 'row-nr' }, ri + 1), UI.studentLabel(s)),
+        UI.nameCells(s, ri + 1),
         showKa ? ka.map((a) => cell(a, s, ri)) : null,
         showKa ? h('td', { class: 'num avg-col' }, UI.valueText(r.ka, level)) : null,
         other.map((a) => cell(a, s, ri)),
@@ -195,6 +207,11 @@
         ').'
       )
     );
+  }
+
+  /** Erster Klick auf eine Schnitt-Spalte zeigt die Besten oben (Sek I: kleine Dezimalnote, MSS: viele Punkte). */
+  function calcFirst(level) {
+    return level === 'mss' ? 'desc' : 'asc';
   }
 
   function byDate(a, b) {
@@ -275,17 +292,27 @@
 
   function yearCard(course, level) {
     const [h1, h2] = G.halvesFor(course);
-    const students = M.activeStudents(course);
+    const all = M.activeStudents(course);
+    const years = new Map(all.map((s) => [s.id, G.yearResult(course, s.id)]));
+    const yr = (s) => years.get(s.id);
+    const calc = calcFirst(level);
+    const sort = UI.sorter('year', {
+      h1: { get: (s) => yr(s).h1, first: calc },
+      h2: { get: (s) => yr(s).h2, first: calc },
+      raw: { get: (s) => yr(s).raw, first: calc },
+      override: { get: (s) => yr(s).override, first: 'desc' },
+    });
+    const students = sort.rows(all);
     const rows = students.map((s, ri) => {
       const r1 = G.halfResult(course, h1, s.id);
       const r2 = G.halfResult(course, h2, s.id);
-      const y = G.yearResult(course, s.id);
+      const y = yr(s);
       const halfCell = (r) =>
         h('td', { class: 'num' }, r.override !== null ? h('span', { class: 'muted small', title: 'gesetzt' }, 'gesetzt ') : h('span', { class: 'raw' }, UI.valueText(r.raw, level)), ' ', UI.gradeBadge(r.final, level));
       return h(
         'tr',
         { class: y.override !== null ? 'overridden' : '' },
-        h('td', { class: 'sticky-col name-cell' }, h('span', { class: 'row-nr' }, ri + 1), UI.studentLabel(s)),
+        UI.nameCells(s, ri + 1),
         halfCell(r1),
         halfCell(r2),
         h('td', { class: 'num result' }, h('span', { class: 'raw' }, UI.valueText(y.raw, level)), ' ', UI.gradeBadge(y.rounded, level)),
@@ -317,7 +344,20 @@
         h(
           'table',
           { class: 'table grid-table overview-table' },
-          h('thead', null, h('tr', null, h('th', { class: 'sticky-col' }, 'Name'), h('th', { class: 'num' }, h1), h('th', { class: 'num' }, h2), h('th', { class: 'num result' }, 'Gerechnet'), h('th', { class: 'center result' }, 'Gesetzt'), h('th', { class: 'result' }, ''))),
+          h(
+            'thead',
+            null,
+            h(
+              'tr',
+              null,
+              sort.nameHeads(),
+              h('th', { class: 'num' }, sort.head('h1', h1)),
+              h('th', { class: 'num' }, sort.head('h2', h2)),
+              h('th', { class: 'num result' }, sort.head('raw', 'Gerechnet')),
+              h('th', { class: 'center result' }, sort.head('override', 'Gesetzt')),
+              h('th', { class: 'result' }, '')
+            )
+          ),
           h('tbody', null, rows)
         )
       )

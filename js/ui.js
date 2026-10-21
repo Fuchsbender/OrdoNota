@@ -173,9 +173,73 @@
     );
   }
 
-  /** Name mit Markierung „I“ für Schülerinnen und Schüler mit I-Status. */
-  function studentLabel(s) {
-    return [NM.model.studentName(s), s.iStatus ? h('span', { class: 'i-mark', title: 'I-Status' }, 'I') : null];
+  /** Zwei feste Namensspalten (Nachname, Vorname mit Markierung „I“); nr = laufende Nummer vor dem Nachnamen. */
+  function nameCells(s, nr) {
+    const title = NM.model.studentName(s);
+    return [
+      h('td', { class: 'sticky-col name-cell name-last', title }, h('span', { class: 'name-clip' }, nr ? h('span', { class: 'row-nr' }, nr) : null, s.last || '')),
+      h('td', { class: 'sticky-col name-cell name-first', title }, h('span', { class: 'name-clip' }, s.first || '', s.iStatus ? h('span', { class: 'i-mark', title: 'I-Status' }, 'I') : null)),
+    ];
+  }
+
+  // ---------- Sortierbare Tabellen ----------
+  // Zustand je Tabellenart in ui.sort[table] = { key, dir } (nur auf diesem Gerät gespeichert).
+  // Spalten: { key: { get(s) → Zahl | Text | null, first: 'asc' | 'desc' } }; first = Richtung beim ersten Klick.
+  // Leere Werte stehen immer unten, bei Gleichstand bleibt die alphabetische Reihenfolge.
+
+  const NAME_COLS = {
+    last: { get: (s) => s.last || '', first: 'asc' },
+    first: { get: (s) => s.first || '', first: 'asc' },
+  };
+  const SORT_DEFAULT = { key: 'last', dir: 'asc' };
+
+  function sorter(table, cols) {
+    cols = Object.assign({}, NAME_COLS, cols);
+    const ui = NM.app.state.ui;
+    ui.sort = ui.sort || {};
+    const saved = ui.sort[table];
+    // Unbekannte Spalte (z. B. Aufgabe eines anderen Tests) → Standard
+    const st = saved && cols[saved.key] ? saved : SORT_DEFAULT;
+    const set = (key) => {
+      ui.sort[table] = st.key === key ? { key, dir: st.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: cols[key].first };
+      NM.app.saveUi();
+      NM.app.rerender();
+    };
+    const ind = (key) => (st.key === key ? (st.dir === 'asc' ? '▲' : '▼') : '');
+    const empty = (v) => v === null || v === undefined || v === '';
+
+    /** Schülerliste (bereits alphabetisch) nach der gewählten Spalte ordnen. */
+    function rows(students) {
+      if (st.key === SORT_DEFAULT.key && st.dir === SORT_DEFAULT.dir) return students;
+      const vals = new Map(students.map((s) => [s.id, cols[st.key].get(s)]));
+      const sign = st.dir === 'desc' ? -1 : 1;
+      return students.slice().sort((a, b) => {
+        const x = vals.get(a.id);
+        const y = vals.get(b.id);
+        if (empty(x) || empty(y)) return empty(x) - empty(y);
+        return sign * (typeof x === 'string' ? x.localeCompare(y, 'de') : x - y);
+      });
+    }
+
+    /** Ganzer Spaltenkopf als Sortier-Schaltfläche. */
+    function head(key, content, title) {
+      return h('button', { class: 'sort-btn' + (st.key === key ? ' active' : ''), title: title || 'Sortieren', onclick: () => set(key) }, content, h('span', { class: 'sort-ind' }, ind(key)));
+    }
+
+    /** Kleine Sortier-Schaltfläche für Köpfe, die schon eigene Schaltflächen haben. */
+    function toggle(key) {
+      return h('button', { class: 'sort-btn sort-toggle' + (st.key === key ? ' active' : ''), title: 'Nach dieser Spalte sortieren', 'aria-label': 'Sortieren', onclick: () => set(key) }, ind(key) || '⇅');
+    }
+
+    /** Köpfe der beiden Namensspalten (passend zu nameCells); attrs z. B. { rowspan: 2 }. */
+    function nameHeads(attrs) {
+      return [
+        h('th', Object.assign({ class: 'sticky-col name-last' }, attrs), head('last', 'Name', 'Nach Nachname sortieren')),
+        h('th', Object.assign({ class: 'sticky-col name-first' }, attrs), head('first', 'Vorname', 'Nach Vorname sortieren')),
+      ];
+    }
+
+    return { rows, head, toggle, nameHeads, key: st.key };
   }
 
   /** Liste von Leistungen eines Typs als auswählbare Karten. */
@@ -208,13 +272,14 @@
     gradeBadge,
     valueText,
     gradeInput,
-    studentLabel,
+    nameCells,
     numberInput,
     statusSelect,
     STATUS,
     STATUS_SHORT,
     editAssessmentMeta,
     assessmentHeader,
+    sorter,
     pickerList,
     emptyState,
     catLabel,

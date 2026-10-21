@@ -4,6 +4,7 @@
   const { h, toast, confirmDialog, modal, parseNum, uid } = NM.util;
   const G = NM.grades;
   const M = NM.model;
+  const UI = NM.ui;
 
   function render(view, { course, db }) {
     view.append(
@@ -135,10 +136,15 @@
   }
 
   function studentsCard(course) {
-    const all = M.sortStudents(course.students);
+    const sort = UI.sorter('students', {
+      iStatus: { get: (s) => (s.iStatus ? 1 : 0), first: 'desc' },
+      active: { get: (s) => (s.active !== false ? 1 : 0), first: 'desc' },
+    });
+    const all = sort.rows(M.sortStudents(course.students));
     const active = all.filter((s) => s.active !== false);
     const inactive = all.filter((s) => s.active === false);
-    const rows = [...active, ...inactive].map((s, i) => {
+    // Ausgeschiedene stehen unten, außer es wird ausdrücklich nach „Aktiv“ sortiert
+    const rows = (sort.key === 'active' ? all : [...active, ...inactive]).map((s, i) => {
       const inp = (k, col) =>
         h('input', {
           class: 'cell-input text-input',
@@ -204,7 +210,20 @@
             h(
               'table',
               { class: 'table compact' },
-              h('thead', null, h('tr', null, h('th', null, 'Nr.'), h('th', null, 'Nachname'), h('th', null, 'Vorname'), h('th', { class: 'center', title: 'I-Status' }, 'I-Status'), h('th', { class: 'center' }, 'Aktiv'), h('th', null, ''))),
+              h(
+                'thead',
+                null,
+                h(
+                  'tr',
+                  null,
+                  h('th', null, 'Nr.'),
+                  h('th', null, sort.head('last', 'Nachname')),
+                  h('th', null, sort.head('first', 'Vorname')),
+                  h('th', { class: 'center' }, sort.head('iStatus', 'I-Status')),
+                  h('th', { class: 'center' }, sort.head('active', 'Aktiv')),
+                  h('th', null, '')
+                )
+              ),
               h('tbody', null, rows)
             )
           )

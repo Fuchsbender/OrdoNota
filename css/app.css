@@ -258,13 +258,21 @@ details.details-card[open] > summary { margin-bottom: 12px; }
 .table .sticky-col { position: sticky; left: 0; z-index: 1; background: var(--surface); border-right: 1px solid var(--border); }
 .table th.sticky-col { z-index: 3; background: var(--surface-2); }
 .table tbody tr:hover td.sticky-col { background: var(--surface-2); }
-.name-cell { font-weight: 520; min-width: 170px; }
+.name-cell { font-weight: 520; }
+/* Name und Vorname als zwei feste Spalten; die Breite bestimmt den Versatz der zweiten (150 px = 134 + 2 × 8 Polster) */
+.name-clip { display: block; overflow: hidden; text-overflow: ellipsis; }
+.name-last .name-clip { width: 134px; }
+.name-first .name-clip { width: 110px; }
+.table .sticky-col.name-last { border-right: 0; }
+.table .sticky-col.name-first { left: 150px; }
 .row-nr { display: inline-block; width: 22px; color: var(--muted); font-size: 12px; font-weight: 400; }
 .table tr.inactive td { opacity: 0.5; }
 .table th.ungraded, .table td.ungraded { opacity: 0.45; }
 .i-mark { display: inline-block; margin-left: 6px; padding: 0 5px; border-radius: 4px; font-size: 11px; font-weight: 700; line-height: 16px; color: var(--accent); background: var(--accent-soft); border: 1px solid var(--accent); vertical-align: 1px; }
 .field-check { height: 34px; margin: 0; }
-.table tr.row-muted td:not(:last-child) { opacity: 0.55; }
+.table tr.row-muted td:not(:last-child):not(.sticky-col) { opacity: 0.55; }
+/* feste Namensspalten nicht durchsichtig machen, sonst scheinen beim Scrollen die Zellen dahinter durch */
+.table tr.row-muted td.sticky-col { color: var(--muted); }
 .table tr.foot td { background: var(--surface-2); font-size: 12px; }
 .table tr.overridden td.result { background: var(--override); }
 .table th.group { text-align: center; border-left: 1px solid var(--border); color: var(--text); }
@@ -277,6 +285,12 @@ details.details-card[open] > summary { margin-bottom: 12px; }
 .col-head { display: inline-flex; flex-direction: column; align-items: center; line-height: 1.2; }
 .col-name { color: var(--text); font-weight: 600; max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
 .col-sub { font-size: 11px; font-weight: 400; }
+.sort-btn { display: inline-flex; align-items: center; gap: 3px; background: none; border: 0; padding: 0; margin: 0; font: inherit; color: inherit; cursor: pointer; }
+.sort-btn:hover { color: var(--text); }
+.sort-btn.active, .sort-btn.active .col-name { color: var(--accent); }
+.sort-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sort-ind { font-size: 9px; min-width: 7px; }
+.sort-toggle { display: block; margin: 2px auto 0; font-size: 11px; color: var(--muted); }
 .assess-head { min-width: 64px; }
 .assess-head .head-btn { color: inherit; }
 .assess-head .tiny { display: block; margin: 2px auto 0; }

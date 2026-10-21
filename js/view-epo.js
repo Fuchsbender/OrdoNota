@@ -186,37 +186,51 @@
 
   function gridCard(course, a, level) {
     const epo = a.epo;
-    const students = M.activeStudents(course);
     const lessons = sortedLessons(epo);
     const ui = NM.app.state.ui;
     const current = ui.epoQuick ? lessons[lessons.length - 1] : null;
+    const pts = Object.assign({}, G.EPO_DEFAULT_POINTS, epo.points);
+    const all = M.activeStudents(course);
+    const results = new Map(all.map((s) => [s.id, G.epoResult(epo, s.id, level)]));
+    const res = (s) => results.get(s.id);
+    const sort = UI.sorter('epo', {
+      ...Object.fromEntries(lessons.map((l) => ['lesson:' + l.id, { get: (s) => lessonPoints((epo.entries[s.id] || {})[l.id], pts), first: 'desc' }])),
+      sum: { get: (s) => (res(s).attended ? res(s).sum : null), first: 'desc' },
+      max: { get: (s) => (res(s).attended ? res(s).max : null), first: 'desc' },
+      pct: { get: (s) => res(s).pct, first: 'desc' },
+      absent: { get: (s) => res(s).absent, first: 'desc' },
+      hw: { get: (s) => -(res(s).u * pts.u + res(s).h * pts.h), first: 'desc' },
+      grade: { get: (s) => res(s).p, first: 'desc' },
+    });
+    const students = sort.rows(all);
     const head = h(
       'tr',
       null,
-      h('th', { class: 'sticky-col' }, 'Name'),
+      sort.nameHeads(),
       lessons.map((l) =>
         h(
           'th',
           { class: 'center lesson-head' },
           h('button', { class: 'link', title: 'Datum ändern / Stunde löschen', onclick: () => editLesson(a, l) }, fmtDateShort(l.date) || '?'),
-          h('button', { class: 'link tiny', title: 'Leere Zellen dieser Stunde füllen', onclick: () => fillLesson(course, a, l) }, 'füllen')
+          h('button', { class: 'link tiny', title: 'Leere Zellen dieser Stunde füllen', onclick: () => fillLesson(course, a, l) }, 'füllen'),
+          sort.toggle('lesson:' + l.id)
         )
       ),
       current ? h('th', { class: 'center quick-head', title: 'Bewertung der neuesten Stunde per Klick' }, 'Schnellwahl ' + (fmtDateShort(current.date) || '?')) : null,
-      h('th', { class: 'num' }, 'Σ'),
-      h('th', { class: 'num' }, 'Max'),
-      h('th', { class: 'num' }, '%'),
-      h('th', { class: 'num', title: 'Abwesend' }, 'k'),
-      h('th', { class: 'num', title: 'Hausaufgaben unvollständig / vergessen' }, 'HA'),
-      h('th', { class: 'center' }, 'Note')
+      h('th', { class: 'num' }, sort.head('sum', 'Σ')),
+      h('th', { class: 'num' }, sort.head('max', 'Max')),
+      h('th', { class: 'num' }, sort.head('pct', '%')),
+      h('th', { class: 'num' }, sort.head('absent', 'k', 'Abwesend – sortieren')),
+      h('th', { class: 'num' }, sort.head('hw', 'HA', 'Hausaufgaben unvollständig / vergessen – sortieren nach Abzug')),
+      h('th', { class: 'center' }, sort.head('grade', 'Note'))
     );
     const rows = students.map((s, ri) => {
       const row = epo.entries[s.id] || {};
-      const res = G.epoResult(epo, s.id, level);
+      const res = results.get(s.id);
       return h(
         'tr',
         null,
-        h('td', { class: 'sticky-col name-cell' }, UI.studentLabel(s)),
+        UI.nameCells(s),
         lessons.map((l, ci) => {
           const c = row[l.id];
           return h(
@@ -257,7 +271,6 @@
         h('td', { class: 'center' }, UI.gradeBadge(res.p, level))
       );
     });
-    const pts = Object.assign({}, G.EPO_DEFAULT_POINTS, epo.points);
     return h(
       'div',
       { class: 'card' },
@@ -303,6 +316,14 @@
           : h('div', { class: 'table-wrap', 'data-scroll-key': 'epo-grid' }, h('table', { class: 'table grid-table epo-table' }, h('thead', null, head), h('tbody', null, rows))),
       h('p', { class: 'muted small' }, 'Höchstpunktzahl = anwesende Stunden × ', pts['++'], '. Hausaufgaben-Vermerke werden abgezogen. Enter/↓ springt zur nächsten Person.')
     );
+  }
+
+  /** Punkte einer Stunde einschließlich Hausaufgaben-Abzug; null = nichts eingetragen oder nur abwesend. */
+  function lessonPoints(c, pts) {
+    if (!c) return null;
+    let v = G.EPO_RATINGS.includes(c.r) ? pts[c.r] : null;
+    if (c.hw) v = (v || 0) + pts[c.hw];
+    return v;
   }
 
   /** Schaltflächen zum Bewerten einer Stunde; erneuter Klick auf die aktive Auswahl hebt sie auf. */

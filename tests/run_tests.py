@@ -174,6 +174,44 @@ def run_app_smoke(br, base):
             br.errors = []
 
 
+def run_sort_check(br, base):
+    print("Sortieren nach Spaltenköpfen:")
+    br.open(f"{base}/index.html?demo")
+    br.wait("!!document.querySelector('.overview-table')", 30)
+    # Schüler-IDs der Tabellenzeilen in Anzeigereihenfolge (aus dem ersten data-focus-key je Zeile)
+    ids = """[...document.querySelectorAll('.grid-table tbody tr:not(.foot)')].map((tr) => {
+        const k = tr.querySelector('[data-focus-key]').dataset.focusKey;
+        return NM.app.currentCourse().students.find((s) => k.includes(s.id)).id; })"""
+    click = "(t) => { const b = [...document.querySelectorAll('thead .sort-btn')].find((x) => x.firstChild.textContent === t); b.click(); return !!b; }"
+    cases = [
+        ("tests", 0, "Σ", "desc", "(c, s) => { const t = c.assessments.find((a) => a.id === NM.app.state.ui.testId[c.id]) || c.assessments.filter((a) => a.kind === 'test' && a.half === NM.app.currentHalf(c)).pop(); return NM.grades.testResult(t.test, s, NM.grades.courseLevel(c)).score; }"),
+        ("tests", 0, "Σ", "asc", None),
+        ("epo", 0, "Note", "desc", "(c, s) => { const e = c.assessments.filter((a) => a.kind === 'epo' && a.half === NM.app.currentHalf(c)).pop(); return NM.grades.epoResult(e.epo, s, NM.grades.courseLevel(c)).p; }"),
+        ("overview", 0, "Gerechnet", "asc", "(c, s) => NM.grades.halfResult(c, NM.app.currentHalf(c, true), s).raw"),
+        ("overview", 1, "Gerechnet", "desc", "(c, s) => NM.grades.halfResult(c, NM.app.currentHalf(c, true), s).raw"),
+        ("overview", 0, "Vorname", "asc", "(c, s) => c.students.find((x) => x.id === s).first"),
+    ]
+    getter = None
+    for tab, course, label, direction, g in cases:
+        getter = g or getter
+        br.errors = []
+        try:
+            if g:
+                br.eval(f"NM.app.state.ui.sort = {{}}; NM.app.select({{courseId: NM.app.db().courses[{course}].id, tab: '{tab}'}}); 1")
+                time.sleep(0.2)
+            br.eval(f"({click})({json.dumps(label)})")
+            time.sleep(0.2)
+            ok = br.eval(f"""(() => {{ const c = NM.app.currentCourse(); const get = {getter};
+                const vals = ({ids}).map((s) => {{ const v = get(c, s); return v === '' ? null : v; }});
+                const cmp = (x, y) => (typeof x === 'string' ? x.localeCompare(y, 'de') : x - y);
+                const v = vals.filter((x) => x !== null && x !== undefined);
+                return new Set(v).size > 1 && vals.slice(v.length).every((x) => x === null || x === undefined)
+                    && v.every((x, i) => !i || ('{direction}' === 'asc' ? cmp(v[i - 1], x) <= 0 : cmp(v[i - 1], x) >= 0)); }})()""")
+        except RuntimeError as e:
+            ok, br.errors = False, br.errors + [str(e)]
+        report(f"{tab} (Kurs {course + 1}) nach „{label}“ {'auf' if direction == 'asc' else 'ab'}steigend", bool(ok) and not br.errors, "; ".join(br.errors))
+
+
 def run_decrypt_tool(br, base):
     print("Notfallwerkzeug tools/entschluesseln.py:")
     spec = importlib.util.spec_from_file_location("entschluesseln", os.path.join(ROOT, "tools", "entschluesseln.py"))
@@ -239,6 +277,7 @@ def main():
     try:
         run_test_pages(br, base)
         run_app_smoke(br, base)
+        run_sort_check(br, base)
         run_decrypt_tool(br, base)
     finally:
         br.close()

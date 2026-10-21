@@ -273,27 +273,37 @@
 
   function resultsCard(course, a, level) {
     const t = a.test;
-    const students = M.activeStudents(course);
     const max = G.testMaxScore(t);
+    const all = M.activeStudents(course);
+    const results = new Map(all.map((s) => [s.id, G.testResult(t, s.id, level)]));
+    const score = (s, task) => ((t.results[s.id] || {}).scores || {})[task.id];
+    const sort = UI.sorter('test', {
+      ...Object.fromEntries(t.tasks.map((task) => ['task:' + task.id, { get: (s) => score(s, task), first: 'desc' }])),
+      sum: { get: (s) => results.get(s.id).score, first: 'desc' },
+      pct: { get: (s) => results.get(s.id).score, first: 'desc' },
+      grade: { get: (s) => results.get(s.id).p, first: 'desc' },
+      status: { get: (s) => UI.STATUS_SHORT[(t.results[s.id] || {}).status] || null, first: 'asc' },
+    });
+    const students = sort.rows(all);
     const head = h(
       'tr',
       null,
-      h('th', { class: 'sticky-col' }, 'Name'),
-      t.tasks.map((task) => h('th', { class: 'center task-col' + (task.bonus ? ' bonus' : '') }, h('span', { class: 'col-head' }, h('span', { class: 'col-name' }, task.name || '–'), h('span', { class: 'col-sub' }, fmtScore(task.max) + (task.bonus ? ' B' : ''))))),
-      h('th', { class: 'num' }, 'Σ'),
-      h('th', { class: 'num' }, '%'),
-      h('th', { class: 'center' }, 'Note'),
-      h('th', null, 'Status')
+      sort.nameHeads(),
+      t.tasks.map((task) => h('th', { class: 'center task-col' + (task.bonus ? ' bonus' : '') }, sort.head('task:' + task.id, h('span', { class: 'col-head' }, h('span', { class: 'col-name' }, task.name || '–'), h('span', { class: 'col-sub' }, fmtScore(task.max) + (task.bonus ? ' B' : '')))))),
+      h('th', { class: 'num' }, sort.head('sum', 'Σ')),
+      h('th', { class: 'num' }, sort.head('pct', '%')),
+      h('th', { class: 'center' }, sort.head('grade', 'Note')),
+      h('th', null, sort.head('status', 'Status'))
     );
     const rows = students.map((s, ri) => {
       const r = (t.results[s.id] = t.results[s.id] || { scores: {} });
       r.scores = r.scores || {};
-      const res = G.testResult(t, s.id, level);
+      const res = results.get(s.id);
       const blocked = r.status === 'fehlt' || r.status === 'nachschreiben' || r.status === 'taeuschung';
       return h(
         'tr',
         { class: blocked ? 'row-muted' : '' },
-        h('td', { class: 'sticky-col name-cell' }, UI.studentLabel(s)),
+        UI.nameCells(s),
         t.tasks.map((task, ci) =>
           h(
             'td',
@@ -331,7 +341,7 @@
     const avgRow = h(
       'tr',
       { class: 'foot' },
-      h('td', { class: 'sticky-col' }, 'Ø gelöst'),
+      h('td', { class: 'sticky-col', colspan: 2 }, 'Ø gelöst'),
       t.tasks.map((task) => {
         const avg = taskAverage(t, M.statStudents(course), task);
         return h('td', { class: 'center muted small' }, avg === null || !task.max ? '' : fmtNum((avg / task.max) * 100, 0) + ' %');

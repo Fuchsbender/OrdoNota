@@ -31,9 +31,9 @@
 
   function loadUi() {
     try {
-      return Object.assign({ tab: 'overview', courseId: null, yearId: null, half: {}, testId: {}, epoId: {}, seatingId: {}, theme: 'auto' }, JSON.parse(localStorage.getItem('nm.ui') || '{}'));
+      return Object.assign({ tab: 'overview', courseId: null, yearId: null, half: {}, testId: {}, epoId: {}, seatingId: {}, sort: {}, theme: 'auto' }, JSON.parse(localStorage.getItem('nm.ui') || '{}'));
     } catch (e) {
-      return { tab: 'overview', courseId: null, yearId: null, half: {}, testId: {}, epoId: {}, seatingId: {}, theme: 'auto' };
+      return { tab: 'overview', courseId: null, yearId: null, half: {}, testId: {}, epoId: {}, seatingId: {}, sort: {}, theme: 'auto' };
     }
   }
   function saveUi() {
