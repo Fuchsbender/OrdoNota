@@ -24,6 +24,7 @@
     { id: 'course', label: 'Kurs & Schüler' },
     { id: 'tests', label: 'Tests' },
     { id: 'epo', label: 'Mitarbeit/EPO' },
+    { id: 'draw', label: 'Ziehen' },
     { id: 'overview', label: 'Notenübersicht' },
     { id: 'seating', label: 'Sitzplan' },
     { id: 'settings', label: 'Einstellungen' },

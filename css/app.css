@@ -458,6 +458,17 @@ dialog.modal h2 { font-size: 17px; margin-bottom: 14px; }
 .seat-side { position: sticky; top: 56px; max-height: calc(100vh - 140px); overflow-y: auto; }
 @media (max-width: 900px) { .seat-layout { grid-template-columns: 1fr; } .seat-side { position: static; max-height: none; } }
 .seat-grid { display: grid; grid-template-columns: repeat(var(--cols), minmax(64px, 96px)); gap: 8px; justify-content: center; }
+/* Ziehen */
+.draw-info { align-self: flex-end; margin: 0 0 10px auto; font-size: 15px; }
+.draw-cards { display: flex; flex-wrap: wrap; gap: 12px; }
+.draw-card { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 150px; padding: 12px; border: 1px solid var(--border-strong); border-radius: var(--radius); background: var(--surface-2); }
+.draw-photo { width: 96px; height: 96px; border-radius: var(--radius-sm); object-fit: cover; }
+.draw-name { font-size: 20px; font-weight: 700; text-align: center; overflow-wrap: anywhere; }
+.draw-card .grade-input { margin-top: 4px; width: 64px; }
+.draw-status { font-size: 12px; padding: 1px 8px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--border); }
+.draw-status-0 { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+.draw-hist-item { display: inline-flex; align-items: center; gap: 6px; margin: 2px 16px 2px 0; }
+.draw-hist-item .grade-input { width: 52px; }
 /* Raster bearbeiten: + / − an allen vier Seiten */
 .seat-edit { display: grid; grid-template-columns: auto auto auto; grid-template-areas: '. top .' 'left grid right' '. bottom .'; gap: 8px; justify-content: center; align-items: center; }
 .seat-edit > .seat-grid { grid-area: grid; }

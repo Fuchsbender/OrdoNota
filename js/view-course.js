@@ -309,6 +309,7 @@
     }
     for (const k of Object.keys(course.overrides)) delete course.overrides[k][s.id];
     delete course.comments[s.id];
+    if (course.draw) delete course.draw.out[s.id];
     NM.app.commit();
   }
 

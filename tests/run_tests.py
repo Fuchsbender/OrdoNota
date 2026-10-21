@@ -165,7 +165,7 @@ def run_app_smoke(br, base):
     print("App (Demo-Modus):")
     br.open(f"{base}/index.html?demo")
     report("App startet", br.wait("!!document.querySelector('.overview-table')", 30), "; ".join(br.errors))
-    for tab in ["course", "tests", "epo", "overview", "settings"]:
+    for tab in ["course", "tests", "epo", "draw", "overview", "settings"]:
         for course in [0, 1]:
             br.eval(f"NM.app.select({{courseId: NM.app.db().courses[{course}].id, tab: '{tab}'}}); 1")
             time.sleep(0.15)
@@ -332,6 +332,57 @@ def run_course_check(br, base):
     report("EPO: Fotos ein-/ausblenden (Foto bzw. Platzhalter je Person)", bool(res) and res["before"] == 0 and res["empty"] == 1 and res["imgs"] == res["rows"] - 1 and not br.errors, str(res) + "; ".join(br.errors))
 
 
+def run_draw_check(br, base):
+    print("Ziehen (Pool, Auffüllen, Noten, Rückgängig):")
+    br.open(f"{base}/index.html?demo")
+    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.errors = []
+    res = br.eval("""(async () => {
+        const wait = () => new Promise((r) => setTimeout(r, 150));
+        const c = NM.app.db().courses[0];                     // 12 Personen
+        NM.app.state.ui.drawCount = 5;
+        NM.app.select({ courseId: c.id, tab: 'draw' }); await wait();
+        const D = NM.views.draw, out = {};
+        const click = (t) => [...document.querySelectorAll('button')].find((b) => b.textContent.includes(t)).click();
+        const nA = c.assessments.length;
+        click('🎲 Ziehen'); await wait();
+        const h1 = c.draw.history[0];
+        out.first = [h1.sids.length, D.pool(c).length, c.assessments.length - nA, new Set(h1.sids).size];
+        click('🎲 Ziehen'); await wait();
+        const h2 = c.draw.history[1];
+        out.noRepeat = h2.sids.every((sid) => !h1.sids.includes(sid));
+        // Ein Abwesender und ein Herausgenommener werden übersprungen
+        const rest = D.pool(c).map((s) => s.id);           // 2 übrig
+        out.restBefore = rest.length;
+        click('🎲 Ziehen'); await wait();                        // 2 übrig + 3 aus neu gefülltem Pool
+        const h3 = c.draw.history[2];
+        out.refill = [h3.sids.length, rest.every((sid) => h3.sids.includes(sid)), new Set(h3.sids).size, D.pool(c).length];
+        // Note eintragen landet in der Notenspalte
+        const inp = document.querySelector('.draw-card .grade-input');
+        inp.value = '2-'; inp.dispatchEvent(new Event('change')); await wait();
+        const a3 = c.assessments.find((a) => a.id === h3.aid);
+        out.grade = [Object.keys(a3.manual.grades).length, a3.cat, a3.kind];
+        // Rückgängig: Pool wie vorher, Spalte weg
+        click('Rückgängig'); await wait(); document.querySelector('dialog .btn-danger, dialog .btn-primary').click(); await wait();
+        out.undo = [c.draw.history.length, D.pool(c).length, !!c.assessments.find((a) => a.id === h3.aid)];
+        // Note in einer früheren Ziehung nachtragen (Liste zeigt die erste Ziehung)
+        const hi = document.querySelector('.draw-hist-item .grade-input');
+        hi.value = '3+'; hi.dispatchEvent(new Event('change')); await wait();
+        const a1 = c.assessments.find((a) => a.id === h1.aid);
+        out.histGrade = [Object.keys(a1.manual.grades).length, NM.grades.label(Object.values(a1.manual.grades)[0].p, 'sek1'), document.querySelectorAll('.draw-hist-item .grade-input').length];
+        // Haken „Im Pool“ und „heute abwesend“
+        const away = NM.model.activeStudents(c).find((s) => !c.draw.out[s.id]);
+        const outSid = D.pool(c).filter((s) => s.id !== away.id)[0].id;
+        c.draw.out[outSid] = { how: 'manual', date: '2026-10-21' };
+        const pick = D.drawStudents(c, 1, new Set([away.id]), () => 0);
+        out.skip = [pick.sids.includes(away.id), pick.sids.includes(outSid), !c.draw.out[away.id]];
+        return out; })()""")
+    ok = bool(res) and res["first"] == [5, 7, 1, 5] and res["noRepeat"] and res["restBefore"] == 2 \
+        and res["refill"][0] == 5 and res["refill"][1] and res["refill"][2] == 5 and res["refill"][3] == 7 \
+        and res["grade"] == [1, "other", "manual"] and res["undo"] == [2, 2, False] and res["histGrade"] == [1, "3+", 5] and res["skip"] == [False, False, True]
+    report("Ziehen: ohne Wiederholung, Auffüllen, Note (auch nachträglich), Rückgängig, Abwesende/Herausgenommene", ok and not br.errors, str(res) + "; ".join(br.errors))
+
+
 def run_decrypt_tool(br, base):
     print("Notfallwerkzeug tools/entschluesseln.py:")
     spec = importlib.util.spec_from_file_location("entschluesseln", os.path.join(ROOT, "tools", "entschluesseln.py"))
@@ -399,6 +450,7 @@ def main():
         run_app_smoke(br, base)
         run_sort_check(br, base)
         run_course_check(br, base)
+        run_draw_check(br, base)
         run_decrypt_tool(br, base)
     finally:
         br.close()

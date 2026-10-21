@@ -7,7 +7,7 @@
   // SCHEMA erhöhen, sobald sich das Datenmodell so ändert, dass ältere App-Versionen
   // die Daten falsch verstehen würden. Ältere Versionen öffnen solche Datenbanken dann nicht.
   const SCHEMA = 1;
-  const APP_VERSION = '1.10.0';
+  const APP_VERSION = '1.11.0';
 
   class NewerSchemaError extends Error {}
 
@@ -56,6 +56,8 @@
       c.comments = c.comments || {};
       if (c.wHalf1 === undefined) c.wHalf1 = 1;
       if (c.wHalf2 === undefined) c.wHalf2 = 2;
+      // 1.11: Ziehen (Pool und bisherige Ziehungen)
+      c.draw = c.draw || { out: {}, history: [] };
       // 1.3: ein Sitzplan pro Kurs → mehrere Räume
       if (c.seating && !c.seatingPlans) {
         c.seatingPlans = [Object.assign({ id: uid(), name: 'Raum 1', cols: 8, rows: 5, desk: 'top' }, c.seating, { pos: c.seating.pos || {} })];

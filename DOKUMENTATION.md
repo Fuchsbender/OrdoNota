@@ -1,6 +1,6 @@
 # Notenmanager – Dokumentation
 
-Version 1.10.0 · Stand Oktober 2026
+Version 1.11.0 · Stand Oktober 2026
 
 Der Notenmanager verwaltet Noten für die Sekundarstufe I (Noten 1–6 mit Tendenz) und die Mainzer Studienstufe (MSS, Punkte 00–15) an Schulen in Rheinland-Pfalz. Er läuft vollständig lokal im Browser, verschlüsselt alle Daten mit einem Passwort und legt sie in einem Ordner ab, den der Synology Drive Client auf die DiskStation spiegelt.
 
@@ -20,6 +20,7 @@ Der Notenmanager verwaltet Noten für die Sekundarstufe I (Noten 1–6 mit Tende
 8. [Reiter „Mitarbeit/EPO“](#8-reiter-mitarbeitepo)
 9. [Reiter „Notenübersicht“](#9-reiter-notenübersicht)
 10. [Reiter „Sitzplan“](#10-reiter-sitzplan)
+    - [10a. Reiter „Ziehen“](#10a-reiter-ziehen)
 11. [Drucken und Exportieren](#11-drucken-und-exportieren)
 12. [Reiter „Einstellungen“](#12-reiter-einstellungen)
 13. [Tastaturbedienung](#13-tastaturbedienung)
@@ -172,7 +173,7 @@ Technisch schreibt die App dazu die Datei `notenmanager.lock.json` in den Dateno
 | **Speicherstatus** | „Speichert …“, „Gespeichert 10:14“, „Ungespeicherte Änderungen“ oder rot „Nicht gespeichert!“ |
 | **☾** | Hell/Dunkel umschalten |
 | **🔒 Sperren** | Speichert, entfernt den Geräte-Hinweis und sperrt die Datenbank |
-| **Reiter** | Kurs & Schüler, Tests, Mitarbeit/EPO, Notenübersicht, Sitzplan, Einstellungen (in der Skizze aus Platzgründen gekürzt) |
+| **Reiter** | Kurs & Schüler, Tests, Mitarbeit/EPO, Ziehen, Notenübersicht, Sitzplan, Einstellungen (in der Skizze aus Platzgründen gekürzt) |
 | **Kursliste** | Kurse des gewählten Schuljahres, sortiert nach Jahrgang. Zeigt Stufe (Sek I/MSS) und Zahl der aktiven Schüler/innen. |
 | **Halbjahres-Umschalter** | In Tests, EPO und Notenübersicht: HJ1/HJ2 bzw. 11/1, 11/2, 12/1, 12/2, 13; in der Notenübersicht zusätzlich „Jahresnote“ |
 
@@ -432,6 +433,20 @@ Für jeden Kurs lassen sich Sitzpläne für einen oder mehrere Räume anlegen. J
 - **Entfernen:** Mit der Maus über die Karte fahren und auf **×** klicken.
 - **Ausblenden:** Der Knopf **„▾ Fotos ausblenden“** in der Werkzeugleiste blendet alle Fotos auf den Karten aus, z. B. wenn der Sitzplan am Beamer gezeigt wird. Die Fotos bleiben gespeichert; „▸ Fotos einblenden“ zeigt sie wieder. Die Einstellung gilt auch für den Ausdruck und wird auf diesem Gerät gemerkt.
 - **Datenschutz:** Schülerfotos sind personenbezogene Daten. Ob sie in einer eigenen Anwendung gespeichert werden dürfen, regelt die Schule (Schulleitung bzw. Datenschutzbeauftragte/r).
+
+## 10a. Reiter „Ziehen“
+
+Zieht zufällig eine gewählte Anzahl von Personen, z. B. um Hausaufgaben einzusammeln und zu bewerten. Wer gezogen wurde, fällt aus dem **Pool**, bis dieser wieder aufgefüllt wird. So kommen alle der Reihe nach dran.
+
+- **Anzahl** eintragen (wird auf diesem Gerät gemerkt), **🎲 Ziehen** klicken. Die Gezogenen erscheinen groß mit Foto (bzw. Personensymbol) – geeignet auch für den Beamer.
+- **Bewerten:** Jede Ziehung legt im gewählten Halbjahr bei den **sonstigen Leistungen** eine Spalte „HA-Kontrolle TT.MM.“ an (Gewicht 1). Die Note tragen Sie direkt unter dem Namen ein; nur die Gezogenen bekommen eine Note, für alle anderen bleibt die Spalte leer und zählt nicht. Name, Gewicht und Bereich lassen sich wie bei jeder Spalte in der Notenübersicht ändern; Kürzel wie `f` (fehlt) ebenfalls dort.
+- **Auffüllen:** Sind weniger Personen im Pool als gezogen werden sollen, werden zuerst alle Übrigen gezogen, dann wird der Pool automatisch aufgefüllt und der Rest daraus gezogen (mit Hinweis). **↺ Pool auffüllen** setzt den Pool jederzeit von Hand zurück; vergebene Noten bleiben erhalten.
+- **Übersicht „Pool“:** zeigt je Person den Status *im Pool*, *gezogen TT.MM.* oder *herausgenommen* (sortierbar).
+  - Haken **„Im Pool“** entfernen nimmt eine Person aus dem Pool heraus (bis zum nächsten Auffüllen); Haken setzen nimmt sie wieder auf – auch nach einer Ziehung.
+  - Haken **„Heute abwesend“**: Die Person wird bei der Ziehung übersprungen, bleibt aber im Pool. Dieser Haken wird nicht gespeichert und ist nach dem Schließen der App wieder weg.
+- Nicht mehr aktive Personen (siehe 6.2) werden nie gezogen.
+- **↶ Rückgängig** (bei der letzten Ziehung) stellt den Pool wie vor der Ziehung wieder her und löscht die angelegte Notenspalte – mit Rückfrage, besonders wenn schon Noten eingetragen sind.
+- **Frühere Ziehungen** (aufklappbar) listen Datum, Spalte und die Gezogenen. Die Noten lassen sich dort **nachtragen oder ändern** (Enter springt zur nächsten Person); sie landen in der Notenspalte der jeweiligen Ziehung.
 
 ## 11. Drucken und Exportieren
 
@@ -809,7 +824,7 @@ Reines HTML/CSS/JavaScript ohne Build-Schritt und ohne externe Bibliotheken. Die
 | `js/model.js` | `NM.model` | Datenmodell: neue Datenbank/Kurse/Leistungen, Migration, Namensliste parsen, Demo-Daten |
 | `js/ui.js` | `NM.ui` | Wiederverwendbare Bausteine: Halbjahres-Umschalter, Noten-Eingabezellen, Badges, Leistungs-Dialog |
 | `js/app.js` | `NM.app` | Anwendungskern: Anmeldung, Sitzung, Autosave, Sperre, Layout, Navigation, Neuzeichnen mit Fokus-Erhalt, Tabellen-Tastatur |
-| `js/view-*.js` | `NM.views.*` | Je ein Reiter: `course`, `tests`, `epo`, `overview`, `seating`, `settings` |
+| `js/view-*.js` | `NM.views.*` | Je ein Reiter: `course`, `tests`, `epo`, `draw`, `overview`, `seating`, `settings` |
 | `js/print.js` | `NM.print` | Druckansichten |
 | `css/app.css` | – | Gestaltung inkl. Hell/Dunkel (Farb-Tokens auf `:root`) und Druck-CSS |
 
@@ -838,7 +853,7 @@ Berechnete Werte (Schnitte, Testnoten, EPO-Noten) werden **nie gespeichert**, so
   "kdf": "PBKDF2-SHA256",
   "savedAt": "2026-10-14T21:57:03.123Z",
   "device": "Laptop Schule",
-  "app": "1.10.0",
+  "app": "1.11.0",
   "pw":   { "salt": "<b64>", "iter": 600000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "rec":  { "salt": "<b64>", "iter": 100000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "data": { "iv": "<b64>", "ct": "<b64: verschlüsseltes JSON des Datenmodells>" }
@@ -861,7 +876,7 @@ Entschlüsselter Inhalt (`schema: 1`):
 ```js
 {
   schema: 1,                             // Datenformat (siehe 26.2)
-  savedWith: "1.10.0",                    // App-Version beim letzten Speichern
+  savedWith: "1.11.0",                    // App-Version beim letzten Speichern
   created: "<ISO>", savedAt: "<ISO>",
   settings: { autoLockMin, limitSek1, limitMss, precision, keepBackups, backupEveryMin, gradeColors },
   years:   [ { id, name: "2026/27" } ],
@@ -879,7 +894,9 @@ Course = {
   overrides: { "<Halbjahr>"|"Jahr": { "<studentId>": { p, reason } } },
   comments:  { "<studentId>": "Text" },
   seatingPlans?: [ { id, name, cols, rows, desk: "top" | "bottom", pos: { "<studentId>": { x, y } } } ],   // Räume
-  seatingSaved?: [ { id, name, room, savedAt, cols, rows, desk, pos } ]                          // gespeicherte Stände
+  seatingSaved?: [ { id, name, room, savedAt, cols, rows, desk, pos } ],                         // gespeicherte Stände
+  draw: { out: { "<studentId>": { how: "drawn" | "manual", date } },   // nicht im Pool (gezogen / herausgenommen)
+          history: [ { id, date, half, aid, sids: [ studentId ], prevOut } ] }   // Ziehungen; aid = angelegte Einzelnote
 }
 
 Assessment = {
@@ -917,7 +934,7 @@ Das Skript startet einen unsichtbaren Chromium-Browser (Chrome, Edge, Chromium, 
 1. alle Testseiten (siehe 25.2),
 2. den Start der App im Demo-Modus und alle Reiter für einen Sek-I- und einen MSS-Kurs ohne JavaScript-Fehler,
 3. das Sortieren per Klick auf Spaltenköpfe (Tests, EPO, Notenübersicht; Richtung und leere Werte unten),
-4. den Excel-Export der Schülerliste (gültiges ZIP/XML, Umlaute und Sonderzeichen), das Kurs-Löschen nur mit „LÖSCHEN“, das Ein-/Ausblenden der Fotos im EPO-Reiter und im Sitzplan (auch im Druck) sowie das Erweitern/Verkleinern des Sitzplan-Rasters an allen vier Seiten,
+4. den Excel-Export der Schülerliste (gültiges ZIP/XML, Umlaute und Sonderzeichen), das Kurs-Löschen nur mit „LÖSCHEN“, das Ein-/Ausblenden der Fotos im EPO-Reiter und im Sitzplan (auch im Druck) das Erweitern/Verkleinern des Sitzplan-Rasters an allen vier Seiten sowie das Ziehen (keine Wiederholung bis zum Auffüllen, automatisches Auffüllen, Note, Rückgängig, Abwesende/Herausgenommene),
 5. das Notfallwerkzeug: Eine von der App echt verschlüsselte Datenbank wird mit `tools/entschluesseln.py` per Passwort und per Wiederherstellungsschlüssel entschlüsselt und mit dem Original verglichen. Dazu kommen falsches Passwort, manipulierte Datei und CSV-Ausgabe.
 
 Am Ende steht `ERGEBNIS: x von y bestanden`. Der Exit-Code ist 0, wenn alles bestanden ist.
@@ -956,7 +973,7 @@ In `js/model.js` stehen zwei Nummern:
 
 | Konstante | Bedeutung | Wann erhöhen |
 |---|---|---|
-| `APP_VERSION` (z. B. `1.10.0`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.10.0` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
+| `APP_VERSION` (z. B. `1.11.0`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.11.0` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
 | `SCHEMA` (z. B. `1`) | Version des Datenformats | nur, wenn eine **ältere** App-Version die neuen Daten falsch verstehen würde (z. B. ein Feld ändert seine Bedeutung) |
 
 Öffnet eine App eine Datenbank mit höherem `SCHEMA`, verweigert sie das mit einer Meldung (siehe 21.10). Neue, nur *zusätzliche* Felder brauchen kein neues `SCHEMA`: Ältere Versionen lassen unbekannte Felder unverändert und speichern sie mit.
