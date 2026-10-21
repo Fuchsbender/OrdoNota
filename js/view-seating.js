@@ -88,26 +88,6 @@
       unplaced.length ? unplaced.map(card) : h('span', { class: 'muted small' }, 'Alle sitzen. Karten hierher ziehen, um sie vom Plan zu nehmen.')
     );
 
-    const num = (label, key, min, max) =>
-      h(
-        'label',
-        { class: 'field narrow' },
-        h('span', null, label),
-        h('input', {
-          class: 'input',
-          type: 'number',
-          min,
-          max,
-          value: st[key],
-          onchange: (e) => {
-            const v = Math.round(Number(e.target.value));
-            if (!(v >= min && v <= max)) return NM.util.toast(`Bitte eine Zahl von ${min} bis ${max}.`, 'error');
-            st[key] = v;
-            NM.app.commit();
-          },
-        })
-      );
-
     view.append(
       h('div', { class: 'view-head' }, h('h1', null, 'Sitzplan')),
       UI.pickerList({
@@ -142,8 +122,6 @@
               },
             })
           ),
-          num('Spalten', 'cols', 1, 16),
-          num('Reihen', 'rows', 1, 12),
           h(
             'label',
             { class: 'field' },
@@ -168,6 +146,20 @@
             h(
               'div',
               { class: 'inline' },
+              h(
+                'button',
+                {
+                  class: 'btn quick-toggle' + (ui.seatEdit ? ' active' : ''),
+                  'aria-pressed': ui.seatEdit ? 'true' : 'false',
+                  title: 'Reihen und Spalten an allen vier Seiten hinzufügen (+) oder entfernen (−)',
+                  onclick: () => {
+                    ui.seatEdit = !ui.seatEdit;
+                    NM.app.saveUi();
+                    NM.app.rerender();
+                  },
+                },
+                ui.seatEdit ? `✓ Raster fertig (${st.cols} × ${st.rows})` : `✎ Raster bearbeiten (${st.cols} × ${st.rows})`
+              ),
               h('button', { class: 'btn', title: 'Noch nicht platzierte Personen auf freie Plätze verteilen (zufällig)', onclick: () => fillRandom(course) }, '🎲 Freie Plätze füllen'),
               h('button', { class: 'btn', onclick: () => clearAll(course) }, 'Alle abräumen'),
               h(
@@ -197,7 +189,7 @@
           'div',
           { class: 'card seat-room' },
           st.desk === 'top' ? desk : null,
-          h('div', { class: 'seat-wrap', 'data-scroll-key': 'seat-grid' }, grid),
+          h('div', { class: 'seat-wrap', 'data-scroll-key': 'seat-grid' }, ui.seatEdit ? editFrame(course, st, grid) : grid),
           st.desk === 'bottom' ? desk : null,
           h('p', { class: 'muted small' }, 'Karten mit der Maus (oder dem Finger) auf einen Platz ziehen. Auf einen besetzten Platz gezogen, tauschen die beiden die Plätze.')
         ),
@@ -470,6 +462,51 @@
       document.addEventListener('pointerup', up);
       document.addEventListener('pointercancel', up);
     });
+  }
+
+  const MAX = { cols: 16, rows: 12 };
+  const SIDES = {
+    top: { key: 'rows', axis: 'y', lead: true, what: 'Reihe', where: 'vorne' },
+    bottom: { key: 'rows', axis: 'y', lead: false, what: 'Reihe', where: 'hinten' },
+    left: { key: 'cols', axis: 'x', lead: true, what: 'Spalte', where: 'links' },
+    right: { key: 'cols', axis: 'x', lead: false, what: 'Spalte', where: 'rechts' },
+  };
+
+  /** Raster mit + / − an allen vier Seiten (Modus „Raster bearbeiten“). */
+  function editFrame(course, st, grid) {
+    const edge = (side) => {
+      const d = SIDES[side];
+      // „vorne/hinten“ hängt davon ab, wo das Lehrerpult steht
+      const where = d.axis === 'y' ? ((side === 'top') === (st.desk !== 'bottom') ? 'beim Pult' : 'hinten') : d.where;
+      return h(
+        'div',
+        { class: 'seat-edge seat-edge-' + side },
+        h('button', { class: 'seat-edge-btn', title: `${d.what} ${where} hinzufügen`, 'aria-label': `${d.what} ${where} hinzufügen`, disabled: st[d.key] >= MAX[d.key], onclick: () => resize(course, side, 1) }, '+'),
+        h('button', { class: 'seat-edge-btn', title: `${d.what} ${where} entfernen`, 'aria-label': `${d.what} ${where} entfernen`, disabled: st[d.key] <= 1, onclick: () => resize(course, side, -1) }, '−')
+      );
+    };
+    return h('div', { class: 'seat-edit' }, edge('top'), edge('left'), grid, edge('right'), edge('bottom'));
+  }
+
+  /**
+   * Raster an einer Seite um eine Reihe/Spalte vergrößern (+1) oder verkleinern (−1).
+   * Oben/links rücken alle Plätze mit, damit die Sitzordnung erhalten bleibt.
+   * Wer in einer entfernten Reihe/Spalte saß, kommt zurück in „Noch ohne Platz“.
+   */
+  async function resize(course, side, delta) {
+    const { st, cells } = layout(course);
+    const d = SIDES[side];
+    const n = st[d.key] + delta;
+    if (n < 1 || n > MAX[d.key]) return;
+    if (delta < 0) {
+      const line = d.lead ? 0 : st[d.key] - 1;
+      const hit = Object.entries(cells).filter(([k]) => Number(k.split(',')[d.axis === 'x' ? 0 : 1]) === line).length;
+      if (hit && !(await confirmDialog(`${d.what} entfernen?`, `In dieser ${d.what} ${hit === 1 ? 'sitzt 1 Person. Sie kommt' : `sitzen ${hit} Personen. Sie kommen`} zurück in „Noch ohne Platz“.`, { okLabel: 'Entfernen' }))) return;
+      for (const [sid, p] of Object.entries(st.pos)) if (p[d.axis] === line) delete st.pos[sid];
+    }
+    if (d.lead) for (const p of Object.values(st.pos)) p[d.axis] += delta;
+    st[d.key] = n;
+    NM.app.commit();
   }
 
   function fillRandom(course) {

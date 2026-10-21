@@ -1,6 +1,6 @@
 # Notenmanager – Dokumentation
 
-Version 1.9.1 · Stand Oktober 2026
+Version 1.10.0 · Stand Oktober 2026
 
 Der Notenmanager verwaltet Noten für die Sekundarstufe I (Noten 1–6 mit Tendenz) und die Mainzer Studienstufe (MSS, Punkte 00–15) an Schulen in Rheinland-Pfalz. Er läuft vollständig lokal im Browser, verschlüsselt alle Daten mit einem Passwort und legt sie in einem Ordner ab, den der Synology Drive Client auf die DiskStation spiegelt.
 
@@ -410,11 +410,11 @@ Für jeden Kurs lassen sich Sitzpläne für einen oder mehrere Räume anlegen. J
 
 ### 10.2 Sitzordnung
 
-- **Spalten** und **Reihen** legen die Größe des Rasters fest (bis 16 × 12), **Lehrerpult** oben oder unten.
+- **✎ Raster bearbeiten** (der Knopf zeigt die aktuelle Größe, z. B. „8 × 5“) blendet an allen vier Seiten des Rasters **+** und **−** ein: oben/unten fügen eine Reihe hinzu bzw. entfernen sie, links/rechts eine Spalte (höchstens 16 Spalten × 12 Reihen). Wird oben oder links etwas eingefügt oder entfernt, rücken alle Plätze mit – die Sitzordnung bleibt erhalten. Sitzen in einer entfernten Reihe/Spalte Personen, fragt die App nach und legt sie zurück in „Noch ohne Platz“. **✓ Raster fertig** blendet die Knöpfe wieder aus. **Lehrerpult** oben oder unten.
 - Karten aus **„Noch ohne Platz“** (rechts) mit Maus oder Finger auf einen Platz ziehen. Auf einen besetzten Platz gezogen, **tauschen** die beiden die Plätze. Zurück in die Ablage gezogen, ist die Person wieder vom Plan genommen. Beim Ziehen an den oberen/unteren Rand scrollt die Seite mit.
 - **🎲 Freie Plätze füllen** verteilt alle noch nicht platzierten Personen in zufälliger Reihenfolge auf die freien Plätze. **Alle abräumen** setzt die Sitzordnung des Raums zurück (mit Rückfrage).
 - **🖨 Drucken** gibt den Plan des gewählten Raums auf einer A4-Seite aus (Raumname in der Überschrift, mit Fotos, soweit vorhanden).
-- Wird das Raster verkleinert, kommen Personen außerhalb des neuen Rasters in die Ablage. Neue Personen im Kurs erscheinen automatisch in der Ablage, inaktive verschwinden vom Plan.
+- Neue Personen im Kurs erscheinen automatisch in der Ablage, inaktive verschwinden vom Plan.
 
 ### 10.3 Gespeicherte Stände
 
@@ -838,7 +838,7 @@ Berechnete Werte (Schnitte, Testnoten, EPO-Noten) werden **nie gespeichert**, so
   "kdf": "PBKDF2-SHA256",
   "savedAt": "2026-10-14T21:57:03.123Z",
   "device": "Laptop Schule",
-  "app": "1.9.1",
+  "app": "1.10.0",
   "pw":   { "salt": "<b64>", "iter": 600000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "rec":  { "salt": "<b64>", "iter": 100000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "data": { "iv": "<b64>", "ct": "<b64: verschlüsseltes JSON des Datenmodells>" }
@@ -861,7 +861,7 @@ Entschlüsselter Inhalt (`schema: 1`):
 ```js
 {
   schema: 1,                             // Datenformat (siehe 26.2)
-  savedWith: "1.9.1",                    // App-Version beim letzten Speichern
+  savedWith: "1.10.0",                    // App-Version beim letzten Speichern
   created: "<ISO>", savedAt: "<ISO>",
   settings: { autoLockMin, limitSek1, limitMss, precision, keepBackups, backupEveryMin, gradeColors },
   years:   [ { id, name: "2026/27" } ],
@@ -917,7 +917,7 @@ Das Skript startet einen unsichtbaren Chromium-Browser (Chrome, Edge, Chromium, 
 1. alle Testseiten (siehe 25.2),
 2. den Start der App im Demo-Modus und alle Reiter für einen Sek-I- und einen MSS-Kurs ohne JavaScript-Fehler,
 3. das Sortieren per Klick auf Spaltenköpfe (Tests, EPO, Notenübersicht; Richtung und leere Werte unten),
-4. den Excel-Export der Schülerliste (gültiges ZIP/XML, Umlaute und Sonderzeichen), das Kurs-Löschen nur mit „LÖSCHEN“ sowie das Ein-/Ausblenden der Fotos im EPO-Reiter und im Sitzplan,
+4. den Excel-Export der Schülerliste (gültiges ZIP/XML, Umlaute und Sonderzeichen), das Kurs-Löschen nur mit „LÖSCHEN“, das Ein-/Ausblenden der Fotos im EPO-Reiter und im Sitzplan (auch im Druck) sowie das Erweitern/Verkleinern des Sitzplan-Rasters an allen vier Seiten,
 5. das Notfallwerkzeug: Eine von der App echt verschlüsselte Datenbank wird mit `tools/entschluesseln.py` per Passwort und per Wiederherstellungsschlüssel entschlüsselt und mit dem Original verglichen. Dazu kommen falsches Passwort, manipulierte Datei und CSV-Ausgabe.
 
 Am Ende steht `ERGEBNIS: x von y bestanden`. Der Exit-Code ist 0, wenn alles bestanden ist.
@@ -956,7 +956,7 @@ In `js/model.js` stehen zwei Nummern:
 
 | Konstante | Bedeutung | Wann erhöhen |
 |---|---|---|
-| `APP_VERSION` (z. B. `1.9.1`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.9.1` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
+| `APP_VERSION` (z. B. `1.10.0`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.10.0` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
 | `SCHEMA` (z. B. `1`) | Version des Datenformats | nur, wenn eine **ältere** App-Version die neuen Daten falsch verstehen würde (z. B. ein Feld ändert seine Bedeutung) |
 
 Öffnet eine App eine Datenbank mit höherem `SCHEMA`, verweigert sie das mit einer Meldung (siehe 21.10). Neue, nur *zusätzliche* Felder brauchen kein neues `SCHEMA`: Ältere Versionen lassen unbekannte Felder unverändert und speichern sie mit.

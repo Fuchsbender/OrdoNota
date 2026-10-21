@@ -458,6 +458,19 @@ dialog.modal h2 { font-size: 17px; margin-bottom: 14px; }
 .seat-side { position: sticky; top: 56px; max-height: calc(100vh - 140px); overflow-y: auto; }
 @media (max-width: 900px) { .seat-layout { grid-template-columns: 1fr; } .seat-side { position: static; max-height: none; } }
 .seat-grid { display: grid; grid-template-columns: repeat(var(--cols), minmax(64px, 96px)); gap: 8px; justify-content: center; }
+/* Raster bearbeiten: + / − an allen vier Seiten */
+.seat-edit { display: grid; grid-template-columns: auto auto auto; grid-template-areas: '. top .' 'left grid right' '. bottom .'; gap: 8px; justify-content: center; align-items: center; }
+.seat-edit > .seat-grid { grid-area: grid; }
+.seat-edge { display: flex; gap: 6px; justify-content: center; }
+.seat-edge-top { grid-area: top; }
+.seat-edge-bottom { grid-area: bottom; }
+.seat-edge-left, .seat-edge-right { flex-direction: column; }
+.seat-edge-left { grid-area: left; }
+.seat-edge-right { grid-area: right; }
+.seat-edge-btn { width: 32px; height: 32px; padding: 0; border: 1px dashed var(--accent); border-radius: var(--radius-sm); background: var(--accent-soft); color: var(--accent); font: inherit; font-size: 18px; font-weight: 700; line-height: 1; cursor: pointer; }
+.seat-edge-btn:hover:not(:disabled) { border-style: solid; }
+.seat-edge-btn:disabled { opacity: 0.35; cursor: default; }
+.seat-edge-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .seat-cell { aspect-ratio: 1; border: 1px dashed var(--border-strong); border-radius: var(--radius-sm); background: var(--bg); display: flex; }
 .seat-cell.seat-over, .seat-tray.seat-over { border-color: var(--accent); background: var(--accent-soft); border-style: solid; }
 .seat-card { flex: 1; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; padding: 6px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface-2); box-shadow: var(--shadow); font-weight: 600; text-align: center; line-height: 1.2; overflow-wrap: anywhere; cursor: grab; user-select: none; touch-action: none; }

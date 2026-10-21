@@ -305,6 +305,29 @@ def run_course_check(br, base):
             return { on, off };
         } finally { window.print = origPrint; } })()""")
     report("Sitzplan-Druck: Platzhalter mit Fotos, nichts ohne Fotos", bool(res3) and res3["on"][0] > 0 and res3["on"][1] == res3["on"][0] and res3["on"][2] == 1 and res3["off"][1] == 0 and not br.errors, str(res3))
+    # Raster bearbeiten: + oben verschiebt alle nach unten, − links nimmt Personen aus Spalte 1 vom Plan
+    res4 = br.eval("""(async () => {
+        const wait = () => new Promise((r) => setTimeout(r, 150));
+        const c = NM.app.currentCourse(); const st = c.seatingPlans[0];
+        st.cols = 4; st.rows = 3; st.pos = {};
+        const ids = NM.model.activeStudents(c).map((s) => s.id);
+        ids.slice(0, 6).forEach((id, i) => (st.pos[id] = { x: i % 3, y: Math.floor(i / 3) }));
+        NM.app.state.ui.seatEdit = true; NM.app.rerender(); await wait();
+        const btn = (side, label) => document.querySelector('.seat-edge-' + side + ' button:' + (label === '+' ? 'first-child' : 'last-child'));
+        const out = { edges: document.querySelectorAll('.seat-edge').length };
+        btn('top', '+').click(); await wait();
+        out.afterTop = [st.rows, st.pos[ids[0]].y, st.pos[ids[3]].y];
+        btn('right', '+').click(); await wait();
+        out.afterRight = [st.cols, st.pos[ids[0]].x];
+        btn('left', '-').click(); await wait();
+        document.querySelector('dialog .btn-primary, dialog .btn-danger').click(); await wait();
+        out.afterLeft = [st.cols, Object.keys(st.pos).length, st.pos[ids[1]].x];
+        btn('bottom', '-').click(); await wait();   // unterste Reihe ist leer → ohne Rückfrage
+        out.afterBottom = [st.rows, !!document.querySelector('dialog')];
+        NM.app.state.ui.seatEdit = false;
+        return out; })()""")
+    report("Sitzplan: Raster an allen Seiten erweitern/verkleinern", bool(res4) and res4["edges"] == 4 and res4["afterTop"] == [4, 1, 2]
+           and res4["afterRight"] == [5, 0] and res4["afterLeft"] == [4, 4, 0] and res4["afterBottom"] == [3, False] and not br.errors, str(res4) + "; ".join(br.errors))
     report("Sitzplan: Symbol ohne Foto, Fotos ausblenden", bool(res2) and res2["shown"] > 0 and res2["icons"] == 1 and res2["hidden"] == 0 and res2["cards"] > 0 and not br.errors, str(res2))
     report("EPO: Fotos ein-/ausblenden (Foto bzw. Platzhalter je Person)", bool(res) and res["before"] == 0 and res["empty"] == 1 and res["imgs"] == res["rows"] - 1 and not br.errors, str(res) + "; ".join(br.errors))
 
