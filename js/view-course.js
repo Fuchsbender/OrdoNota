@@ -32,8 +32,17 @@
       'select',
       {
         class: 'input',
-        onchange: (e) => {
-          course.type = e.target.value;
+        onchange: async (e) => {
+          const type = e.target.value;
+          const mss = type === 'lk' || type === 'gk';
+          const j = Number(course.jahrgang);
+          // Die Notenskala hängt am Jahrgang (ab 11: Punkte) – Kursart und Jahrgang passend halten
+          const nj = mss && j <= 10 ? M.mssJahrgang(course) : type === 'sek1' && j >= 11 ? 10 : null;
+          if (nj !== null) {
+            if (!(await changeJahrgang(course, nj))) return;
+            toast(`Jahrgangsstufe auf ${nj} gesetzt (${nj >= 11 ? 'MSS, Punkte 00–15' : 'Sek I, Noten 1–6'}). Bitte prüfen.`, 'info', 6000);
+          }
+          course.type = type;
           const t = G.COURSE_TYPES[course.type];
           course.wKa = t.ka;
           course.wOther = t.other;
@@ -109,22 +118,17 @@
       const ok = await confirmDialog(
         'Jahrgangsstufe ändern?',
         `Die Halbjahre ändern sich von ${oldHalves.join('/')} zu ${newHalves.join('/')}. Vorhandene Leistungen werden entsprechend zugeordnet.` +
-          (oldLevel !== newLevel ? ' Achtung: Die Notenskala wechselt (Sek I ↔ MSS). Eingetragene Noten bleiben als Punkte erhalten.' : ''),
+          (oldLevel !== newLevel
+            ? ' Achtung: Die Notenskala wechselt (Sek I ↔ MSS). Eingetragene Noten bleiben als Punkte erhalten. Tests und EPO-Blöcke mit Standard-LIMIT bzw. Standard-Umrechnung bekommen die Standardwerte der neuen Stufe; von Hand geänderte Werte bleiben.'
+            : ''),
         { okLabel: 'Ändern' }
       );
-      if (!ok) return NM.app.rerender();
-      for (const a of course.assessments) {
-        const i = Math.max(0, oldHalves.indexOf(a.half));
-        a.half = newHalves[Math.min(i, newHalves.length - 1)];
+      if (!ok) {
+        NM.app.rerender();
+        return false;
       }
-      const ov = {};
-      oldHalves.forEach((x, i) => {
-        if (course.overrides[x] && newHalves[i]) ov[newHalves[i]] = course.overrides[x];
-      });
-      if (course.overrides.Jahr && j <= 11) ov.Jahr = course.overrides.Jahr;
-      course.overrides = ov;
     }
-    course.jahrgang = j;
+    M.setJahrgang(course, j, NM.app.db().settings);
     if (j >= 11 && course.type === 'sek1') {
       course.type = 'lk';
     } else if (j <= 10 && (course.type === 'lk' || course.type === 'gk')) {
@@ -133,6 +137,7 @@
       course.wOther = 50;
     }
     NM.app.commit();
+    return true;
   }
 
   function studentsCard(course) {

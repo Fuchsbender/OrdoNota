@@ -7,7 +7,7 @@
   // SCHEMA erhöhen, sobald sich das Datenmodell so ändert, dass ältere App-Versionen
   // die Daten falsch verstehen würden. Ältere Versionen öffnen solche Datenbanken dann nicht.
   const SCHEMA = 1;
-  const APP_VERSION = '1.12.0';
+  const APP_VERSION = '1.12.1';
 
   class NewerSchemaError extends Error {}
 
@@ -58,6 +58,8 @@
       if (c.wHalf2 === undefined) c.wHalf2 = 2;
       // 1.11: Ziehen (Pool und bisherige Ziehungen)
       c.draw = c.draw || { out: {}, history: [] };
+      // 1.12.1: MSS-Kursart bei Jahrgang ≤ 10 (nur die Kursart gewählt) rechnete mit der Sek-I-Notenskala
+      if ((c.type === 'lk' || c.type === 'gk') && Number(c.jahrgang) <= 10) setJahrgang(c, mssJahrgang(c), db.settings);
       // 1.3: ein Sitzplan pro Kurs → mehrere Räume
       if (c.seating && !c.seatingPlans) {
         c.seatingPlans = [Object.assign({ id: uid(), name: 'Raum 1', cols: 8, rows: 5, desk: 'top' }, c.seating, { pos: c.seating.pos || {} })];
@@ -67,6 +69,49 @@
     db.schema = SCHEMA;
     db.savedWith = APP_VERSION;
     return db;
+  }
+
+  /** Jahrgang für einen MSS-Kurs: 11, 12 oder 13 aus „Klasse / Stufe“ (z. B. „MSS 12“), sonst 11. */
+  function mssJahrgang(course) {
+    const m = /(?:^|\D)(1[123])(?:\D|$)/.exec(course.klasse || '');
+    return m ? Number(m[1]) : 11;
+  }
+
+  /**
+   * Jahrgang setzen und Leistungen, gesetzte Noten und Ziehungen auf die neuen Halbjahre umhängen
+   * (z. B. HJ1/HJ2 → 11/1, 11/2). Noten sind intern Punkte und bleiben unverändert.
+   * Wechselt die Stufe (Sek I ↔ MSS), bekommen Tests/EPO-Blöcke mit Standardwerten die Standardwerte der neuen Stufe.
+   */
+  function setJahrgang(course, j, settings) {
+    const from = G.courseLevel(course);
+    const to = G.courseLevel({ jahrgang: j });
+    if (from !== to && settings) adoptLevelDefaults(course, from, to, settings);
+    const oldHalves = G.halvesFor(course);
+    const newHalves = G.halvesFor({ jahrgang: j });
+    const map = (half) => newHalves[Math.min(Math.max(0, oldHalves.indexOf(half)), newHalves.length - 1)];
+    for (const a of course.assessments || []) a.half = map(a.half);
+    for (const e of (course.draw && course.draw.history) || []) e.half = map(e.half);
+    const old = course.overrides || {};
+    const ov = {};
+    oldHalves.forEach((x, i) => {
+      if (old[x] && newHalves[i]) ov[newHalves[i]] = old[x];
+    });
+    if (old.Jahr && j <= 11) ov.Jahr = old.Jahr;
+    course.overrides = ov;
+    course.jahrgang = j;
+  }
+
+  /** LIMIT von Tests und EPO-Blöcken sowie die EPO-Umrechnung umstellen – nur wo noch der Standard der alten Stufe gilt. */
+  function adoptLevelDefaults(course, from, to, settings) {
+    const limit = (level) => Number(level === 'mss' ? settings.limitMss : settings.limitSek1);
+    for (const a of course.assessments || []) {
+      if (a.test && Number(a.test.limit) === limit(from)) a.test.limit = limit(to);
+      if (a.epo) {
+        const isDefault = !a.epo.table || JSON.stringify(a.epo.table) === JSON.stringify(G.epoDefaultTable(from, a.epo.limit));
+        if (Number(a.epo.limit) === limit(from)) a.epo.limit = limit(to);
+        if (isDefault) a.epo.table = G.epoDefaultTable(to, a.epo.limit);
+      }
+    }
   }
 
   function newCourse(yearId, { klasse = '', fach = '', jahrgang = 5, type = 'sek1' } = {}) {
@@ -269,6 +314,8 @@
     newDb,
     migrate,
     newCourse,
+    setJahrgang,
+    mssJahrgang,
     courseTitle,
     sortStudents,
     activeStudents,

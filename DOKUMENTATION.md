@@ -1,6 +1,6 @@
 # OrdoNota – Dokumentation
 
-Version 1.12.0 · Stand Oktober 2026
+Version 1.12.1 · Stand Oktober 2026
 
 OrdoNota (bis Version 1.11 „Notenmanager“) verwaltet Noten für die Sekundarstufe I (Noten 1–6 mit Tendenz) und die Mainzer Studienstufe (MSS, Punkte 00–15) an Schulen in Rheinland-Pfalz. Die App läuft vollständig lokal im Browser, verschlüsselt alle Daten mit einem Passwort und legt sie in einem Ordner ab, den der Synology Drive Client auf die DiskStation spiegelt.
 
@@ -195,7 +195,7 @@ Technisch schreibt die App dazu die Datei `notenmanager.lock.json` in den Dateno
 | Klasse / Stufe | z. B. „8b“ oder „MSS 12“ |
 | Fach | z. B. „Mathe“, „M LK“ |
 | Jahrgangsstufe | 5–13. **Ab 11 wird in MSS-Punkten gerechnet.** Bestimmt auch die Halbjahre. |
-| Kursart | Setzt die Standardgewichtung (siehe Tabelle) |
+| Kursart | Setzt die Standardgewichtung (siehe Tabelle). Kursart und Jahrgang werden passend gehalten: Wählen Sie „MSS-Leistungskurs“ oder „MSS-Grundkurs“ bei Jahrgang 5–10, springt der Jahrgang auf 11 (bzw. 12/13, wenn das unter „Klasse / Stufe“ steht, z. B. „MSS 12“); „Sek I“ bei Jahrgang 11–13 setzt ihn auf 10. Ein Hinweis zeigt die Änderung an. |
 | Gewicht Klassen-/Kursarbeiten (%) | Anteil der schriftlichen Arbeiten. Das andere Feld passt sich automatisch an (Summe 100 %). |
 | Jahresnote: Gewicht 1. HJ : 2. HJ | Nur für Jahrgang 5–11; Standard 1 : 2 (⅓ : ⅔) |
 | Notizen | Freitext zum Kurs |
@@ -218,7 +218,9 @@ Technisch schreibt die App dazu die Datei `notenmanager.lock.json` in den Dateno
 | 12 | 12/1, 12/2 | nein |
 | 13 | 13 | nein |
 
-> Ändern Sie die Jahrgangsstufe eines Kurses mit vorhandenen Noten, ordnet die App die Leistungen den neuen Halbjahren zu (erstes zu erstem, zweites zu zweitem) und fragt vorher nach.
+> Ändern Sie die Jahrgangsstufe eines Kurses mit vorhandenen Noten, ordnet die App die Leistungen den neuen Halbjahren zu (erstes zu erstem, zweites zu zweitem) und fragt vorher nach. Wechselt dabei die Skala (Sek I ↔ MSS), bekommen Tests und EPO-Blöcke, die noch das Standard-LIMIT bzw. die Standard-Umrechnung der alten Stufe haben, die Standardwerte der neuen Stufe (z. B. LIMIT 50 % → 45 %); von Hand geänderte Werte bleiben.
+>
+> **Korrektur in Version 1.12.1:** Bis dahin ließ sich „MSS-Grundkurs“/„MSS-Leistungskurs“ wählen, ohne dass sich der Jahrgang änderte – solche Kurse rechneten mit der Sek-I-Notenskala. Beim ersten Öffnen mit Version 1.12.1 werden sie automatisch auf MSS umgestellt (Jahrgang 11 oder der Jahrgang aus „Klasse / Stufe“), samt Halbjahren, gesetzten Noten und den Standardwerten von Tests/EPO. Bitte den Jahrgang danach kurz prüfen.
 
 ### 6.2 Schülerinnen und Schüler
 
@@ -857,7 +859,7 @@ Berechnete Werte (Schnitte, Testnoten, EPO-Noten) werden **nie gespeichert**, so
   "kdf": "PBKDF2-SHA256",
   "savedAt": "2026-10-14T21:57:03.123Z",
   "device": "Laptop Schule",
-  "app": "1.12.0",
+  "app": "1.12.1",
   "pw":   { "salt": "<b64>", "iter": 600000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "rec":  { "salt": "<b64>", "iter": 100000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "data": { "iv": "<b64>", "ct": "<b64: verschlüsseltes JSON des Datenmodells>" }
@@ -880,7 +882,7 @@ Entschlüsselter Inhalt (`schema: 1`):
 ```js
 {
   schema: 1,                             // Datenformat (siehe 26.2)
-  savedWith: "1.12.0",                    // App-Version beim letzten Speichern
+  savedWith: "1.12.1",                    // App-Version beim letzten Speichern
   created: "<ISO>", savedAt: "<ISO>",
   settings: { autoLockMin, limitSek1, limitMss, precision, keepBackups, backupEveryMin, gradeColors },
   years:   [ { id, name: "2026/27" } ],
@@ -977,7 +979,7 @@ In `js/model.js` stehen zwei Nummern:
 
 | Konstante | Bedeutung | Wann erhöhen |
 |---|---|---|
-| `APP_VERSION` (z. B. `1.12.0`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.12.0` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
+| `APP_VERSION` (z. B. `1.12.1`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.12.1` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
 | `SCHEMA` (z. B. `1`) | Version des Datenformats | nur, wenn eine **ältere** App-Version die neuen Daten falsch verstehen würde (z. B. ein Feld ändert seine Bedeutung) |
 
 Öffnet eine App eine Datenbank mit höherem `SCHEMA`, verweigert sie das mit einer Meldung (siehe 21.10). Neue, nur *zusätzliche* Felder brauchen kein neues `SCHEMA`: Ältere Versionen lassen unbekannte Felder unverändert und speichern sie mit.

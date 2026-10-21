@@ -8,6 +8,7 @@
 <script src="../js/model.js"></script>
 <script>
   const M = NM.model;
+  const G = NM.grades;
   const lines = [];
   let fails = 0;
   const ok = (name, cond) => { if (!cond) fails++; lines.push((cond ? 'OK   ' : 'FAIL ') + name); };
@@ -47,6 +48,35 @@
   const stc = { students: [{ id: 'a', last: 'A' }, { id: 'b', last: 'B', iStatus: true }, { id: 'c', last: 'C', active: false }] };
   ok('Statistik ohne I-Status/inaktiv', M.statStudents(stc).map((s) => s.id).join() === 'a');
   ok('I-Status bleibt in der Liste aktiver Personen', M.activeStudents(stc).length === 2);
+
+  // 1.12.1: Grundkurs mit Jahrgang ≤ 10 wird auf MSS umgestellt (Halbjahre und gesetzte Noten umgehängt)
+  const gkOld = M.migrate({ schema: 1, years: [], courses: [
+    { id: 'g', klasse: 'MSS 12', jahrgang: 5, type: 'gk', students: [], overrides: { HJ1: { s: { p: 9 } } },
+      assessments: [{ id: 'x', kind: 'manual', half: 'HJ1', cat: 'other', manual: { grades: { s: { p: 11 } } } }, { id: 'y', kind: 'manual', half: 'HJ2', cat: 'ka', manual: { grades: {} } }] },
+    { id: 'l', klasse: 'LK Mathe', jahrgang: 8, type: 'lk', students: [], assessments: [] },
+    { id: 's', klasse: '8b', jahrgang: 8, type: 'sek1', students: [], assessments: [] },
+  ] });
+  const [gk, lk, s8] = gkOld.courses;
+  ok('GK mit Jahrgang 5 → MSS (Jahrgang aus Klasse „MSS 12“)', gk.jahrgang === 12 && G.courseLevel(gk) === 'mss');
+  ok('GK: Halbjahre umgehängt (HJ1→12/1, HJ2→12/2)', gk.assessments[0].half === '12/1' && gk.assessments[1].half === '12/2');
+  ok('GK: Punkte und gesetzte Note bleiben', gk.assessments[0].manual.grades.s.p === 11 && gk.overrides['12/1'].s.p === 9 && !gk.overrides.HJ1);
+  ok('LK ohne Jahrgang in der Klasse → 11', lk.jahrgang === 11 && G.courseLevel(lk) === 'mss');
+  ok('Sek-I-Kurs bleibt unverändert', s8.jahrgang === 8 && G.courseLevel(s8) === 'sek1');
+
+  // Beim Wechsel auf MSS: Standard-LIMIT und Standard-EPO-Umrechnung → MSS-Standard, eigene Werte bleiben
+  const gkT = M.migrate({ schema: 1, settings: { limitSek1: 50, limitMss: 45 }, years: [], courses: [
+    { id: 'g', klasse: 'GK', jahrgang: 7, type: 'gk', students: [], assessments: [
+      { id: 't1', kind: 'test', half: 'HJ1', cat: 'ka', test: { limit: 50, tasks: [], results: {}, custom: {} } },
+      { id: 't2', kind: 'test', half: 'HJ1', cat: 'ka', test: { limit: 40, tasks: [], results: {}, custom: {} } },
+      { id: 'e1', kind: 'epo', half: 'HJ1', cat: 'other', epo: { limit: 50, table: G.epoDefaultTable('sek1', 50), lessons: [], entries: {} } },
+      { id: 'e2', kind: 'epo', half: 'HJ1', cat: 'other', epo: { limit: 50, table: { strict: false, mins: [0, 10, 20] }, lessons: [], entries: {} } },
+    ] },
+  ] }).courses[0];
+  const [t1, t2, e1, e2] = gkT.assessments;
+  ok('Test mit Standard-LIMIT 50 → MSS-Standard 45', t1.test.limit === 45);
+  ok('Test mit eigenem LIMIT 40 bleibt', t2.test.limit === 40);
+  ok('EPO mit Standard-Umrechnung → MSS-Umrechnung (5-%-Stufen, „mehr als“)', e1.epo.limit === 45 && JSON.stringify(e1.epo.table) === JSON.stringify(G.epoDefaultTable('mss', 45)));
+  ok('EPO mit eigener Umrechnung bleibt', e2.epo.table.mins.join() === '0,10,20');
 
   lines.unshift(fails === 0 ? 'ALLE TESTS BESTANDEN' : fails + ' FEHLGESCHLAGEN');
   document.getElementById('out').textContent = lines.join('\n');

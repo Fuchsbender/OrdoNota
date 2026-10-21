@@ -272,6 +272,21 @@ def run_course_check(br, base):
     report("Kurs löschen: falsches Wort + Enter löscht nicht", bool(res) and res["keptAfterWrong"], str(res))
     report("Kurs löschen: mit „LÖSCHEN“ gelöscht", bool(res) and res["enabled"] and res["deleted"] and not br.errors, str(res) + "; ".join(br.errors))
 
+    # Kursart MSS-Grundkurs bei neuem Kurs (Jahrgang 5) stellt auf MSS um
+    br.errors = []
+    res5 = br.eval("""(async () => {
+        const wait = () => new Promise((r) => setTimeout(r, 150));
+        const db = NM.app.db(); const c = NM.model.newCourse(db.years[0].id, { klasse: 'MSS 13', jahrgang: 5 });
+        db.courses.push(c); NM.app.select({ courseId: c.id, tab: 'course' }); await wait();
+        const sel = [...document.querySelectorAll('select')].find((s) => [...s.options].some((o) => o.value === 'gk'));
+        sel.value = 'gk'; sel.dispatchEvent(new Event('change')); await wait();
+        const out = { gk: [c.type, c.jahrgang, NM.grades.courseLevel(c), Math.round(c.wKa)] };
+        sel.value = 'sek1'; sel.dispatchEvent(new Event('change')); await wait();
+        out.sek1 = [c.type, c.jahrgang, NM.grades.courseLevel(c)];
+        db.courses = db.courses.filter((x) => x.id !== c.id);
+        return out; })()""")
+    report("Kursart MSS-Grundkurs stellt Jahrgang/Punkteskala um (und zurück)", bool(res5) and res5["gk"] == ["gk", 13, "mss", 33] and res5["sek1"] == ["sek1", 10, "sek1"] and not br.errors, str(res5) + "; ".join(br.errors))
+
     # EPO: Fotos per Umschalter (frische Demo – der Lösch-Test hat Kurs 1 entfernt)
     br.open(f"{base}/index.html?demo")
     br.wait("!!document.querySelector('.overview-table')", 30)
