@@ -212,6 +212,67 @@ def run_sort_check(br, base):
         report(f"{tab} (Kurs {course + 1}) nach „{label}“ {'auf' if direction == 'asc' else 'ab'}steigend", bool(ok) and not br.errors, "; ".join(br.errors))
 
 
+def run_course_check(br, base):
+    print("Kurs & Schüler: Excel-Export und Kurs löschen:")
+    import base64, io, zipfile
+    import xml.etree.ElementTree as ET
+    br.open(f"{base}/index.html?demo")
+    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.errors = []
+    # Excel-Datei so erzeugen wie der Knopf, aber als Base64 zurückgeben statt herunterladen
+    b64 = br.eval("""(async () => {
+        const c = NM.app.db().courses[0];
+        c.students.push({ id: 'x1', last: 'Özdemir & <Test>', first: 'Zoë', active: false, iStatus: true });
+        let blob = null;
+        const origUrl = URL.createObjectURL, origClick = HTMLAnchorElement.prototype.click;
+        URL.createObjectURL = (b) => { blob = b; return 'about:blank'; };
+        HTMLAnchorElement.prototype.click = function () {};   // nicht wirklich herunterladen
+        try { NM.app.select({ courseId: c.id, tab: 'course' }); await new Promise((r) => setTimeout(r, 100));
+              [...document.querySelectorAll('button')].find((b) => b.textContent.includes('Excel')).click(); }
+        finally { URL.createObjectURL = origUrl; HTMLAnchorElement.prototype.click = origClick; }
+        const buf = new Uint8Array(await blob.arrayBuffer());
+        let s = ''; for (const x of buf) s += String.fromCharCode(x);
+        return btoa(s); })()""")
+    ok, detail = False, ""
+    try:
+        z = zipfile.ZipFile(io.BytesIO(base64.b64decode(b64)))
+        bad = z.testzip()
+        for n in z.namelist():
+            ET.fromstring(z.read(n))
+        ns = {"m": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
+        rows = []
+        for r in ET.fromstring(z.read("xl/worksheets/sheet1.xml")).iterfind(".//m:row", ns):
+            rows.append(["".join(c.itertext()) for c in r.iterfind("m:c", ns)])
+        ok = (bad is None and rows[0] == ["Nr.", "Nachname", "Vorname", "I-Status", "Aktiv"]
+              and rows[1][0] == "1" and rows[-1] == ["Özdemir & <Test>", "Zoë", "ja", "nein"] and len(rows) == 14)
+        detail = f"{len(rows)} Zeilen, letzte: {rows[-1]}"
+    except Exception as e:
+        detail = repr(e)
+    report("Schülerliste als .xlsx (ZIP, XML, Umlaute/Sonderzeichen, Kopfzeile)", ok and not br.errors, detail + "; ".join(br.errors))
+
+    # Kurs löschen: nur mit „LÖSCHEN“
+    br.errors = []
+    res = br.eval("""(async () => {
+        const wait = () => new Promise((r) => setTimeout(r, 100));
+        const n0 = NM.app.db().courses.length;
+        const open = async () => { [...document.querySelectorAll('button')].find((b) => b.textContent === 'Kurs löschen').click(); await wait();
+            return [document.querySelector('dialog .input'), document.querySelector('dialog .btn-danger')]; };
+        const type = (inp, v) => { inp.value = v; inp.dispatchEvent(new Event('input')); };
+        let [inp, btn] = await open();
+        const out = { disabledEmpty: btn.disabled };
+        type(inp, 'löschen'); out.disabledLower = btn.disabled;
+        inp.form.requestSubmit(); await wait();          // Enter mit falschem Wort
+        out.keptAfterWrong = NM.app.db().courses.length === n0;
+        [inp, btn] = await open();
+        type(inp, 'LÖSCHEN'); out.enabled = !btn.disabled;
+        btn.click(); await wait(); await wait();
+        out.deleted = NM.app.db().courses.length === n0 - 1;
+        return out; })()""")
+    report("Kurs löschen: Knopf gesperrt ohne „LÖSCHEN“", bool(res) and res["disabledEmpty"] and res["disabledLower"], str(res))
+    report("Kurs löschen: falsches Wort + Enter löscht nicht", bool(res) and res["keptAfterWrong"], str(res))
+    report("Kurs löschen: mit „LÖSCHEN“ gelöscht", bool(res) and res["enabled"] and res["deleted"] and not br.errors, str(res) + "; ".join(br.errors))
+
+
 def run_decrypt_tool(br, base):
     print("Notfallwerkzeug tools/entschluesseln.py:")
     spec = importlib.util.spec_from_file_location("entschluesseln", os.path.join(ROOT, "tools", "entschluesseln.py"))
@@ -278,6 +339,7 @@ def main():
         run_test_pages(br, base)
         run_app_smoke(br, base)
         run_sort_check(br, base)
+        run_course_check(br, base)
         run_decrypt_tool(br, base)
     finally:
         br.close()

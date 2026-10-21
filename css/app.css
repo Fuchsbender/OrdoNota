@@ -130,6 +130,7 @@ ul.plain li { display: flex; align-items: center; gap: 10px; padding: 6px 0; bor
 .btn-primary:hover { background: var(--accent-strong); border-color: var(--accent-strong); }
 .btn-danger { color: var(--danger); border-color: var(--danger); background: transparent; }
 .btn-danger:hover { background: var(--danger-soft); }
+.btn-danger:disabled { color: var(--muted); border-color: var(--border); background: transparent; }
 .btn-ghost { border-style: dashed; background: transparent; color: var(--accent); }
 .btn-ghost:hover { background: var(--accent-soft); }
 .btn-sm { height: 28px; padding: 0 10px; font-size: 13px; }

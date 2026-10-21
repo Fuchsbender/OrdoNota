@@ -1,7 +1,7 @@
 /* Notenmanager – Reiter „Kurs & Schüler“. */
 (function (NM) {
   'use strict';
-  const { h, toast, confirmDialog, modal, parseNum, uid } = NM.util;
+  const { h, toast, confirmDialog, modal, parseNum, uid, download, safeFilename } = NM.util;
   const G = NM.grades;
   const M = NM.model;
   const UI = NM.ui;
@@ -202,7 +202,12 @@
     return h(
       'div',
       { class: 'card' },
-      h('h2', null, 'Schülerinnen und Schüler ', h('span', { class: 'muted' }, `(${active.length})`)),
+      h(
+        'div',
+        { class: 'card-head' },
+        h('h2', null, 'Schülerinnen und Schüler ', h('span', { class: 'muted' }, `(${active.length})`)),
+        course.students.length ? h('button', { class: 'btn btn-sm', title: 'Schülerliste als Excel-Datei (.xlsx) herunterladen', onclick: () => exportStudents(course) }, '⬇ Excel') : null
+      ),
       course.students.length
         ? h(
             'div',
@@ -272,6 +277,20 @@
     );
   }
 
+  /** Schülerliste als .xlsx: aktive alphabetisch mit Nummer, danach nicht mehr aktive. */
+  function exportStudents(course) {
+    const all = M.sortStudents(course.students);
+    const active = all.filter((s) => s.active !== false);
+    const inactive = all.filter((s) => s.active === false);
+    const rows = [['Nr.', 'Nachname', 'Vorname', 'I-Status', 'Aktiv']];
+    active.forEach((s, i) => rows.push([i + 1, s.last || '', s.first || '', s.iStatus ? 'ja' : '', 'ja']));
+    inactive.forEach((s) => rows.push(['', s.last || '', s.first || '', s.iStatus ? 'ja' : '', 'nein']));
+    const year = NM.app.currentYear();
+    const title = M.courseTitle(course);
+    download(safeFilename(`Schuelerliste_${title}_${year ? year.name : ''}.xlsx`), NM.xlsx.workbook({ sheet: title, rows, widths: [6, 22, 18, 9, 7] }));
+    toast('Schülerliste als Excel-Datei gespeichert (Download-Ordner). Sie enthält Namen – bitte vertraulich behandeln.', 'success', 5000);
+  }
+
   async function removeStudent(course, s) {
     const hasGrades = course.assessments.some((a) => G.assessmentPoints(a, s.id, G.courseLevel(course)) !== null);
     const ok = await confirmDialog(
@@ -307,8 +326,7 @@
           {
             class: 'btn btn-danger',
             onclick: async () => {
-              const ok = await confirmDialog('Kurs löschen?', `„${M.courseTitle(course)}“ wird mit allen Noten gelöscht. Das lässt sich nur über eine Sicherung rückgängig machen.`, { okLabel: 'Endgültig löschen', danger: true });
-              if (!ok) return;
+              if (!(await confirmCourseDelete(course))) return;
               db.courses = db.courses.filter((c) => c.id !== course.id);
               NM.app.state.ui.courseId = null;
               NM.app.commit({ render: false });
@@ -319,6 +337,39 @@
         )
       )
     );
+  }
+
+  const DELETE_WORD = 'LÖSCHEN';
+
+  /** Kurs löschen nur nach Eingabe von „LÖSCHEN“. */
+  async function confirmCourseDelete(course) {
+    const input = h('input', { class: 'input', autocomplete: 'off', spellcheck: 'false', placeholder: DELETE_WORD });
+    const matches = () => input.value.trim() === DELETE_WORD;
+    const v = await modal({
+      title: 'Kurs löschen?',
+      body: h(
+        'div',
+        null,
+        h('p', null, `„${M.courseTitle(course)}“ wird mit allen Schülerinnen und Schülern, Noten und Sitzplänen gelöscht. Das lässt sich nur über eine Sicherung rückgängig machen.`),
+        h('label', { class: 'field' }, h('span', null, `Zur Bestätigung „${DELETE_WORD}“ eingeben:`), input)
+      ),
+      buttons: [
+        { label: 'Abbrechen', value: null },
+        { label: 'Endgültig löschen', value: 'delete', kind: 'danger', validate: matches },
+      ],
+      onOpen: (dlg) => {
+        const btn = dlg.querySelector('.btn-danger');
+        const sync = () => (btn.disabled = !matches());
+        input.addEventListener('input', sync);
+        sync();
+      },
+    });
+    // Auch Enter im Eingabefeld schließt den Dialog – deshalb hier noch einmal prüfen
+    if (v === null || !matches()) {
+      if (v !== null) toast(`Nicht gelöscht – bitte genau „${DELETE_WORD}“ eingeben.`, 'error');
+      return false;
+    }
+    return true;
   }
 
   async function copyCourse(course, db) {

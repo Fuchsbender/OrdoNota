@@ -1,6 +1,6 @@
 # Notenmanager – Dokumentation
 
-Version 1.6.0 · Stand Oktober 2026
+Version 1.7.0 · Stand Oktober 2026
 
 Der Notenmanager verwaltet Noten für die Sekundarstufe I (Noten 1–6 mit Tendenz) und die Mainzer Studienstufe (MSS, Punkte 00–15) an Schulen in Rheinland-Pfalz. Er läuft vollständig lokal im Browser, verschlüsselt alle Daten mit einem Passwort und legt sie in einem Ordner ab, den der Synology Drive Client auf die DiskStation spiegelt.
 
@@ -240,7 +240,8 @@ Doppelte Namen werden übersprungen. Die Liste wird alphabetisch sortiert.
 ### 6.3 Kurs verwalten
 
 - **Kurs kopieren:** Übernimmt Kursdaten, Gewichtung und optional die aktiven Schüler/innen in ein (neues) Schuljahr, mit Jahrgang + 1 als Vorschlag. Noten werden nicht kopiert. Typischer Ablauf zum Schuljahreswechsel: oben „+ Neues Schuljahr …“ anlegen, dann jeden Kurs dorthin kopieren.
-- **Kurs löschen:** Löscht den Kurs mit allen Noten. Rückgängig machen geht nur über eine Sicherung.
+- **Kurs löschen:** Löscht den Kurs mit allen Schüler/innen, Noten und Sitzplänen. Zur Sicherheit muss im Dialog das Wort **LÖSCHEN** (in Großbuchstaben) eingetippt werden; vorher bleibt „Endgültig löschen“ gesperrt. Rückgängig machen geht nur über eine Sicherung.
+- **Schülerliste als Excel:** Der Knopf **⬇ Excel** neben der Überschrift „Schülerinnen und Schüler“ speichert eine `.xlsx`-Datei mit den Spalten Nr., Nachname, Vorname, I-Status, Aktiv – zuerst die aktiven Personen alphabetisch und nummeriert, darunter die nicht mehr aktiven. Die Datei ist **nicht verschlüsselt** (siehe 11).
 
 ## 7. Reiter „Tests“
 
@@ -438,6 +439,7 @@ Alle Ausdrucke öffnen den Druckdialog des Browsers. Dort können Sie auch **„
 | Notenübersicht | 🖨 Kursliste | Notenliste des gewählten Halbjahres bzw. der Jahresnoten; gesetzte Noten mit * |
 | Notenübersicht | 🖨 Schülerbögen | Eine Seite je Person (Auswahl siehe unten) |
 | Notenübersicht | ⬇ CSV/Excel | Alle Noten und Ergebnisse des Kurses als CSV (Semikolon, öffnet direkt in Excel) |
+| Kurs & Schüler | ⬇ Excel | Schülerliste als Excel-Datei (.xlsx): Nr., Nachname, Vorname, I-Status, Aktiv (siehe 6.3) |
 | Tests | 🖨 Schlüssel / Liste / Schülerzettel | siehe 7.6 |
 | Tests | ⛶ Beamer | Vollbild ohne Namen: Notenspiegel, Punkteverteilung, Ø je Aufgabe (siehe 7.5) |
 | Sitzplan | 🖨 Drucken | Sitzplan des gewählten Raums mit Vornamen, Fotos und Lehrerpult, A4 (quer, wenn mehr Spalten als Reihen) |
@@ -454,6 +456,8 @@ Alle Ausdrucke öffnen den Druckdialog des Browsers. Dort können Sie auch **„
 - Bemerkung
 
 So eignet sich derselbe Bogen für Elterngespräche (z. B. ohne Bemerkung) und für die eigenen Unterlagen.
+
+**Excel-Schülerliste:** echte `.xlsx`-Datei (ohne Makros), Kopfzeile fett und beim Scrollen fixiert, Tabellenblatt nach dem Kurs benannt. Öffnet in Excel, LibreOffice und Numbers. Die Datei ist **nicht verschlüsselt**.
 
 **CSV-Export:** Spalten Nr, Nachname, Vorname, danach je Halbjahr alle Einzelleistungen, Ø KA, Ø Sonstige, gerechnet, Note, zuletzt (falls vorhanden) Jahr gerechnet und Jahresnote. Die Datei ist **nicht verschlüsselt**. Behandeln Sie sie entsprechend und löschen Sie sie nach Gebrauch.
 
@@ -795,6 +799,7 @@ Reines HTML/CSS/JavaScript ohne Build-Schritt und ohne externe Bibliotheken. Die
 | Datei | Namensraum | Aufgabe |
 |---|---|---|
 | `js/util.js` | `NM.util` | DOM-Helfer `h()`, Formatierung (deutsch), Dialoge, Toasts, Download, CSV |
+| `js/xlsx.js` | `NM.xlsx` | Excel-Dateien ohne Bibliothek: `workbook({ sheet, rows, widths })` → Blob (ZIP ohne Kompression, ein Blatt, Kopfzeile fett) |
 | `js/grades.js` | `NM.grades` | **Gesamte Notenlogik** (rein, ohne DOM): Skalen, Eingabe-Parser, Rundung, Notenschlüssel, Test-/EPO-Auswertung, Halbjahres-/Jahresnote |
 | `js/crypto.js` | `NM.crypto` | `Vault`: Erzeugen, Entsperren (Passwort/Wiederherstellung), Ver-/Entschlüsseln, Passwortwechsel |
 | `js/storage.js` | `NM.storage` | `FolderStore` (File System Access API): Lesen/Schreiben, Sicherungen, Lock, Konflikterkennung; `MemoryStore` für den Demo-Modus |
@@ -830,7 +835,7 @@ Berechnete Werte (Schnitte, Testnoten, EPO-Noten) werden **nie gespeichert**, so
   "kdf": "PBKDF2-SHA256",
   "savedAt": "2026-10-14T21:57:03.123Z",
   "device": "Laptop Schule",
-  "app": "1.6.0",
+  "app": "1.7.0",
   "pw":   { "salt": "<b64>", "iter": 600000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "rec":  { "salt": "<b64>", "iter": 100000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "data": { "iv": "<b64>", "ct": "<b64: verschlüsseltes JSON des Datenmodells>" }
@@ -853,7 +858,7 @@ Entschlüsselter Inhalt (`schema: 1`):
 ```js
 {
   schema: 1,                             // Datenformat (siehe 26.2)
-  savedWith: "1.6.0",                    // App-Version beim letzten Speichern
+  savedWith: "1.7.0",                    // App-Version beim letzten Speichern
   created: "<ISO>", savedAt: "<ISO>",
   settings: { autoLockMin, limitSek1, limitMss, precision, keepBackups, backupEveryMin, gradeColors },
   years:   [ { id, name: "2026/27" } ],
@@ -909,7 +914,8 @@ Das Skript startet einen unsichtbaren Chromium-Browser (Chrome, Edge, Chromium, 
 1. alle Testseiten (siehe 25.2),
 2. den Start der App im Demo-Modus und alle Reiter für einen Sek-I- und einen MSS-Kurs ohne JavaScript-Fehler,
 3. das Sortieren per Klick auf Spaltenköpfe (Tests, EPO, Notenübersicht; Richtung und leere Werte unten),
-4. das Notfallwerkzeug: Eine von der App echt verschlüsselte Datenbank wird mit `tools/entschluesseln.py` per Passwort und per Wiederherstellungsschlüssel entschlüsselt und mit dem Original verglichen. Dazu kommen falsches Passwort, manipulierte Datei und CSV-Ausgabe.
+4. den Excel-Export der Schülerliste (gültiges ZIP/XML, Umlaute und Sonderzeichen) und das Kurs-Löschen nur mit „LÖSCHEN“,
+5. das Notfallwerkzeug: Eine von der App echt verschlüsselte Datenbank wird mit `tools/entschluesseln.py` per Passwort und per Wiederherstellungsschlüssel entschlüsselt und mit dem Original verglichen. Dazu kommen falsches Passwort, manipulierte Datei und CSV-Ausgabe.
 
 Am Ende steht `ERGEBNIS: x von y bestanden`. Der Exit-Code ist 0, wenn alles bestanden ist.
 
@@ -947,7 +953,7 @@ In `js/model.js` stehen zwei Nummern:
 
 | Konstante | Bedeutung | Wann erhöhen |
 |---|---|---|
-| `APP_VERSION` (z. B. `1.6.0`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.6.0` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
+| `APP_VERSION` (z. B. `1.7.0`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.7.0` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
 | `SCHEMA` (z. B. `1`) | Version des Datenformats | nur, wenn eine **ältere** App-Version die neuen Daten falsch verstehen würde (z. B. ein Feld ändert seine Bedeutung) |
 
 Öffnet eine App eine Datenbank mit höherem `SCHEMA`, verweigert sie das mit einer Meldung (siehe 21.10). Neue, nur *zusätzliche* Felder brauchen kein neues `SCHEMA`: Ältere Versionen lassen unbekannte Felder unverändert und speichern sie mit.

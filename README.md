@@ -48,7 +48,7 @@ Ausprobieren ohne echte Daten: `index.html?demo` (nichts wird gespeichert).
 
 ## Bedienung – Kurzfassung
 
-- **Kurs & Schüler**: Kursdaten, Gewichtung, Namen aus Excel einfügen (eine Zeile pro Person). Abgänge nur „Aktiv“ abwählen – Noten bleiben erhalten. Haken „I-Status“ markiert Personen mit einem **I**.
+- **Kurs & Schüler**: Kursdaten, Gewichtung, Namen aus Excel einfügen (eine Zeile pro Person). Abgänge nur „Aktiv“ abwählen – Noten bleiben erhalten. Haken „I-Status“ markiert Personen mit einem **I**. **⬇ Excel** speichert die Schülerliste als `.xlsx`. Kurs löschen erst nach Eintippen von **LÖSCHEN**.
 - **Tests**: Aufgaben mit Höchstpunkten, Rohpunkte eintragen; Schlüssel, Notenspiegel, Statistik, Ausdrucke (Schlüssel, Liste, Schülerzettel) und **⛶ Beamer**-Ansicht ohne Namen (Notenspiegel, Punkteverteilung, Ø je Aufgabe).
 - **Mitarbeit/EPO**: „+ Stunde“, dann pro Person das Kürzel tippen oder per **Schnellwahl** klicken; „füllen“ setzt alle leeren Zellen einer Stunde. Ausdrucke: Liste und Schülerzettel zum Ausschneiden (mit Datum/Unterschrift).
 - **Notenübersicht**: alle Noten des Halbjahres; direkte Noten eintragen (`2-`, `11`, oder `f` = fehlt, `ns` = Nachschreiben, `t` = Täuschung/Verweigerung). Kursliste, Schülerbögen, CSV-Export für Excel.
