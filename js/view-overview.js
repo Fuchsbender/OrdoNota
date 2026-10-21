@@ -58,6 +58,8 @@
     const colIndex = new Map();
     for (const a of [...ka, ...other]) if (a.kind === 'manual') colIndex.set(a.id, col++);
     const overCol = col;
+    // Spalten aus dem Reiter „Ziehen“: wer nicht gezogen wurde, bekommt ein ausgegrautes Feld
+    const drawn = new Map(((course.draw || {}).history || []).map((e) => [e.aid, new Set(e.sids)]));
 
     const th = (a) =>
       h(
@@ -116,9 +118,10 @@
       }
       const g = a.manual.grades[s.id] || {};
       const shown = g.status ? UI.STATUS_SHORT[g.status] : g.p === undefined || g.p === null ? '' : G.label(g.p, level);
+      const notDrawn = drawn.has(a.id) && !drawn.get(a.id).has(s.id) && !shown;
       return h(
         'td',
-        { class: 'center' },
+        { class: 'center' + (notDrawn ? ' not-drawn' : ''), title: notDrawn ? 'Nicht gezogen – bei Bedarf trotzdem eintragbar' : null },
         h('input', {
           class: 'cell-input grade-input' + (g.status ? ' status' : ''),
           value: shown,

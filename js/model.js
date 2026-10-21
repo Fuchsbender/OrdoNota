@@ -7,7 +7,7 @@
   // SCHEMA erhöhen, sobald sich das Datenmodell so ändert, dass ältere App-Versionen
   // die Daten falsch verstehen würden. Ältere Versionen öffnen solche Datenbanken dann nicht.
   const SCHEMA = 1;
-  const APP_VERSION = '1.11.0';
+  const APP_VERSION = '1.11.1';
 
   class NewerSchemaError extends Error {}
 

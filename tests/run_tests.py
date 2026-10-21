@@ -365,6 +365,12 @@ def run_draw_check(br, base):
         // Rückgängig: Pool wie vorher, Spalte weg
         click('Rückgängig'); await wait(); document.querySelector('dialog .btn-danger, dialog .btn-primary').click(); await wait();
         out.undo = [c.draw.history.length, D.pool(c).length, !!c.assessments.find((a) => a.id === h3.aid)];
+        // Notenübersicht: Felder der Nicht-Gezogenen ausgegraut
+        NM.app.select({ tab: 'overview' }); await wait();
+        const h2a = c.assessments.find((a) => a.id === h2.aid);
+        const cells = NM.model.activeStudents(c).map((s) => document.querySelector(`[data-focus-key="ov-${h2a.id}-${s.id}"]`).closest('td'));
+        out.greyed = [cells.filter((td) => td.classList.contains('not-drawn')).length, cells.length - h2.sids.length];
+        NM.app.select({ tab: 'draw' }); await wait();
         // Note in einer früheren Ziehung nachtragen (Liste zeigt die erste Ziehung)
         const hi = document.querySelector('.draw-hist-item .grade-input');
         hi.value = '3+'; hi.dispatchEvent(new Event('change')); await wait();
@@ -379,7 +385,7 @@ def run_draw_check(br, base):
         return out; })()""")
     ok = bool(res) and res["first"] == [5, 7, 1, 5] and res["noRepeat"] and res["restBefore"] == 2 \
         and res["refill"][0] == 5 and res["refill"][1] and res["refill"][2] == 5 and res["refill"][3] == 7 \
-        and res["grade"] == [1, "other", "manual"] and res["undo"] == [2, 2, False] and res["histGrade"] == [1, "3+", 5] and res["skip"] == [False, False, True]
+        and res["grade"] == [1, "other", "manual"] and res["undo"] == [2, 2, False] and res["histGrade"] == [1, "3+", 5] and res["greyed"][0] == res["greyed"][1] == 7 and res["skip"] == [False, False, True]
     report("Ziehen: ohne Wiederholung, Auffüllen, Note (auch nachträglich), Rückgängig, Abwesende/Herausgenommene", ok and not br.errors, str(res) + "; ".join(br.errors))
 
 

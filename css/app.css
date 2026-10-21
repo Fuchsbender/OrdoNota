@@ -467,6 +467,8 @@ dialog.modal h2 { font-size: 17px; margin-bottom: 14px; }
 .draw-card .grade-input { margin-top: 4px; width: 64px; }
 .draw-status { font-size: 12px; padding: 1px 8px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--border); }
 .draw-status-0 { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+.table td.not-drawn .cell-input { opacity: 0.35; border-style: dashed; background: transparent; }
+.table td.not-drawn .cell-input:focus { opacity: 1; }
 .draw-hist-item { display: inline-flex; align-items: center; gap: 6px; margin: 2px 16px 2px 0; }
 .draw-hist-item .grade-input { width: 52px; }
 /* Raster bearbeiten: + / − an allen vier Seiten */
