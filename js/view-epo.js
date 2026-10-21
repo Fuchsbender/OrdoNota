@@ -230,7 +230,7 @@
       return h(
         'tr',
         null,
-        UI.nameCells(s),
+        UI.nameCells(s, null, { photo: !!ui.epoPhotos }),
         lessons.map((l, ci) => {
           const c = row[l.id];
           return h(
@@ -280,18 +280,10 @@
         h('h2', null, 'Bewertung je Stunde'),
         lessons.length && students.length
           ? h(
-              'button',
-              {
-                class: 'btn btn-sm quick-toggle' + (ui.epoQuick ? ' active' : ''),
-                'aria-pressed': ui.epoQuick ? 'true' : 'false',
-                title: 'Schaltflächen zum Bewerten der neuesten Stunde ein-/ausblenden',
-                onclick: () => {
-                  ui.epoQuick = !ui.epoQuick;
-                  NM.app.saveUi();
-                  NM.app.rerender();
-                },
-              },
-              ui.epoQuick ? '▾ Schnellwahl ausblenden' : '▸ Schnellwahl einblenden'
+              'span',
+              { class: 'head-toggles' },
+              toggleBtn(ui, 'epoQuick', ui.epoQuick ? '▾ Schnellwahl ausblenden' : '▸ Schnellwahl einblenden', 'Schaltflächen zum Bewerten der neuesten Stunde ein-/ausblenden'),
+              toggleBtn(ui, 'epoPhotos', ui.epoPhotos ? '▾ Fotos ausblenden' : '▸ Fotos einblenden', 'Schülerfotos vor dem Namen ein-/ausblenden (Fotos werden im Reiter „Sitzplan“ hinzugefügt)')
             )
           : null,
         h(
@@ -313,8 +305,26 @@
         ? h('p', { class: 'muted' }, 'Noch keine Stunden. Mit „+ Stunde“ eine Spalte anlegen.')
         : students.length === 0
           ? h('p', { class: 'muted' }, 'Bitte zuerst im Reiter „Kurs & Schüler“ Namen eintragen.')
-          : h('div', { class: 'table-wrap', 'data-scroll-key': 'epo-grid' }, h('table', { class: 'table grid-table epo-table' }, h('thead', null, head), h('tbody', null, rows))),
+          : h('div', { class: 'table-wrap', 'data-scroll-key': 'epo-grid' }, h('table', { class: 'table grid-table epo-table' + (ui.epoPhotos ? ' with-photos' : '') }, h('thead', null, head), h('tbody', null, rows))),
       h('p', { class: 'muted small' }, 'Höchstpunktzahl = anwesende Stunden × ', pts['++'], '. Hausaufgaben-Vermerke werden abgezogen. Enter/↓ springt zur nächsten Person.')
+    );
+  }
+
+  /** Umschaltknopf für eine Ansichtsoption (nur auf diesem Gerät gespeichert). */
+  function toggleBtn(ui, key, label, title) {
+    return h(
+      'button',
+      {
+        class: 'btn btn-sm quick-toggle' + (ui[key] ? ' active' : ''),
+        'aria-pressed': ui[key] ? 'true' : 'false',
+        title,
+        onclick: () => {
+          ui[key] = !ui[key];
+          NM.app.saveUi();
+          NM.app.rerender();
+        },
+      },
+      label
     );
   }
 

@@ -1,6 +1,6 @@
 # Notenmanager – Dokumentation
 
-Version 1.7.0 · Stand Oktober 2026
+Version 1.8.0 · Stand Oktober 2026
 
 Der Notenmanager verwaltet Noten für die Sekundarstufe I (Noten 1–6 mit Tendenz) und die Mainzer Studienstufe (MSS, Punkte 00–15) an Schulen in Rheinland-Pfalz. Er läuft vollständig lokal im Browser, verschlüsselt alle Daten mit einem Passwort und legt sie in einem Ordner ab, den der Synology Drive Client auf die DiskStation spiegelt.
 
@@ -129,7 +129,7 @@ Der Browser merkt sich den Datenordner. Beim nächsten Start erscheint direkt **
 
 ### 3.5 Demo-Modus
 
-`index.html?demo` öffnet die App mit Beispieldaten (Kurs 8b Mathe, Sek I, und MSS 12 M LK). **Nichts wird gespeichert.** Der Demo-Modus eignet sich zum Ausprobieren und Kennenlernen.
+`index.html?demo` öffnet die App mit Beispieldaten (Kurs 8b Mathe, Sek I, und MSS 12 M LK). Statt echter Fotos hat jede Person ein Personensymbol, damit sich Sitzplan und Fotoanzeige im EPO ausprobieren lassen. **Nichts wird gespeichert.** Der Demo-Modus eignet sich zum Ausprobieren und Kennenlernen.
 
 ## 4. Arbeiten mit mehreren Geräten
 
@@ -337,6 +337,7 @@ Kombinationen sind möglich, z. B. `+h` (gute Mitarbeit, Hausaufgaben vergessen)
 **Hilfen**
 
 - **Schnellwahl** (Knopf „▸ Schnellwahl einblenden“ neben der Überschrift; standardmäßig ausgeblendet, der Zustand wird auf diesem Gerät gemerkt): Eine zusätzliche Spalte rechts neben den Stunden. Für die neueste Stunde lässt sich je Person per Klick `++`, `+`, `0`, `-`, `--` oder `k` sowie `u`/`h` setzen. Ein erneuter Klick auf die markierte Schaltfläche hebt die Auswahl wieder auf. Tippen in die Zellen funktioniert weiterhin.
+- **Fotos** (Knopf „▸ Fotos einblenden“ neben „Schnellwahl“; Zustand wird auf diesem Gerät gemerkt): zeigt vor jedem Nachnamen das Schülerfoto, damit Sie Gesichter und Namen schneller zuordnen. Wer noch kein Foto hat, bekommt einen Platzhalter mit Initialen. Fotos werden im Reiter „Sitzplan“ hinzugefügt (siehe 10.4).
 - **füllen** (unter dem Datum): setzt alle noch leeren Zellen dieser Stunde auf einen Wert, z. B. `0`. Danach tragen Sie nur noch die Abweichungen ein.
 - **Datum anklicken:** Datum ändern oder Stunde löschen.
 - Rechts stehen je Person: Σ Punkte, Max, %, Fehlstunden (k), Hausaufgaben-Vermerke (u/h) und die **Note**.
@@ -835,7 +836,7 @@ Berechnete Werte (Schnitte, Testnoten, EPO-Noten) werden **nie gespeichert**, so
   "kdf": "PBKDF2-SHA256",
   "savedAt": "2026-10-14T21:57:03.123Z",
   "device": "Laptop Schule",
-  "app": "1.7.0",
+  "app": "1.8.0",
   "pw":   { "salt": "<b64>", "iter": 600000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "rec":  { "salt": "<b64>", "iter": 100000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "data": { "iv": "<b64>", "ct": "<b64: verschlüsseltes JSON des Datenmodells>" }
@@ -858,7 +859,7 @@ Entschlüsselter Inhalt (`schema: 1`):
 ```js
 {
   schema: 1,                             // Datenformat (siehe 26.2)
-  savedWith: "1.7.0",                    // App-Version beim letzten Speichern
+  savedWith: "1.8.0",                    // App-Version beim letzten Speichern
   created: "<ISO>", savedAt: "<ISO>",
   settings: { autoLockMin, limitSek1, limitMss, precision, keepBackups, backupEveryMin, gradeColors },
   years:   [ { id, name: "2026/27" } ],
@@ -914,7 +915,7 @@ Das Skript startet einen unsichtbaren Chromium-Browser (Chrome, Edge, Chromium, 
 1. alle Testseiten (siehe 25.2),
 2. den Start der App im Demo-Modus und alle Reiter für einen Sek-I- und einen MSS-Kurs ohne JavaScript-Fehler,
 3. das Sortieren per Klick auf Spaltenköpfe (Tests, EPO, Notenübersicht; Richtung und leere Werte unten),
-4. den Excel-Export der Schülerliste (gültiges ZIP/XML, Umlaute und Sonderzeichen) und das Kurs-Löschen nur mit „LÖSCHEN“,
+4. den Excel-Export der Schülerliste (gültiges ZIP/XML, Umlaute und Sonderzeichen), das Kurs-Löschen nur mit „LÖSCHEN“ und die Fotos im EPO-Reiter,
 5. das Notfallwerkzeug: Eine von der App echt verschlüsselte Datenbank wird mit `tools/entschluesseln.py` per Passwort und per Wiederherstellungsschlüssel entschlüsselt und mit dem Original verglichen. Dazu kommen falsches Passwort, manipulierte Datei und CSV-Ausgabe.
 
 Am Ende steht `ERGEBNIS: x von y bestanden`. Der Exit-Code ist 0, wenn alles bestanden ist.
@@ -953,7 +954,7 @@ In `js/model.js` stehen zwei Nummern:
 
 | Konstante | Bedeutung | Wann erhöhen |
 |---|---|---|
-| `APP_VERSION` (z. B. `1.7.0`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.7.0` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
+| `APP_VERSION` (z. B. `1.8.0`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.8.0` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
 | `SCHEMA` (z. B. `1`) | Version des Datenformats | nur, wenn eine **ältere** App-Version die neuen Daten falsch verstehen würde (z. B. ein Feld ändert seine Bedeutung) |
 
 Öffnet eine App eine Datenbank mit höherem `SCHEMA`, verweigert sie das mit einer Meldung (siehe 21.10). Neue, nur *zusätzliche* Felder brauchen kein neues `SCHEMA`: Ältere Versionen lassen unbekannte Felder unverändert und speichern sie mit.

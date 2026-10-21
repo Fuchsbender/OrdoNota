@@ -213,7 +213,7 @@ def run_sort_check(br, base):
 
 
 def run_course_check(br, base):
-    print("Kurs & Schüler: Excel-Export und Kurs löschen:")
+    print("Kurs & Schüler (Excel-Export, Kurs löschen), EPO-Fotos:")
     import base64, io, zipfile
     import xml.etree.ElementTree as ET
     br.open(f"{base}/index.html?demo")
@@ -271,6 +271,22 @@ def run_course_check(br, base):
     report("Kurs löschen: Knopf gesperrt ohne „LÖSCHEN“", bool(res) and res["disabledEmpty"] and res["disabledLower"], str(res))
     report("Kurs löschen: falsches Wort + Enter löscht nicht", bool(res) and res["keptAfterWrong"], str(res))
     report("Kurs löschen: mit „LÖSCHEN“ gelöscht", bool(res) and res["enabled"] and res["deleted"] and not br.errors, str(res) + "; ".join(br.errors))
+
+    # EPO: Fotos per Umschalter (frische Demo – der Lösch-Test hat Kurs 1 entfernt)
+    br.open(f"{base}/index.html?demo")
+    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.errors = []
+    res = br.eval("""(async () => {
+        const wait = () => new Promise((r) => setTimeout(r, 150));
+        const c = NM.app.db().courses[0];
+        delete c.students[0].photo;   // Demo hat für alle ein Symbolfoto – eine Person ohne Foto
+        NM.app.state.ui.epoPhotos = false; NM.app.select({ courseId: c.id, tab: 'epo' }); await wait();
+        const before = document.querySelectorAll('.epo-table .name-photo').length;
+        [...document.querySelectorAll('.quick-toggle')].find((b) => b.textContent.includes('Fotos')).click(); await wait();
+        return { before, imgs: document.querySelectorAll('.epo-table img.name-photo').length,
+                 empty: document.querySelectorAll('.epo-table .name-photo-empty').length,
+                 rows: document.querySelectorAll('.epo-table tbody tr').length }; })()""")
+    report("EPO: Fotos ein-/ausblenden (Foto bzw. Platzhalter je Person)", bool(res) and res["before"] == 0 and res["empty"] == 1 and res["imgs"] == res["rows"] - 1 and not br.errors, str(res) + "; ".join(br.errors))
 
 
 def run_decrypt_tool(br, base):

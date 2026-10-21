@@ -7,7 +7,7 @@
   // SCHEMA erhöhen, sobald sich das Datenmodell so ändert, dass ältere App-Versionen
   // die Daten falsch verstehen würden. Ältere Versionen öffnen solche Datenbanken dann nicht.
   const SCHEMA = 1;
-  const APP_VERSION = '1.7.0';
+  const APP_VERSION = '1.8.0';
 
   class NewerSchemaError extends Error {}
 
@@ -196,6 +196,14 @@
 
   // ---------- Demo-Daten (nur index.html?demo) ----------
 
+  // Demo: Personensymbol (Kopf und Schultern) als Ersatz für echte Schülerfotos
+  const DEMO_PHOTO =
+    'data:image/svg+xml,' +
+    encodeURIComponent(
+      "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 160'><rect width='160' height='160' fill='#e6e9ee'/>" +
+        "<circle cx='80' cy='60' r='30' fill='#2b2f36'/><path d='M20 160c0-38 27-62 60-62s60 24 60 62z' fill='#2b2f36'/></svg>"
+    );
+
   function demoDb() {
     const db = newDb();
     const year = db.years[0];
@@ -246,6 +254,7 @@
     ];
     c12.students.forEach((s, i) => (k.test.results[s.id] = { scores: { b1: 12 - i, b2: 18 - i * 1.5, b3: 15 - i * 2 } }));
     c12.assessments.push(k);
+    for (const s of [...c8.students, ...c12.students]) s.photo = DEMO_PHOTO;
     db.courses.push(c8, c12);
     return db;
   }

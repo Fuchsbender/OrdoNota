@@ -174,11 +174,23 @@
     );
   }
 
-  /** Zwei feste Namensspalten (Nachname, Vorname mit Markierung „I“); nr = laufende Nummer vor dem Nachnamen. */
-  function nameCells(s, nr) {
+  /**
+   * Zwei feste Namensspalten (Nachname, Vorname mit Markierung „I“); nr = laufende Nummer vor dem Nachnamen.
+   * photo: Foto (oder Platzhalter mit Initialen) vor dem Nachnamen – die Tabelle braucht dann die Klasse „with-photos“.
+   */
+  function nameCells(s, nr, { photo = false } = {}) {
     const title = NM.model.studentName(s);
+    const pic = !photo
+      ? null
+      : s.photo
+        ? h('img', { class: 'name-photo', src: s.photo, alt: '' })
+        : h('span', { class: 'name-photo name-photo-empty', title: 'Kein Foto – Fotos fügen Sie im Reiter „Sitzplan“ hinzu' }, ((s.first || '')[0] || '') + ((s.last || '')[0] || ''));
     return [
-      h('td', { class: 'sticky-col name-cell name-last', title }, h('span', { class: 'name-clip' }, nr ? h('span', { class: 'row-nr' }, nr) : null, s.last || '')),
+      h(
+        'td',
+        { class: 'sticky-col name-cell name-last', title },
+        h('span', { class: 'name-clip' }, pic, h('span', { class: 'name-text' }, nr ? h('span', { class: 'row-nr' }, nr) : null, s.last || ''))
+      ),
       h('td', { class: 'sticky-col name-cell name-first', title }, h('span', { class: 'name-clip' }, s.first || '', s.iStatus ? h('span', { class: 'i-mark', title: 'I-Status' }, 'I') : null)),
     ];
   }

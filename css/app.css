@@ -261,11 +261,17 @@ details.details-card[open] > summary { margin-bottom: 12px; }
 .table tbody tr:hover td.sticky-col { background: var(--surface-2); }
 .name-cell { font-weight: 520; }
 /* Name und Vorname als zwei feste Spalten; die Breite bestimmt den Versatz der zweiten (150 px = 134 + 2 × 8 Polster) */
-.name-clip { display: block; overflow: hidden; text-overflow: ellipsis; }
+.name-clip, .name-text { display: block; overflow: hidden; text-overflow: ellipsis; }
 .name-last .name-clip { width: 134px; }
 .name-first .name-clip { width: 110px; }
 .table .sticky-col.name-last { border-right: 0; }
 .table .sticky-col.name-first { left: 150px; }
+/* Mit Fotos: Nachnamenspalte um das Foto (40 px + 6 px Abstand) breiter, Vorname rückt entsprechend nach */
+.with-photos .name-last .name-clip { width: 180px; display: flex; align-items: center; gap: 6px; }
+.with-photos .name-text { min-width: 0; }
+.table.with-photos .sticky-col.name-first { left: 196px; }
+.name-photo { width: 40px; height: 40px; flex-shrink: 0; border-radius: 6px; object-fit: cover; }
+.name-photo-empty { display: inline-flex; align-items: center; justify-content: center; border: 1px dashed var(--border-strong); background: var(--surface-2); color: var(--muted); font-size: 12px; font-weight: 600; }
 .row-nr { display: inline-block; width: 22px; color: var(--muted); font-size: 12px; font-weight: 400; }
 .table tr.inactive td { opacity: 0.5; }
 .table th.ungraded, .table td.ungraded { opacity: 0.45; }
@@ -400,7 +406,7 @@ body.no-grade-colors .r-pp, body.no-grade-colors .r-p, body.no-grade-colors .r-z
 .lesson-head .link { display: block; margin: 0 auto; }
 .lesson-head .link:first-child { color: var(--text); font-weight: 600; }
 .table th.quick-head, .table td:has(> .quick-group) { border-left: 1px solid var(--border); border-right: 1px solid var(--border); }
-.quick-toggle { margin-right: auto; }
+.head-toggles { display: inline-flex; gap: 6px; margin-right: auto; }
 .quick-toggle.active { background: var(--accent-soft); border-color: var(--accent); }
 .quick-group { display: inline-flex; align-items: center; gap: 2px; }
 .quick-btn { min-width: 28px; height: 26px; padding: 0 5px; border: 1px solid var(--border-strong); border-radius: 5px; color: var(--muted); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
