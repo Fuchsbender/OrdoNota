@@ -255,7 +255,9 @@
   function seating(c) {
     const { st, students, cells } = NM.views.seating.layout(c);
     const names = NM.views.seating.cardNames(students);
-    const photo = (s) => (s && !NM.app.state.ui.seatHidePhotos ? s.photo : null); // Umschalter im Sitzplan gilt auch für den Druck
+    // Umschalter im Sitzplan gilt auch für den Druck; mit Fotos bekommt jede Karte ein Bild (ohne Foto das Personensymbol)
+    const withPhotos = !NM.app.state.ui.seatHidePhotos && Object.keys(cells).length > 0;
+    const pic = (s) => (s.photo ? h('img', { src: s.photo, alt: '' }) : h('img', { class: 'p-seat-icon', src: M.PERSON_ICON, alt: '' }));
     const desk = h('div', { class: 'p-seat-desk' }, 'Lehrerpult');
     const rows = [];
     for (let y = 0; y < st.rows; y++) {
@@ -263,13 +265,13 @@
       for (let x = 0; x < st.cols; x++) {
         const sid = cells[x + ',' + y];
         const s = sid && students.find((p) => p.id === sid);
-        tr.appendChild(h('td', { class: sid ? 'p-seat' : 'p-seat empty' }, photo(s) ? h('img', { src: photo(s), alt: '' }) : null, sid ? names[sid] : ''));
+        tr.appendChild(h('td', { class: sid ? 'p-seat' : 'p-seat empty' }, s && withPhotos ? pic(s) : null, sid ? names[sid] : ''));
       }
       rows.push(tr);
     }
     doPrint(
       `${M.courseTitle(c)} – Sitzplan`,
-      h('div', { class: 'p-page' }, header(c, 'Sitzplan', st.name), st.desk === 'top' ? desk : null, h('table', { class: 'p-seat-grid' + (students.some((s) => photo(s) && Object.values(cells).includes(s.id)) ? ' with-photos' : '') }, h('tbody', null, rows)), st.desk === 'bottom' ? desk : null),
+      h('div', { class: 'p-page' }, header(c, 'Sitzplan', st.name), st.desk === 'top' ? desk : null, h('table', { class: 'p-seat-grid' + (withPhotos ? ' with-photos' : '') }, h('tbody', null, rows)), st.desk === 'bottom' ? desk : null),
       { landscape: st.cols > st.rows }
     );
   }

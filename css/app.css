@@ -467,6 +467,7 @@ dialog.modal h2 { font-size: 17px; margin-bottom: 14px; }
 .seat-card.seat-selected { outline: 3px solid var(--accent); outline-offset: 1px; }
 .seat-card.seat-over { border-color: var(--accent); background: var(--accent-soft); }
 .seat-card.has-photo { padding: 4px; }
+.seat-photo-empty { opacity: 0.55; }
 .seat-photo { width: 100%; flex: 1; min-height: 0; object-fit: cover; border-radius: 4px; pointer-events: none; }
 .seat-card.has-photo .seat-name { font-size: 12px; line-height: 1.1; }
 .seat-photo-del { position: absolute; top: 2px; right: 2px; width: 20px; height: 20px; padding: 0; border: 0; border-radius: 50%; background: rgba(0, 0, 0, 0.6); color: #fff; font-size: 14px; line-height: 20px; cursor: pointer; display: none; }
@@ -533,6 +534,7 @@ body.no-grade-colors .p-grade[style*='--g-hue'] { background: none; }
 .p-seat-grid td { height: 18mm; border: 0.8pt solid #000; border-radius: 2mm; text-align: center; vertical-align: middle; font-size: 11pt; font-weight: 600; overflow-wrap: anywhere; }
 .p-seat-grid td.empty { border: 0.5pt dashed #bbb; }
 .p-seat-grid img { display: block; width: 16mm; height: 16mm; margin: 1mm auto 0.5mm; object-fit: cover; border-radius: 1mm; }
+.p-seat-grid img.p-seat-icon { opacity: 0.55; }
 .p-seat-grid.with-photos td { height: 24mm; font-size: 9.5pt; }
 .p-seat-desk { margin: 3mm auto; width: 60mm; padding: 2mm; text-align: center; border: 0.8pt solid #000; font-weight: 600; }
 .p-epo-slip-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; border-bottom: 1pt solid #000; padding-bottom: 3px; margin-bottom: 6px; }

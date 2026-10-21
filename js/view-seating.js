@@ -61,11 +61,13 @@
     const names = cardNames(students);
     const ui = NM.app.state.ui;
     const card = (s) => {
-      const pic = !!s.photo && !ui.seatHidePhotos;
+      const show = !ui.seatHidePhotos;
+      const pic = show && !!s.photo;
       return h(
         'div',
-        { class: 'seat-card' + (pic ? ' has-photo' : '') + (s.id === selectedSid ? ' seat-selected' : ''), 'data-sid': s.id, title: M.studentName(s) + ' – anklicken und Strg+V fügt ein kopiertes Foto ein' },
-        pic ? h('img', { class: 'seat-photo', src: s.photo, alt: '', draggable: 'false' }) : null,
+        { class: 'seat-card' + (show ? ' has-photo' : '') + (s.id === selectedSid ? ' seat-selected' : ''), 'data-sid': s.id, title: M.studentName(s) + ' – anklicken und Strg+V fügt ein kopiertes Foto ein' },
+        // ohne Foto: blasses Personensymbol als Platzhalter
+        show ? h('img', { class: 'seat-photo' + (pic ? '' : ' seat-photo-empty'), src: pic ? s.photo : M.PERSON_ICON, alt: '', draggable: 'false' }) : null,
         h('span', { class: 'seat-name' }, names[s.id]),
         pic ? h('button', { class: 'seat-photo-del', title: 'Foto entfernen', 'aria-label': 'Foto entfernen', onclick: () => removePhoto(course, s) }, '×') : null
       );

@@ -289,10 +289,23 @@ def run_course_check(br, base):
     res2 = br.eval("""(async () => {
         const wait = () => new Promise((r) => setTimeout(r, 150));
         NM.app.state.ui.seatHidePhotos = false; NM.app.select({ tab: 'seating' }); await wait();
-        const shown = document.querySelectorAll('.seat-card img.seat-photo').length;
+        const shown = document.querySelectorAll('.seat-card img.seat-photo:not(.seat-photo-empty)').length;
+        const icons = document.querySelectorAll('.seat-card img.seat-photo-empty').length;
         [...document.querySelectorAll('.quick-toggle')].find((b) => b.textContent.includes('Fotos')).click(); await wait();
-        return { shown, hidden: document.querySelectorAll('.seat-card img.seat-photo').length, cards: document.querySelectorAll('.seat-card').length }; })()""")
-    report("Sitzplan: Fotos ausblenden", bool(res2) and res2["shown"] > 0 and res2["hidden"] == 0 and res2["cards"] > 0 and not br.errors, str(res2))
+        return { shown, icons, hidden: document.querySelectorAll('.seat-card img.seat-photo').length, cards: document.querySelectorAll('.seat-card').length }; })()""")
+    # Druck: mit Fotos hat jeder belegte Platz ein Bild (Foto oder Symbol), ausgeblendet keiner
+    res3 = br.eval("""(async () => {
+        const c = NM.app.currentCourse(); const origPrint = window.print; window.print = () => {};
+        try {
+            c.seatingPlans[0].pos = {}; NM.views.seating.layout(c).students.forEach((s, i) => (c.seatingPlans[0].pos[s.id] = { x: i % 4, y: Math.floor(i / 4) }));
+            const count = () => { NM.print.seating(c); const r = document.getElementById('print-root');
+                return [r.querySelectorAll('td.p-seat:not(.empty)').length, r.querySelectorAll('td.p-seat img').length, r.querySelectorAll('img.p-seat-icon').length]; };
+            NM.app.state.ui.seatHidePhotos = false; const on = count();
+            NM.app.state.ui.seatHidePhotos = true; const off = count();
+            return { on, off };
+        } finally { window.print = origPrint; } })()""")
+    report("Sitzplan-Druck: Platzhalter mit Fotos, nichts ohne Fotos", bool(res3) and res3["on"][0] > 0 and res3["on"][1] == res3["on"][0] and res3["on"][2] == 1 and res3["off"][1] == 0 and not br.errors, str(res3))
+    report("Sitzplan: Symbol ohne Foto, Fotos ausblenden", bool(res2) and res2["shown"] > 0 and res2["icons"] == 1 and res2["hidden"] == 0 and res2["cards"] > 0 and not br.errors, str(res2))
     report("EPO: Fotos ein-/ausblenden (Foto bzw. Platzhalter je Person)", bool(res) and res["before"] == 0 and res["empty"] == 1 and res["imgs"] == res["rows"] - 1 and not br.errors, str(res) + "; ".join(br.errors))
 
 
