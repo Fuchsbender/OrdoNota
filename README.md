@@ -36,7 +36,7 @@ Ausprobieren ohne echte Daten: `index.html?demo` (nichts wird gespeichert).
 - Schwellen lassen sich je Test von Hand überschreiben. Bonusaufgaben zählen zur erreichten, nicht zur Höchstpunktzahl (Ergebnis wird bei der Bestnote gekappt).
 - Drittelparagraph: Warnung, wenn mehr als ⅓ der Arbeiten 5 oder 6 sind (Täuschung/Verweigerung nicht mitgezählt).
 - Statistik je Test: Notenspiegel, Ø, Standardabweichung (Teiler n), Anteil unter 4. Personen mit I-Status zählen in der Statistik nicht mit.
-- Tests lassen sich als „nicht gewertet“ markieren: Sie bleiben sichtbar (ausgegraut), zählen aber nicht zur Note.
+- Tests lassen sich als „nicht gewertet“ markieren: Sie bleiben sichtbar (ausgegraut), zählen aber nicht zur Note. Das geht auch für einzelne Personen über den Status „nicht gewertet“; die Arbeit zählt dann auch nicht in Notenspiegel, Ø und Drittelparagraph.
 
 **Mitarbeit/EPO** – je Stunde `++ + 0 - --` (4…0 Punkte), `k` = abwesend (zählt nicht), Zusatz `u` (HA unvollständig, −1) bzw. `h` (HA vergessen, −2), z. B. `+h`. Prozent = Punkte / (anwesende Stunden × 4). MSS: 5-%-Stufen wie bisher; Sek I: Sek-I-Schlüssel. Alles je Block einstellbar.
 

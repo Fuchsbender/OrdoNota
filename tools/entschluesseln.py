@@ -128,7 +128,11 @@ def schreibe_csv(daten, ordner):
                 elif a.get("kind") == "test":
                     r = a.get("test", {}).get("results", {}).get(sid, {})
                     punkte = sum(float(v) for v in r.get("scores", {}).values() if v not in (None, ""))
-                    z.append(r.get("status") or (f"{punkte:g} Pkt." if r.get("scores") else ""))
+                    text = f"{punkte:g} Pkt." if r.get("scores") else ""
+                    if r.get("status") == "ungewertet":
+                        z.append(f"{text} (nicht gewertet)".strip())
+                    else:
+                        z.append(r.get("status") or text)
                 else:
                     e = a.get("epo", {}).get("entries", {}).get(sid, {})
                     z.append(" ".join((c.get("r", "") + c.get("hw", "")) for c in e.values()))

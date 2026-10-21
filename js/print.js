@@ -128,7 +128,7 @@
           t.tasks.map((task) => h('td', { class: 'n' }, r.scores ? fmtScore(r.scores[task.id]) : '')),
           h('td', { class: 'n' }, res.score === null ? '' : fmtScore(res.score)),
           h('td', { class: 'n' }, res.score === null || !G.testMaxScore(t) ? '' : fmtNum((res.score / G.testMaxScore(t)) * 100, 0)),
-          h('td', { class: 'c' }, res.p === null ? UI.STATUS_SHORT[r.status] || '' : badge(res.p, level))
+          h('td', { class: 'c' + (r.status === 'ungewertet' ? ' p-ungraded' : '') }, res.p === null ? UI.STATUS_SHORT[r.status] || '' : [badge(res.p, level), r.status === 'ungewertet' ? h('small', null, ' n. gew.') : null])
         );
       });
       return doPrint(
@@ -304,7 +304,7 @@
     const th = (a) => h('th', { class: a.ungraded ? 'p-ungraded' : null }, a.name, h('br'), h('small', null, [NM.util.fmtDateShort(a.date), Number(a.weight) !== 1 ? '×' + fmtScore(a.weight) : '', a.ungraded ? 'nicht gewertet' : ''].filter(Boolean).join(' ')));
     const rows = students.map((s, i) => {
       const r = G.halfResult(c, half, s.id);
-      const cell = (a) => h('td', { class: 'c' + (a.ungraded ? ' p-ungraded' : '') }, badge(G.assessmentPoints(a, s.id, level), level));
+      const cell = (a) => h('td', { class: 'c' + (G.ungradedFor(a, s.id) ? ' p-ungraded' : '') }, badge(G.assessmentPoints(a, s.id, level), level));
       return h(
         'tr',
         null,
@@ -398,7 +398,7 @@
                   list.map((a) => {
                     const p = G.assessmentPoints(a, s.id, level);
                     const status = a.kind === 'test' ? (a.test.results[s.id] || {}).status : a.kind === 'manual' ? (a.manual.grades[s.id] || {}).status : '';
-                    return h('tr', null, h('td', null, fmtDate(a.date)), h('td', null, a.name, a.kind !== 'manual' ? h('small', null, ' (' + M.kindLabel(a) + ')') : null, a.ungraded ? h('small', null, ' – nicht gewertet') : null), h('td', null, UI.catLabel(a.cat)), h('td', { class: 'n' }, fmtScore(a.weight)), h('td', { class: 'c' }, p === null ? UI.STATUS_SHORT[status] || '–' : badge(p, level)));
+                    return h('tr', null, h('td', null, fmtDate(a.date)), h('td', null, a.name, a.kind !== 'manual' ? h('small', null, ' (' + M.kindLabel(a) + ')') : null, G.ungradedFor(a, s.id) ? h('small', null, ' – nicht gewertet') : null), h('td', null, UI.catLabel(a.cat)), h('td', { class: 'n' }, fmtScore(a.weight)), h('td', { class: 'c' }, p === null ? UI.STATUS_SHORT[status] || '–' : badge(p, level)));
                   })
                 )
               )

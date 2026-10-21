@@ -103,8 +103,9 @@
     { v: 'fehlt', label: 'fehlt (entschuldigt)' },
     { v: 'nachschreiben', label: 'Nachschreiben' },
     { v: 'taeuschung', label: 'Täuschung/Verweigerung' },
+    { v: 'ungewertet', label: 'nicht gewertet' },
   ];
-  const STATUS_SHORT = { fehlt: 'fehlt', nachschreiben: 'NS', taeuschung: 'T/V' };
+  const STATUS_SHORT = { fehlt: 'fehlt', nachschreiben: 'NS', taeuschung: 'T/V', ungewertet: 'n. gew.' };
 
   function statusSelect(value, onSet, key) {
     return h(

@@ -111,7 +111,8 @@
       if (a.kind !== 'manual') {
         const p = G.assessmentPoints(a, s.id, level);
         const status = a.kind === 'test' ? (a.test.results[s.id] || {}).status : '';
-        return h('td', { class: 'center' + (a.ungraded ? ' ungraded' : '') }, p === null ? (status ? h('span', { class: 'muted small' }, UI.STATUS_SHORT[status]) : h('span', { class: 'muted' }, '·')) : UI.gradeBadge(p, level, 'ro'));
+        const off = G.ungradedFor(a, s.id);
+        return h('td', { class: 'center' + (off ? ' ungraded' : ''), title: off && !a.ungraded ? 'Nicht gewertet – zählt nicht zur Note' : null }, p === null ? (status ? h('span', { class: 'muted small' }, UI.STATUS_SHORT[status]) : h('span', { class: 'muted' }, '·')) : UI.gradeBadge(p, level, 'ro'));
       }
       const g = a.manual.grades[s.id] || {};
       const shown = g.status ? UI.STATUS_SHORT[g.status] : g.p === undefined || g.p === null ? '' : G.label(g.p, level);

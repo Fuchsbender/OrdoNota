@@ -1,6 +1,6 @@
 # Notenmanager – Dokumentation
 
-Version 1.5.0 · Stand Oktober 2026
+Version 1.6.0 · Stand Oktober 2026
 
 Der Notenmanager verwaltet Noten für die Sekundarstufe I (Noten 1–6 mit Tendenz) und die Mainzer Studienstufe (MSS, Punkte 00–15) an Schulen in Rheinland-Pfalz. Er läuft vollständig lokal im Browser, verschlüsselt alle Daten mit einem Passwort und legt sie in einem Ordner ab, den der Synology Drive Client auf die DiskStation spiegelt.
 
@@ -278,6 +278,7 @@ In der Tabelle **Ergebnisse** die erreichten Punkte je Aufgabe eintragen (Komma 
 | fehlt (entschuldigt) | keine Note, zählt nicht im Schnitt |
 | Nachschreiben | keine Note (Erinnerung zum Nachschreiben) |
 | Täuschung/Verweigerung | Note 6 bzw. 00 Punkte; wird beim Drittelparagraphen **nicht** mitgezählt |
+| nicht gewertet | Punkte und Note werden wie gewohnt berechnet und angezeigt, die Zeile ist ausgegraut. Die Arbeit zählt **nicht** zur Halbjahresnote dieser Person und nicht in Notenspiegel, Ø, Standardabweichung, „Ø gelöst“ und Drittelparagraph. In der Notenübersicht erscheint die Note ausgegraut. |
 
 Die Zeile **„Ø gelöst“** zeigt je Aufgabe, wie viel Prozent der möglichen Punkte im Schnitt erreicht wurden. Daran sieht man schnell, welche Aufgabe schwer war.
 
@@ -365,6 +366,7 @@ Name │ Klassen-/Kursarbeiten │ Ø │ Sonstige Leistungen          │ Ø �
 | Spalten mit ✎ bzw. ◷ | Ergebnisse aus Tests bzw. EPO-Blöcken; nur anzeigen, bearbeitet wird im jeweiligen Reiter („Test ›“ / „EPO ›“ springt dorthin) |
 | Spalten ohne Symbol | direkt eingetragene Einzelnoten (bearbeitbar) |
 | ausgegraute Spalte | Test mit Haken „nicht gewertet“ (siehe 7.1); wird angezeigt, zählt aber nicht |
+| ausgegraute einzelne Note | Testarbeit dieser Person mit Status „nicht gewertet“ (siehe 7.3); wird angezeigt, zählt aber nicht |
 | Ø | gewichteter Schnitt des Bereichs (Sek I: Dezimalnote, MSS: Punkte) |
 | Gerechnet | ungerundeter Gesamtschnitt + gerundete Note |
 | Gesetzt | Ihre Zeugnisnote, falls sie von der gerechneten abweicht (leer = gerechnete Note gilt) |
@@ -574,7 +576,7 @@ Prozentwerte auf ganze Prozent gerundet.
 ### 15.4 Drittelparagraph
 
 Greift, wenn gilt: (Anzahl Noten 5 und 6 − Anzahl „Täuschung/Verweigerung“) **>** (Anzahl gewerteter Arbeiten) / 3.
-Als 5 und 6 zählen alle Stufen von 5+ bis 6 (Punkte 0–3). „fehlt“ und „Nachschreiben“ zählen nicht mit, ebenso wenig Personen mit I-Status (siehe 6.2).
+Als 5 und 6 zählen alle Stufen von 5+ bis 6 (Punkte 0–3). „fehlt“ und „Nachschreiben“ zählen nicht mit, ebenso wenig Personen mit I-Status (siehe 6.2) und einzeln „nicht gewertete“ Arbeiten (siehe 7.3).
 
 ## 16. Mitarbeit/EPO-Berechnung
 
@@ -609,7 +611,7 @@ Stunden mit `k` oder ohne Eintrag zählen nicht zu Max. Hausaufgaben-Vermerke we
 Ø Sonstige = Σ (Wert × Gewicht) / Σ Gewicht   über alle sonstigen Leistungen
 ```
 
-„Wert“ ist in der Sek I die Dezimalnote (13 → 1,33), in der MSS die Punktzahl. Leistungen ohne Note („fehlt“, „Nachschreiben“, leer) werden übersprungen, ebenso Tests mit Haken „nicht gewertet“.
+„Wert“ ist in der Sek I die Dezimalnote (13 → 1,33), in der MSS die Punktzahl. Leistungen ohne Note („fehlt“, „Nachschreiben“, leer) werden übersprungen, ebenso Tests mit Haken „nicht gewertet“ und einzelne Testarbeiten mit Status „nicht gewertet“.
 
 **Schritt 2 – Halbjahresnote**
 
@@ -828,7 +830,7 @@ Berechnete Werte (Schnitte, Testnoten, EPO-Noten) werden **nie gespeichert**, so
   "kdf": "PBKDF2-SHA256",
   "savedAt": "2026-10-14T21:57:03.123Z",
   "device": "Laptop Schule",
-  "app": "1.5.0",
+  "app": "1.6.0",
   "pw":   { "salt": "<b64>", "iter": 600000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "rec":  { "salt": "<b64>", "iter": 100000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "data": { "iv": "<b64>", "ct": "<b64: verschlüsseltes JSON des Datenmodells>" }
@@ -851,7 +853,7 @@ Entschlüsselter Inhalt (`schema: 1`):
 ```js
 {
   schema: 1,                             // Datenformat (siehe 26.2)
-  savedWith: "1.5.0",                    // App-Version beim letzten Speichern
+  savedWith: "1.6.0",                    // App-Version beim letzten Speichern
   created: "<ISO>", savedAt: "<ISO>",
   settings: { autoLockMin, limitSek1, limitMss, precision, keepBackups, backupEveryMin, gradeColors },
   years:   [ { id, name: "2026/27" } ],
@@ -888,7 +890,7 @@ Assessment = {
 }
 ```
 
-`p` ist immer eine Punktzahl 0–15. `status` ∈ `fehlt`, `nachschreiben`, `taeuschung`.
+`p` ist immer eine Punktzahl 0–15. `status` ∈ `fehlt`, `nachschreiben`, `taeuschung`; bei Testergebnissen zusätzlich `ungewertet` (Note wird berechnet, zählt aber nicht; Abfrage über `NM.grades.ungradedFor(a, sid)`).
 
 `NM.model.migrate()` ergänzt beim Öffnen fehlende Felder. Neue Felder bitte dort mit Standardwert nachtragen.
 
@@ -945,7 +947,7 @@ In `js/model.js` stehen zwei Nummern:
 
 | Konstante | Bedeutung | Wann erhöhen |
 |---|---|---|
-| `APP_VERSION` (z. B. `1.5.0`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.5.0` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
+| `APP_VERSION` (z. B. `1.6.0`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.6.0` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
 | `SCHEMA` (z. B. `1`) | Version des Datenformats | nur, wenn eine **ältere** App-Version die neuen Daten falsch verstehen würde (z. B. ein Feld ändert seine Bedeutung) |
 
 Öffnet eine App eine Datenbank mit höherem `SCHEMA`, verweigert sie das mit einer Meldung (siehe 21.10). Neue, nur *zusätzliche* Felder brauchen kein neues `SCHEMA`: Ältere Versionen lassen unbekannte Felder unverändert und speichern sie mit.

@@ -299,7 +299,7 @@
       const r = (t.results[s.id] = t.results[s.id] || { scores: {} });
       r.scores = r.scores || {};
       const res = results.get(s.id);
-      const blocked = r.status === 'fehlt' || r.status === 'nachschreiben' || r.status === 'taeuschung';
+      const blocked = !!r.status; // auch „nicht gewertet“: Note bleibt sichtbar, Zeile ausgegraut
       return h(
         'tr',
         { class: blocked ? 'row-muted' : '' },
@@ -438,7 +438,7 @@
         h('div', null, h('span', { class: 'muted' }, '5 und 6'), h('strong', null, st.weak)),
         weakTile(st)
       ),
-      iHint(course),
+      iHint(course, t),
       st.drittel
         ? h('div', { class: 'alert alert-danger' }, h('strong', null, 'Drittelparagraph greift! '), 'Mehr als ein Drittel der Arbeiten ist mangelhaft oder ungenügend (Täuschung/Verweigerung nicht mitgezählt). Die Arbeit muss von der Schulleitung genehmigt werden.')
         : st.n
@@ -457,10 +457,12 @@
     return h('div', { title: 'Anteil mit Note 5 oder 6' }, h('span', { class: 'muted' }, 'unter 4'), h('strong', null, st.weakPct === null ? '–' : fmtNum(st.weakPct, 0) + ' %'));
   }
 
-  /** Hinweis, wenn Personen mit I-Status aus der Statistik herausgenommen sind. */
-  function iHint(course) {
+  /** Hinweis, wenn Personen mit I-Status oder nicht gewertete Arbeiten aus der Statistik herausgenommen sind. */
+  function iHint(course, t) {
     const n = M.activeStudents(course).length - M.statStudents(course).length;
-    return n ? h('p', { class: 'muted small' }, `Ohne ${n} ${n === 1 ? 'Person' : 'Personen'} mit I-Status.`) : null;
+    const u = M.statStudents(course).filter((s) => (t.results[s.id] || {}).status === 'ungewertet').length;
+    const parts = [n ? `${n} ${n === 1 ? 'Person' : 'Personen'} mit I-Status` : null, u ? `${u} nicht ${u === 1 ? 'gewertete Arbeit' : 'gewertete Arbeiten'}` : null].filter(Boolean);
+    return parts.length ? h('p', { class: 'muted small' }, `Ohne ${parts.join(' und ')}.`) : null;
   }
 
   function distribution(st, level) {
@@ -481,9 +483,13 @@
     );
   }
 
-  /** Durchschnittlich erreichte Punkte einer Aufgabe (nur eingetragene Werte); null = keine. */
+  /** Durchschnittlich erreichte Punkte einer Aufgabe (nur eingetragene, gewertete Werte); null = keine. */
   function taskAverage(t, students, task) {
-    const vals = students.map((s) => (t.results[s.id] && t.results[s.id].scores ? t.results[s.id].scores[task.id] : null)).filter((v) => v !== null && v !== undefined && v !== '');
+    const vals = students
+      .map((s) => t.results[s.id] || {})
+      .filter((r) => r.status !== 'ungewertet')
+      .map((r) => (r.scores ? r.scores[task.id] : null))
+      .filter((v) => v !== null && v !== undefined && v !== '');
     return vals.length ? vals.reduce((x, y) => x + Number(y), 0) / vals.length : null;
   }
 

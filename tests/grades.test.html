@@ -83,6 +83,22 @@
   eq('Anteil unter 4: 2 von 5', st.weakPct, 40);
   eq('Drittel: 2 schwache von 5, Täuschung ausgenommen → greift nicht', st.drittel, false);
 
+  // Einzelne Arbeit „nicht gewertet“: Note wird berechnet, zählt aber weder in Statistik noch Halbjahresnote
+  const tu = JSON.parse(JSON.stringify(test));
+  tu.results.s1.status = 'ungewertet';
+  eq('nicht gewertet → Note bleibt sichtbar', G.label(G.testResult(tu, 's1', 'sek1').p, 'sek1'), '1');
+  const stu = G.testStats(tu, ['s1','s2','s3','s4','s5','s6'], 'sek1');
+  eq('nicht gewertet → nicht im Notenspiegel', [stu.n, stu.whole[1]], [4, 0]);
+  eq('nicht gewertet → Drittel zählt nur gewertete Arbeiten', [stu.weak, stu.drittel], [2, false]);
+  const cu = { jahrgang: 8, wKa: 50, wOther: 50, overrides: {}, assessments: [
+    { id: 't', kind: 'test', half: 'HJ1', cat: 'ka', weight: 1, test: tu },
+    { id: 'm', kind: 'manual', half: 'HJ1', cat: 'ka', weight: 1, manual: { grades: { s1: { p: 8 }, s2: { p: 8 } } } },
+    { id: 'o', kind: 'manual', half: 'HJ1', cat: 'other', weight: 1, manual: { grades: { s1: { p: 8 }, s2: { p: 8 } } } },
+  ] };
+  eq('nicht gewertet → zählt nicht zur Halbjahresnote', G.halfResult(cu, 'HJ1', 's1').ka, 3);
+  eq('andere Person: Test zählt weiter (4- = 4,33 und 3)', G.round2(G.halfResult(cu, 'HJ1', 's2').ka), 3.67);
+  eq('ungradedFor', [G.ungradedFor(cu.assessments[0], 's1'), G.ungradedFor(cu.assessments[0], 's2')], [true, false]);
+
   // EPO (Werte aus EPO Apr-Mai26_KuM.xlsx, Tabelle3)
   const epo = { lessons: [1,2,3,4,5,6,7].map((i) => ({ id: 'l' + i })), entries: {
     sa: { l1:{r:'+'}, l2:{r:'0'}, l3:{r:'+'}, l4:{r:'+'}, l5:{r:'0'}, l6:{r:'0'}, l7:{r:'+'} },

@@ -218,7 +218,12 @@
     return { status, score, bonus, p: scoreToPoints(score, key) };
   }
 
-  /** Notenspiegel und Drittelparagraph. */
+  /** Zählt diese Leistung für diese Person nicht? (ganze Leistung oder einzelne Testarbeit „nicht gewertet“) */
+  function ungradedFor(a, sid) {
+    return !!a.ungraded || (a.kind === 'test' && ((a.test.results || {})[sid] || {}).status === 'ungewertet');
+  }
+
+  /** Notenspiegel und Drittelparagraph (einzeln nicht gewertete Arbeiten zählen nicht mit). */
   function testStats(test, studentIds, level) {
     const counts = {};
     const whole = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
@@ -230,7 +235,7 @@
     let excluded = 0;
     for (const sid of studentIds) {
       const r = testResult(test, sid, level);
-      if (r.p === null) continue;
+      if (r.p === null || r.status === 'ungewertet') continue;
       n++;
       counts[r.p] = (counts[r.p] || 0) + 1;
       whole[wholeGrade(r.p)]++;
@@ -365,7 +370,7 @@
     const list = (course.assessments || []).filter((a) => a.half === half);
     const collect = (cat) =>
       list
-        .filter((a) => a.cat === cat && !a.ungraded)
+        .filter((a) => a.cat === cat && !ungradedFor(a, sid))
         .map((a) => {
           const p = assessmentPoints(a, sid, level);
           return { v: p === null ? null : calcValue(p, level), w: Number(a.weight) || 0 };
@@ -436,6 +441,7 @@
     halvesFor,
     hasYearGrade,
     assessmentPoints,
+    ungradedFor,
     halfResult,
     yearResult,
   };
