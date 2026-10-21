@@ -283,9 +283,16 @@ def run_course_check(br, base):
         NM.app.state.ui.epoPhotos = false; NM.app.select({ courseId: c.id, tab: 'epo' }); await wait();
         const before = document.querySelectorAll('.epo-table .name-photo').length;
         [...document.querySelectorAll('.quick-toggle')].find((b) => b.textContent.includes('Fotos')).click(); await wait();
-        return { before, imgs: document.querySelectorAll('.epo-table img.name-photo').length,
+        return { before, imgs: document.querySelectorAll('.epo-table img.name-photo:not(.name-photo-empty)').length,
                  empty: document.querySelectorAll('.epo-table .name-photo-empty').length,
                  rows: document.querySelectorAll('.epo-table tbody tr').length }; })()""")
+    res2 = br.eval("""(async () => {
+        const wait = () => new Promise((r) => setTimeout(r, 150));
+        NM.app.state.ui.seatHidePhotos = false; NM.app.select({ tab: 'seating' }); await wait();
+        const shown = document.querySelectorAll('.seat-card img.seat-photo').length;
+        [...document.querySelectorAll('.quick-toggle')].find((b) => b.textContent.includes('Fotos')).click(); await wait();
+        return { shown, hidden: document.querySelectorAll('.seat-card img.seat-photo').length, cards: document.querySelectorAll('.seat-card').length }; })()""")
+    report("Sitzplan: Fotos ausblenden", bool(res2) and res2["shown"] > 0 and res2["hidden"] == 0 and res2["cards"] > 0 and not br.errors, str(res2))
     report("EPO: Fotos ein-/ausblenden (Foto bzw. Platzhalter je Person)", bool(res) and res["before"] == 0 and res["empty"] == 1 and res["imgs"] == res["rows"] - 1 and not br.errors, str(res) + "; ".join(br.errors))
 
 

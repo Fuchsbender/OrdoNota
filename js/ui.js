@@ -176,7 +176,7 @@
 
   /**
    * Zwei feste Namensspalten (Nachname, Vorname mit Markierung „I“); nr = laufende Nummer vor dem Nachnamen.
-   * photo: Foto (oder Platzhalter mit Initialen) vor dem Nachnamen – die Tabelle braucht dann die Klasse „with-photos“.
+   * photo: Foto (oder Personensymbol als Platzhalter) vor dem Nachnamen – die Tabelle braucht dann die Klasse „with-photos“.
    */
   function nameCells(s, nr, { photo = false } = {}) {
     const title = NM.model.studentName(s);
@@ -184,7 +184,7 @@
       ? null
       : s.photo
         ? h('img', { class: 'name-photo', src: s.photo, alt: '' })
-        : h('span', { class: 'name-photo name-photo-empty', title: 'Kein Foto – Fotos fügen Sie im Reiter „Sitzplan“ hinzu' }, ((s.first || '')[0] || '') + ((s.last || '')[0] || ''));
+        : h('img', { class: 'name-photo name-photo-empty', src: NM.model.PERSON_ICON, alt: '', title: 'Kein Foto – Fotos fügen Sie im Reiter „Sitzplan“ hinzu' });
     return [
       h(
         'td',

@@ -271,7 +271,7 @@ details.details-card[open] > summary { margin-bottom: 12px; }
 .with-photos .name-text { min-width: 0; }
 .table.with-photos .sticky-col.name-first { left: 196px; }
 .name-photo { width: 40px; height: 40px; flex-shrink: 0; border-radius: 6px; object-fit: cover; }
-.name-photo-empty { display: inline-flex; align-items: center; justify-content: center; border: 1px dashed var(--border-strong); background: var(--surface-2); color: var(--muted); font-size: 12px; font-weight: 600; }
+.name-photo-empty { opacity: 0.55; }
 .row-nr { display: inline-block; width: 22px; color: var(--muted); font-size: 12px; font-weight: 400; }
 .table tr.inactive td { opacity: 0.5; }
 .table th.ungraded, .table td.ungraded { opacity: 0.45; }

@@ -59,14 +59,17 @@
   function render(view, { course }) {
     const { st, students, cells, unplaced } = layout(course);
     const names = cardNames(students);
-    const card = (s) =>
-      h(
+    const ui = NM.app.state.ui;
+    const card = (s) => {
+      const pic = !!s.photo && !ui.seatHidePhotos;
+      return h(
         'div',
-        { class: 'seat-card' + (s.photo ? ' has-photo' : '') + (s.id === selectedSid ? ' seat-selected' : ''), 'data-sid': s.id, title: M.studentName(s) + ' – anklicken und Strg+V fügt ein kopiertes Foto ein' },
-        s.photo ? h('img', { class: 'seat-photo', src: s.photo, alt: '', draggable: 'false' }) : null,
+        { class: 'seat-card' + (pic ? ' has-photo' : '') + (s.id === selectedSid ? ' seat-selected' : ''), 'data-sid': s.id, title: M.studentName(s) + ' – anklicken und Strg+V fügt ein kopiertes Foto ein' },
+        pic ? h('img', { class: 'seat-photo', src: s.photo, alt: '', draggable: 'false' }) : null,
         h('span', { class: 'seat-name' }, names[s.id]),
-        s.photo ? h('button', { class: 'seat-photo-del', title: 'Foto entfernen', 'aria-label': 'Foto entfernen', onclick: () => removePhoto(course, s) }, '×') : null
+        pic ? h('button', { class: 'seat-photo-del', title: 'Foto entfernen', 'aria-label': 'Foto entfernen', onclick: () => removePhoto(course, s) }, '×') : null
       );
+    };
 
     const grid = h('div', { class: 'seat-grid', style: `--cols:${st.cols}` });
     for (let y = 0; y < st.rows; y++) {
@@ -103,7 +106,6 @@
         })
       );
 
-    const ui = NM.app.state.ui;
     view.append(
       h('div', { class: 'view-head' }, h('h1', null, 'Sitzplan')),
       UI.pickerList({
@@ -166,6 +168,20 @@
               { class: 'inline' },
               h('button', { class: 'btn', title: 'Noch nicht platzierte Personen auf freie Plätze verteilen (zufällig)', onclick: () => fillRandom(course) }, '🎲 Freie Plätze füllen'),
               h('button', { class: 'btn', onclick: () => clearAll(course) }, 'Alle abräumen'),
+              h(
+                'button',
+                {
+                  class: 'btn quick-toggle' + (ui.seatHidePhotos ? '' : ' active'),
+                  'aria-pressed': ui.seatHidePhotos ? 'false' : 'true',
+                  title: 'Schülerfotos auf den Karten und im Ausdruck ein-/ausblenden (Fotos bleiben gespeichert)',
+                  onclick: () => {
+                    ui.seatHidePhotos = !ui.seatHidePhotos;
+                    NM.app.saveUi();
+                    NM.app.rerender();
+                  },
+                },
+                ui.seatHidePhotos ? '▸ Fotos einblenden' : '▾ Fotos ausblenden'
+              ),
               h('button', { class: 'btn', onclick: () => NM.print.seating(course) }, '🖨 Drucken'),
               plans(course).length > 1 ? h('button', { class: 'icon-btn danger', title: 'Diesen Raum löschen', 'aria-label': 'Diesen Raum löschen', onclick: () => deleteRoom(course, st) }, '🗑') : null
             )
