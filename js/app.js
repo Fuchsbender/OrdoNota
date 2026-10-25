@@ -695,7 +695,7 @@
       )
     );
     main.appendChild(tabs);
-    const view = h('section', { class: 'view', id: 'view' });
+    const view = h('section', { class: 'view view-' + state.ui.tab, id: 'view' });
     main.appendChild(view);
     if (!course && state.ui.tab !== 'settings') {
       view.appendChild(

@@ -170,7 +170,8 @@ def run_app_smoke(br, base):
             br.eval(f"NM.app.select({{courseId: NM.app.db().courses[{course}].id, tab: '{tab}'}}); 1")
             time.sleep(0.15)
             n = br.eval("document.getElementById('view').children.length")
-            report(f"Reiter {tab} (Kurs {course + 1})", bool(n) and not br.errors, "; ".join(br.errors))
+            stray = br.eval("[...document.getElementById('view').childNodes].some((x) => x.nodeType === 3 && /null|undefined/.test(x.textContent))")
+            report(f"Reiter {tab} (Kurs {course + 1})", bool(n) and not stray and not br.errors, "; ".join(br.errors) + (" ; Text „null“ im Reiter" if stray else ""))
             br.errors = []
 
 
@@ -391,16 +392,17 @@ def run_draw_check(br, base):
         hi.value = '3+'; hi.dispatchEvent(new Event('change')); await wait();
         const a1 = c.assessments.find((a) => a.id === h1.aid);
         out.histGrade = [Object.keys(a1.manual.grades).length, NM.grades.label(Object.values(a1.manual.grades)[0].p, 'sek1'), document.querySelectorAll('.draw-hist-item .grade-input').length];
-        // Haken „Im Pool“ und „heute abwesend“
-        const away = NM.model.activeStudents(c).find((s) => !c.draw.out[s.id]);
-        const outSid = D.pool(c).filter((s) => s.id !== away.id)[0].id;
-        c.draw.out[outSid] = { how: 'manual', date: '2026-10-21' };
-        const pick = D.drawStudents(c, 1, new Set([away.id]), () => 0);
-        out.skip = [pick.sids.includes(away.id), pick.sids.includes(outSid), !c.draw.out[away.id]];
+        // Haken „Im Pool“ und „heute abwesend“: bei vollem Pool alle anderen 10 ziehen, ohne dass aufgefüllt wird
+        // (beim Auffüllen kämen Herausgenommene laut Doku zurück – das darf hier nicht vom Zufall der vorigen Ziehungen abhängen)
+        c.draw.out = {};
+        const [away, outS] = NM.model.activeStudents(c);
+        c.draw.out[outS.id] = { how: 'manual', date: '2026-10-21' };
+        const pick = D.drawStudents(c, 10, new Set([away.id]), () => 0);
+        out.skip = [pick.sids.includes(away.id), pick.sids.includes(outS.id), !c.draw.out[away.id], pick.refilled, pick.sids.length];
         return out; })()""")
     ok = bool(res) and res["first"] == [5, 7, 1, 5] and res["noRepeat"] and res["restBefore"] == 2 \
         and res["refill"][0] == 5 and res["refill"][1] and res["refill"][2] == 5 and res["refill"][3] == 7 \
-        and res["grade"] == [1, "other", "manual"] and res["undo"] == [2, 2, False] and res["histGrade"] == [1, "3+", 5] and res["greyed"][0] == res["greyed"][1] == 7 and res["skip"] == [False, False, True]
+        and res["grade"] == [1, "other", "manual"] and res["undo"] == [2, 2, False] and res["histGrade"] == [1, "3+", 5] and res["greyed"][0] == res["greyed"][1] == 7 and res["skip"] == [False, False, True, False, 10]
     report("Ziehen: ohne Wiederholung, Auffüllen, Note (auch nachträglich), Rückgängig, Abwesende/Herausgenommene", ok and not br.errors, str(res) + "; ".join(br.errors))
 
 
@@ -418,6 +420,37 @@ MOODLE_GRADES = "\n".join([
     "Fischer,Mia,mia@x.de,In Bearbeitung,1. September 2026  10:05,-,-,-,-,-",
     "Gesamtdurchschnitt,,,,,,,\"1,75\",\"0,75\",1",
 ])
+
+
+def run_tests_view_check(br, base):
+    print("Tests-Reiter (Breite, Unterschrift bei Klassenarbeiten):")
+    br.call("Emulation.setDeviceMetricsOverride", width=2560, height=1300, deviceScaleFactor=1, mobile=False)
+    br.open(f"{base}/index.html?demo")
+    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.errors = []
+    res = br.eval("""(async () => {
+        const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
+        window.print = () => {};
+        const c = NM.app.db().courses[0];
+        NM.app.select({ courseId: c.id, tab: 'tests' }); await wait();
+        const a = c.assessments.find((x) => x.kind === 'test');
+        const out = { wide: document.getElementById('view').getBoundingClientRect().width > 1600 };
+        const boxes = () => [...document.querySelectorAll('[data-focus-key^="ts-signed-"]')];
+        out.ka = [a.cat, boxes().length];
+        const sid = c.students[0].id;
+        const box = document.querySelector(`[data-focus-key="ts-signed-${sid}"]`);
+        box.checked = true; box.dispatchEvent(new Event('change')); await wait();
+        out.signed = [a.test.results[sid].signed === NM.util.todayISO(), document.querySelector('.card-head .chip, .card-head .pill').textContent === 'Unterschriften 1 / 11'];
+        NM.print.test(c, a, 'list'); await wait();
+        out.print = document.getElementById('print-root').textContent.includes('Unterschr.');
+        document.body.classList.remove('printing');
+        a.cat = 'other'; NM.app.rerender(); await wait();
+        out.other = boxes().length;
+        a.cat = 'ka'; NM.app.rerender(); await wait();
+        return out; })()""")
+    br.call("Emulation.clearDeviceMetricsOverride")
+    ok = bool(res) and res["wide"] and res["ka"] == ["ka", 12] and res["signed"] == [True, True] and res["print"] and res["other"] == 0
+    report("Tests: volle Breite, Unterschrift abhaken/zählen/drucken, nur bei Klassenarbeiten", ok and not br.errors, str(res) + "; ".join(br.errors))
 
 
 def run_moodle_check(br, base):
@@ -452,9 +485,9 @@ def run_moodle_check(br, base):
         // Ausdruck mit und ohne Note
         NM.print.moodle(c, a, { withGrade: true }); await wait();
         const root = document.getElementById('print-root');
-        out.printGrade = [root.querySelectorAll('.p-page').length, !!root.querySelector('.p-mr-grade'), root.textContent.includes('Hauptstadt?'), root.querySelectorAll('tr.p-mr-part').length];
+        out.printGrade = [root.querySelectorAll('.p-page').length, !!root.querySelector('.p-mr-grade'), root.textContent.includes('Hauptstadt?'), root.querySelectorAll('tr.p-mr-part').length, root.textContent.includes('sehr gut'), root.querySelectorAll('.p-mr-sign').length];
         NM.print.moodle(c, a, { withGrade: false, sid: sid('Demir') }); await wait();
-        out.printNoGrade = [root.querySelectorAll('.p-page').length, !!root.querySelector('.p-mr-grade'), root.textContent.includes('1,5 / 2')];
+        out.printNoGrade = [root.querySelectorAll('.p-page').length, !!root.querySelector('.p-mr-grade'), root.textContent.includes('1,5 / 2'), root.textContent.includes('Unterschrift Lehrkraft')];
         document.body.classList.remove('printing');
         // Erneut importieren: nur Bewertungen, Demir korrigiert
         NM.app.rerender(); await wait();
@@ -464,7 +497,7 @@ def run_moodle_check(br, base):
         out.reimport = [c.assessments.length - n, r('Demir').score, a.test.moodle.answers[sid('Demir')][a.test.tasks[0].id].a];
         return out; })(%s, %s)""" % (json.dumps(MOODLE_ANSWERS), json.dumps(MOODLE_GRADES)))
     ok = bool(res) and res["rows"] == 3 and res["name"] == "HÜ Test" and res["test"] == [1, "HÜ Test", "F1,F2", 0.5, 2, 1.5, "fehlt", 2] \
-        and res["card"] and res["printGrade"] == [2, True, True, 1] and res["printNoGrade"] == [1, False, True] and res["reimport"] == [1, 2, "5"]
+        and res["card"] and res["printGrade"] == [2, True, True, 1, True, 2] and res["printNoGrade"] == [1, False, True, True] and res["reimport"] == [1, 2, "5"]
     report("Moodle: Import mit Zuordnung, „fehlt“, Ausdruck mit/ohne Note, erneuter Import", ok and not br.errors, str(res) + "; ".join(br.errors))
 
 
@@ -536,6 +569,7 @@ def main():
         run_sort_check(br, base)
         run_course_check(br, base)
         run_draw_check(br, base)
+        run_tests_view_check(br, base)
         run_moodle_check(br, base)
         run_decrypt_tool(br, base)
     finally:

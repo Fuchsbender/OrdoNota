@@ -31,6 +31,16 @@
     return '';
   }
 
+  const GRADE_WORDS = { 1: 'sehr gut', 2: 'gut', 3: 'befriedigend', 4: 'ausreichend', 5: 'mangelhaft', 6: 'ungenügend' };
+
+  /** Note ausgeschrieben, z. B. 2+ → „voll gut“, 2- → „noch gut“ (ohne „voll sehr gut“; 6 ohne Tendenz). */
+  function gradeWord(p) {
+    if (p === null || p === undefined || Number.isNaN(p)) return '';
+    const g = wholeGrade(p);
+    const t = g === 1 && tendency(p) === '+' ? '' : tendency(p);
+    return (t === '+' ? 'voll ' : t === '-' ? 'noch ' : '') + GRADE_WORDS[g];
+  }
+
   /** Dezimalnote zu Punkten (z. B. 13 → 1,33). */
   function pointsToDecimal(p) {
     const w = wholeGrade(p);
@@ -168,17 +178,31 @@
 
   /**
    * Punktschwellen eines Tests.
-   * @returns Array idx=Punktstufe → {p, pct, min} (min = Mindestpunktzahl)
+   * whole (nur Sek I): nur ganze Noten 1–6 (Punkte 14, 11, 8, 5, 2, 0); eine ganze Note beginnt an der Schwelle
+   * ihrer schwächsten Tendenz (z. B. 4 ab LIMIT wie sonst die 4-). Eigene Schwellen dann je ganzer Note.
+   * @returns Array → {p, pct, min} (min = Mindestpunktzahl), aufsteigend nach p
    */
-  function testKey(level, limit, maxScore, precision, custom) {
+  function testKey(level, limit, maxScore, precision, custom, whole = false) {
     const pcts = keyPercents(level, limit);
-    return pcts.map((pct, p) => {
+    const steps = whole && level !== 'mss' ? [0, 2, 5, 8, 11, 14].map((p) => ({ p, at: p ? p - 1 : 0 })) : pcts.map((_, p) => ({ p, at: p }));
+    return steps.map(({ p, at }) => {
+      const pct = pcts[at];
       let min = p === 0 ? 0 : roundToPrecision((pct / 100) * maxScore, precision);
       const isCustom = custom && custom[p] !== undefined && custom[p] !== null && custom[p] !== '';
       if (isCustom) min = Number(custom[p]);
       const shownPct = maxScore > 0 ? round2((min / maxScore) * 100) : 0;
       return { p, pct: shownPct, min, custom: !!isCustom };
     });
+  }
+
+  /** Vergibt der Test nur ganze Noten ohne Tendenzen? (nur Sek I) */
+  function wholeOnly(test, level) {
+    return level !== 'mss' && !!test.wholeGrades;
+  }
+
+  /** Notenschlüssel eines Tests mit allen Einstellungen. */
+  function keyForTest(test, level) {
+    return testKey(level, test.limit, testMaxScore(test), test.precision, test.custom, wholeOnly(test, level));
   }
 
   /** Punktstufe für eine erreichte Punktzahl (höchste Stufe, deren Schwelle erreicht ist). */
@@ -200,7 +224,7 @@
     const r = (test.results || {})[sid] || {};
     const status = r.status || '';
     if (status === 'fehlt' || status === 'nachschreiben') return { status, score: null, p: null };
-    const key = testKey(level, test.limit, testMaxScore(test), test.precision, test.custom);
+    const key = keyForTest(test, level);
     if (status === 'taeuschung') return { status, score: null, p: 0 };
     const scores = r.scores || {};
     let any = false;
@@ -416,6 +440,7 @@
     tendency,
     pointsToDecimal,
     label,
+    gradeWord,
     levels,
     parse,
     roundDecimal,
@@ -426,6 +451,8 @@
     roundToPrecision,
     keyPercents,
     testKey,
+    keyForTest,
+    wholeOnly,
     scoreToPoints,
     testMaxScore,
     testResult,

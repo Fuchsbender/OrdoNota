@@ -1,6 +1,6 @@
 # OrdoNota – Dokumentation
 
-Version 1.13.0 · Stand Oktober 2026
+Version 1.14.0 · Stand Oktober 2026
 
 OrdoNota (bis Version 1.11 „Notenmanager“) verwaltet Noten für die Sekundarstufe I (Noten 1–6 mit Tendenz) und die Mainzer Studienstufe (MSS, Punkte 00–15) an Schulen in Rheinland-Pfalz. Die App läuft vollständig lokal im Browser, verschlüsselt alle Daten mit einem Passwort und legt sie in einem Ordner ab, den der Synology Drive Client auf die DiskStation spiegelt.
 
@@ -262,6 +262,7 @@ Doppelte Namen werden übersprungen. Die Liste wird alphabetisch sortiert.
 | Wertung | Haken **„nicht gewertet“**: Der Test bleibt mit allen Ergebnissen, Schlüssel und Notenspiegel erhalten, erscheint in der Notenübersicht und in der Kursliste aber nur ausgegraut und zählt **nicht** zur Halbjahresnote. |
 | Gewicht | Standard 1; z. B. 0,5 für eine kurze Überprüfung |
 | Punkte-Genauigkeit | Ganze, halbe oder Zehntel-Punkte. Gilt für Notenschlüssel und Summen. |
+| Notenstufen | nur Sek I: **mit Tendenzen** (1, 1-, 2+ … 6, Standard) oder **nur ganze Noten (1–6)**, z. B. für kurze Tests mit wenigen Punkten. Eine ganze Note beginnt dort, wo sonst ihre Minus-Note beginnt; die 4 also ab LIMIT (siehe 15.2). Beim Umstellen werden von Hand geänderte Schwellen zurückgesetzt (mit Rückfrage). |
 | LIMIT | Sek I: Prozentsatz für die **4-**; MSS: Prozentsatz für **04 Punkte**. Neue Tests übernehmen den Standard aus den Einstellungen. |
 
 ### 7.2 Aufgaben
@@ -283,6 +284,8 @@ In der Tabelle **Ergebnisse** die erreichten Punkte je Aufgabe eintragen (Komma 
 | Nachschreiben | keine Note (Erinnerung zum Nachschreiben) |
 | Täuschung/Verweigerung | Note 6 bzw. 00 Punkte; wird beim Drittelparagraphen **nicht** mitgezählt |
 | nicht gewertet | Punkte und Note werden wie gewohnt berechnet und angezeigt, die Zeile ist ausgegraut. Die Arbeit zählt **nicht** zur Halbjahresnote dieser Person und nicht in Notenspiegel, Ø, Standardabweichung, „Ø gelöst“ und Drittelparagraph. In der Notenübersicht erscheint die Note ausgegraut. |
+
+**Unterschrift gesehen** (nur bei Klassen-/Kursarbeiten): In der letzten Spalte „Unterschrift“ abhaken, wenn die unterschriebene Arbeit zurück ist; das Datum wird gemerkt (Tooltip). Neben „Ergebnisse“ steht der Stand, z. B. „Unterschriften 9 / 11“ (gezählt werden Personen mit Note), grün hinterlegt, wenn alle da sind. Der Vermerk hat keinen Einfluss auf die Note und erscheint im Ausdruck „Liste“ als eigene Spalte.
 
 Die Zeile **„Ø gelöst“** zeigt je Aufgabe, wie viel Prozent der möglichen Punkte im Schnitt erreicht wurden. Daran sieht man schnell, welche Aufgabe schwer war.
 
@@ -307,9 +310,9 @@ Unter dem Schlüssel stehen das Balkendiagramm (Anzahl je ganzer Note 1–6), Te
 | Knopf | Inhalt |
 |---|---|
 | 🖨 Schlüssel | Notenschlüssel und Notenspiegel (z. B. für das Klassenbuch oder die Fachleitung) |
-| 🖨 Liste | Alle Personen mit Punkten je Aufgabe, Σ, %, Note; darunter Notenspiegel und Schlüssel |
+| 🖨 Liste | Alle Personen mit Punkten je Aufgabe, Σ, %, Note (bei Klassen-/Kursarbeiten mit Spalte „Unterschrift“); darunter Notenspiegel und Schlüssel |
 | 🖨 Schülerzettel | Ein Abschnitt pro Person zum Ausschneiden: erreichte und mögliche Punkte je Aufgabe, Prozent, Note |
-| 🖨 Moodle-Ergebnisse | nur bei Tests aus Moodle (siehe 7.7): je Person eine Seite mit Ergebnis (Punkte, Prozent) oben, darunter Frage, gegebene Antwort, Lösung und Punkte; die **Note wahlweise mit oder ohne** |
+| 🖨 Moodle-Ergebnisse | nur bei Tests aus Moodle (siehe 7.7): je Person eine Seite mit Ergebnis (Punkte, Prozent) oben, darunter Frage, gegebene Antwort, Lösung und Punkte; unten die **Note (Zahl und ausgeschrieben) wahlweise** sowie Linien für Datum und Unterschrift |
 
 ### 7.7 Moodle-Import
 
@@ -335,7 +338,7 @@ Regeln beim Import:
 
 **Erneut importieren** (Knopf in der Karte „Moodle“), z. B. nach Korrekturen in Moodle: Die Punkte der Moodle-Fragen werden ersetzt, eigene zusätzliche Aufgaben, Notenschlüssel, Gewicht und Status „nicht gewertet“/„Täuschung“ bleiben erhalten. Lädt man dabei nur die Bewertungen-CSV, bleiben die gespeicherten Antworttexte erhalten.
 
-**Ausdruck „🖨 Moodle-Ergebnisse“:** Im Dialog wählen Sie **alle** (je eine Seite) oder **eine Person** und ob die **Note** mitgedruckt wird. Oben steht das Ergebnis (Punkte, Prozent mit Balken, ggf. Note), darunter je Frage Frage, „Deine Antwort“, Lösung und Punkte. Jede Zeile trägt ein Zeichen und einen farbigen Rand: ✓ richtig (grün), ◐ teilweise (orange hinterlegt), ✗ falsch (rot hinterlegt, Lösung fett), – keine Antwort. Durch die Zeichen bleibt der Ausdruck auch in Schwarzweiß lesbar; Zeilen werden nicht über Seiten getrennt.
+**Ausdruck „🖨 Moodle-Ergebnisse“:** Im Dialog wählen Sie **alle** (je eine Seite) oder **eine Person** und ob die **Note** mitgedruckt wird. Oben steht das Ergebnis (Punkte, Prozent mit Balken), darunter je Frage Frage, „Deine Antwort“, Lösung und Punkte. Jede Zeile trägt ein Zeichen und einen farbigen Rand: ✓ richtig (grün), ◐ teilweise (orange hinterlegt), ✗ falsch (rot hinterlegt, Lösung fett), – keine Antwort. Durch die Zeichen bleibt der Ausdruck auch in Schwarzweiß lesbar; Zeilen werden nicht über Seiten getrennt. Unten steht – wenn gewählt – die **Note als Zahl und ausgeschrieben** (z. B. „2+ voll gut“, „2- noch gut“; MSS: „11 Punkte gut (2)“), darunter Linien für **Datum** und **Unterschrift der Lehrkraft** (auch ohne Note).
 
 ## 8. Reiter „Mitarbeit/EPO“
 
@@ -605,6 +608,8 @@ Prozentwerte auf 2 Nachkommastellen gerundet.
 | 4 … 1 | L + k · (100 − L) / 11, k = 1 … 10 (gleiche Abstände) |
 
 Prozentwerte auf ganze Prozent gerundet.
+
+**Nur ganze Noten** (Einstellung „Notenstufen“ im Test): Es gibt nur die Stufen 1–6. Jede ganze Note beginnt an der Schwelle ihrer Minus-Note aus der Tabelle oben (bei L = 50 %: 1 ab 91 %, 2 ab 77 %, 3 ab 64 %, 4 ab 50 %, 5 ab 25 %). Intern zählen sie wie die Noten ohne Tendenz (1 = 14 Punkte, 2 = 11, 3 = 8, 4 = 5, 5 = 2, 6 = 0), Schnitte rechnen also mit 1,0; 2,0 usw.
 
 **Beispiel L = 50 %:**
 
@@ -887,7 +892,7 @@ Berechnete Werte (Schnitte, Testnoten, EPO-Noten) werden **nie gespeichert**, so
   "kdf": "PBKDF2-SHA256",
   "savedAt": "2026-10-14T21:57:03.123Z",
   "device": "Laptop Schule",
-  "app": "1.13.0",
+  "app": "1.14.0",
   "pw":   { "salt": "<b64>", "iter": 600000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "rec":  { "salt": "<b64>", "iter": 100000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "data": { "iv": "<b64>", "ct": "<b64: verschlüsseltes JSON des Datenmodells>" }
@@ -910,7 +915,7 @@ Entschlüsselter Inhalt (`schema: 1`):
 ```js
 {
   schema: 1,                             // Datenformat (siehe 26.2)
-  savedWith: "1.13.0",                    // App-Version beim letzten Speichern
+  savedWith: "1.14.0",                    // App-Version beim letzten Speichern
   created: "<ISO>", savedAt: "<ISO>",
   settings: { autoLockMin, limitSek1, limitMss, precision, keepBackups, backupEveryMin, gradeColors },
   years:   [ { id, name: "2026/27" } ],
@@ -939,9 +944,10 @@ Assessment = {
   cat: "ka" | "other",
   name, date: "YYYY-MM-DD", weight, ungraded?,   // ungraded: zählt nicht zur Note
   manual?: { grades: { "<sid>": { p } | { status } } },
-  test?:   { limit, precision, tasks: [ { id, name, max, bonus?, moodleNr? } ],   // moodleNr: Fragennummer in Moodle
+  test?:   { limit, precision, wholeGrades?,                            // wholeGrades: nur ganze Noten (Sek I)
+             tasks: [ { id, name, max, bonus?, moodleNr? } ],   // moodleNr: Fragennummer in Moodle
              custom: { "<p>": Mindestpunktzahl },
-             results: { "<sid>": { scores: { "<taskId>": Zahl }, status? } },
+             results: { "<sid>": { scores: { "<taskId>": Zahl }, status?, signed? } },   // signed: Datum „Unterschrift gesehen“
              moodle?: { importedAt, totalMax,                                     // nur bei Moodle-Import
                         files: [ { name, kind: "answers" | "grades", text } ],    // Original-CSV-Dateien
                         answers: { "<sid>": { "<taskId>": { q, a, c } } } } },   // Frage, gegebene, richtige Antwort
@@ -971,7 +977,7 @@ Das Skript startet einen unsichtbaren Chromium-Browser (Chrome, Edge, Chromium, 
 1. alle Testseiten (siehe 25.2),
 2. den Start der App im Demo-Modus und alle Reiter für einen Sek-I- und einen MSS-Kurs ohne JavaScript-Fehler,
 3. das Sortieren per Klick auf Spaltenköpfe (Tests, EPO, Notenübersicht; Richtung und leere Werte unten),
-4. den Moodle-Import (Dateiauswahl im Dialog, Zuordnung, Status „fehlt“, Ausdruck mit und ohne Note, erneuter Import),
+4. den Reiter „Tests“ in voller Breite und den Haken „Unterschrift gesehen“ bei Klassenarbeiten (Zähler, Ausdruck), den Moodle-Import (Dateiauswahl im Dialog, Zuordnung, Status „fehlt“, Ausdruck mit und ohne Note, erneuter Import),
 5. den Excel-Export der Schülerliste (gültiges ZIP/XML, Umlaute und Sonderzeichen), das Kurs-Löschen nur mit „LÖSCHEN“, das Ein-/Ausblenden der Fotos im EPO-Reiter und im Sitzplan (auch im Druck) das Erweitern/Verkleinern des Sitzplan-Rasters an allen vier Seiten sowie das Ziehen (keine Wiederholung bis zum Auffüllen, automatisches Auffüllen, Note, Rückgängig, Abwesende/Herausgenommene),
 6. das Notfallwerkzeug: Eine von der App echt verschlüsselte Datenbank wird mit `tools/entschluesseln.py` per Passwort und per Wiederherstellungsschlüssel entschlüsselt und mit dem Original verglichen. Dazu kommen falsches Passwort, manipulierte Datei und CSV-Ausgabe.
 
@@ -1012,7 +1018,7 @@ In `js/model.js` stehen zwei Nummern:
 
 | Konstante | Bedeutung | Wann erhöhen |
 |---|---|---|
-| `APP_VERSION` (z. B. `1.13.0`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.13.0` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
+| `APP_VERSION` (z. B. `1.14.0`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.14.0` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
 | `SCHEMA` (z. B. `1`) | Version des Datenformats | nur, wenn eine **ältere** App-Version die neuen Daten falsch verstehen würde (z. B. ein Feld ändert seine Bedeutung) |
 
 Öffnet eine App eine Datenbank mit höherem `SCHEMA`, verweigert sie das mit einer Meldung (siehe 21.10). Neue, nur *zusätzliche* Felder brauchen kein neues `SCHEMA`: Ältere Versionen lassen unbekannte Felder unverändert und speichern sie mit.

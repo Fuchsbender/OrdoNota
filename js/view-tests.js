@@ -1,7 +1,7 @@
 /* OrdoNota – Reiter „Tests“: Rohpunkte erfassen, Notenschlüssel, Notenspiegel. */
 (function (NM) {
   'use strict';
-  const { h, clear, modal, toast, confirmDialog, parseNum, uid, fmtNum, fmtScore, fmtDate, gradeStyle } = NM.util;
+  const { h, clear, modal, toast, confirmDialog, parseNum, uid, fmtNum, fmtScore, fmtDate, todayISO, gradeStyle } = NM.util;
   const G = NM.grades;
   const M = NM.model;
   const UI = NM.ui;
@@ -42,7 +42,7 @@
       view.appendChild(UI.emptyState('Noch kein Test in ' + half, 'Legen Sie einen Test an: Aufgaben mit Höchstpunktzahlen festlegen, Rohpunkte eintragen – Note, Notenspiegel und Drittelparagraph werden automatisch berechnet.'));
       return;
     }
-    view.append(metaCard(course, cur, level), cur.test.moodle ? moodleCard(course, db, cur) : null, tasksCard(cur), h('div', { class: 'test-layout' }, resultsCard(course, cur, level), keyCard(course, cur, level)));
+    view.append(...[metaCard(course, cur, level), cur.test.moodle ? moodleCard(course, db, cur) : null, tasksCard(cur), h('div', { class: 'test-layout' }, resultsCard(course, cur, level), keyCard(course, cur, level))].filter(Boolean));
   }
 
   function metaCard(course, a, level) {
@@ -121,10 +121,35 @@
             ].map(([v, l]) => h('option', { value: v, selected: Number(t.precision) === v }, l))
           )
         ),
+        level === 'mss'
+          ? null
+          : h(
+              'label',
+              { class: 'field', title: 'Bei Tests mit wenigen Punkten: nur 1, 2, 3, 4, 5, 6 vergeben. Eine ganze Note beginnt dort, wo sonst ihre Minus-Note beginnt (4 ab LIMIT).' },
+              h('span', null, 'Notenstufen'),
+              h(
+                'select',
+                {
+                  class: 'input',
+                  onchange: async (e) => {
+                    const whole = e.target.value === 'whole';
+                    if (t.custom && Object.keys(t.custom).length) {
+                      if (!(await confirmDialog('Notenstufen umstellen?', 'Von Hand geänderte Schwellen im Notenschlüssel passen nicht mehr und werden zurückgesetzt.', { okLabel: 'Umstellen' }))) return NM.app.rerender();
+                      t.custom = {};
+                    }
+                    if (whole) t.wholeGrades = true;
+                    else delete t.wholeGrades;
+                    NM.app.commit();
+                  },
+                },
+                h('option', { value: 'tend', selected: !t.wholeGrades }, 'mit Tendenzen (2+, 2, 2-)'),
+                h('option', { value: 'whole', selected: !!t.wholeGrades }, 'nur ganze Noten (1–6)')
+              )
+            ),
         h(
           'label',
           { class: 'field narrow', title: level === 'mss' ? 'Ab diesem Prozentsatz gibt es 4 Punkte (4-)' : 'Ab diesem Prozentsatz gibt es eine 4-' },
-          h('span', null, level === 'mss' ? 'LIMIT 04 P. (%)' : 'LIMIT 4- (%)'),
+          h('span', null, level === 'mss' ? 'LIMIT 04 P. (%)' : t.wholeGrades ? 'LIMIT 4 (%)' : 'LIMIT 4- (%)'),
           h('input', {
             class: 'input',
             type: 'number',
@@ -267,6 +292,13 @@
     );
   }
 
+  /** „Unterschriften 9 / 11“ – gezählt werden Personen mit Note (nicht fehlend/nachschreibend). */
+  function signCount(t, students) {
+    const due = students.filter((s) => (t.results[s.id] || {}).signed || !['fehlt', 'nachschreiben'].includes((t.results[s.id] || {}).status) && Object.values((t.results[s.id] || {}).scores || {}).some((v) => v !== '' && v !== null && v !== undefined));
+    const n = due.filter((s) => (t.results[s.id] || {}).signed).length;
+    return h('span', { class: due.length && n === due.length ? 'pill' : 'chip', title: 'Unterschrift unter der Arbeit gesehen (Personen mit Note)' }, `Unterschriften ${n} / ${due.length}`);
+  }
+
   // Nächste freie Bezeichnung A1, A2, … (nach der höchsten vorhandenen Nummer)
   function nextTaskName(tasks) {
     const nums = tasks.filter((x) => !x.bonus).map((x) => /^A?(\d+)/i.exec(x.name || '')).filter(Boolean).map((m) => Number(m[1]));
@@ -285,7 +317,10 @@
       pct: { get: (s) => results.get(s.id).score, first: 'desc' },
       grade: { get: (s) => results.get(s.id).p, first: 'desc' },
       status: { get: (s) => UI.STATUS_SHORT[(t.results[s.id] || {}).status] || null, first: 'asc' },
+      signed: { get: (s) => ((t.results[s.id] || {}).signed ? 1 : 0), first: 'asc' },
     });
+    // Klassen-/Kursarbeit: Unterschrift der Eltern gesehen (nur Vermerk, ohne Einfluss auf die Note)
+    const sign = a.cat === 'ka';
     const students = sort.rows(all);
     const head = h(
       'tr',
@@ -295,7 +330,8 @@
       h('th', { class: 'num' }, sort.head('sum', 'Σ')),
       h('th', { class: 'num' }, sort.head('pct', '%')),
       h('th', { class: 'center' }, sort.head('grade', 'Note')),
-      h('th', null, sort.head('status', 'Status'))
+      h('th', { class: 'col-tight' }, sort.head('status', 'Status')),
+      sign ? h('th', { class: 'center col-tight', title: 'Unterschrift unter der Arbeit gesehen' }, sort.head('signed', 'Unterschrift')) : null
     );
     const rows = students.map((s, ri) => {
       const r = (t.results[s.id] = t.results[s.id] || { scores: {} });
@@ -336,7 +372,25 @@
             r.status = v;
             NM.app.commit();
           }, `ts-status-${s.id}`)
-        )
+        ),
+        sign
+          ? h(
+              'td',
+              { class: 'center' },
+              h('input', {
+                type: 'checkbox',
+                checked: !!r.signed,
+                'data-focus-key': `ts-signed-${s.id}`,
+                title: r.signed ? 'Unterschrift gesehen am ' + fmtDate(r.signed) : 'Unterschrift gesehen?',
+                'aria-label': 'Unterschrift gesehen: ' + M.studentName(s),
+                onchange: (e) => {
+                  if (e.target.checked) r.signed = todayISO();
+                  else delete r.signed;
+                  NM.app.commit();
+                },
+              })
+            )
+          : null
       );
     });
     // Aufgabenschnitt
@@ -348,12 +402,17 @@
         const avg = taskAverage(t, M.statStudents(course), task);
         return h('td', { class: 'center muted small' }, avg === null || !task.max ? '' : fmtNum((avg / task.max) * 100, 0) + ' %');
       }),
-      h('td', { colspan: 4 })
+      h('td', { colspan: sign ? 5 : 4 })
     );
     return h(
       'div',
       { class: 'card' },
-      h('div', { class: 'card-head' }, h('h2', null, 'Ergebnisse'), h('span', { class: 'muted small' }, 'Enter/↓ springt zur nächsten Person, Tab zur nächsten Aufgabe')),
+      h(
+        'div',
+        { class: 'card-head' },
+        h('div', { class: 'inline' }, h('h2', null, 'Ergebnisse'), sign ? signCount(t, all) : null),
+        h('span', { class: 'muted small' }, 'Enter/↓ springt zur nächsten Person, Tab zur nächsten Aufgabe')
+      ),
       students.length === 0
         ? h('p', { class: 'muted' }, 'Bitte zuerst im Reiter „Kurs & Schüler“ Namen eintragen.')
         : h('div', { class: 'table-wrap', 'data-scroll-key': 'test-results' }, h('table', { class: 'table grid-table' }, h('thead', null, head), h('tbody', null, rows, avgRow)))
@@ -363,7 +422,7 @@
   function keyCard(course, a, level) {
     const t = a.test;
     const max = G.testMaxScore(t);
-    const key = G.testKey(level, t.limit, max, t.precision, t.custom);
+    const key = G.keyForTest(t, level);
     const st = G.testStats(t, M.statStudents(course).map((s) => s.id), level);
     const anyCustom = key.some((k) => k.custom);
     const rows = key
@@ -500,7 +559,7 @@
     const t = a.test;
     const max = G.testMaxScore(t);
     const step = Number(t.precision) || 1;
-    const key = G.testKey(level, t.limit, max, t.precision, t.custom);
+    const key = G.keyForTest(t, level);
     const students = M.statStudents(course);
     const st = G.testStats(t, students.map((s) => s.id), level);
     const taskRows = t.tasks.map((task) => {

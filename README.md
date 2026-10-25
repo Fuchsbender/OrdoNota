@@ -33,6 +33,7 @@ Ausprobieren ohne echte Daten: `index.html?demo` (nichts wird gespeichert). Beis
 **Notenschlüssel für Tests** (LIMIT je Test einstellbar)
 - MSS (wie die bisherige Excel-Vorlage): 01 P. bei ½·LIMIT, linear bis 04 P. = LIMIT, darüber 12 gleiche Schritte bis 101 %.
 - Sek I: 4- ab LIMIT (z. B. 40–50 %), darüber 11 gleiche Schritte bis 100 %; 5- bei ½·LIMIT, 5+/5/5- gleichmäßig dazwischen; Schwellen auf ganze Prozent.
+- Sek I wahlweise **nur ganze Noten** (1–6) je Test, z. B. bei wenigen Punkten: jede ganze Note beginnt an der Schwelle ihrer Minus-Note (4 ab LIMIT).
 - Schwellen lassen sich je Test von Hand überschreiben. Bonusaufgaben zählen zur erreichten, nicht zur Höchstpunktzahl (Ergebnis wird bei der Bestnote gekappt).
 - Drittelparagraph: Warnung, wenn mehr als ⅓ der Arbeiten 5 oder 6 sind (Täuschung/Verweigerung nicht mitgezählt).
 - Statistik je Test: Notenspiegel, Ø, Standardabweichung (Teiler n), Anteil unter 4. Personen mit I-Status zählen in der Statistik nicht mit.
@@ -49,8 +50,8 @@ Ausprobieren ohne echte Daten: `index.html?demo` (nichts wird gespeichert). Beis
 ## Bedienung – Kurzfassung
 
 - **Kurs & Schüler**: Kursdaten, Gewichtung, Namen aus Excel einfügen (eine Zeile pro Person). Abgänge nur „Aktiv“ abwählen – Noten bleiben erhalten. Haken „I-Status“ markiert Personen mit einem **I**. **⬇ Excel** speichert die Schülerliste als `.xlsx`. Kurs löschen erst nach Eintippen von **LÖSCHEN**.
-- **Tests**: Aufgaben mit Höchstpunkten, Rohpunkte eintragen; Schlüssel, Notenspiegel, Statistik, Ausdrucke (Schlüssel, Liste, Schülerzettel) und **⛶ Beamer**-Ansicht ohne Namen (Notenspiegel, Punkteverteilung, Ø je Aufgabe).
-- **Moodle-Import** (im Reiter Tests): Antworten- und Bewertungen-CSV aus Moodle wählen, Personen zuordnen (Name bzw. gemerkte E-Mail); jede Frage wird eine Aufgabe, die Note rechnet OrdoNota. Die CSV-Dateien werden verschlüsselt im Test gespeichert. Nicht beendete/fehlende Versuche → „fehlt“. Ausdruck **🖨 Moodle-Ergebnisse**: je Person Frage, richtige Antwort, Antwort, Punkte – mit oder ohne Note.
+- **Tests**: Aufgaben mit Höchstpunkten, Rohpunkte eintragen; Schlüssel, Notenspiegel, Statistik, Ausdrucke (Schlüssel, Liste, Schülerzettel) bei Klassenarbeiten Haken **„Unterschrift gesehen“** mit Zähler; **⛶ Beamer**-Ansicht ohne Namen (Notenspiegel, Punkteverteilung, Ø je Aufgabe).
+- **Moodle-Import** (im Reiter Tests): Antworten- und Bewertungen-CSV aus Moodle wählen, Personen zuordnen (Name bzw. gemerkte E-Mail); jede Frage wird eine Aufgabe, die Note rechnet OrdoNota. Die CSV-Dateien werden verschlüsselt im Test gespeichert. Nicht beendete/fehlende Versuche → „fehlt“. Ausdruck **🖨 Moodle-Ergebnisse**: je Person Frage, Antwort, Lösung, Punkte; unten Note als Zahl und ausgeschrieben (wahlweise) sowie Datum/Unterschrift der Lehrkraft.
 - **Mitarbeit/EPO**: „+ Stunde“, dann pro Person das Kürzel tippen oder per **Schnellwahl** klicken; **Fotos** lassen sich per Umschalter vor den Namen einblenden; „füllen“ setzt alle leeren Zellen einer Stunde. Ausdrucke: Liste und Schülerzettel zum Ausschneiden (mit Datum/Unterschrift).
 - **Ziehen**: gewählte Anzahl zufällig ziehen (z. B. Hausaufgaben einsammeln); Gezogene fallen aus dem Pool, bis er aufgefüllt wird (automatisch, wenn er zu klein ist, oder per Knopf). Jede Ziehung legt eine Spalte „HA-Kontrolle“ bei den sonstigen Leistungen an, Noten direkt eintragen. Übersicht über den Pool, Haken zum Herausnehmen und für „heute abwesend“.
 - **Notenübersicht**: alle Noten des Halbjahres; direkte Noten eintragen (`2-`, `11`, oder `f` = fehlt, `ns` = Nachschreiben, `t` = Täuschung/Verweigerung). Kursliste, Schülerbögen, CSV-Export für Excel.

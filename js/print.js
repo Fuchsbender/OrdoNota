@@ -54,7 +54,7 @@
 
   function keyTable(course, a, level, { counts = true } = {}) {
     const t = a.test;
-    const key = G.testKey(level, t.limit, G.testMaxScore(t), t.precision, t.custom);
+    const key = G.keyForTest(t, level);
     const st = G.testStats(t, M.statStudents(course).map((s) => s.id), level);
     return h(
       'table',
@@ -104,9 +104,9 @@
     return n ? h('p', { class: 'p-note' }, `Ohne ${n} ${n === 1 ? 'Person' : 'Personen'} mit I-Status.`) : null;
   }
 
-  function testMeta(a) {
+  function testMeta(course, a) {
     const t = a.test;
-    return [fmtDate(a.date), UI.catLabel(a.cat), `Höchstpunktzahl ${fmtScore(G.testMaxScore(t))}`, `LIMIT ${fmtScore(t.limit)} %`].filter(Boolean).join(' · ');
+    return [fmtDate(a.date), UI.catLabel(a.cat), `Höchstpunktzahl ${fmtScore(G.testMaxScore(t))}`, `LIMIT ${fmtScore(t.limit)} %`, G.wholeOnly(t, G.courseLevel(course)) ? 'nur ganze Noten' : null].filter(Boolean).join(' · ');
   }
 
   function test(course, a, mode) {
@@ -114,7 +114,7 @@
     const t = a.test;
     const students = M.activeStudents(course);
     if (mode === 'key') {
-      return doPrint(`${a.name} – Notenschlüssel`, h('div', { class: 'p-page' }, header(course, a.name, testMeta(a)), h('div', { class: 'p-cols' }, h('div', null, h('h2', null, 'Notenschlüssel'), keyTable(course, a, level)), h('div', null, h('h2', null, 'Notenspiegel'), statsBlock(course, a, level)))));
+      return doPrint(`${a.name} – Notenschlüssel`, h('div', { class: 'p-page' }, header(course, a.name, testMeta(course, a)), h('div', { class: 'p-cols' }, h('div', null, h('h2', null, 'Notenschlüssel'), keyTable(course, a, level)), h('div', null, h('h2', null, 'Notenspiegel'), statsBlock(course, a, level)))));
     }
     if (mode === 'list') {
       const rows = students.map((s, i) => {
@@ -128,7 +128,8 @@
           t.tasks.map((task) => h('td', { class: 'n' }, r.scores ? fmtScore(r.scores[task.id]) : '')),
           h('td', { class: 'n' }, res.score === null ? '' : fmtScore(res.score)),
           h('td', { class: 'n' }, res.score === null || !G.testMaxScore(t) ? '' : fmtNum((res.score / G.testMaxScore(t)) * 100, 0)),
-          h('td', { class: 'c' + (r.status === 'ungewertet' ? ' p-ungraded' : '') }, res.p === null ? UI.STATUS_SHORT[r.status] || '' : [badge(res.p, level), r.status === 'ungewertet' ? h('small', null, ' n. gew.') : null])
+          h('td', { class: 'c' + (r.status === 'ungewertet' ? ' p-ungraded' : '') }, res.p === null ? UI.STATUS_SHORT[r.status] || '' : [badge(res.p, level), r.status === 'ungewertet' ? h('small', null, ' n. gew.') : null]),
+          a.cat === 'ka' ? h('td', { class: 'c' }, r.signed ? '✓ ' + NM.util.fmtDateShort(r.signed) : '') : null
         );
       });
       return doPrint(
@@ -136,11 +137,11 @@
         h(
           'div',
           { class: 'p-page' },
-          header(course, a.name, testMeta(a)),
+          header(course, a.name, testMeta(course, a)),
           h(
             'table',
             { class: 'p-table p-full' },
-            h('thead', null, h('tr', null, h('th', null, 'Nr.'), h('th', null, 'Name'), t.tasks.map((task) => h('th', null, task.name, h('br'), h('small', null, fmtScore(task.max) + (task.bonus ? ' B' : '')))), h('th', null, 'Σ'), h('th', null, '%'), h('th', null, 'Note'))),
+            h('thead', null, h('tr', null, h('th', null, 'Nr.'), h('th', null, 'Name'), t.tasks.map((task) => h('th', null, task.name, h('br'), h('small', null, fmtScore(task.max) + (task.bonus ? ' B' : '')))), h('th', null, 'Σ'), h('th', null, '%'), h('th', null, 'Note'), a.cat === 'ka' ? h('th', null, 'Unterschr.') : null)),
             h('tbody', null, rows)
           ),
           h('div', { class: 'p-cols' }, h('div', null, statsBlock(course, a, level)), h('div', null, keyTable(course, a, level, { counts: false })))
@@ -216,8 +217,7 @@
           { class: 'p-mr-summary' },
           tile('Punkte', `${fmtScore(res.score)} / ${fmtScore(max)}`),
           pct === null ? null : tile('Prozent', fmtNum(pct, 1) + ' %'),
-          pct === null ? null : h('div', { class: 'p-mr-bar' }, h('div', { style: `width:${Math.max(0, Math.min(100, pct))}%` })),
-          withGrade && res.p !== null ? tile('Note', [G.label(res.p, level), level === 'mss' ? h('small', null, ` Punkte (${G.wholeGrade(res.p)}${G.tendency(res.p)})`) : null], 'p-mr-grade') : null
+          pct === null ? null : h('div', { class: 'p-mr-bar' }, h('div', { style: `width:${Math.max(0, Math.min(100, pct))}%` }))
         ),
         h(
           'table',
@@ -226,7 +226,21 @@
           h('thead', null, h('tr', null, h('th', null, 'Nr.'), h('th', null, 'Frage'), h('th', null, 'Deine Antwort'), h('th', null, 'Lösung'), h('th', { class: 'p-mr-pts' }, 'Punkte'))),
           h('tbody', null, rows)
         ),
-        h('div', { class: 'p-mr-legend' }, Object.values(MOODLE_MARK).map(([sym, label]) => h('span', null, h('b', null, sym), ' ', label)))
+        h('div', { class: 'p-mr-legend' }, Object.values(MOODLE_MARK).map(([sym, label]) => h('span', null, h('b', null, sym), ' ', label))),
+        h(
+          'div',
+          { class: 'p-mr-foot' },
+          withGrade && res.p !== null
+            ? h(
+                'div',
+                { class: 'p-mr-grade' },
+                h('span', null, 'Note'),
+                h('strong', null, level === 'mss' ? `${G.label(res.p, level)} Punkte` : G.label(res.p, level)),
+                h('em', null, G.gradeWord(res.p) + (level === 'mss' ? ` (${G.wholeGrade(res.p)}${G.tendency(res.p)})` : ''))
+              )
+            : null,
+          h('div', { class: 'p-mr-sign' }, h('div', null, h('div', { class: 'p-mr-line' }), 'Datum'), h('div', null, h('div', { class: 'p-mr-line' }), 'Unterschrift Lehrkraft'))
+        )
       );
     });
     doPrint(`${a.name} – Moodle-Ergebnisse`, h('div', null, pages));

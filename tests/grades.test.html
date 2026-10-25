@@ -17,6 +17,7 @@
   // Skalen
   eq('MSS 15 = 1+', G.label(15, 'mss') + '/' + G.wholeGrade(15) + G.tendency(15), '15/1+');
   eq('MSS 0 = 6', G.wholeGrade(0), 6);
+  eq('Note ausgeschrieben', [15, 14, 13, 12, 11, 10, 8, 4, 3, 1, 0].map(G.gradeWord).join('|'), 'sehr gut|sehr gut|noch sehr gut|voll gut|gut|noch gut|befriedigend|noch ausreichend|voll mangelhaft|noch mangelhaft|ungenügend');
   eq('Sek I Labels', G.levels('sek1').map((l) => l.label), ['1','1-','2+','2','2-','3+','3','3-','4+','4','4-','5+','5','5-','6']);
   eq('Dezimal 13 → 1,33', G.pointsToDecimal(13), 1.33);
   eq('Dezimal 12 → 1,67', G.pointsToDecimal(12), 1.67);
@@ -149,7 +150,26 @@
   eq('Jahrgang 11 mit Jahresnote', G.hasYearGrade({ jahrgang: 11 }), true);
   eq('Halbjahre 13', G.halvesFor({ jahrgang: 13 }), ['13']);
 
+  // Nur ganze Noten (Sek I): Schwellen = Schwellen der jeweiligen Minus-Note
+  {
+    const tk = G.testKey('sek1', 50, 20, 1, {});
+    const wk = G.testKey('sek1', 50, 20, 1, {}, true);
+    eq('Ganze Noten: Stufen 6..1 als Punkte', wk.map((k) => k.p).join(), '0,2,5,8,11,14');
+    eq('Ganze Noten: Schwelle = Minus-Note', wk.slice(1).map((k) => k.min).join(), [1, 4, 7, 10, 13].map((p) => tk[p].min).join());
+    eq('Ganze Noten: 4 ab LIMIT', wk[2].min, 10);
+    const wt = { limit: 50, precision: 1, wholeGrades: true, custom: {}, tasks: [{ id: 'a', max: 20 }], results: { x: { scores: { a: 19 } }, y: { scores: { a: 12 } }, z: { scores: { a: 9 } } } };
+    eq('Ganze Noten: Ergebnisse nur 1–6', ['x', 'y', 'z'].map((sid) => G.label(G.testResult(wt, sid, 'sek1').p, 'sek1')).join(), '1,4,5');
+    eq('Ganze Noten: Ø als Dezimalnote', G.testStats(wt, ['x', 'y', 'z'], 'sek1').avgDec, 10 / 3);
+    wt.custom = { 5: 12 };
+    eq('Ganze Noten: eigene Schwelle je ganzer Note', G.label(G.testResult(wt, 'y', 'sek1').p, 'sek1'), '4');
+    wt.custom = { 5: 13 };
+    eq('Ganze Noten: eigene Schwelle wirkt', G.label(G.testResult(wt, 'y', 'sek1').p, 'sek1'), '5');
+    eq('Ganze Noten: in der MSS ohne Wirkung', G.keyForTest(wt, 'mss').length, 16);
+    eq('Ganze Noten: Wort ohne Tendenz', G.gradeWord(G.testResult(wt, 'x', 'sek1').p), 'sehr gut');
+  }
+
   lines.unshift(fails === 0 ? 'ALLE TESTS BESTANDEN' : fails + ' FEHLGESCHLAGEN');
+  
   document.getElementById('out').textContent = lines.join('\n');
 </script>
 </body>
