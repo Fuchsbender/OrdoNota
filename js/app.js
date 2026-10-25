@@ -610,20 +610,65 @@
       h('button', { class: 'icon-btn', title: 'Hell/Dunkel umschalten', 'aria-label': 'Hell/Dunkel umschalten', onclick: toggleTheme, html: '<svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z"/></svg>' }),
       h('button', { class: 'btn btn-sm', onclick: () => lockApp('Gesperrt.'), title: 'Datenbank sperren' }, '🔒 Sperren')
     );
-    const side = h('aside', { class: 'sidebar' }, renderCourseList());
+    const side = h('aside', { class: 'sidebar' + (state.ui.sideCollapsed ? ' collapsed' : '') }, renderCourseList());
     const main = h('main', { class: 'main', id: 'main' });
     r.append(top, h('div', { class: 'layout' }, side, main));
     updateSaveStatus();
     renderMain();
   }
 
+  /** Kursauswahl ein-/ausklappen (wird auf diesem Gerät gemerkt). */
+  function toggleSidebar() {
+    state.ui.sideCollapsed = !state.ui.sideCollapsed;
+    saveUi();
+    const side = document.querySelector('.sidebar');
+    // Breite gleitet per CSS-Übergang; während dessen kein Zeilenumbruch, der neue Inhalt blendet ein
+    side.classList.add('sliding');
+    side.classList.toggle('collapsed', state.ui.sideCollapsed);
+    const nav = renderCourseList();
+    nav.classList.add('nav-anim');
+    clear(side).appendChild(nav);
+    side.querySelector('.side-toggle').focus();
+    const done = () => side.classList.remove('sliding');
+    side.addEventListener('transitionend', done, { once: true });
+    setTimeout(done, 400);
+  }
+
   function renderCourseList() {
     const list = coursesOfYear().slice().sort((a, b) => Number(a.jahrgang) - Number(b.jahrgang) || M.courseTitle(a).localeCompare(M.courseTitle(b), 'de'));
     const cur = currentCourse();
+    const collapsed = !!state.ui.sideCollapsed;
+    const toggle = h(
+      'button',
+      { class: 'icon-btn side-toggle', title: collapsed ? 'Kursauswahl ausklappen' : 'Kursauswahl einklappen', 'aria-label': collapsed ? 'Kursauswahl ausklappen' : 'Kursauswahl einklappen', 'aria-expanded': String(!collapsed), onclick: toggleSidebar },
+      collapsed ? '»' : '«'
+    );
+    if (collapsed) {
+      // Schmale Leiste: Kürzel je Kurs (Klasse und Fach), voller Name als Tooltip
+      const short = (s, n) => String(s || '').replace(/\s+/g, '').slice(0, n);
+      return h(
+        'nav',
+        { class: 'course-nav', 'aria-label': 'Kurse' },
+        toggle,
+        list.map((c) =>
+          h(
+            'button',
+            {
+              class: 'course-chip' + (cur && cur.id === c.id ? ' active' : ''),
+              title: M.courseTitle(c),
+              'aria-label': M.courseTitle(c),
+              onclick: () => select({ courseId: c.id, tab: state.ui.tab === 'settings' ? 'overview' : state.ui.tab }),
+            },
+            h('span', { class: 'course-name' }, short(c.klasse || M.courseTitle(c), 5)),
+            c.klasse && c.fach ? h('span', { class: 'course-meta' }, short(c.fach, 4)) : null
+          )
+        )
+      );
+    }
     return h(
       'nav',
       { class: 'course-nav', 'aria-label': 'Kurse' },
-      h('div', { class: 'nav-title' }, 'Kurse'),
+      h('div', { class: 'nav-head' }, h('div', { class: 'nav-title' }, 'Kurse'), toggle),
       list.length === 0 ? h('p', { class: 'muted small' }, 'Noch keine Kurse in diesem Schuljahr.') : null,
       list.map((c) =>
         h(

@@ -422,6 +422,28 @@ MOODLE_GRADES = "\n".join([
 ])
 
 
+def run_sidebar_check(br, base):
+    print("Kursliste ein-/ausklappen:")
+    br.open(f"{base}/index.html?demo")
+    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.errors = []
+    res = br.eval("""(async () => {
+        const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
+        const side = () => document.querySelector('.sidebar');
+        const out = { open: side().getBoundingClientRect().width };
+        document.querySelector('.side-toggle').click(); await wait(450);     // Gleitanimation abwarten
+        const chips = [...document.querySelectorAll('.course-chip')];
+        out.closed = [side().classList.contains('collapsed'), side().getBoundingClientRect().width, chips.length, NM.app.state.ui.sideCollapsed];
+        chips[1].click(); await wait();
+        out.switch = [NM.app.currentCourse().id === NM.app.db().courses[1].id, side().classList.contains('collapsed'), document.querySelectorAll('.course-chip.active').length];
+        document.querySelector('.side-toggle').click(); await wait(450);
+        out.reopen = [side().classList.contains('collapsed'), document.querySelectorAll('.course-item').length];
+        return out; })()""")
+    ok = bool(res) and res["open"] > 200 and res["closed"][0] and res["closed"][1] < 80 and res["closed"][2] == 2 and res["closed"][3] is True \
+        and res["switch"] == [True, True, 1] and res["reopen"] == [False, 2]
+    report("Kursliste: einklappen, Kurs über Kürzel wechseln, ausklappen", ok and not br.errors, str(res) + "; ".join(br.errors))
+
+
 def run_tests_view_check(br, base):
     print("Tests-Reiter (Breite, Unterschrift bei Klassenarbeiten):")
     br.call("Emulation.setDeviceMetricsOverride", width=2560, height=1300, deviceScaleFactor=1, mobile=False)
@@ -569,6 +591,7 @@ def main():
         run_sort_check(br, base)
         run_course_check(br, base)
         run_draw_check(br, base)
+        run_sidebar_check(br, base)
         run_tests_view_check(br, base)
         run_moodle_check(br, base)
         run_decrypt_tool(br, base)
