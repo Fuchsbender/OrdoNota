@@ -1,6 +1,6 @@
 # OrdoNota – Dokumentation
 
-Version 1.15.0 · Stand Oktober 2026
+Version 1.17.0 · Stand Oktober 2026
 
 OrdoNota (bis Version 1.11 „Notenmanager“) verwaltet Noten für die Sekundarstufe I (Noten 1–6 mit Tendenz) und die Mainzer Studienstufe (MSS, Punkte 00–15) an Schulen in Rheinland-Pfalz. Die App läuft vollständig lokal im Browser, verschlüsselt alle Daten mit einem Passwort und legt sie in einem Ordner ab, den der Synology Drive Client auf die DiskStation spiegelt.
 
@@ -173,7 +173,7 @@ Technisch schreibt die App dazu die Datei `notenmanager.lock.json` in den Dateno
 | **Speicherstatus** | „Speichert …“, „Gespeichert 10:14“, „Ungespeicherte Änderungen“ oder rot „Nicht gespeichert!“ |
 | **☾** | Hell/Dunkel umschalten |
 | **🔒 Sperren** | Speichert, entfernt den Geräte-Hinweis und sperrt die Datenbank |
-| **Reiter** | Kurs & Schüler, Tests, Mitarbeit/EPO, Ziehen, Notenübersicht, Sitzplan, Einstellungen (in der Skizze aus Platzgründen gekürzt) |
+| **Reiter** | Kurs & Schüler, Tests, Mitarbeit/EPO, Ziehen, Notenübersicht, Sitzplan, Einstellungen (in der Skizze aus Platzgründen gekürzt). Beim Wechsel von Reiter, Kurs oder Halbjahr blendet der Inhalt weich ein und der Unterstrich gleitet zum neuen Reiter; beim Eintragen von Werten gibt es keine Animation. Bei „Bewegung reduzieren“ im Betriebssystem entfällt beides. |
 | **Kursliste** | Kurse des gewählten Schuljahres, sortiert nach Jahrgang. Zeigt Stufe (Sek I/MSS) und Zahl der aktiven Schüler/innen. **«** neben „Kurse“ klappt die Liste gleitend nach links ein (ohne Animation, wenn im Betriebssystem „Bewegung reduzieren“ eingestellt ist): Es bleibt eine schmale Leiste mit Kürzeln (Klasse und Fach, voller Name beim Darüberfahren), über die sich weiter Kurse wechseln lassen; **»** klappt sie wieder aus. Der Zustand wird auf diesem Gerät gemerkt. |
 | **Halbjahres-Umschalter** | In Tests, EPO und Notenübersicht: HJ1/HJ2 bzw. 11/1, 11/2, 12/1, 12/2, 13; in der Notenübersicht zusätzlich „Jahresnote“ |
 
@@ -529,8 +529,16 @@ So eignet sich derselbe Bogen für Elterngespräche (z. B. ohne Bemerkung) und f
 | Schuljahre | Umbenennen, leere Schuljahre löschen | – |
 | Darstellung | Noten farbig hinterlegen | an |
 | | Farbschema: wie System / hell / dunkel | wie System |
+| 🍅 Pomodoro-Timer | Timer in der Kopfzeile anzeigen | aus |
+| | Anzahl Pomodoros / Länge eines Pomodoros | 4 / 25 Min. |
+| | Kurze Pause / lange Pause am Ende (0 = keine) | 5 / 15 Min. |
+| | Ticken: aus / nur Pomodoros / immer | aus |
+| | Signal bei Phasenwechsel: aus / Wecker klingeln / Gong / Piepen (je mit „▶ Probe“) | Wecker klingeln |
+| | Lautstärke | 60 % |
 
-Gerätename und Farbschema gelten **pro Gerät/Browser**. Alles andere ist in der Datenbank gespeichert und gilt auf allen Geräten.
+**Pomodoro-Timer:** Ist er aktiviert, steht er in der Kopfzeile neben dem Schuljahr: Phase (🍅 2/4 bzw. ☕ Pause), verbleibende Zeit und die Knöpfe **▶ Start**, **⏸ Pause**, **↺ Zurücksetzen** und **⚙ Einstellungen** (dieselben Einstellungen wie im Reiter, als Dialog). Farben: **rot** = Pomodoro läuft, **grün** = Pause läuft, **gelb** = pausiert, grau = bereit bzw. fertig. Nach jedem Pomodoro beginnt automatisch die kurze Pause, nach dem letzten die lange Pause; danach ist der Durchlauf fertig. Bei jedem Phasenwechsel erklingt das gewählte Signal und eine Meldung erscheint. Die Töne erzeugt die App selbst (keine Tondateien). Der Timer läuft weiter, wenn die App gesperrt oder neu geladen wird; sein Stand gilt pro Gerät.
+
+Gerätename, Farbschema und der Stand des Pomodoro-Timers gelten **pro Gerät/Browser**. Alles andere ist in der Datenbank gespeichert und gilt auf allen Geräten.
 
 ## 13. Tastaturbedienung
 
@@ -857,6 +865,7 @@ Reines HTML/CSS/JavaScript ohne Build-Schritt und ohne externe Bibliotheken. Die
 | `js/grades.js` | `NM.grades` | **Gesamte Notenlogik** (rein, ohne DOM): Skalen, Eingabe-Parser, Rundung, Notenschlüssel, Test-/EPO-Auswertung, Halbjahres-/Jahresnote |
 | `js/crypto.js` | `NM.crypto` | `Vault`: Erzeugen, Entsperren (Passwort/Wiederherstellung), Ver-/Entschlüsseln, Passwortwechsel |
 | `js/storage.js` | `NM.storage` | `FolderStore` (File System Access API): Lesen/Schreiben, Sicherungen, Lock, Konflikterkennung; `MemoryStore` für den Demo-Modus |
+| `js/pomodoro.js` | `NM.pomodoro` | Pomodoro-Timer: Ablauf (`next`), Anzeige in der Kopfzeile, Töne per Web Audio, Einstellungsformular |
 | `js/model.js` | `NM.model` | Datenmodell: neue Datenbank/Kurse/Leistungen, Migration, Namensliste parsen, Demo-Daten |
 | `js/moodle.js` | `NM.moodle` | Moodle-Import (rein, ohne DOM): CSV zerlegen, Antworten-/Bewertungen-CSV erkennen und zusammenführen, Personen zuordnen, als Test übernehmen |
 | `js/ui.js` | `NM.ui` | Wiederverwendbare Bausteine: Halbjahres-Umschalter, Noten-Eingabezellen, Badges, Leistungs-Dialog |
@@ -876,7 +885,7 @@ Eingabe (change) → Daten im Objekt ändern → NM.app.commit()
 
 Berechnete Werte (Schnitte, Testnoten, EPO-Noten) werden **nie gespeichert**, sondern bei jedem Zeichnen aus den Rohdaten berechnet.
 
-**Pro Gerät im Browser gespeichert** (`localStorage`/IndexedDB, nicht in der Datenbank): Ordner-Handle, Geräte-ID und -name, gewählter Kurs/Reiter/Halbjahr, Farbschema, ein-/ausgeklappte Kursliste.
+**Pro Gerät im Browser gespeichert** (`localStorage`/IndexedDB, nicht in der Datenbank): Ordner-Handle, Geräte-ID und -name, gewählter Kurs/Reiter/Halbjahr, Farbschema, ein-/ausgeklappte Kursliste, Stand des Pomodoro-Timers.
 
 ## 23. Dateiformat der Datenbank
 
@@ -892,7 +901,7 @@ Berechnete Werte (Schnitte, Testnoten, EPO-Noten) werden **nie gespeichert**, so
   "kdf": "PBKDF2-SHA256",
   "savedAt": "2026-10-14T21:57:03.123Z",
   "device": "Laptop Schule",
-  "app": "1.15.0",
+  "app": "1.17.0",
   "pw":   { "salt": "<b64>", "iter": 600000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "rec":  { "salt": "<b64>", "iter": 100000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "data": { "iv": "<b64>", "ct": "<b64: verschlüsseltes JSON des Datenmodells>" }
@@ -915,9 +924,10 @@ Entschlüsselter Inhalt (`schema: 1`):
 ```js
 {
   schema: 1,                             // Datenformat (siehe 26.2)
-  savedWith: "1.15.0",                    // App-Version beim letzten Speichern
+  savedWith: "1.17.0",                    // App-Version beim letzten Speichern
   created: "<ISO>", savedAt: "<ISO>",
-  settings: { autoLockMin, limitSek1, limitMss, precision, keepBackups, backupEveryMin, gradeColors },
+  settings: { autoLockMin, limitSek1, limitMss, precision, keepBackups, backupEveryMin, gradeColors,
+              pomodoro: { enabled, count, work, short, long, tick: "off" | "work" | "always", alarm: "off" | "bell" | "gong" | "beep", volume } },
   years:   [ { id, name: "2026/27" } ],
   courses: [ Course ]
 }
@@ -977,7 +987,7 @@ Das Skript startet einen unsichtbaren Chromium-Browser (Chrome, Edge, Chromium, 
 1. alle Testseiten (siehe 25.2),
 2. den Start der App im Demo-Modus und alle Reiter für einen Sek-I- und einen MSS-Kurs ohne JavaScript-Fehler,
 3. das Sortieren per Klick auf Spaltenköpfe (Tests, EPO, Notenübersicht; Richtung und leere Werte unten),
-4. das Ein-/Ausklappen der Kursliste, den Reiter „Tests“ in voller Breite und den Haken „Unterschrift gesehen“ bei Klassenarbeiten (Zähler, Ausdruck), den Moodle-Import (Dateiauswahl im Dialog, Zuordnung, Status „fehlt“, Ausdruck mit und ohne Note, erneuter Import),
+4. den Pomodoro-Timer (Aktivieren, Farben je Zustand, Phasenwechsel, Zurücksetzen, Einstellungsdialog), die weichen Übergänge (nur bei Reiter-, Kurs- und Halbjahreswechsel), das Ein-/Ausklappen der Kursliste, den Reiter „Tests“ in voller Breite und den Haken „Unterschrift gesehen“ bei Klassenarbeiten (Zähler, Ausdruck), den Moodle-Import (Dateiauswahl im Dialog, Zuordnung, Status „fehlt“, Ausdruck mit und ohne Note, erneuter Import),
 5. den Excel-Export der Schülerliste (gültiges ZIP/XML, Umlaute und Sonderzeichen), das Kurs-Löschen nur mit „LÖSCHEN“, das Ein-/Ausblenden der Fotos im EPO-Reiter und im Sitzplan (auch im Druck) das Erweitern/Verkleinern des Sitzplan-Rasters an allen vier Seiten sowie das Ziehen (keine Wiederholung bis zum Auffüllen, automatisches Auffüllen, Note, Rückgängig, Abwesende/Herausgenommene),
 6. das Notfallwerkzeug: Eine von der App echt verschlüsselte Datenbank wird mit `tools/entschluesseln.py` per Passwort und per Wiederherstellungsschlüssel entschlüsselt und mit dem Original verglichen. Dazu kommen falsches Passwort, manipulierte Datei und CSV-Ausgabe.
 
@@ -992,6 +1002,7 @@ Am Ende steht `ERGEBNIS: x von y bestanden`. Der Exit-Code ist 0, wenn alles bes
 | `tests/grades.test.html` | Skalen, Eingabe-Parser, Rundung, Notenschlüssel (Vergleich mit Excel-Formeln), Bonus/Kappung, Status, Drittelparagraph, EPO (Werte aus der bisherigen EPO-Liste), Halbjahres-/Jahresnote, GK-Gewichtung | im Browser öffnen |
 | `tests/model.test.html` | Migration älterer Datenbanken, Ablehnung neuerer Datenformate, Erhalt unbekannter Felder, Namensliste | im Browser öffnen |
 | `tests/moodle.test.html` | CSV-Zerlegung, Erkennen und Zusammenführen von Antworten-/Bewertungen-CSV, bester Versuch, Textvergleich ohne Bewertungen, Zuordnung (Name, gemerkte E-Mail), Übernahme als Test, „fehlt“, erneuter Import, skalierte Punkte | im Browser öffnen |
+| `tests/pomodoro.test.html` | Ablauf der Phasen (mit/ohne kurze bzw. lange Pause), Standardwerte, Migration der Einstellungen | im Browser öffnen |
 | `tests/crypto.test.html` | Anlegen, Entsperren, falsches Passwort, Wiederherstellungsschlüssel, Passwortwechsel, alte Sicherungen, Manipulationserkennung | im Browser öffnen (dauert einige Sekunden) |
 | `tests/storage.test.html` | Schreiben/Lesen, rollierende Sicherungen, externe Änderung, erzwungenes Überschreiben, Lock-Datei, Konfliktkopie | **über `http://localhost`**, z. B. `python3 -m http.server` im Programmordner, dann `http://localhost:8000/tests/storage.test.html` |
 
@@ -1018,7 +1029,7 @@ In `js/model.js` stehen zwei Nummern:
 
 | Konstante | Bedeutung | Wann erhöhen |
 |---|---|---|
-| `APP_VERSION` (z. B. `1.15.0`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.15.0` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
+| `APP_VERSION` (z. B. `1.17.0`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.17.0` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
 | `SCHEMA` (z. B. `1`) | Version des Datenformats | nur, wenn eine **ältere** App-Version die neuen Daten falsch verstehen würde (z. B. ein Feld ändert seine Bedeutung) |
 
 Öffnet eine App eine Datenbank mit höherem `SCHEMA`, verweigert sie das mit einer Meldung (siehe 21.10). Neue, nur *zusätzliche* Felder brauchen kein neues `SCHEMA`: Ältere Versionen lassen unbekannte Felder unverändert und speichern sie mit.

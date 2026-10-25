@@ -7,9 +7,12 @@
   // SCHEMA erhöhen, sobald sich das Datenmodell so ändert, dass ältere App-Versionen
   // die Daten falsch verstehen würden. Ältere Versionen öffnen solche Datenbanken dann nicht.
   const SCHEMA = 1;
-  const APP_VERSION = '1.15.0';
+  const APP_VERSION = '1.17.0';
 
   class NewerSchemaError extends Error {}
+
+  // Pomodoro-Timer (Einstellungen, siehe js/pomodoro.js); Längen in Minuten, Lautstärke 0–100
+  const POMODORO_DEFAULTS = { enabled: false, count: 4, work: 25, short: 5, long: 15, tick: 'off', alarm: 'bell', volume: 60 };
 
   function currentSchoolYearName() {
     const d = new Date();
@@ -30,6 +33,7 @@
         keepBackups: 10,
         backupEveryMin: 10,
         gradeColors: true,
+        pomodoro: Object.assign({}, POMODORO_DEFAULTS),
       },
       years: [year],
       courses: [],
@@ -47,6 +51,8 @@
       );
     }
     db.settings = Object.assign(newDb().settings, db.settings || {});
+    // 1.17: Pomodoro-Timer
+    db.settings.pomodoro = Object.assign({}, POMODORO_DEFAULTS, db.settings.pomodoro || {});
     db.years = db.years || [];
     db.courses = db.courses || [];
     for (const c of db.courses) {
@@ -309,6 +315,7 @@
   NM.model = {
     SCHEMA,
     APP_VERSION,
+    POMODORO_DEFAULTS,
     PERSON_ICON,
     NewerSchemaError,
     newDb,

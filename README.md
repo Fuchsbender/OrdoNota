@@ -56,6 +56,7 @@ Ausprobieren ohne echte Daten: `index.html?demo` (nichts wird gespeichert). Beis
 - **Ziehen**: gewählte Anzahl zufällig ziehen (z. B. Hausaufgaben einsammeln); Gezogene fallen aus dem Pool, bis er aufgefüllt wird (automatisch, wenn er zu klein ist, oder per Knopf). Jede Ziehung legt eine Spalte „HA-Kontrolle“ bei den sonstigen Leistungen an, Noten direkt eintragen. Übersicht über den Pool, Haken zum Herausnehmen und für „heute abwesend“.
 - **Notenübersicht**: alle Noten des Halbjahres; direkte Noten eintragen (`2-`, `11`, oder `f` = fehlt, `ns` = Nachschreiben, `t` = Täuschung/Verweigerung). Kursliste, Schülerbögen, CSV-Export für Excel.
 - **Sitzplan**: mehrere Räume pro Kurs; Raster per „Raster bearbeiten“ an allen vier Seiten mit +/− erweitern oder verkleinern; Vornamen-Karten per Ziehen auf ein Raster setzen, tauschen, zufällig füllen, Stände speichern/laden, Fotos (Strg+V oder Bild auf die Karte ziehen, per Knopf ausblendbar), Druck.
+- **🍅 Pomodoro-Timer** (Einstellungen → aktivieren): in der Kopfzeile mit Start/Pause/Zurücksetzen/⚙; rot = Arbeitsphase, grün = Pause, gelb = pausiert. Anzahl, Längen, Ticken und Wecker-Signal einstellbar.
 - **Sortieren**: Klick auf einen Spaltenkopf (Name, Vorname, Aufgabe, Stunde, Note, …) sortiert, zweiter Klick dreht um; bei Köpfen mit eigener Funktion über das kleine ⇅. Leere Werte stehen unten, Ausdrucke bleiben alphabetisch.
 - Tastatur: Enter/↓ = nächste Person, Tab = nächste Spalte.
 

@@ -7,7 +7,7 @@
   function render(view, { db }) {
     view.append(
       h('div', { class: 'view-head' }, h('h1', null, 'Einstellungen')),
-      h('div', { class: 'grid-2' }, securityCard(db), defaultsCard(db), storageCard(db), yearsCard(db), displayCard(db), infoCard())
+      h('div', { class: 'grid-2' }, securityCard(db), defaultsCard(db), storageCard(db), yearsCard(db), displayCard(db), pomodoroCard(db), infoCard())
     );
   }
 
@@ -297,6 +297,33 @@
         })
       ),
       h('p', { class: 'muted small' }, 'Neue Schuljahre legen Sie oben über die Schuljahr-Auswahl an. Kurse lassen sich unter „Kurs & Schüler“ ins neue Schuljahr kopieren.')
+    );
+  }
+
+  function pomodoroCard(db) {
+    if (!db.settings.pomodoro) db.settings.pomodoro = NM.pomodoro.config(db.settings);
+    const p = db.settings.pomodoro;
+    return h(
+      'div',
+      { class: 'card' },
+      h('h2', null, '🍅 Pomodoro-Timer'),
+      h(
+        'label',
+        { class: 'check' },
+        h('input', {
+          type: 'checkbox',
+          checked: p.enabled,
+          onchange: (e) => {
+            p.enabled = e.target.checked;
+            if (!p.enabled) NM.pomodoro.reset();
+            NM.app.commit({ render: false });
+            NM.app.renderShell();
+          },
+        }),
+        ' Pomodoro-Timer in der Kopfzeile anzeigen'
+      ),
+      h('p', { class: 'muted small' }, 'Arbeitsphasen (rot) und Pausen (grün) im Wechsel; pausiert ist der Timer gelb. Bedienung in der Kopfzeile neben dem Schuljahr: ▶ Start, ⏸ Pause, ↺ Zurücksetzen, ⚙ Einstellungen. Der Timer läuft auch weiter, wenn die App gesperrt wird.'),
+      p.enabled ? NM.pomodoro.settingsForm(db.settings) : null
     );
   }
 

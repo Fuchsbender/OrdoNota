@@ -151,7 +151,7 @@ def report(name, ok, detail=""):
 
 def run_test_pages(br, base):
     print("Testseiten:")
-    for page in ["grades", "model", "moodle", "crypto", "storage"]:
+    for page in ["grades", "model", "moodle", "pomodoro", "crypto", "storage"]:
         br.open(f"{base}/tests/{page}.test.html")
         done = br.wait("/^(ALLE TESTS BESTANDEN|\\d+ FEHLGESCHLAGEN|FEHLER)/.test(document.getElementById('out').textContent)")
         text = br.eval("document.getElementById('out').textContent") or ""
@@ -422,6 +422,84 @@ MOODLE_GRADES = "\n".join([
 ])
 
 
+def run_pomodoro_check(br, base):
+    print("Pomodoro-Timer (Einstellung, Kopfzeile, Phasen):")
+    br.open(f"{base}/index.html?demo")
+    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.errors = []
+    res = br.eval("""(async () => {
+        const wait = (ms = 250) => new Promise((r) => setTimeout(r, ms));
+        const P = NM.pomodoro, st = P.state();
+        P.reset();
+        const out = { off: !document.querySelector('.pomo') };
+        NM.app.select({ tab: 'settings' }); await wait();
+        const box = [...document.querySelectorAll('label.check')].find((l) => l.textContent.includes('Pomodoro')).querySelector('input');
+        box.checked = true; box.dispatchEvent(new Event('change')); await wait();
+        const pomo = () => document.querySelector('.pomo');
+        const btn = (t) => [...pomo().querySelectorAll('button')].find((b) => b.title === t);
+        out.on = [!!pomo(), pomo().className, document.querySelector('.pomo-time').textContent, ['Start', 'Pause', 'Zurücksetzen', 'Pomodoro-Einstellungen'].every((t) => !!btn(t))];
+        const settings = NM.app.db().settings.pomodoro;
+        settings.tick = 'off'; settings.alarm = 'off';
+        btn('Start').click(); await wait();
+        out.work = [pomo().className, btn('Start').disabled, btn('Pause').disabled];
+        btn('Pause').click(); await wait();
+        out.paused = [pomo().className, st.running];
+        btn('Start').click(); await wait();
+        st.endsAt = Date.now() - 10; P.tick(); await wait();           // Pomodoro vorbei → kurze Pause
+        out.brk = [pomo().className, st.phase, st.index, document.querySelector('.pomo-time').textContent <= '05:00'];
+        btn('Pause').click(); await wait();
+        out.brkPaused = pomo().className;
+        btn('Zurücksetzen').click(); await wait();
+        out.reset = [pomo().className, st.phase, st.index, document.querySelector('.pomo-time').textContent];
+        btn('Pomodoro-Einstellungen').click(); await wait();
+        out.dialog = document.querySelectorAll('dialog input[type=number]').length;
+        const work = document.querySelector('dialog input[type=number]:nth-of-type(1)');
+        const f = [...document.querySelectorAll('dialog label.field')].find((l) => l.textContent.startsWith('Länge eines Pomodoros')).querySelector('input');
+        f.value = '30'; f.dispatchEvent(new Event('change')); await wait();
+        document.querySelector('dialog .btn-primary').click(); await wait();
+        out.len = [settings.work, document.querySelector('.pomo-time').textContent];
+        box.checked = false;
+        NM.app.select({ tab: 'settings' }); await wait();
+        const box2 = [...document.querySelectorAll('label.check')].find((l) => l.textContent.includes('Pomodoro')).querySelector('input');
+        box2.checked = false; box2.dispatchEvent(new Event('change')); await wait();
+        out.offAgain = !document.querySelector('.pomo');
+        return out; })()""")
+    ok = bool(res) and res["off"] and res["on"] == [True, "pomo pomo-idle", "25:00", True] and res["work"] == ["pomo pomo-work", True, False] \
+        and res["paused"] == ["pomo pomo-paused", False] and res["brk"] == ["pomo pomo-break", "short", 1, True] and res["brkPaused"] == "pomo pomo-paused" \
+        and res["reset"] == ["pomo pomo-idle", "work", 1, "25:00"] and res["dialog"] == 4 and res["len"] == [30, "30:00"] and res["offAgain"]
+    report("Pomodoro: aktivieren, Start (rot), Pause (gelb), Pausenphase (grün), Zurücksetzen, Einstellungen, deaktivieren", ok and not br.errors, str(res) + "; ".join(br.errors))
+
+
+def run_transition_check(br, base):
+    print("Weiche Übergänge (Reiter, Kurs, Halbjahr):")
+    br.open(f"{base}/index.html?demo")
+    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.errors = []
+    res = br.eval("""(async () => {
+        const wait = (ms = 250) => new Promise((r) => setTimeout(r, ms));
+        const enter = () => document.getElementById('view').classList.contains('view-enter');
+        const ink = () => { const i = document.querySelector('.tab-ink'), a = document.querySelector('.tab.active');
+            return Math.abs(i.getBoundingClientRect().left - a.getBoundingClientRect().left) < 1 && Math.abs(i.offsetWidth - a.offsetWidth) < 1; };
+        const c = NM.app.db().courses;
+        const out = {};
+        NM.app.select({ courseId: c[0].id, tab: 'tests' });
+        out.tab = [enter(), document.querySelector('.tab-ink').classList.contains('moving')];
+        await wait(); out.inkTab = ink();
+        NM.app.commit(); await wait();
+        out.input = [enter(), document.querySelector('.tab-ink').classList.contains('moving')];
+        NM.app.setHalf(c[0], 'HJ2'); await wait(50);
+        out.half = enter();
+        NM.app.rerender(); await wait();
+        out.after = enter();
+        NM.app.select({ courseId: c[1].id }); await wait(50);
+        out.course = [enter(), document.querySelector('.tab-ink').classList.contains('moving')];
+        await wait(); out.inkCourse = ink();
+        return out; })()""")
+    ok = bool(res) and res["tab"] == [True, True] and res["inkTab"] and res["input"] == [False, False] and res["half"] and not res["after"] \
+        and res["course"] == [True, False] and res["inkCourse"]
+    report("Übergang bei Reiter/Kurs/Halbjahr, nicht beim Neuzeichnen nach Eingaben; Unterstrich am aktiven Reiter", ok and not br.errors, str(res) + "; ".join(br.errors))
+
+
 def run_sidebar_check(br, base):
     print("Kursliste ein-/ausklappen:")
     br.open(f"{base}/index.html?demo")
@@ -591,6 +669,8 @@ def main():
         run_sort_check(br, base)
         run_course_check(br, base)
         run_draw_check(br, base)
+        run_pomodoro_check(br, base)
+        run_transition_check(br, base)
         run_sidebar_check(br, base)
         run_tests_view_check(br, base)
         run_moodle_check(br, base)

@@ -605,6 +605,7 @@
       { class: 'topbar' },
       h('div', { class: 'brand' }, h('span', { class: 'brand-full', html: NM.logo.full(32) }), h('span', { class: 'brand-mark', html: NM.logo.mark(28) })),
       yearSel,
+      NM.pomodoro.widget(),
       h('div', { class: 'spacer' }),
       h('span', { id: 'save-status', class: 'save-status' }),
       h('button', { class: 'icon-btn', title: 'Hell/Dunkel umschalten', 'aria-label': 'Hell/Dunkel umschalten', onclick: toggleTheme, html: '<svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z"/></svg>' }),
@@ -717,11 +718,21 @@
     }, 0);
   }
 
+  // Weiche Übergänge nur beim Wechsel von Reiter, Kurs oder Halbjahr – nicht beim Neuzeichnen nach Eingaben
+  let lastViewKey = null;
+  let lastTab = null;
+  let lastInk = null;
+
   function renderMain() {
     const main = document.getElementById('main');
     if (!main) return;
     clear(main);
     const course = currentCourse();
+    const viewKey = [state.ui.tab, course ? course.id : '', course ? currentHalf(course, true) : ''].join('|');
+    const viewChanged = lastViewKey !== null && viewKey !== lastViewKey;
+    const tabChanged = lastTab !== null && lastTab !== state.ui.tab;
+    lastViewKey = viewKey;
+    lastTab = state.ui.tab;
     const tabs = h(
       'div',
       { class: 'tabs', role: 'tablist' },
@@ -740,7 +751,8 @@
       )
     );
     main.appendChild(tabs);
-    const view = h('section', { class: 'view view-' + state.ui.tab, id: 'view' });
+    placeTabInk(tabs, tabChanged);
+    const view = h('section', { class: 'view view-' + state.ui.tab + (viewChanged ? ' view-enter' : ''), id: 'view' });
     main.appendChild(view);
     if (!course && state.ui.tab !== 'settings') {
       view.appendChild(
@@ -756,6 +768,26 @@
     }
     const v = NM.views[state.ui.tab];
     if (v) v.render(view, { course, db: state.db });
+  }
+
+  /** Unterstrich des aktiven Reiters; gleitet beim Reiterwechsel von der alten zur neuen Position. */
+  function placeTabInk(tabs, animate) {
+    const act = tabs.querySelector('.tab.active');
+    if (!act) return;
+    const ink = h('span', { class: 'tab-ink', 'aria-hidden': 'true' });
+    tabs.appendChild(ink);
+    const to = { left: act.offsetLeft, width: act.offsetWidth };
+    const put = (p) => {
+      ink.style.width = p.width + 'px';
+      ink.style.transform = `translateX(${p.left}px)`;
+    };
+    if (animate && lastInk) {
+      put(lastInk);
+      ink.getBoundingClientRect(); // Startposition übernehmen, bevor der Übergang beginnt
+      ink.classList.add('moving');
+    }
+    put(to);
+    lastInk = to;
   }
 
   // ---------- Neuzeichnen mit Fokus-Erhalt ----------
