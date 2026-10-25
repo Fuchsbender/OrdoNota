@@ -1,6 +1,6 @@
 # OrdoNota – Dokumentation
 
-Version 1.12.1 · Stand Oktober 2026
+Version 1.13.0 · Stand Oktober 2026
 
 OrdoNota (bis Version 1.11 „Notenmanager“) verwaltet Noten für die Sekundarstufe I (Noten 1–6 mit Tendenz) und die Mainzer Studienstufe (MSS, Punkte 00–15) an Schulen in Rheinland-Pfalz. Die App läuft vollständig lokal im Browser, verschlüsselt alle Daten mit einem Passwort und legt sie in einem Ordner ab, den der Synology Drive Client auf die DiskStation spiegelt.
 
@@ -130,7 +130,7 @@ Der Browser merkt sich den Datenordner. Beim nächsten Start erscheint direkt **
 
 ### 3.5 Demo-Modus
 
-`index.html?demo` öffnet die App mit Beispieldaten (Kurs 8b Mathe, Sek I, und MSS 12 M LK). Statt echter Fotos hat jede Person ein Personensymbol, damit sich Sitzplan und Fotoanzeige im EPO ausprobieren lassen. **Nichts wird gespeichert.** Der Demo-Modus eignet sich zum Ausprobieren und Kennenlernen.
+`index.html?demo` öffnet die App mit Beispieldaten (Kurs 8b Mathe, Sek I, und MSS 12 M LK). Statt echter Fotos hat jede Person ein Personensymbol, damit sich Sitzplan und Fotoanzeige im EPO ausprobieren lassen. **Nichts wird gespeichert.** Der Demo-Modus eignet sich zum Ausprobieren und Kennenlernen. Zum Ausprobieren des Moodle-Imports (Abschnitt 7.7) liegen im Ordner `demo/` eine Antworten- und eine Bewertungen-CSV, deren Namen zum Kurs 8b Mathe passen.
 
 ## 4. Arbeiten mit mehreren Geräten
 
@@ -309,6 +309,33 @@ Unter dem Schlüssel stehen das Balkendiagramm (Anzahl je ganzer Note 1–6), Te
 | 🖨 Schlüssel | Notenschlüssel und Notenspiegel (z. B. für das Klassenbuch oder die Fachleitung) |
 | 🖨 Liste | Alle Personen mit Punkten je Aufgabe, Σ, %, Note; darunter Notenspiegel und Schlüssel |
 | 🖨 Schülerzettel | Ein Abschnitt pro Person zum Ausschneiden: erreichte und mögliche Punkte je Aufgabe, Prozent, Note |
+| 🖨 Moodle-Ergebnisse | nur bei Tests aus Moodle (siehe 7.7): je Person eine Seite mit Ergebnis (Punkte, Prozent) oben, darunter Frage, gegebene Antwort, Lösung und Punkte; die **Note wahlweise mit oder ohne** |
+
+### 7.7 Moodle-Import
+
+Tests aus Moodle lassen sich direkt übernehmen. Die Note berechnet OrdoNota mit dem eigenen Notenschlüssel (LIMIT, Abschnitt 15), nicht mit der Bewertung aus Moodle.
+
+1. In Moodle beim Test unter **Ergebnisse** zwei Dateien als CSV herunterladen:
+   - **Antworten** („Antworten“-Bericht): Fragetext, gegebene und richtige Antwort je Frage.
+   - **Bewertungen** („Bewertungen“-Bericht, Spalten `F 1 /1,00`, `F 2 /1,00` …): Punkte je Frage. Nur diese Datei enthält Korrekturen, die Sie in Moodle von Hand vorgenommen haben (z. B. Tippfehler als richtig gewertet).
+2. Im Reiter „Tests“ das Halbjahr wählen und **„⬆ Moodle-Import“** klicken.
+3. Beide Dateien auswählen (mehrere auf einmal markieren). OrdoNota erkennt selbst, welche welche ist. Eine allein geht auch:
+   - nur Antworten: Punkte per Textvergleich (Antwort = richtige Antwort, je Frage 1 Punkt); Korrekturen aus Moodle fehlen,
+   - nur Bewertungen: Punkte vollständig, der Ausdruck enthält aber keine Fragen und Antworten.
+4. **Zuordnung prüfen:** Jede Person aus Moodle wird einem Kursmitglied zugeordnet: zuerst über die beim letzten Import gemerkte Moodle-E-Mail-Adresse, sonst über Nach- und Vorname. Nicht erkannte Personen per Auswahlliste zuordnen oder „— nicht übernehmen —“ lassen.
+5. **Importieren.** Es entsteht ein Test (Bereich „Sonstige“, Datum des Moodle-Versuchs, Bezeichnung aus dem Dateinamen; alles änderbar) mit einer Aufgabe **F1, F2, …** je Moodle-Frage.
+
+Regeln beim Import:
+
+- Hat jemand mehrere Versuche, zählt der beste **beendete** Versuch.
+- Personen mit nicht beendetem Versuch („In Bearbeitung“) und Kursmitglieder ohne Moodle-Versuch bekommen den Status **„fehlt“**, sofern noch keine Punkte eingetragen sind. Punkte können von Hand nachgetragen werden.
+- Unbeantwortete Fragen zählen 0 Punkte.
+- Die Punkte-Genauigkeit wird passend gesetzt (ganze, halbe oder Zehntel-Punkte). Rechnet Moodle mit skalierten Punkten (z. B. `F 1 /0,71`), kann die Summe der gerundeten Fragenpunkte minimal von der Moodle-Bewertung abweichen; OrdoNota weist dann darauf hin.
+- **Beide CSV-Dateien werden verschlüsselt im Test gespeichert**, ebenso Fragen und Antworten je Person. Die Karte **„Moodle“** im Test zeigt das Importdatum und bietet die Originaldateien zum Herunterladen an (⬇; die heruntergeladene Datei ist unverschlüsselt).
+
+**Erneut importieren** (Knopf in der Karte „Moodle“), z. B. nach Korrekturen in Moodle: Die Punkte der Moodle-Fragen werden ersetzt, eigene zusätzliche Aufgaben, Notenschlüssel, Gewicht und Status „nicht gewertet“/„Täuschung“ bleiben erhalten. Lädt man dabei nur die Bewertungen-CSV, bleiben die gespeicherten Antworttexte erhalten.
+
+**Ausdruck „🖨 Moodle-Ergebnisse“:** Im Dialog wählen Sie **alle** (je eine Seite) oder **eine Person** und ob die **Note** mitgedruckt wird. Oben steht das Ergebnis (Punkte, Prozent mit Balken, ggf. Note), darunter je Frage Frage, „Deine Antwort“, Lösung und Punkte. Jede Zeile trägt ein Zeichen und einen farbigen Rand: ✓ richtig (grün), ◐ teilweise (orange hinterlegt), ✗ falsch (rot hinterlegt, Lösung fett), – keine Antwort. Durch die Zeichen bleibt der Ausdruck auch in Schwarzweiß lesbar; Zeilen werden nicht über Seiten getrennt.
 
 ## 8. Reiter „Mitarbeit/EPO“
 
@@ -461,7 +488,7 @@ Alle Ausdrucke öffnen den Druckdialog des Browsers. Dort können Sie auch **„
 | Notenübersicht | 🖨 Schülerbögen | Eine Seite je Person (Auswahl siehe unten) |
 | Notenübersicht | ⬇ CSV/Excel | Alle Noten und Ergebnisse des Kurses als CSV (Semikolon, öffnet direkt in Excel) |
 | Kurs & Schüler | ⬇ Excel | Schülerliste als Excel-Datei (.xlsx): Nr., Nachname, Vorname, I-Status, Aktiv (siehe 6.3) |
-| Tests | 🖨 Schlüssel / Liste / Schülerzettel | siehe 7.6 |
+| Tests | 🖨 Schlüssel / Liste / Schülerzettel / Moodle-Ergebnisse | siehe 7.6 und 7.7 |
 | Tests | ⛶ Beamer | Vollbild ohne Namen: Notenspiegel, Punkteverteilung, Ø je Aufgabe (siehe 7.5) |
 | Sitzplan | 🖨 Drucken | Sitzplan des gewählten Raums mit Vornamen, Fotos und Lehrerpult, A4 (quer, wenn mehr Spalten als Reihen) |
 | Mitarbeit/EPO | 🖨 Liste | Bewertungsraster mit Ergebnis je Person |
@@ -826,6 +853,7 @@ Reines HTML/CSS/JavaScript ohne Build-Schritt und ohne externe Bibliotheken. Die
 | `js/crypto.js` | `NM.crypto` | `Vault`: Erzeugen, Entsperren (Passwort/Wiederherstellung), Ver-/Entschlüsseln, Passwortwechsel |
 | `js/storage.js` | `NM.storage` | `FolderStore` (File System Access API): Lesen/Schreiben, Sicherungen, Lock, Konflikterkennung; `MemoryStore` für den Demo-Modus |
 | `js/model.js` | `NM.model` | Datenmodell: neue Datenbank/Kurse/Leistungen, Migration, Namensliste parsen, Demo-Daten |
+| `js/moodle.js` | `NM.moodle` | Moodle-Import (rein, ohne DOM): CSV zerlegen, Antworten-/Bewertungen-CSV erkennen und zusammenführen, Personen zuordnen, als Test übernehmen |
 | `js/ui.js` | `NM.ui` | Wiederverwendbare Bausteine: Halbjahres-Umschalter, Noten-Eingabezellen, Badges, Leistungs-Dialog |
 | `js/app.js` | `NM.app` | Anwendungskern: Anmeldung, Sitzung, Autosave, Sperre, Layout, Navigation, Neuzeichnen mit Fokus-Erhalt, Tabellen-Tastatur |
 | `js/view-*.js` | `NM.views.*` | Je ein Reiter: `course`, `tests`, `epo`, `draw`, `overview`, `seating`, `settings` |
@@ -859,7 +887,7 @@ Berechnete Werte (Schnitte, Testnoten, EPO-Noten) werden **nie gespeichert**, so
   "kdf": "PBKDF2-SHA256",
   "savedAt": "2026-10-14T21:57:03.123Z",
   "device": "Laptop Schule",
-  "app": "1.12.1",
+  "app": "1.13.0",
   "pw":   { "salt": "<b64>", "iter": 600000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "rec":  { "salt": "<b64>", "iter": 100000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "data": { "iv": "<b64>", "ct": "<b64: verschlüsseltes JSON des Datenmodells>" }
@@ -882,7 +910,7 @@ Entschlüsselter Inhalt (`schema: 1`):
 ```js
 {
   schema: 1,                             // Datenformat (siehe 26.2)
-  savedWith: "1.12.1",                    // App-Version beim letzten Speichern
+  savedWith: "1.13.0",                    // App-Version beim letzten Speichern
   created: "<ISO>", savedAt: "<ISO>",
   settings: { autoLockMin, limitSek1, limitMss, precision, keepBackups, backupEveryMin, gradeColors },
   years:   [ { id, name: "2026/27" } ],
@@ -895,7 +923,7 @@ Course = {
   type: "sek1" | "lk" | "gk" | "noka",
   wKa, wOther,                           // Gewichte in %
   wHalf1, wHalf2,                        // Jahresnote (Standard 1 : 2)
-  students: [ { id, last, first, active, iStatus?, photo? } ],   // photo: JPEG als Data-URL, 160×160
+  students: [ { id, last, first, active, iStatus?, photo?, email? } ],   // photo: JPEG als Data-URL, 160×160; email: Moodle-Adresse (Zuordnung beim Import)
   assessments: [ Assessment ],
   overrides: { "<Halbjahr>"|"Jahr": { "<studentId>": { p, reason } } },
   comments:  { "<studentId>": "Text" },
@@ -911,9 +939,12 @@ Assessment = {
   cat: "ka" | "other",
   name, date: "YYYY-MM-DD", weight, ungraded?,   // ungraded: zählt nicht zur Note
   manual?: { grades: { "<sid>": { p } | { status } } },
-  test?:   { limit, precision, tasks: [ { id, name, max, bonus? } ],
+  test?:   { limit, precision, tasks: [ { id, name, max, bonus?, moodleNr? } ],   // moodleNr: Fragennummer in Moodle
              custom: { "<p>": Mindestpunktzahl },
-             results: { "<sid>": { scores: { "<taskId>": Zahl }, status? } } },
+             results: { "<sid>": { scores: { "<taskId>": Zahl }, status? } },
+             moodle?: { importedAt, totalMax,                                     // nur bei Moodle-Import
+                        files: [ { name, kind: "answers" | "grades", text } ],    // Original-CSV-Dateien
+                        answers: { "<sid>": { "<taskId>": { q, a, c } } } } },   // Frage, gegebene, richtige Antwort
   epo?:    { limit, points: { "++","+","0","-","--","u","h" },
              table: { strict: bool, mins: [ % je Punktstufe ] },
              lessons: [ { id, date } ],
@@ -940,8 +971,9 @@ Das Skript startet einen unsichtbaren Chromium-Browser (Chrome, Edge, Chromium, 
 1. alle Testseiten (siehe 25.2),
 2. den Start der App im Demo-Modus und alle Reiter für einen Sek-I- und einen MSS-Kurs ohne JavaScript-Fehler,
 3. das Sortieren per Klick auf Spaltenköpfe (Tests, EPO, Notenübersicht; Richtung und leere Werte unten),
-4. den Excel-Export der Schülerliste (gültiges ZIP/XML, Umlaute und Sonderzeichen), das Kurs-Löschen nur mit „LÖSCHEN“, das Ein-/Ausblenden der Fotos im EPO-Reiter und im Sitzplan (auch im Druck) das Erweitern/Verkleinern des Sitzplan-Rasters an allen vier Seiten sowie das Ziehen (keine Wiederholung bis zum Auffüllen, automatisches Auffüllen, Note, Rückgängig, Abwesende/Herausgenommene),
-5. das Notfallwerkzeug: Eine von der App echt verschlüsselte Datenbank wird mit `tools/entschluesseln.py` per Passwort und per Wiederherstellungsschlüssel entschlüsselt und mit dem Original verglichen. Dazu kommen falsches Passwort, manipulierte Datei und CSV-Ausgabe.
+4. den Moodle-Import (Dateiauswahl im Dialog, Zuordnung, Status „fehlt“, Ausdruck mit und ohne Note, erneuter Import),
+5. den Excel-Export der Schülerliste (gültiges ZIP/XML, Umlaute und Sonderzeichen), das Kurs-Löschen nur mit „LÖSCHEN“, das Ein-/Ausblenden der Fotos im EPO-Reiter und im Sitzplan (auch im Druck) das Erweitern/Verkleinern des Sitzplan-Rasters an allen vier Seiten sowie das Ziehen (keine Wiederholung bis zum Auffüllen, automatisches Auffüllen, Note, Rückgängig, Abwesende/Herausgenommene),
+6. das Notfallwerkzeug: Eine von der App echt verschlüsselte Datenbank wird mit `tools/entschluesseln.py` per Passwort und per Wiederherstellungsschlüssel entschlüsselt und mit dem Original verglichen. Dazu kommen falsches Passwort, manipulierte Datei und CSV-Ausgabe.
 
 Am Ende steht `ERGEBNIS: x von y bestanden`. Der Exit-Code ist 0, wenn alles bestanden ist.
 
@@ -953,6 +985,7 @@ Am Ende steht `ERGEBNIS: x von y bestanden`. Der Exit-Code ist 0, wenn alles bes
 |---|---|---|
 | `tests/grades.test.html` | Skalen, Eingabe-Parser, Rundung, Notenschlüssel (Vergleich mit Excel-Formeln), Bonus/Kappung, Status, Drittelparagraph, EPO (Werte aus der bisherigen EPO-Liste), Halbjahres-/Jahresnote, GK-Gewichtung | im Browser öffnen |
 | `tests/model.test.html` | Migration älterer Datenbanken, Ablehnung neuerer Datenformate, Erhalt unbekannter Felder, Namensliste | im Browser öffnen |
+| `tests/moodle.test.html` | CSV-Zerlegung, Erkennen und Zusammenführen von Antworten-/Bewertungen-CSV, bester Versuch, Textvergleich ohne Bewertungen, Zuordnung (Name, gemerkte E-Mail), Übernahme als Test, „fehlt“, erneuter Import, skalierte Punkte | im Browser öffnen |
 | `tests/crypto.test.html` | Anlegen, Entsperren, falsches Passwort, Wiederherstellungsschlüssel, Passwortwechsel, alte Sicherungen, Manipulationserkennung | im Browser öffnen (dauert einige Sekunden) |
 | `tests/storage.test.html` | Schreiben/Lesen, rollierende Sicherungen, externe Änderung, erzwungenes Überschreiben, Lock-Datei, Konfliktkopie | **über `http://localhost`**, z. B. `python3 -m http.server` im Programmordner, dann `http://localhost:8000/tests/storage.test.html` |
 
@@ -979,7 +1012,7 @@ In `js/model.js` stehen zwei Nummern:
 
 | Konstante | Bedeutung | Wann erhöhen |
 |---|---|---|
-| `APP_VERSION` (z. B. `1.12.1`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.12.1` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
+| `APP_VERSION` (z. B. `1.13.0`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.13.0` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
 | `SCHEMA` (z. B. `1`) | Version des Datenformats | nur, wenn eine **ältere** App-Version die neuen Daten falsch verstehen würde (z. B. ein Feld ändert seine Bedeutung) |
 
 Öffnet eine App eine Datenbank mit höherem `SCHEMA`, verweigert sie das mit einer Meldung (siehe 21.10). Neue, nur *zusätzliche* Felder brauchen kein neues `SCHEMA`: Ältere Versionen lassen unbekannte Felder unverändert und speichern sie mit.
@@ -999,6 +1032,7 @@ In `js/model.js` stehen zwei Nummern:
 - **Rechenregeln ändern:** ausschließlich in `js/grades.js`. Danach `tests/grades.test.html` anpassen und ausführen.
 - **Neuer Reiter:** Datei `js/view-name.js` mit `NM.views.name = { render(view, { course, db }) }` anlegen, in `index.html` einbinden und in `TABS` in `js/app.js` eintragen.
 - **Sortierbare Spalte:** `NM.ui.sorter(tabelle, { schlüssel: { get: (s) => Wert, first: 'asc' | 'desc' } })` liefert `rows()` zum Ordnen der Schülerliste sowie `head()`, `toggle()` und `nameHeads()` für die Spaltenköpfe; die passenden Namenszellen erzeugt `NM.ui.nameCells(s, nr)`.
+- **Moodle-Import:** Einlesen und Übernehmen in `js/moodle.js` (Tests: `tests/moodle.test.html`), Dialog und Karte in `js/view-tests.js`, Ausdruck `NM.print.moodle` in `js/print.js`.
 - **Neue Kursart:** Eintrag in `COURSE_TYPES` in `js/grades.js`.
 - **Farben:** Tokens oben in `css/app.css` (`:root` hell, darunter dunkel).
 - **Änderungen am Datenmodell:** Standardwerte in `NM.model.migrate()` ergänzen, damit bestehende Datenbanken weiter funktionieren. Bei inkompatiblen Änderungen `SCHEMA` erhöhen.

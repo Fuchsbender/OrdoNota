@@ -256,7 +256,7 @@
   }
 
   /** Liste von Leistungen eines Typs als auswählbare Karten. */
-  function pickerList({ items, currentId, onPick, onAdd, addLabel, sub }) {
+  function pickerList({ items, currentId, onPick, onAdd, addLabel, sub, extra }) {
     return h(
       'div',
       { class: 'picker' },
@@ -268,7 +268,8 @@
           h('span', { class: 'picker-sub' }, sub(a))
         )
       ),
-      h('button', { class: 'picker-item picker-add', onclick: onAdd }, addLabel)
+      h('button', { class: 'picker-item picker-add', onclick: onAdd }, addLabel),
+      extra || null
     );
   }
 

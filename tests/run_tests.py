@@ -151,7 +151,7 @@ def report(name, ok, detail=""):
 
 def run_test_pages(br, base):
     print("Testseiten:")
-    for page in ["grades", "model", "crypto", "storage"]:
+    for page in ["grades", "model", "moodle", "crypto", "storage"]:
         br.open(f"{base}/tests/{page}.test.html")
         done = br.wait("/^(ALLE TESTS BESTANDEN|\\d+ FEHLGESCHLAGEN|FEHLER)/.test(document.getElementById('out').textContent)")
         text = br.eval("document.getElementById('out').textContent") or ""
@@ -404,6 +404,70 @@ def run_draw_check(br, base):
     report("Ziehen: ohne Wiederholung, Auffüllen, Note (auch nachträglich), Rückgängig, Abwesende/Herausgenommene", ok and not br.errors, str(res) + "; ".join(br.errors))
 
 
+MOODLE_HEAD = 'Nachname,Vorname,E-Mail-Adresse,Status,Begonnen,Beendet,Dauer,"Bewertung/2,00"'
+MOODLE_ANSWERS = "\n".join([
+    MOODLE_HEAD + ",Frage 1,Antwort 1,Richtige Antwort 1,Frage 2,Antwort 2,Richtige Antwort 2",
+    "Becker,Lea,lea@x.de,Beendet,1. September 2026  10:05,x,x,\"2,00\",Wie viel ist 2+2?,4,4,Hauptstadt?,Berlin,Berlin",
+    "Demir,Can,can@x.de,Beendet,1. September 2026  10:05,x,x,\"1,00\",Wie viel ist 2+2?,5,4,Hauptstadt?,Berlin,Berlin",
+    "Fischer,Mia,mia@x.de,In Bearbeitung,1. September 2026  10:05,-,-,-,Wie viel ist 2+2?,-,4,Hauptstadt?,-,Berlin",
+])
+MOODLE_GRADES = "\n".join([
+    MOODLE_HEAD + ',"F 1 /1,00","F 2 /1,00"',
+    "Becker,Lea,lea@x.de,Beendet,1. September 2026  10:05,x,x,\"2,00\",1,1",
+    "Demir,Can,can@x.de,Beendet,1. September 2026  10:05,x,x,\"1,50\",\"0,50\",1",
+    "Fischer,Mia,mia@x.de,In Bearbeitung,1. September 2026  10:05,-,-,-,-,-",
+    "Gesamtdurchschnitt,,,,,,,\"1,75\",\"0,75\",1",
+])
+
+
+def run_moodle_check(br, base):
+    print("Moodle-Import (Dialog, Übernahme, Ausdruck):")
+    br.open(f"{base}/index.html?demo")
+    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.errors = []
+    res = br.eval("""(async (answers, grades) => {
+        const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
+        window.print = () => {};
+        const c = NM.app.db().courses[0];
+        NM.app.select({ courseId: c.id, tab: 'tests' }); await wait();
+        const click = (t, root = document) => [...root.querySelectorAll('button')].find((b) => b.textContent.includes(t)).click();
+        const pick = async (files) => {
+            const inp = document.querySelector('dialog input[type=file]');
+            const dt = new DataTransfer();
+            files.forEach(([name, text]) => dt.items.add(new File([text], name, { type: 'text/csv' })));
+            inp.files = dt.files; inp.dispatchEvent(new Event('change')); await wait(400);
+        };
+        const out = {};
+        const n = c.assessments.length;
+        click('Moodle-Import'); await wait();
+        await pick([['10a-HÜ Test-Antworten.csv', answers], ['10a-HÜ Test-Bewertungen.csv', grades]]);
+        out.rows = document.querySelectorAll('dialog tbody tr').length;
+        out.name = document.querySelector('dialog input:not([type=file])').value;
+        document.querySelector('dialog .btn-primary').click(); await wait();
+        const a = c.assessments[c.assessments.length - 1];
+        const sid = (last) => c.students.find((s) => s.last === last).id;
+        const r = (last) => NM.grades.testResult(a.test, sid(last), 'sek1');
+        out.test = [c.assessments.length - n, a.name, a.test.tasks.map((t) => t.name).join(), a.test.precision, r('Becker').score, r('Demir').score, (a.test.results[sid('Fischer')] || {}).status, a.test.moodle.files.length];
+        out.card = !!document.querySelector('.card h2') && [...document.querySelectorAll('.card h2')].some((x) => x.textContent === 'Moodle');
+        // Ausdruck mit und ohne Note
+        NM.print.moodle(c, a, { withGrade: true }); await wait();
+        const root = document.getElementById('print-root');
+        out.printGrade = [root.querySelectorAll('.p-page').length, !!root.querySelector('.p-mr-grade'), root.textContent.includes('Hauptstadt?'), root.querySelectorAll('tr.p-mr-part').length];
+        NM.print.moodle(c, a, { withGrade: false, sid: sid('Demir') }); await wait();
+        out.printNoGrade = [root.querySelectorAll('.p-page').length, !!root.querySelector('.p-mr-grade'), root.textContent.includes('1,5 / 2')];
+        document.body.classList.remove('printing');
+        // Erneut importieren: nur Bewertungen, Demir korrigiert
+        NM.app.rerender(); await wait();
+        click('Erneut importieren'); await wait();
+        await pick([['10a-HÜ Test-Bewertungen.csv', grades.replace('"1,50","0,50",1', '"2,00",1,1')]]);
+        document.querySelector('dialog .btn-primary').click(); await wait();
+        out.reimport = [c.assessments.length - n, r('Demir').score, a.test.moodle.answers[sid('Demir')][a.test.tasks[0].id].a];
+        return out; })(%s, %s)""" % (json.dumps(MOODLE_ANSWERS), json.dumps(MOODLE_GRADES)))
+    ok = bool(res) and res["rows"] == 3 and res["name"] == "HÜ Test" and res["test"] == [1, "HÜ Test", "F1,F2", 0.5, 2, 1.5, "fehlt", 2] \
+        and res["card"] and res["printGrade"] == [2, True, True, 1] and res["printNoGrade"] == [1, False, True] and res["reimport"] == [1, 2, "5"]
+    report("Moodle: Import mit Zuordnung, „fehlt“, Ausdruck mit/ohne Note, erneuter Import", ok and not br.errors, str(res) + "; ".join(br.errors))
+
+
 def run_decrypt_tool(br, base):
     print("Notfallwerkzeug tools/entschluesseln.py:")
     spec = importlib.util.spec_from_file_location("entschluesseln", os.path.join(ROOT, "tools", "entschluesseln.py"))
@@ -472,6 +536,7 @@ def main():
         run_sort_check(br, base)
         run_course_check(br, base)
         run_draw_check(br, base)
+        run_moodle_check(br, base)
         run_decrypt_tool(br, base)
     finally:
         br.close()

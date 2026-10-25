@@ -1,7 +1,7 @@
 /* OrdoNota – Reiter „Tests“: Rohpunkte erfassen, Notenschlüssel, Notenspiegel. */
 (function (NM) {
   'use strict';
-  const { h, toast, confirmDialog, parseNum, uid, fmtNum, fmtScore, fmtDate, gradeStyle } = NM.util;
+  const { h, clear, modal, toast, confirmDialog, parseNum, uid, fmtNum, fmtScore, fmtDate, gradeStyle } = NM.util;
   const G = NM.grades;
   const M = NM.model;
   const UI = NM.ui;
@@ -31,6 +31,7 @@
           NM.app.commit();
         },
         addLabel: '+ Neuer Test',
+        extra: h('button', { class: 'picker-item picker-add', title: 'Moodle-Test aus der Antworten- und Bewertungen-CSV übernehmen', onclick: () => moodleImport(course, db, half, null) }, '⬆ Moodle-Import'),
         sub: (a) => {
           const st = G.testStats(a.test, M.statStudents(course).map((s) => s.id), level);
           return [fmtDate(a.date), UI.catLabel(a.cat), a.ungraded ? 'nicht gewertet' : null, st.n ? 'Ø ' + fmtNum(level === 'mss' ? st.avgPoints : st.avgDec, 2) : null].filter(Boolean).join(' · ');
@@ -41,7 +42,7 @@
       view.appendChild(UI.emptyState('Noch kein Test in ' + half, 'Legen Sie einen Test an: Aufgaben mit Höchstpunktzahlen festlegen, Rohpunkte eintragen – Note, Notenspiegel und Drittelparagraph werden automatisch berechnet.'));
       return;
     }
-    view.append(metaCard(course, cur, level), tasksCard(cur), h('div', { class: 'test-layout' }, resultsCard(course, cur, level), keyCard(course, cur, level)));
+    view.append(metaCard(course, cur, level), cur.test.moodle ? moodleCard(course, db, cur) : null, tasksCard(cur), h('div', { class: 'test-layout' }, resultsCard(course, cur, level), keyCard(course, cur, level)));
   }
 
   function metaCard(course, a, level) {
@@ -150,6 +151,7 @@
             h('button', { class: 'btn', onclick: () => NM.print.test(course, a, 'key') }, '🖨 Schlüssel'),
             h('button', { class: 'btn', onclick: () => NM.print.test(course, a, 'list') }, '🖨 Liste'),
             h('button', { class: 'btn', onclick: () => NM.print.test(course, a, 'students') }, '🖨 Schülerzettel'),
+            t.moodle ? h('button', { class: 'btn', title: 'Je Person eine Seite mit Fragen, Antworten und Punkten', onclick: () => moodlePrint(course, a) }, '🖨 Moodle-Ergebnisse') : null,
             h(
               'button',
               {
@@ -583,5 +585,159 @@
     });
   }
 
-  NM.views.tests = { render };
+  // ---------- Moodle ----------
+
+  function moodleCard(course, db, a) {
+    const mo = a.test.moodle;
+    const kindLabel = { answers: 'Antworten', grades: 'Bewertungen' };
+    return h(
+      'div',
+      { class: 'card' },
+      h(
+        'div',
+        { class: 'card-head' },
+        h('h2', null, 'Moodle'),
+        h('span', { class: 'muted small' }, 'Importiert am ', new Date(mo.importedAt).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }))
+      ),
+      h(
+        'div',
+        { class: 'inline wrap' },
+        (mo.files || []).map((f) => h('button', { class: 'btn btn-sm', title: 'Gespeicherte Originaldatei herunterladen', onclick: () => NM.util.download(f.name, f.text, 'text/csv;charset=utf-8') }, `⬇ ${kindLabel[f.kind] || 'CSV'}: ${f.name}`)),
+        h('button', { class: 'btn btn-sm', title: 'z. B. nach Korrekturen in Moodle: Punkte neu übernehmen, eigene Aufgaben und Einstellungen bleiben', onclick: () => moodleImport(course, db, a.half, a) }, '⬆ Erneut importieren')
+      ),
+      (mo.files || []).some((f) => f.kind === 'grades')
+        ? null
+        : h('p', { class: 'muted small' }, 'Ohne Bewertungen-CSV: Punkte per Textvergleich (Antwort = richtige Antwort). Korrekturen, die in Moodle von Hand vorgenommen wurden, fehlen.')
+    );
+  }
+
+  /** Dialog: Moodle-CSV-Dateien wählen, Personen zuordnen, in einen neuen (target = null) oder bestehenden Test übernehmen. */
+  async function moodleImport(course, db, half, target) {
+    const MO = NM.moodle;
+    const students = M.activeStudents(course);
+    let parsed = null;
+    let map = new Map();
+    const box = h('div');
+    const name = h('input', { class: 'input' });
+    const fileInput = h('input', {
+      class: 'input',
+      type: 'file',
+      accept: '.csv,text/csv',
+      multiple: true,
+      onchange: async (e) => {
+        const files = await Promise.all([...e.target.files].map(async (f) => ({ name: f.name, text: await f.text() })));
+        parsed = MO.parseExport(files);
+        map = MO.matchStudents(parsed.persons, students);
+        if (!target) name.value = parsed.title;
+        renderMap();
+      },
+    });
+
+    function renderMap() {
+      clear(box);
+      const kinds = parsed.files.map((f) => f.kind);
+      box.append(
+        parsed.warnings.map((w) => h('div', { class: 'alert alert-danger' }, w)),
+        !parsed.files.length
+          ? null
+          : h(
+              'p',
+              { class: 'small' },
+              kinds.includes('answers') ? '✓ Antworten-CSV (Fragen und Antworten)' : '– keine Antworten-CSV: der Ausdruck enthält keine Fragen und Antworten',
+              h('br'),
+              kinds.includes('grades') ? '✓ Bewertungen-CSV (Punkte je Frage, mit Korrekturen aus Moodle)' : '– keine Bewertungen-CSV: Punkte per Textvergleich, Korrekturen in Moodle fehlen',
+              h('br'),
+              `${parsed.questions.length} Fragen · ${parsed.persons.length} Personen`
+            )
+      );
+      if (!parsed.persons.length) return;
+      const assigned = new Set(map.values());
+      const rows = parsed.persons.map((p) =>
+        h(
+          'tr',
+          null,
+          h('td', null, [p.last, p.first].filter(Boolean).join(', ') || p.email, p.email ? h('div', { class: 'muted small' }, p.email) : null),
+          h('td', null, p.finished ? 'beendet' : h('span', { class: 'muted' }, 'nicht beendet → fehlt')),
+          h('td', { class: 'num' }, p.finished && p.total !== null ? `${fmtScore(p.total)} / ${fmtScore(parsed.totalMax)}` : ''),
+          h(
+            'td',
+            null,
+            h(
+              'select',
+              {
+                class: 'input input-sm',
+                onchange: (e) => {
+                  if (e.target.value) map.set(p, e.target.value);
+                  else map.delete(p);
+                  renderMap();
+                },
+              },
+              h('option', { value: '' }, '— nicht übernehmen —'),
+              students.map((s) => h('option', { value: s.id, selected: map.get(p) === s.id }, M.studentName(s) + (assigned.has(s.id) && map.get(p) !== s.id ? ' (schon zugeordnet)' : '')))
+            )
+          )
+        )
+      );
+      const without = students.filter((s) => !assigned.has(s.id));
+      box.append(
+        h('div', { class: 'table-wrap short' }, h('table', { class: 'table compact' }, h('thead', null, h('tr', null, h('th', null, 'Moodle'), h('th', null, 'Status'), h('th', { class: 'num' }, 'Punkte'), h('th', null, 'Kursmitglied'))), h('tbody', null, rows))),
+        without.length ? h('p', { class: 'muted small' }, 'Ohne Moodle-Ergebnis (bekommen „fehlt“, wenn noch keine Punkte eingetragen sind): ', without.map(M.studentName).join('; ')) : null
+      );
+    }
+
+    const v = await modal({
+      title: target ? `Moodle-Import erneut: ${target.name}` : 'Moodle-Import',
+      wide: true,
+      body: h(
+        'div',
+        null,
+        h('p', { class: 'small' }, 'Aus Moodle (Test → Ergebnisse) die Antworten-CSV und die Bewertungen-CSV herunterladen und hier beide auswählen. Die Note berechnet OrdoNota mit dem eigenen Notenschlüssel. Beide Dateien werden verschlüsselt im Test gespeichert.'),
+        target ? h('p', { class: 'small' }, 'Die Punkte der Moodle-Fragen werden ersetzt. Eigene Aufgaben, Notenschlüssel und Einstellungen bleiben erhalten.') : null,
+        h('label', { class: 'field' }, h('span', null, 'CSV-Dateien (eine oder beide)'), fileInput),
+        target ? null : h('label', { class: 'field' }, h('span', null, 'Bezeichnung'), name),
+        box
+      ),
+      buttons: [
+        { label: 'Abbrechen', value: null },
+        {
+          label: 'Importieren',
+          value: 'ok',
+          kind: 'primary',
+          validate: () => {
+            if (!parsed || !parsed.persons.length) return toast('Bitte zuerst die Moodle-CSV-Dateien wählen.', 'error'), false;
+            if (new Set(map.values()).size !== map.size) return toast('Ein Kursmitglied ist mehreren Moodle-Personen zugeordnet.', 'error'), false;
+            return true;
+          },
+        },
+      ],
+    });
+    if (v !== 'ok') return;
+    const sum = MO.applyImport(course, target, parsed, map, { half, settings: db.settings, name: name.value.trim() });
+    NM.app.state.ui.testId[course.id] = sum.assessment.id;
+    NM.app.saveUi();
+    NM.app.commit();
+    toast(`Moodle-Import: ${sum.imported} Ergebnisse übernommen` + (sum.missing.length ? `, ${sum.missing.length} × „fehlt“` : '') + '.', 'info', 5000);
+    if (sum.mismatch.length) toast(`Hinweis: Bei ${sum.mismatch.join(', ')} weicht die Summe der Fragenpunkte (gerundet) von der Moodle-Bewertung ab.`, 'warn', 9000);
+  }
+
+  /** Dialog: Moodle-Ergebnisse drucken (alle oder eine Person, mit oder ohne Note). */
+  async function moodlePrint(course, a) {
+    const level = G.courseLevel(course);
+    const withResult = M.activeStudents(course).filter((s) => G.testResult(a.test, s.id, level).score !== null);
+    const who = h('select', { class: 'input' }, h('option', { value: '' }, `Alle (${withResult.length}, je eine Seite)`), withResult.map((s) => h('option', { value: s.id }, M.studentName(s))));
+    const grade = h('input', { type: 'checkbox', checked: true });
+    const v = await modal({
+      title: 'Moodle-Ergebnisse drucken',
+      body: h('div', null, h('label', { class: 'field' }, h('span', null, 'Wer'), who), h('label', { class: 'check' }, grade, ' Note mit ausdrucken')),
+      buttons: [
+        { label: 'Abbrechen', value: null },
+        { label: '🖨 Drucken', value: 'ok', kind: 'primary' },
+      ],
+    });
+    if (v !== 'ok') return;
+    if (!withResult.length) return toast('Noch keine Ergebnisse zum Drucken.', 'error');
+    NM.print.moodle(course, a, { sid: who.value || null, withGrade: grade.checked });
+  }
+
+  NM.views.tests = { render, moodleImport };
 })((globalThis.NM = globalThis.NM || {}));

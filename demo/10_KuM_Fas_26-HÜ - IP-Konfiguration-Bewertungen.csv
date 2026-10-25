@@ -1,0 +1,14 @@
+﻿Nachname,Vorname,E-Mail-Adresse,Status,Begonnen,Beendet,Dauer,"Bewertung/14,00","F 1 /1,00","F 2 /1,00","F 3 /1,00","F 4 /1,00","F 5 /1,00","F 6 /1,00","F 7 /1,00","F 8 /1,00","F 9 /1,00","F 10 /1,00","F 11 /1,00","F 12 /1,00","F 13 /1,00","F 14 /1,00"
+Becker,Lea,lea.becker@example.org,In Bearbeitung,1. September 2026  10:05,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-
+Demir,Can,can.demir@example.org,Beendet,1. September 2026  10:05,1. September 2026  10:10,5 Minuten 10 Sekunden,7,1,1,1,0,0,1,1,1,-,0,-,-,1,0
+Fischer,Mia,mia.fischer@example.org,Beendet,1. September 2026  10:05,1. September 2026  10:09,4 Minuten 29 Sekunden,11,1,1,1,1,0,1,1,1,1,0,1,1,1,0
+Hoffmann,Paul,paul.hoffmann@example.org,Beendet,1. September 2026  10:05,1. September 2026  10:09,3 Minuten 57 Sekunden,11,1,1,0,1,0,1,1,1,1,1,1,1,1,0
+Jung,Emma,emma.jung@example.org,Beendet,1. September 2026  10:05,1. September 2026  10:12,7 Minuten 19 Sekunden,11,1,1,1,1,0,0,1,1,1,1,1,0,1,1
+Klein,Noah,noah.klein@example.org,Beendet,1. September 2026  10:05,1. September 2026  10:12,7 Minuten 33 Sekunden,12,1,1,1,1,1,0,1,1,1,1,1,0,1,1
+Lang,Sophie,sophie.lang@example.org,Beendet,1. September 2026  10:05,1. September 2026  10:09,4 Minuten 4 Sekunden,12,1,1,1,1,0,1,1,1,1,1,1,1,1,0
+Meyer,Ben,ben.meyer@example.org,Beendet,1. September 2026  10:05,1. September 2026  10:12,7 Minuten 11 Sekunden,12,1,1,1,1,0,1,1,1,1,1,1,1,1,0
+Neumann,Lina,lina.neumann@example.org,Beendet,1. September 2026  10:05,1. September 2026  10:10,5 Minuten 9 Sekunden,12,1,1,1,1,0,1,1,1,1,0,1,1,1,1
+Schmitt,Finn,finn.schmitt@example.org,Beendet,1. September 2026  10:05,1. September 2026  10:12,6 Minuten 31 Sekunden,13,1,1,1,1,0,1,1,1,1,1,1,1,1,1
+Wagner,Ella,ella.wagner@example.org,Beendet,1. September 2026  10:05,1. September 2026  10:12,7 Minuten 9 Sekunden,13,1,1,1,1,0,1,1,1,1,1,1,1,1,1
+Weber,Luis,luis.weber@example.org,Beendet,1. September 2026  10:05,1. September 2026  10:12,7 Minuten 17 Sekunden,14,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+Gesamtdurchschnitt,,,,,,,"11,64",1,1,"0,91","0,91","0,18","0,82",1,1,"0,91","0,73","0,91","0,73",1,"0,55"

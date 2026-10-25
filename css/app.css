@@ -557,6 +557,43 @@ body.no-grade-colors .p-grade[style*='--g-hue'] { background: none; }
 .p-slip-table { width: auto; }
 .p-slip-result { font-size: 10pt; }
 .p-big { font-size: 14pt; }
+/* Moodle-Ergebnisse: je Person eine Seite */
+.p-mr { --mr-ok: #2e7d32; --mr-ok-bg: #e8f5e9; --mr-part: #b26a00; --mr-part-bg: #fff4e0; --mr-wrong: #c62828; --mr-wrong-bg: #fdecea; --mr-none: #757575; --mr-none-bg: #f1f1f1; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.p-mr-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; padding-bottom: 8px; border-bottom: 1.5pt solid #000; }
+.p-mr-kicker { font-size: 8pt; letter-spacing: 0.08em; text-transform: uppercase; color: #666; }
+.p-mr-head h1 { font-size: 17pt; line-height: 1.2; margin: 1px 0 3px; }
+.p-mr-name { font-size: 12pt; font-weight: 600; }
+.p-mr-meta { text-align: right; font-size: 9pt; color: #333; line-height: 1.5; }
+.p-mr-summary { display: flex; align-items: center; gap: 22px; margin: 12px 0 14px; padding: 9px 14px; border: 0.75pt solid #bbb; border-radius: 6px; background: #f7f7f7; }
+.p-mr-tile { display: flex; flex-direction: column; }
+.p-mr-tile span { font-size: 7.5pt; letter-spacing: 0.06em; text-transform: uppercase; color: #666; }
+.p-mr-tile strong { font-size: 15pt; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.p-mr-tile small { font-size: 9pt; font-weight: 400; color: #444; }
+.p-mr-bar { flex: 1; height: 7px; border-radius: 4px; background: #e2e2e2; overflow: hidden; }
+.p-mr-bar > div { height: 100%; background: #444; }
+.p-mr-grade { padding-left: 18px; border-left: 0.75pt solid #bbb; }
+.p-mr-grade strong { font-size: 22pt; }
+.p-mr-table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 9pt; }
+.p-mr-table th { text-align: left; font-size: 7.5pt; letter-spacing: 0.05em; text-transform: uppercase; color: #555; font-weight: 600; padding: 0 6px 4px; border-bottom: 1pt solid #000; }
+.p-mr-table td { padding: 5px 6px; vertical-align: top; border-bottom: 0.5pt solid #d4d4d4; overflow-wrap: anywhere; line-height: 1.35; }
+.p-mr-table tr { break-inside: avoid; page-break-inside: avoid; }
+.p-mr-table td.p-mr-nr { text-align: right; color: #666; font-variant-numeric: tabular-nums; border-left: 3pt solid transparent; }
+.p-mr-table .p-mr-pts { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.p-mr-table td.p-mr-c { color: #555; }
+.p-mr-table td.p-mr-a em { color: #888; }
+.p-mr-sym { display: inline-block; width: 1.2em; margin-right: 4px; text-align: center; font-weight: 700; }
+.p-mr-ok td.p-mr-nr { border-left-color: var(--mr-ok); }
+.p-mr-ok .p-mr-sym { color: var(--mr-ok); }
+.p-mr-part td.p-mr-nr { border-left-color: var(--mr-part); }
+.p-mr-part td { background: var(--mr-part-bg); }
+.p-mr-part .p-mr-sym { color: var(--mr-part); }
+.p-mr-wrong td.p-mr-nr, .p-mr-none td.p-mr-nr { border-left-color: var(--mr-wrong); }
+.p-mr-wrong td { background: var(--mr-wrong-bg); }
+.p-mr-wrong .p-mr-sym { color: var(--mr-wrong); }
+.p-mr-wrong td.p-mr-c, .p-mr-none td.p-mr-c { color: #000; font-weight: 600; }
+.p-mr-none td { background: var(--mr-none-bg); }
+.p-mr-none .p-mr-sym { color: var(--mr-none); }
+.p-mr-legend { display: flex; gap: 14px; justify-content: flex-end; margin-top: 8px; font-size: 7.5pt; color: #666; }
 .p-epo td.c { min-width: 18px; }
 .p-seat-grid { width: 100%; border-collapse: separate; border-spacing: 2mm; table-layout: fixed; }
 .p-seat-grid td { height: 18mm; border: 0.8pt solid #000; border-radius: 2mm; text-align: center; vertical-align: middle; font-size: 11pt; font-weight: 600; overflow-wrap: anywhere; }

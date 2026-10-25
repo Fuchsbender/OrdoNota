@@ -6,6 +6,8 @@ Sicherungen/
 # Entschlüsselte Klartext-Ausgaben und Exporte
 *_klartext.json
 *.csv
+# Ausnahme: Moodle-Beispieldaten für den Demo-Modus (nur Demo-Namen)
+!demo/*.csv
 # Excel-Vorlagen mit echten Namen (und LibreOffice-Sperrdateien)
 *.xlsx
 *.xls

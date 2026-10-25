@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="de">
+<head><meta charset="utf-8"><title>Tests Moodle-Import</title></head>
+<body>
+<pre id="out"></pre>
+<script src="../js/util.js"></script>
+<script src="../js/grades.js"></script>
+<script src="../js/model.js"></script>
+<script src="../js/moodle.js"></script>
+<script>
+  const M = NM.model;
+  const G = NM.grades;
+  const MO = NM.moodle;
+  const lines = [];
+  let fails = 0;
+  const ok = (name, cond) => { if (!cond) fails++; lines.push((cond ? 'OK   ' : 'FAIL ') + name); };
+
+  // CSV-Zerlegung
+  const rows = MO.parseCsv('﻿a,"b, mit Komma","c ""zitiert"""\r\n1,"zwei\nZeilen",3\n\n');
+  ok('CSV: Anführungszeichen, Komma, Zeilenumbruch im Feld, BOM', rows.length === 2 && rows[0][1] === 'b, mit Komma' && rows[0][2] === 'c "zitiert"' && rows[1][1] === 'zwei\nZeilen');
+  ok('CSV: Semikolon wird erkannt', MO.parseCsv('a;b,c;d\n1;2;3')[0].length === 3);
+  ok('Datum aus Moodle', MO.parseDate('1. September 2026  10:05') === '2026-09-01' && MO.parseDate('-') === null);
+  ok('Auswahlmöglichkeiten vom Fragetext abgetrennt', MO.questionText('Welche Farbe?: Rot; Grün; Blau') === 'Welche Farbe?' && MO.questionText('Nur Text') === 'Nur Text');
+  ok('Genauigkeit 1 / 0,5 / 0,1', MO.precisionFor([1, 2]) === 1 && MO.precisionFor([1, 0.5]) === 0.5 && MO.precisionFor([0.71]) === 0.1);
+
+  // Export wie aus Moodle (anonymisiert): Antworten + Bewertungen, Korrektur in Moodle nur in der Bewertungen-CSV
+  const head = 'Nachname,Vorname,E-Mail-Adresse,Status,Begonnen,Beendet,Dauer,"Bewertung/3,00"';
+  const answers = [
+    head + ',Frage 1,Antwort 1,Richtige Antwort 1,Frage 2,Antwort 2,Richtige Antwort 2,Frage 3,Antwort 3,Richtige Antwort 3',
+    'Müller,Anna,anna@x.de,Beendet,1. September 2026  10:05,x,x,"2,00","Wie viel ist 2+2?: 3; 4; 5",4,4,Hauptstadt?,Bonn,Berlin,Farbe?,blau.,Blau',
+    'Schmidt,Jonas,jonas@x.de,Beendet,1. September 2026  10:05,x,x,"1,00",Wie viel ist 2+2?,5,4,Hauptstadt?,Berlin,Berlin,Farbe?,-,Blau',
+    'Schmidt,Jonas,jonas@x.de,Beendet,2. September 2026  10:05,x,x,"3,00",Wie viel ist 2+2?,4,4,Hauptstadt?,Berlin,Berlin,Farbe?,Blau,Blau',
+    'Weber,Lena,lena@x.de,In Bearbeitung,1. September 2026  10:05,-,-,-,Wie viel ist 2+2?,-,4,Hauptstadt?,-,Berlin,Farbe?,-,Blau',
+    'Fremd,Fritz,fritz@x.de,Beendet,1. September 2026  10:05,x,x,"3,00",Wie viel ist 2+2?,4,4,Hauptstadt?,Berlin,Berlin,Farbe?,Blau,Blau',
+  ].join('\n');
+  const grades = [
+    head + ',"F 1 /1,00","F 2 /1,00","F 3 /1,00"',
+    'Müller,Anna,anna@x.de,Beendet,1. September 2026  10:05,x,x,"2,50",1,"0,50",1',
+    'Schmidt,Jonas,jonas@x.de,Beendet,1. September 2026  10:05,x,x,"1,00",0,1,-',
+    'Schmidt,Jonas,jonas@x.de,Beendet,2. September 2026  10:05,x,x,"3,00",1,1,1',
+    'Weber,Lena,lena@x.de,In Bearbeitung,1. September 2026  10:05,-,-,-,-,-,-',
+    'Fremd,Fritz,fritz@x.de,Beendet,1. September 2026  10:05,x,x,"3,00",1,1,1',
+    'Gesamtdurchschnitt,,,,,,,"2,38","0,75","0,88","0,75"',
+  ].join('\n');
+  const p = MO.parseExport([{ name: '10_Info-HÜ 1 - Grundlagen-Antworten.csv', text: answers }, { name: '10_Info-HÜ 1 - Grundlagen-Bewertungen.csv', text: grades }]);
+  ok('Beide Dateien erkannt', p.files.map((f) => f.kind).sort().join() === 'answers,grades' && !p.warnings.length);
+  ok('Titel aus dem Dateinamen', p.title === 'HÜ 1 - Grundlagen');
+  ok('Fragen mit Höchstpunkten aus der Bewertungen-CSV', p.questions.length === 3 && p.questions.every((q) => q.max === 1) && p.totalMax === 3);
+  ok('Je Person ein Versuch, Durchschnittszeile ignoriert', p.persons.length === 4);
+  const anna = p.persons.find((x) => x.first === 'Anna');
+  ok('Punkte aus der Bewertungen-CSV (Moodle-Korrektur 0,5)', anna.scores[2] === 0.5 && anna.total === 2.5);
+  ok('Texte aus der Antworten-CSV', anna.answers[1].q === 'Wie viel ist 2+2?' && anna.answers[2].a === 'Bonn' && anna.answers[2].c === 'Berlin');
+  const jonas = p.persons.find((x) => x.first === 'Jonas');
+  ok('Mehrere Versuche: der beste zählt', jonas.total === 3 && jonas.date === '2026-09-02');
+  ok('Nicht beendeter Versuch erkannt', p.persons.find((x) => x.first === 'Lena').finished === false);
+
+  // Ohne Bewertungen-CSV: Textvergleich
+  const pa = MO.parseExport([{ name: 'x-Antworten.csv', text: answers }]);
+  const anna2 = pa.persons.find((x) => x.first === 'Anna');
+  ok('Ohne Bewertungen-CSV: Textvergleich (Groß/klein, Punkt am Ende egal)', anna2.scores[1] === 1 && anna2.scores[2] === 0 && anna2.scores[3] === 1);
+  ok('Keine Moodle-Datei → Warnung', MO.parseExport([{ name: 'a.csv', text: 'x,y\n1,2' }]).warnings.length === 1);
+
+  // Zuordnung und Übernahme
+  const db = M.newDb();
+  const c = M.newCourse(db.years[0].id, { klasse: '10a', fach: 'Info', jahrgang: 10, type: 'sek1' });
+  c.students = M.parseNames('Müller, Anna\nSchmidt, Jonas\nWeber, Lena\nZiegler, Tom');
+  c.students[3].email = 'fritz@x.de'; // gemerkte E-Mail
+  const map = MO.matchStudents(p.persons, c.students);
+  const sidOf = (first) => map.get(p.persons.find((x) => x.first === first));
+  ok('Zuordnung über Namen', sidOf('Anna') === c.students[0].id && sidOf('Jonas') === c.students[1].id && sidOf('Lena') === c.students[2].id);
+  ok('Zuordnung über gemerkte E-Mail', sidOf('Fritz') === c.students[3].id);
+  map.delete(p.persons.find((x) => x.first === 'Fritz')); // Fritz nicht übernehmen
+  const sum = MO.applyImport(c, null, p, map, { half: 'HJ1', settings: db.settings });
+  const a = sum.assessment;
+  const t = a.test;
+  ok('Neuer Test mit Aufgaben F1–F3', c.assessments.length === 1 && a.kind === 'test' && t.tasks.map((x) => x.name).join() === 'F1,F2,F3' && a.cat === 'other' && a.name === 'HÜ 1 - Grundlagen');
+  ok('Genauigkeit halbe Punkte', t.precision === 0.5);
+  ok('Punkte übernommen', G.testResult(t, c.students[0].id, 'sek1').score === 2.5 && G.testResult(t, c.students[1].id, 'sek1').score === 3);
+  ok('Note mit OrdoNota-Schlüssel', G.testResult(t, c.students[1].id, 'sek1').p === G.testResult({ ...t, results: { x: { scores: Object.fromEntries(t.tasks.map((k) => [k.id, k.max])) } } }, 'x', 'sek1').p);
+  ok('Nicht beendet und ohne Versuch → fehlt', t.results[c.students[2].id].status === 'fehlt' && t.results[c.students[3].id].status === 'fehlt' && sum.missing.length === 2);
+  ok('Unbeantwortete Frage zählt 0', t.results[c.students[0].id].scores[t.tasks[2].id] === 1);
+  ok('Antworttexte gespeichert', t.moodle.answers[c.students[0].id][t.tasks[1].id].a === 'Bonn');
+  ok('CSV-Dateien gespeichert', t.moodle.files.length === 2 && t.moodle.files[0].text.length > 100);
+  ok('E-Mail bei der Person gemerkt', c.students[0].email === 'anna@x.de');
+  ok('Summe passt zur Moodle-Bewertung', sum.imported === 2 && sum.mismatch.length === 0);
+
+  // Erneuter Import in denselben Test (z. B. nach Korrektur in Moodle): Aufgaben bleiben, Punkte werden ersetzt
+  const ids = t.tasks.map((x) => x.id).join();
+  t.tasks.push({ id: 'extra', name: 'Zusatz', max: 2 });
+  const p2 = MO.parseExport([{ name: 'x-Bewertungen.csv', text: grades.replace('Müller,Anna,anna@x.de,Beendet,1. September 2026  10:05,x,x,"2,50",1,"0,50",1', 'Mueller,Anni,anna@x.de,Beendet,1. September 2026  10:05,x,x,"3,00",1,1,1') }]);
+  const map2 = MO.matchStudents(p2.persons, c.students);
+  ok('Erneuter Import: Zuordnung über E-Mail trotz anderem Namen', map2.get(p2.persons.find((x) => x.email === 'anna@x.de')) === c.students[0].id);
+  MO.applyImport(c, a, p2, map2, {});
+  ok('Erneuter Import: gleiche Aufgaben, eigene Aufgabe bleibt', t.tasks.slice(0, 3).map((x) => x.id).join() === ids && t.tasks.length === 4 && c.assessments.length === 1);
+  ok('Erneuter Import: Punkte aktualisiert, Texte bleiben', G.testResult(t, c.students[0].id, 'sek1').score === 3 && t.moodle.answers[c.students[0].id][t.tasks[1].id].a === 'Bonn');
+  ok('Erneuter Import: Fritz jetzt über E-Mail (Tom) übernommen, „fehlt“ entfernt', !t.results[c.students[3].id].status && G.testResult(t, c.students[3].id, 'sek1').score === 3);
+
+  // Skalierte Moodle-Punkte (F n /0,71) → Zehntel; Abweichung der Summe wird gemeldet
+  const scaled = MO.parseExport([{ name: 'x-Bewertungen.csv', text: 'Nachname,Vorname,E-Mail-Adresse,Status,Begonnen,"Bewertung/10,00","F 1 /0,71","F 2 /0,71"\nMüller,Anna,anna@x.de,Beendet,1. September 2026,"5,00","0,71","0,71"' }]);
+  const c2 = M.newCourse(db.years[0].id, { jahrgang: 12, type: 'gk' });
+  c2.students = M.parseNames('Müller, Anna');
+  const s2 = MO.applyImport(c2, null, scaled, MO.matchStudents(scaled.persons, c2.students), { half: '12/1', settings: db.settings });
+  ok('Skalierte Punkte: Zehntel und Hinweis auf Abweichung', s2.assessment.test.precision === 0.1 && s2.mismatch.length === 1 && s2.assessment.test.limit === db.settings.limitMss);
+
+  document.getElementById('out').textContent = (fails ? `${fails} FEHLGESCHLAGEN` : 'ALLE TESTS BESTANDEN') + '\n\n' + lines.join('\n');
+</script>
+</body>
+</html>

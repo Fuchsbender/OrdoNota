@@ -169,6 +169,69 @@
     doPrint(`${a.name} – Schülerzettel`, h('div', { class: 'p-slips' }, slips));
   }
 
+  // ---------- Moodle-Ergebnisse ----------
+
+  const MOODLE_MARK = { ok: ['✓', 'richtig'], part: ['◐', 'teilweise'], wrong: ['✗', 'falsch'], none: ['–', 'keine Antwort'] };
+
+  /** Je Person eine Seite: Ergebnis oben, darunter Frage, Antwort, Lösung und Punkte; Note nur mit withGrade. */
+  function moodle(course, a, { sid = null, withGrade = true } = {}) {
+    const level = G.courseLevel(course);
+    const t = a.test;
+    const answers = (t.moodle && t.moodle.answers) || {};
+    const max = G.testMaxScore(t);
+    const students = M.activeStudents(course).filter((s) => (!sid || s.id === sid) && G.testResult(t, s.id, level).score !== null);
+    // Markierung nach Punkten (auch in Moodle von Hand korrigierte); „keine Antwort“ nur ohne Punkte
+    const mark = (v, task, x) => (v === undefined || v === null || v === '' ? '' : Number(v) >= Number(task.max) ? 'ok' : Number(v) > 0 ? 'part' : x.q && !x.a ? 'none' : 'wrong');
+    const tile = (label, value, cls) => h('div', { class: 'p-mr-tile' + (cls ? ' ' + cls : '') }, h('span', null, label), h('strong', null, value));
+    const pages = students.map((s) => {
+      const scores = (t.results[s.id] || {}).scores || {};
+      const ans = answers[s.id] || {};
+      const res = G.testResult(t, s.id, level);
+      const pct = max ? (res.score / max) * 100 : null;
+      const rows = t.tasks.map((task, i) => {
+        const x = ans[task.id] || {};
+        const v = scores[task.id];
+        const m = mark(v, task, x);
+        return h(
+          'tr',
+          { class: m ? 'p-mr-' + m : '' },
+          h('td', { class: 'p-mr-nr' }, task.moodleNr || i + 1),
+          h('td', { class: 'p-mr-q' }, x.q || task.name),
+          h('td', { class: 'p-mr-a' }, x.q ? x.a || h('em', null, 'keine Antwort') : ''),
+          h('td', { class: 'p-mr-c' }, x.c || ''),
+          h('td', { class: 'p-mr-pts' }, m ? h('span', { class: 'p-mr-sym', title: MOODLE_MARK[m][1] }, MOODLE_MARK[m][0]) : null, `${fmtScore(v)} / ${fmtScore(task.max)}${task.bonus ? ' B' : ''}`)
+        );
+      });
+      return h(
+        'div',
+        { class: 'p-page p-break p-mr' },
+        h(
+          'div',
+          { class: 'p-mr-head' },
+          h('div', null, h('div', { class: 'p-mr-kicker' }, 'Testergebnis'), h('h1', null, a.name), h('div', { class: 'p-mr-name' }, [s.first, s.last].filter(Boolean).join(' '))),
+          h('div', { class: 'p-mr-meta' }, h('strong', null, M.courseTitle(course)), h('div', null, 'Testdatum ', fmtDate(a.date)))
+        ),
+        h(
+          'div',
+          { class: 'p-mr-summary' },
+          tile('Punkte', `${fmtScore(res.score)} / ${fmtScore(max)}`),
+          pct === null ? null : tile('Prozent', fmtNum(pct, 1) + ' %'),
+          pct === null ? null : h('div', { class: 'p-mr-bar' }, h('div', { style: `width:${Math.max(0, Math.min(100, pct))}%` })),
+          withGrade && res.p !== null ? tile('Note', [G.label(res.p, level), level === 'mss' ? h('small', null, ` Punkte (${G.wholeGrade(res.p)}${G.tendency(res.p)})`) : null], 'p-mr-grade') : null
+        ),
+        h(
+          'table',
+          { class: 'p-mr-table' },
+          h('colgroup', null, h('col', { style: 'width:6%' }), h('col', { style: 'width:42%' }), h('col', { style: 'width:19%' }), h('col', { style: 'width:19%' }), h('col', { style: 'width:14%' })),
+          h('thead', null, h('tr', null, h('th', null, 'Nr.'), h('th', null, 'Frage'), h('th', null, 'Deine Antwort'), h('th', null, 'Lösung'), h('th', { class: 'p-mr-pts' }, 'Punkte'))),
+          h('tbody', null, rows)
+        ),
+        h('div', { class: 'p-mr-legend' }, Object.values(MOODLE_MARK).map(([sym, label]) => h('span', null, h('b', null, sym), ' ', label)))
+      );
+    });
+    doPrint(`${a.name} – Moodle-Ergebnisse`, h('div', null, pages));
+  }
+
   // ---------- EPO ----------
 
   function epo(course, a) {
@@ -490,5 +553,5 @@
     );
   }
 
-  NM.print = { test, epo, epoSlips, seating, course, studentsDialog };
+  NM.print = { test, moodle, epo, epoSlips, seating, course, studentsDialog };
 })((globalThis.NM = globalThis.NM || {}));
