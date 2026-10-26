@@ -8,8 +8,9 @@
   // die Daten falsch verstehen würden. Ältere Versionen öffnen solche Datenbanken dann nicht.
   // 2 (1.18): Arbeiten in Teilen – getrennt benotete Teile würden ältere Versionen falsch rechnen.
   // 3 (1.20): Präsentationen (kind "pres") – ältere Versionen kennen diese Leistungsart nicht.
-  const SCHEMA = 3;
-  const APP_VERSION = '1.22.1';
+  // 4 (1.23): Gruppenpräsentationen – ältere Versionen würden Gruppenwerte ignorieren und falsche Noten zeigen.
+  const SCHEMA = 4;
+  const APP_VERSION = '1.23.0';
 
   class NewerSchemaError extends Error {}
 
@@ -341,12 +342,14 @@
 
   /** Kriterium für eine Bewertung aus einem Pool-Eintrag (oder einem Kriterium einer früheren Bewertung). */
   function presCriterion(c) {
-    return { id: uid(), poolId: c.poolId || c.id, group: c.group || '', name: c.name, desc: Object.assign({}, c.desc || {}), weight: Number(c.weight) > 0 ? Number(c.weight) : 1 };
+    const out = { id: uid(), poolId: c.poolId || c.id, group: c.group || '', name: c.name, desc: Object.assign({}, c.desc || {}), weight: Number(c.weight) > 0 ? Number(c.weight) : 1 };
+    if (c.scope === 'person') out.scope = 'person'; // bei Gruppenpräsentationen je Person bewertet
+    return out;
   }
 
   /** Vorlage aus Kriterien (einer Bewertung oder aus dem Pool): Reihenfolge, Gewichte und Stufen werden kopiert. */
   function newPresTemplate(name, criteria) {
-    return { id: uid(), name, criteria: criteria.map((c) => ({ poolId: c.poolId || c.id, group: c.group || '', name: c.name, desc: Object.assign({}, c.desc || {}), weight: Number(c.weight) > 0 ? Number(c.weight) : 1 })) };
+    return { id: uid(), name, criteria: criteria.map((c) => Object.assign({ poolId: c.poolId || c.id, group: c.group || '', name: c.name, desc: Object.assign({}, c.desc || {}), weight: Number(c.weight) > 0 ? Number(c.weight) : 1 }, c.scope === 'person' ? { scope: 'person' } : {})) };
   }
 
   function kindLabel(a) {
@@ -417,6 +420,30 @@
       hw.pres.results[s.id] = { date: `2026-11-${String(17 + i).padStart(2, '0')}`, scores: Object.fromEntries(hw.pres.criteria.map((c, j) => [c.id, [3, 2, 3, 1, 2, 3][(i + j) % 6]])) };
     });
     c8.assessments.push(hw);
+    // Gruppenpräsentation: Inhalt und Medien für die Gruppe, Vortrag je Person; eine Abweichung
+    const gp = newPres(c8, 'HJ2', db.settings, db.criteriaPool.filter((x) => ['Fachliche Richtigkeit', 'Gliederung', 'Übersichtlichkeit', 'Freies Sprechen', 'Blickkontakt', 'Fragen beantworten'].includes(x.name)));
+    gp.name = 'Gruppenpräsentation Zufall';
+    gp.pres.groupMode = 'mixed';
+    gp.pres.criteria[0].weight = 2;
+    for (const c of gp.pres.criteria) if (['Freies Sprechen', 'Blickkontakt', 'Fragen beantworten'].includes(c.name)) c.scope = 'person';
+    const gs = c8.students;
+    gp.pres.groups = [
+      { id: 'gr1', name: 'Gruppe 1', topic: 'Laplace-Experimente', members: [gs[0].id, gs[3].id, gs[6].id], scores: {} },
+      { id: 'gr2', name: 'Gruppe 2', topic: 'Baumdiagramme', members: [gs[1].id, gs[4].id, gs[7].id, gs[10].id], scores: {} },
+      { id: 'gr3', name: 'Gruppe 3', topic: 'Simulation', members: [gs[2].id, gs[5].id, gs[8].id], scores: {} },
+    ];
+    gp.pres.groups.forEach((g, gi) => {
+      gp.pres.criteria.forEach((c, j) => {
+        if (c.scope !== 'person') g.scores[c.id] = [3, 2, 2, 3, 1][(gi + j) % 5];
+      });
+      g.members.forEach((sid, mi) => {
+        gp.pres.results[sid] = { scores: Object.fromEntries(gp.pres.criteria.filter((c) => c.scope === 'person').map((c, j) => [c.id, Math.max(0, 3 - ((gi + mi + j) % 4))])) };
+      });
+    });
+    gp.pres.results[gs[4].id].scores[gp.pres.criteria[0].id] = 1; // Abweichung: fachlich schwächer als die Gruppe
+    gp.pres.results[gs[4].id].note = 'Fachteil unsicher, bei Nachfragen Lücken.';
+    gp.pres.results[gs[8].id] = { status: 'fehlt' };
+    c8.assessments.push(gp);
     // Klassenarbeit in zwei Teilen, gemeinsam bepunktet (ein Schlüssel über alle Punkte)
     const t2 = newTest(c8, 'HJ2', db.settings);
     t2.name = 'KA 2 – Geometrie';

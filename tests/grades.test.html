@@ -245,6 +245,35 @@
     eq('Präsentation zählt zu den sonstigen Leistungen', G.halfResult(course, 'HJ1', 'x').other, (1 + 3) / 2);
   }
 
+  // Gruppenpräsentationen: Gruppenwert gilt für alle Mitglieder, eine eigene Bewertung ersetzt ihn
+  {
+    const crit = [{ id: 'i', name: 'Inhalt', weight: 2 }, { id: 'm', name: 'Medien' }, { id: 'v', name: 'Vortrag', scope: 'person' }];
+    const gp = {
+      limit: 50,
+      custom: {},
+      groupMode: 'mixed',
+      criteria: crit,
+      groups: [{ id: 'g', name: 'G1', topic: 'Thema G', members: ['a', 'b', 'c', 'f'], scores: { i: 3, m: 2, v: 0 } }],
+      results: { a: { scores: { v: 3 } }, b: { scores: { v: 1, i: 1 } }, f: { status: 'fehlt' }, e: { scores: { i: 2, m: 2, v: 2 }, topic: 'Einzel' } },
+    };
+    eq('Gruppe: Gruppenwerte + eigenes Personenkriterium', G.presScores(gp, 'a'), { i: 3, m: 2, v: 3 });
+    eq('Gruppe: Abweichung ersetzt den Gruppenwert', G.presScores(gp, 'b'), { i: 1, m: 2, v: 1 });
+    eq('Gruppe: Personenkriterium übernimmt keinen Gruppenwert', G.presScores(gp, 'c'), { i: 3, m: 2 });
+    eq('Gruppe: Summe mit Gewicht (3×2 + 2 + 3 = 11 von 12)', [G.presResult(gp, 'a', 'sek1').score, G.presResult(gp, 'a', 'sek1').max], [11, 12]);
+    eq('Gruppe: Mitglied ohne eigenen Eintrag bekommt Punkte', G.presResult(gp, 'c', 'sek1').score, 8);
+    eq('Gruppe: Status je Person (fehlt → keine Note)', G.presResult(gp, 'f', 'sek1').p, null);
+    eq('Gruppe: Person ohne Gruppe wird einzeln bewertet', [G.presResult(gp, 'e', 'sek1').score, G.presGroupOf(gp, 'e')], [8, null]);
+    eq('Gruppe: Abweichung erkannt (nur bei Gruppenkriterien)', [G.presDeviation(gp, 'b', crit[0]), G.presDeviation(gp, 'b', crit[2]), G.presDeviation(gp, 'a', crit[0])], [true, false, false]);
+    eq('Gruppe: Thema der Gruppe, eigenes geht vor', [G.presTopic(gp, 'a'), G.presTopic(gp, 'e'), G.presTopic(gp, 'x')], ['Thema G', 'Einzel', '']);
+    eq('Gruppe: Statistik zählt alle Mitglieder', G.presStats(gp, ['a', 'b', 'c', 'f', 'e'], 'sek1').n, 4);
+    const all = Object.assign({}, gp, { groupMode: 'group' });
+    eq('Modus „alles als Gruppe“: auch Personenkriterien aus der Gruppe', G.presScores(all, 'c'), { i: 3, m: 2, v: 0 });
+    const off = Object.assign({}, gp, { groupMode: undefined });
+    eq('Ohne Gruppenmodus: Gruppen werden ignoriert', [G.presScores(off, 'c'), G.presGroupOf(off, 'a')], [{}, null]);
+    const course = { jahrgang: 8, type: 'sek1', wKa: 50, wOther: 50, assessments: [{ id: 'gp', kind: 'pres', half: 'HJ1', cat: 'other', weight: 1, pres: gp }] };
+    eq('Gruppe: Note fließt in die Halbjahresnote', G.halfResult(course, 'HJ1', 'c').other !== null, true);
+  }
+
   lines.unshift(fails === 0 ? 'ALLE TESTS BESTANDEN' : fails + ' FEHLGESCHLAGEN');
   
   document.getElementById('out').textContent = lines.join('\n');

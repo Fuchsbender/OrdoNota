@@ -353,16 +353,57 @@
     return w > 0 ? w : 1;
   }
 
+  // Gruppenpräsentationen (1.23): pres.groupMode = 'mixed' (je Kriterium Gruppe/Person über c.scope) | 'group' (alles als
+  // Gruppe); pres.groups = [{ id, name, members: [sid], topic?, date?, note?, scores: { critId: 0–3 } }].
+  // Eine Einzelbewertung results[sid].scores[critId] ersetzt bei Gruppenkriterien den Gruppenwert (Abweichung).
+
+  const filled = (v) => v !== null && v !== undefined && v !== '';
+
+  function presGroupOf(pres, sid) {
+    if (!pres.groupMode) return null;
+    return (pres.groups || []).find((g) => (g.members || []).includes(sid)) || null;
+  }
+
+  /** Wird dieses Kriterium für die Gruppe bewertet? */
+  function presCritIsGroup(pres, c) {
+    return pres.groupMode === 'group' || (pres.groupMode === 'mixed' && c.scope !== 'person');
+  }
+
+  /** Rohpunkte (0–3) einer Person je Kriterium: Gruppenwert, ersetzt durch eine eigene Bewertung. */
+  function presScores(pres, sid) {
+    const own = ((pres.results || {})[sid] || {}).scores || {};
+    const g = presGroupOf(pres, sid);
+    const out = {};
+    for (const c of pres.criteria || []) {
+      if (filled(own[c.id])) out[c.id] = Number(own[c.id]);
+      else if (g && presCritIsGroup(pres, c) && filled((g.scores || {})[c.id])) out[c.id] = Number(g.scores[c.id]);
+    }
+    return out;
+  }
+
+  /** Weicht die Person bei diesem Kriterium vom Gruppenwert ab (eigene Bewertung bei einem Gruppenkriterium)? */
+  function presDeviation(pres, sid, c) {
+    const g = presGroupOf(pres, sid);
+    return !!g && presCritIsGroup(pres, c) && filled((((pres.results || {})[sid] || {}).scores || {})[c.id]);
+  }
+
+  /** Thema einer Person: eigenes oder das der Gruppe. */
+  function presTopic(pres, sid) {
+    const g = presGroupOf(pres, sid);
+    return ((pres.results || {})[sid] || {}).topic || (g && g.topic) || '';
+  }
+
   /** Präsentation als Test: Kriterium = Aufgabe mit 3 × Gewicht Punkten, Punkte × Gewicht. */
   function presAsTest(pres) {
     const crit = pres.criteria || [];
     const results = {};
-    for (const [sid, r] of Object.entries(pres.results || {})) {
+    const ids = new Set(Object.keys(pres.results || {}));
+    if (pres.groupMode) for (const g of pres.groups || []) for (const sid of g.members || []) ids.add(sid);
+    for (const sid of ids) {
+      const r = (pres.results || {})[sid] || {};
+      const raw = presScores(pres, sid);
       const scores = {};
-      for (const c of crit) {
-        const v = (r.scores || {})[c.id];
-        if (v !== null && v !== undefined && v !== '') scores[c.id] = Number(v) * critWeight(c);
-      }
+      for (const c of crit) if (filled(raw[c.id])) scores[c.id] = raw[c.id] * critWeight(c);
       results[sid] = { scores, status: r.status };
     }
     return {
@@ -622,6 +663,11 @@
     partWeight,
     PRES_MAX,
     critWeight,
+    presGroupOf,
+    presCritIsGroup,
+    presScores,
+    presDeviation,
+    presTopic,
     presAsTest,
     presResult,
     presStats,

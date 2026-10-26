@@ -1,6 +1,6 @@
 # OrdoNota – Dokumentation
 
-Version 1.22.1 · Stand Oktober 2026
+Version 1.23.0 · Stand Oktober 2026
 
 OrdoNota (bis Version 1.11 „Notenmanager“) verwaltet Noten für die Sekundarstufe I (Noten 1–6 mit Tendenz) und die Mainzer Studienstufe (MSS, Punkte 00–15) an Schulen in Rheinland-Pfalz. Die App läuft vollständig lokal im Browser, verschlüsselt alle Daten mit einem Passwort und legt sie in einem Ordner ab, den der Synology Drive Client auf die DiskStation spiegelt.
 
@@ -132,7 +132,7 @@ Der Browser merkt sich den Datenordner. Beim nächsten Start erscheint direkt **
 
 ### 3.5 Demo-Modus
 
-`index.html?demo` öffnet die App mit Beispieldaten (Kurs 8b Mathe, Sek I, und MSS 12 M LK). Enthalten sind u. a. Arbeiten in Teilen (8b, 2. HJ: „KA 2 – Geometrie“, zwei Teile gemeinsam bepunktet; MSS 12: „Kursarbeit 2 – Analysis“, drei Teile getrennt benotet mit Gewicht 1 : 2 : 1, eine Person mit fehlendem Teil) und Präsentationen (8b, 2. HJ: „Referat Statistik“ und „HA vorstellen“ nach der Standardvorlage; MSS 12: „Kurzvortrag Extremwerte“). Statt echter Fotos hat jede Person ein Personensymbol, damit sich Sitzplan und Fotoanzeige im EPO ausprobieren lassen. **Nichts wird gespeichert.** Der Demo-Modus eignet sich zum Ausprobieren und Kennenlernen. Zum Ausprobieren des Moodle-Imports (Abschnitt 7.7) liegen im Ordner `demo/` eine Antworten- und eine Bewertungen-CSV, deren Namen zum Kurs 8b Mathe passen.
+`index.html?demo` öffnet die App mit Beispieldaten (Kurs 8b Mathe, Sek I, und MSS 12 M LK). Enthalten sind u. a. Arbeiten in Teilen (8b, 2. HJ: „KA 2 – Geometrie“, zwei Teile gemeinsam bepunktet; MSS 12: „Kursarbeit 2 – Analysis“, drei Teile getrennt benotet mit Gewicht 1 : 2 : 1, eine Person mit fehlendem Teil) und Präsentationen (8b, 2. HJ: „Referat Statistik“ und „HA vorstellen“ nach der Standardvorlage, „Gruppenpräsentation Zufall“ mit drei Gruppen, Personenkriterien und einer Abweichung; MSS 12: „Kurzvortrag Extremwerte“). Statt echter Fotos hat jede Person ein Personensymbol, damit sich Sitzplan und Fotoanzeige im EPO ausprobieren lassen. **Nichts wird gespeichert.** Der Demo-Modus eignet sich zum Ausprobieren und Kennenlernen. Zum Ausprobieren des Moodle-Imports (Abschnitt 7.7) liegen im Ordner `demo/` eine Antworten- und eine Bewertungen-CSV, deren Namen zum Kurs 8b Mathe passen.
 
 ## 4. Arbeiten mit mehreren Geräten
 
@@ -475,7 +475,24 @@ Eine **Vorlage** ist ein benannter Satz von Kriterien mit Reihenfolge, Gewichten
 
 Bewertungen sind unabhängig von ihrer Vorlage: Spätere Änderungen an der Vorlage oder ihr Löschen ändern bestehende Bewertungen nicht.
 
-> Präsentationen brauchen OrdoNota ab Version 1.20 auf allen Geräten (Datenformat 3, siehe 21.10).
+### 8a.6 Gruppenpräsentationen
+
+Bei einer Gruppenpräsentation wird die Gruppe **einmal** bewertet, und die Punkte gelten für alle Mitglieder. Einzelne Kriterien lassen sich für eine Person abweichend bewerten. Jede Person bekommt weiter ihre eigene Note.
+
+1. **Form wählen** (Eckdaten, vor dem Bewerten):
+   - **Einzelpräsentation** – wie bisher.
+   - **Gruppen – Kriterien je Gruppe oder Person:** In der Karte „Kriterien“ legt die Spalte **„Bewertet“** für jedes Kriterium fest, ob es einmal für die Gruppe (Standard, z. B. Inhalt, Gliederung, Medien) oder für jede Person einzeln bewertet wird (z. B. Freies Sprechen, Blickkontakt, Fragen beantworten). Die Einstellung wird in Vorlagen mitgespeichert.
+   - **Gruppen – alles als Gruppe:** Alle Kriterien werden für die Gruppe bewertet; Unterschiede nur über Abweichungen.
+2. **Gruppen bilden** in der Karte **„Gruppen“**: „+ Gruppe“, Namen ändern, Personen über „+ Person“ hinzufügen und mit × herausnehmen, Gruppe mit ✕ löschen. **„Gruppen übernehmen von …“** kopiert die Gruppen (ohne Punkte) einer anderen Präsentation des Kurses. Personen ohne Gruppe werden einzeln bewertet; eine Präsentation darf also gemischt sein.
+3. **Bewerten** mit dem Umschalter **Gruppe / Person**:
+   - **Gruppe:** Gruppe wählen (‹ ›), Thema und Datum der Gruppe, Knöpfe 0–3 für die Gruppenkriterien; darunter je Mitglied die Personenkriterien, Summe, Note und Status. „einzeln ›“ springt zur Personenansicht.
+   - **Person:** alle Kriterien einer Person. Bei Gruppenkriterien ist der Gruppenwert vorgewählt. Ein anderer Wert gilt als **Abweichung (◆)** und ersetzt den Gruppenwert nur für diese Person; **„↺ Gruppenwert“** nimmt sie zurück.
+   - **Übersicht:** Spalte „Gruppe“; Gruppenwerte grau und kursiv, Abweichungen farbig markiert. Eine andere Zahl in einer Gruppenzelle ist eine Abweichung; Leeren oder der Gruppenwert stellt den Gruppenwert wieder her.
+4. **Status** (fehlt, Nachschreiben …) und Bemerkung gelten je Person. Die Bemerkung zur Gruppe erscheint auf den Bewertungsbögen aller Mitglieder.
+5. **Ausdrucke:** Die Bewertungsliste ist nach Gruppen geordnet (mit Gruppenspalte, ◆ für Abweichungen, je Kriterium „Gruppe“/„Person“). Bewertungsbögen zeigen Gruppe, Gruppenthema und bei jedem Kriterium „für die Gruppe“ bzw. „je Person“; die Handreichung erklärt das Verfahren.
+6. **Zurück zur Einzelpräsentation:** Die Gruppen werden aufgelöst, Gruppenwerte und -themen werden als Einzelbewertung der Mitglieder übernommen – die Noten bleiben gleich.
+
+> Präsentationen brauchen OrdoNota ab Version 1.20 auf allen Geräten (Datenformat 3), Gruppenpräsentationen ab Version 1.23 (Datenformat 4, siehe 21.10).
 
 ## 9. Reiter „Notenübersicht“
 
@@ -761,6 +778,10 @@ Je Kriterium 0–3 Punkte, multipliziert mit dem Gewicht des Kriteriums (×1, ×
 
 **Beispiel (Sek I, LIMIT 50 %):** fünf Kriterien, eines ×2 → Höchstpunktzahl 18. Bewertung 2 (×2), 1, 0, 3, 2 → 4 + 1 + 0 + 3 + 2 = 10 Punkte = 55,6 % → **4**.
 
+**Gruppenpräsentationen:** Je Person und Kriterium zählt die eigene Bewertung, wenn es eine gibt, sonst – bei einem Gruppenkriterium – der Gruppenwert. Personenkriterien übernehmen nie einen Gruppenwert (im Modus „alles als Gruppe“ sind alle Kriterien Gruppenkriterien). Daraus wird für jede Person wie oben die Note berechnet; Notenspiegel, Ø und Drittelparagraph zählen jede Person einzeln. Die zusammengeführten Punkte werden nie gespeichert (`NM.grades.presScores`).
+
+*Beispiel:* Inhalt (×2) und Medien für die Gruppe mit 3 und 2, Vortrag je Person. Anna bekommt beim Vortrag 3 → 6 + 2 + 3 = 11 von 12. Ben weicht beim Inhalt ab (1) und hat beim Vortrag 1 → 2 + 2 + 1 = 5 von 12.
+
 ## 16. Mitarbeit/EPO-Berechnung
 
 Für jede Person und jeden EPO-Block:
@@ -1019,7 +1040,7 @@ Berechnete Werte (Schnitte, Testnoten, EPO-Noten) werden **nie gespeichert**, so
   "kdf": "PBKDF2-SHA256",
   "savedAt": "2026-10-14T21:57:03.123Z",
   "device": "Laptop Schule",
-  "app": "1.22.1",
+  "app": "1.23.0",
   "pw":   { "salt": "<b64>", "iter": 600000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "rec":  { "salt": "<b64>", "iter": 100000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "data": { "iv": "<b64>", "ct": "<b64: verschlüsseltes JSON des Datenmodells>" }
@@ -1037,12 +1058,12 @@ Berechnete Werte (Schnitte, Testnoten, EPO-Noten) werden **nie gespeichert**, so
 
 ## 24. Datenmodell
 
-Entschlüsselter Inhalt (`schema: 3`):
+Entschlüsselter Inhalt (`schema: 4`):
 
 ```js
 {
-  schema: 3,                             // Datenformat (siehe 26.2)
-  savedWith: "1.22.1",                    // App-Version beim letzten Speichern
+  schema: 4,                             // Datenformat (siehe 26.2)
+  savedWith: "1.23.0",                    // App-Version beim letzten Speichern
   created: "<ISO>", savedAt: "<ISO>",
   settings: { autoLockMin, limitSek1, limitMss, precision, keepBackups, backupEveryMin, gradeColors,
               pomodoro: { enabled, count, work, short, long, tick: "off" | "work" | "always", alarm: "off" | "bell" | "gong" | "beep", volume } },
@@ -1088,8 +1109,11 @@ Assessment = {
              lessons: [ { id, date } ],
              entries: { "<sid>": { "<lessonId>": { r: "++"|"+"|"0"|"-"|"--"|"k"|"", hw: "u"|"h"|"" } } } },
   pres?:   { limit, custom: { "<p>": Mindestpunktzahl }, wholeGrades?,
-             criteria: [ { id, poolId, group, name, desc: { 0, 1, 2, 3 }, weight } ],   // Kopie aus dem Pool
+             criteria: [ { id, poolId, group, name, desc: { 0, 1, 2, 3 }, weight, scope?: "person" } ],   // Kopie aus dem Pool
+             groupMode?: "mixed" | "group",   // seit 1.23: Gruppenpräsentation (fehlt = einzeln)
+             groups?: [ { id, name, members: [sid], topic?, date?, note?, scores: { "<criterionId>": 0..3 } } ],
              results: { "<sid>": { scores: { "<criterionId>": 0..3 }, topic?, date?, note?, status? } } }
+             // bei Gruppen: results[sid].scores eines Gruppenkriteriums = Abweichung vom Gruppenwert
 }
 ```
 
@@ -1115,7 +1139,7 @@ Das Skript startet einen unsichtbaren Chromium-Browser (Chrome, Edge, Chromium, 
 2. den Start der App im Demo-Modus und alle Reiter für einen Sek-I- und einen MSS-Kurs ohne JavaScript-Fehler,
 3. das Sortieren per Klick auf Spaltenköpfe (Tests, EPO, Notenübersicht; Richtung und leere Werte unten),
 4. den Pomodoro-Timer (Aktivieren, Farben je Zustand, Phasenwechsel, Zurücksetzen, Einstellungsdialog), das Layout des Reiters „Einstellungen“ bei aktivem Timer (keine Lücken zwischen den Karten, Auswahllisten nicht abgeschnitten, bei 1570 und 2560 px) und die Kürzel in der eingeklappten Kursliste, die weichen Übergänge (nur bei Reiter-, Kurs- und Halbjahreswechsel), das Ein-/Ausklappen der Kursliste, den Reiter „Tests“ in voller Breite, Arbeiten in Teilen (einschalten, Aufgaben und Punkte je Teil, Teil ausblenden, getrennt benoten, Status je Teil, Schlüssel je Teil, Ausdrucke inkl. „Ergebnisse nach Teilen“, Beamer, Teile aufheben), die Druckauswahl „🖨 Drucken …“ in Tests, EPO und Notenübersicht (Gruppen, Tooltips, Auswahl druckt, Abbrechen nicht) und den Haken „Unterschrift gesehen“ bei Klassenarbeiten (Zähler, Ausdruck), den Moodle-Import (Dateiauswahl im Dialog, Zuordnung, Status „fehlt“, Ausdruck mit und ohne Note, erneuter Import),
-5. den Excel-Export der Schülerliste (gültiges ZIP/XML, Umlaute und Sonderzeichen), das Kurs-Löschen nur mit „LÖSCHEN“, das Ein-/Ausblenden der Fotos im EPO-Reiter und im Sitzplan (auch im Druck) das Erweitern/Verkleinern des Sitzplan-Rasters an allen vier Seiten sowie das Ziehen (keine Wiederholung bis zum Auffüllen, automatisches Auffüllen, Note, Rückgängig, Abwesende/Herausgenommene) und den Reiter „Präsentationen“ (Bewerten per Knopf und in der Tabelle, Gewicht, Kriterien aus dem Pool und eigene, Vorlage, Ausdrucke, Spalte in der Notenübersicht, Pool bearbeiten, Startbestand ergänzen, Vorlagen speichern/anlegen/verwenden/drucken/löschen, Standardvorlagen vorhanden und ergänzen, Handreichung mit Notenschlüssel),
+5. den Excel-Export der Schülerliste (gültiges ZIP/XML, Umlaute und Sonderzeichen), das Kurs-Löschen nur mit „LÖSCHEN“, das Ein-/Ausblenden der Fotos im EPO-Reiter und im Sitzplan (auch im Druck) das Erweitern/Verkleinern des Sitzplan-Rasters an allen vier Seiten sowie das Ziehen (keine Wiederholung bis zum Auffüllen, automatisches Auffüllen, Note, Rückgängig, Abwesende/Herausgenommene) und den Reiter „Präsentationen“ (Bewerten per Knopf und in der Tabelle, Gewicht, Kriterien aus dem Pool und eigene, Vorlage, Ausdrucke, Spalte in der Notenübersicht, Pool bearbeiten, Startbestand ergänzen, Vorlagen speichern/anlegen/verwenden/drucken/löschen, Standardvorlagen vorhanden und ergänzen, Handreichung mit Notenschlüssel) und Gruppenpräsentationen (Gruppenwert für alle Mitglieder, Personenkriterien, Abweichung setzen/zurücksetzen, Tabelle, Gruppen bearbeiten/übernehmen, Druck, Auflösen ohne Notenänderung),
 6. das Notfallwerkzeug: Eine von der App echt verschlüsselte Datenbank wird mit `tools/entschluesseln.py` per Passwort und per Wiederherstellungsschlüssel entschlüsselt und mit dem Original verglichen. Dazu kommen falsches Passwort, manipulierte Datei und CSV-Ausgabe.
 
 Am Ende steht `ERGEBNIS: x von y bestanden`. Der Exit-Code ist 0, wenn alles bestanden ist.
@@ -1126,8 +1150,8 @@ Am Ende steht `ERGEBNIS: x von y bestanden`. Der Exit-Code ist 0, wenn alles bes
 
 | Datei | Prüft | Ausführen |
 |---|---|---|
-| `tests/grades.test.html` | Skalen, Eingabe-Parser, Rundung, Notenschlüssel (Vergleich mit Excel-Formeln), Bonus/Kappung, Status, Drittelparagraph, EPO (Werte aus der bisherigen EPO-Liste), Halbjahres-/Jahresnote, GK-Gewichtung, Präsentationen (Gewicht, Status, Schlüssel, Halbjahresnote), Arbeiten in Teilen (gemeinsam/getrennt, Gewichte, fehlender Teil, Status je Teil, ganze Noten je Teil, MSS) | im Browser öffnen |
-| `tests/model.test.html` | Migration älterer Datenbanken (SCHEMA 1 → 3, Kriterienpool, Startbestand ergänzen, Vorlagen, Standardvorlagen), neue Präsentation, Ablehnung neuerer Datenformate, Erhalt unbekannter Felder, Namensliste | im Browser öffnen |
+| `tests/grades.test.html` | Skalen, Eingabe-Parser, Rundung, Notenschlüssel (Vergleich mit Excel-Formeln), Bonus/Kappung, Status, Drittelparagraph, EPO (Werte aus der bisherigen EPO-Liste), Halbjahres-/Jahresnote, GK-Gewichtung, Präsentationen (Gewicht, Status, Schlüssel, Halbjahresnote, Gruppen: Gruppenwert, Abweichung, Personenkriterium, Modus „alles als Gruppe“), Arbeiten in Teilen (gemeinsam/getrennt, Gewichte, fehlender Teil, Status je Teil, ganze Noten je Teil, MSS) | im Browser öffnen |
+| `tests/model.test.html` | Migration älterer Datenbanken (SCHEMA 1 → 4, Kriterienpool, Startbestand ergänzen, Vorlagen, Standardvorlagen), neue Präsentation, Ablehnung neuerer Datenformate, Erhalt unbekannter Felder, Namensliste | im Browser öffnen |
 | `tests/moodle.test.html` | CSV-Zerlegung, Erkennen und Zusammenführen von Antworten-/Bewertungen-CSV, bester Versuch, Textvergleich ohne Bewertungen, Zuordnung (Name, gemerkte E-Mail), Übernahme als Test, „fehlt“, erneuter Import, skalierte Punkte, Import in einen Teil | im Browser öffnen |
 | `tests/pomodoro.test.html` | Ablauf der Phasen (mit/ohne kurze bzw. lange Pause), Standardwerte, Migration der Einstellungen | im Browser öffnen |
 | `tests/crypto.test.html` | Anlegen, Entsperren, falsches Passwort, Wiederherstellungsschlüssel, Passwortwechsel, alte Sicherungen, Manipulationserkennung | im Browser öffnen (dauert einige Sekunden) |
@@ -1156,8 +1180,8 @@ In `js/model.js` stehen zwei Nummern:
 
 | Konstante | Bedeutung | Wann erhöhen |
 |---|---|---|
-| `APP_VERSION` (z. B. `1.22.1`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.22.1` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
-| `SCHEMA` (z. B. `3`) | Version des Datenformats (2 seit 1.18: Arbeiten in Teilen; 3 seit 1.20: Präsentationen) | nur, wenn eine **ältere** App-Version die neuen Daten falsch verstehen würde (z. B. ein Feld ändert seine Bedeutung) |
+| `APP_VERSION` (z. B. `1.23.0`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.23.0` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
+| `SCHEMA` (z. B. `4`) | Version des Datenformats (2 seit 1.18: Arbeiten in Teilen; 3 seit 1.20: Präsentationen; 4 seit 1.23: Gruppenpräsentationen) | nur, wenn eine **ältere** App-Version die neuen Daten falsch verstehen würde (z. B. ein Feld ändert seine Bedeutung) |
 
 Öffnet eine App eine Datenbank mit höherem `SCHEMA`, verweigert sie das mit einer Meldung (siehe 21.10). Neue, nur *zusätzliche* Felder brauchen kein neues `SCHEMA`: Ältere Versionen lassen unbekannte Felder unverändert und speichern sie mit.
 

@@ -9,6 +9,9 @@
   const LEVELS = [0, 1, 2, 3];
   const WEIGHTS = [1, 2, 3];
   const selected = {}; // gerade bewertete Person je Bewertung (nur bis zum Neuladen)
+  const selectedGroup = {}; // gerade bewertete Gruppe je Bewertung
+  const rateMode = {}; // 'group' | 'person' je Bewertung (Gruppenpräsentationen)
+  const has = (v) => v !== undefined && v !== null && v !== '';
 
   function render(view, { course, db }) {
     const level = G.courseLevel(course);
@@ -45,11 +48,14 @@
       return;
     }
     view.append(
-      metaCard(course, cur, level),
-      criteriaCard(db, cur),
-      h('div', { class: 'test-layout' }, h('div', { class: 'pres-main' }, rateCard(course, cur, level), tableCard(course, cur, level)), keyCard(course, cur, level)),
-      templatesCard(course, db),
-      poolCard(db)
+      ...[
+        metaCard(course, cur, level),
+        criteriaCard(db, cur),
+        cur.pres.groupMode ? groupsCard(course, cur) : null,
+        h('div', { class: 'test-layout' }, h('div', { class: 'pres-main' }, rateCard(course, cur, level), tableCard(course, cur, level)), keyCard(course, cur, level)),
+        templatesCard(course, db),
+        poolCard(db),
+      ].filter(Boolean)
     );
   }
 
@@ -161,6 +167,18 @@
         h(
           'label',
           { class: 'field' },
+          h('span', null, 'Form'),
+          h(
+            'select',
+            { class: 'input', 'data-focus-key': 'pres-mode', title: 'Gruppenpräsentation: Die Gruppe wird einmal bewertet, die Punkte gelten für alle Mitglieder; einzelne Kriterien lassen sich je Person abweichend bewerten.', onchange: (e) => setGroupMode(a, e.target.value) },
+            h('option', { value: '', selected: !p.groupMode }, 'Einzelpräsentation'),
+            h('option', { value: 'mixed', selected: p.groupMode === 'mixed' }, 'Gruppen – Kriterien je Gruppe oder Person'),
+            h('option', { value: 'group', selected: p.groupMode === 'group' }, 'Gruppen – alles als Gruppe')
+          )
+        ),
+        h(
+          'label',
+          { class: 'field' },
           h('span', null, 'Wertung'),
           h(
             'label',
@@ -246,7 +264,7 @@
         { label: '🖨 Drucken', value: 'ok', kind: 'primary' },
       ],
     });
-    if (v === 'ok') NM.print.presGuide({ title: a.name, course, criteria: a.pres.criteria, key: withKey.checked ? G.keyForPres(a.pres, level) : null, level });
+    if (v === 'ok') NM.print.presGuide({ title: a.name, course, criteria: a.pres.criteria, key: withKey.checked ? G.keyForPres(a.pres, level) : null, level, groupMode: a.pres.groupMode || null });
   }
 
   async function sheetsDialog(course, a) {
@@ -269,7 +287,7 @@
   // ---------- Kriterien der Bewertung ----------
 
   function used(p, c) {
-    return Object.values(p.results).some((r) => r.scores && r.scores[c.id] !== undefined && r.scores[c.id] !== null && r.scores[c.id] !== '');
+    return [...Object.values(p.results), ...(p.groups || [])].some((r) => r.scores && has(r.scores[c.id]));
   }
 
   function criteriaCard(db, a) {
@@ -299,6 +317,27 @@
           )
         ),
         h('td', { class: 'num' }, fmtScore(3 * G.critWeight(c))),
+        p.groupMode === 'mixed'
+          ? h(
+              'td',
+              null,
+              h(
+                'select',
+                {
+                  class: 'input input-sm',
+                  'aria-label': 'Bewertet für ' + c.name,
+                  'data-focus-key': `crit-scope-${c.id}`,
+                  onchange: (e) => {
+                    if (e.target.value === 'person') c.scope = 'person';
+                    else delete c.scope;
+                    NM.app.commit();
+                  },
+                },
+                h('option', { value: 'group', selected: c.scope !== 'person' }, 'Gruppe'),
+                h('option', { value: 'person', selected: c.scope === 'person' }, 'je Person')
+              )
+            )
+          : null,
         h(
           'td',
           null,
@@ -317,7 +356,7 @@
                 onclick: async () => {
                   if (used(p, c) && !(await confirmDialog('Kriterium entfernen?', `Für „${c.name}“ sind schon Punkte vergeben. Sie werden gelöscht.`, { okLabel: 'Entfernen', danger: true }))) return;
                   p.criteria = p.criteria.filter((x) => x !== c);
-                  for (const r of Object.values(p.results)) if (r.scores) delete r.scores[c.id];
+                  for (const r of [...Object.values(p.results), ...(p.groups || [])]) if (r.scores) delete r.scores[c.id];
                   NM.app.commit();
                 },
               },
@@ -331,7 +370,7 @@
       'div',
       { class: 'card' },
       h('div', { class: 'card-head' }, h('h2', null, 'Kriterien'), h('span', { class: 'muted' }, `je 0–3 Punkte · Höchstpunktzahl ${fmtScore(max)}`)),
-      p.criteria.length ? h('div', { class: 'table-wrap' }, h('table', { class: 'table compact crit-table' }, h('thead', null, h('tr', null, h('th', null, 'Gruppe'), h('th', null, 'Kriterium'), h('th', null, 'Gewicht'), h('th', { class: 'num' }, 'max.'), h('th', null, ''))), h('tbody', null, rows))) : h('p', { class: 'muted' }, 'Noch keine Kriterien.'),
+      p.criteria.length ? h('div', { class: 'table-wrap' }, h('table', { class: 'table compact crit-table' }, h('thead', null, h('tr', null, h('th', null, 'Gruppe'), h('th', null, 'Kriterium'), h('th', null, 'Gewicht'), h('th', { class: 'num' }, 'max.'), p.groupMode === 'mixed' ? h('th', { title: 'Gruppenkriterien werden einmal für die Gruppe bewertet, die anderen für jede Person' }, 'Bewertet') : null, h('th', null, ''))), h('tbody', null, rows))) : h('p', { class: 'muted' }, 'Noch keine Kriterien.'),
       h(
         'div',
         { class: 'inline wrap' },
@@ -415,12 +454,316 @@
     NM.app.commit();
   }
 
-  // ---------- Bewerten (eine Person, große Knöpfe) ----------
+  // ---------- Gruppen (Gruppenpräsentationen) ----------
+
+  async function setGroupMode(a, v) {
+    const p = a.pres;
+    if (!v && p.groupMode) {
+      const busy = (p.groups || []).some((g) => g.members.length);
+      if (busy && !(await confirmDialog('Gruppen auflösen?', 'Die Gruppen werden aufgelöst. Gruppenwerte und Themen werden als Einzelbewertung der Mitglieder übernommen – die Noten bleiben gleich.', { okLabel: 'Auflösen' }))) return NM.app.rerender();
+      for (const g of p.groups || []) {
+        for (const sid of g.members) {
+          const r = (p.results[sid] = p.results[sid] || {});
+          r.scores = G.presScores(p, sid);
+          if (!r.topic && g.topic) r.topic = g.topic;
+          if (!r.date && g.date) r.date = g.date;
+        }
+      }
+      delete p.groupMode;
+      delete p.groups;
+    } else if (v) {
+      p.groupMode = v;
+      p.groups = p.groups || [];
+    }
+    NM.app.commit();
+  }
+
+  function groupsCard(course, a) {
+    const p = a.pres;
+    p.groups = p.groups || [];
+    const inGroup = new Set(p.groups.flatMap((g) => g.members));
+    const free = M.activeStudents(course).filter((s) => !inGroup.has(s.id));
+    const nameOf = (sid) => {
+      const s = course.students.find((x) => x.id === sid);
+      return s ? M.studentName(s) : '?';
+    };
+    const sources = course.assessments.filter((x) => x.kind === 'pres' && x !== a && (x.pres.groups || []).some((g) => g.members.length));
+    const rows = p.groups.map((g) =>
+      h(
+        'div',
+        { class: 'grp-row' },
+        h('input', {
+          class: 'input input-sm grp-name',
+          value: g.name,
+          'aria-label': 'Name der Gruppe',
+          'data-focus-key': `grp-name-${g.id}`,
+          onchange: (e) => {
+            g.name = e.target.value.trim() || g.name;
+            NM.app.commit();
+          },
+        }),
+        h(
+          'div',
+          { class: 'grp-members' },
+          g.members.map((sid) =>
+            h(
+              'span',
+              { class: 'chip grp-chip' },
+              nameOf(sid),
+              h(
+                'button',
+                {
+                  class: 'chip-x',
+                  title: 'Aus der Gruppe nehmen (eigene Bewertungen bleiben)',
+                  'aria-label': `Aus ${g.name} nehmen: ${nameOf(sid)}`,
+                  onclick: () => {
+                    g.members = g.members.filter((x) => x !== sid);
+                    NM.app.commit();
+                  },
+                },
+                '×'
+              )
+            )
+          ),
+          free.length
+            ? h(
+                'select',
+                {
+                  class: 'input input-sm grp-add',
+                  'aria-label': `Person zu ${g.name} hinzufügen`,
+                  'data-focus-key': `grp-add-${g.id}`,
+                  onchange: (e) => {
+                    if (!e.target.value) return;
+                    g.members.push(e.target.value);
+                    NM.app.commit();
+                  },
+                },
+                h('option', { value: '' }, '+ Person'),
+                free.map((s) => h('option', { value: s.id }, M.studentName(s)))
+              )
+            : null
+        ),
+        h(
+          'button',
+          {
+            class: 'icon-btn',
+            title: 'Gruppe löschen',
+            'aria-label': 'Gruppe löschen: ' + g.name,
+            onclick: async () => {
+              const rated = Object.values(g.scores || {}).some(has);
+              if ((rated || g.members.length) && !(await confirmDialog('Gruppe löschen?', `„${g.name}“ löschen?` + (rated ? ' Die Gruppenwerte gehen verloren;' : '') + ' die Mitglieder werden dann einzeln bewertet (eigene Bewertungen bleiben).', { okLabel: 'Löschen', danger: true }))) return;
+              p.groups = p.groups.filter((x) => x !== g);
+              NM.app.commit();
+            },
+          },
+          '✕'
+        )
+      )
+    );
+    const addGroup = () => {
+      let n = p.groups.length + 1;
+      while (p.groups.some((g) => g.name === 'Gruppe ' + n)) n++;
+      p.groups.push({ id: NM.util.uid(), name: 'Gruppe ' + n, members: [], scores: {} });
+      NM.app.commit();
+    };
+    const importFrom = async (id) => {
+      const src = sources.find((x) => x.id === id);
+      if (!src) return;
+      if (p.groups.some((g) => g.members.length) && !(await confirmDialog('Gruppen ersetzen?', 'Die bisherigen Gruppen dieser Bewertung (mit ihren Gruppenwerten) werden ersetzt.', { okLabel: 'Ersetzen', danger: true }))) return NM.app.rerender();
+      const ids = new Set(course.students.map((s) => s.id));
+      p.groups = src.pres.groups.filter((g) => g.members.length).map((g) => ({ id: NM.util.uid(), name: g.name, members: g.members.filter((sid) => ids.has(sid)), scores: {} }));
+      NM.app.commit();
+      toast(`${p.groups.length} Gruppen aus „${src.name}“ übernommen.`, 'info');
+    };
+    return h(
+      'div',
+      { class: 'card grp-card' },
+      h('div', { class: 'card-head' }, h('h2', null, 'Gruppen'), h('span', { class: 'muted small' }, p.groupMode === 'group' ? 'alle Kriterien werden für die Gruppe bewertet; Abweichungen je Person unter „Bewerten → Person“' : 'Gruppenkriterien einmal für die Gruppe, die anderen je Person (Spalte „Bewertet“ bei den Kriterien)')),
+      rows.length ? h('div', { class: 'grp-list' }, rows) : h('p', { class: 'muted' }, 'Noch keine Gruppen.'),
+      h(
+        'div',
+        { class: 'inline wrap' },
+        h('button', { class: 'btn btn-ghost', 'data-focus-key': 'grp-new', onclick: addGroup }, '+ Gruppe'),
+        sources.length
+          ? h(
+              'select',
+              { class: 'input input-sm', 'aria-label': 'Gruppen übernehmen von', 'data-focus-key': 'grp-import', onchange: (e) => importFrom(e.target.value) },
+              h('option', { value: '' }, 'Gruppen übernehmen von …'),
+              sources.map((x) => h('option', { value: x.id }, `${x.name} (${x.half}, ${x.pres.groups.filter((g) => g.members.length).length} Gruppen)`))
+            )
+          : null
+      ),
+      h('p', { class: 'muted small' }, free.length ? `Ohne Gruppe (werden einzeln bewertet): ${free.map((s) => M.studentName(s)).join(', ')}` : 'Alle aktiven Personen sind einer Gruppe zugeordnet.')
+    );
+  }
+
+  // ---------- Bewerten (große Knöpfe; bei Gruppen wahlweise für die Gruppe oder eine Person) ----------
+
+  /** Zeile mit Knöpfen 0–3 für ein Kriterium; value: angezeigter Wert. */
+  function rateRow(c, value, onPick, { disabled = false, note = null, key, compact = false }) {
+    const on = has(value);
+    return h(
+      'div',
+      { class: 'rate-row' + (compact ? ' compact' : '') },
+      h('div', { class: 'rate-name' }, h('strong', null, c.name), G.critWeight(c) !== 1 ? h('span', { class: 'chip' }, '×' + G.critWeight(c)) : null, h('div', { class: 'muted small' }, on ? (c.desc || {})[value] || '' : c.group || ''), note),
+      h(
+        'div',
+        { class: 'rate-btns', role: 'group', 'aria-label': c.name },
+        LEVELS.map((n) =>
+          h(
+            'button',
+            {
+              class: 'rate-btn' + (on && Number(value) === n ? ' active' : ''),
+              title: `${n}: ${(c.desc || {})[n] || ''}`,
+              'aria-pressed': String(on && Number(value) === n),
+              'data-focus-key': `${key}-${n}`,
+              disabled,
+              onclick: () => onPick(n),
+            },
+            n
+          )
+        )
+      )
+    );
+  }
+
+  /** Wert setzen; nochmal auf denselben Wert klicken hebt ihn auf. */
+  function toggleScore(scores, id, n) {
+    if (has(scores[id]) && Number(scores[id]) === n) delete scores[id];
+    else scores[id] = n;
+    NM.app.commit();
+  }
 
   function rateCard(course, a, level) {
-    const p = a.pres;
     const students = M.activeStudents(course);
     if (!students.length) return h('div', { class: 'card' }, h('p', { class: 'muted' }, 'Bitte zuerst im Reiter „Kurs & Schüler“ Namen eintragen.'));
+    const groups = a.pres.groupMode ? (a.pres.groups || []).filter((g) => g.members.length) : [];
+    const mode = groups.length ? rateMode[a.id] || 'group' : 'person';
+    const toggle = groups.length
+      ? h(
+          'div',
+          { class: 'segmented', role: 'group', 'aria-label': 'Bewerten für' },
+          [
+            ['group', 'Gruppe'],
+            ['person', 'Person'],
+          ].map(([v, label]) =>
+            h(
+              'button',
+              {
+                class: 'seg' + (mode === v ? ' active' : ''),
+                'aria-pressed': String(mode === v),
+                'data-focus-key': 'rate-mode-' + v,
+                onclick: () => {
+                  rateMode[a.id] = v;
+                  NM.app.rerender();
+                },
+              },
+              label
+            )
+          )
+        )
+      : null;
+    return mode === 'group' ? groupRateCard(course, a, level, groups, toggle) : personRateCard(course, a, level, students, toggle);
+  }
+
+  function groupRateCard(course, a, level, groups, toggle) {
+    const p = a.pres;
+    const idx = Math.max(0, groups.findIndex((g) => g.id === selectedGroup[a.id]));
+    const g = groups[idx];
+    g.scores = g.scores || {};
+    const pick = (i) => {
+      selectedGroup[a.id] = groups[(i + groups.length) % groups.length].id;
+      NM.app.rerender();
+    };
+    const setField = (key) => (e) => {
+      const v = e.target.value.trim();
+      if (v) g[key] = v;
+      else delete g[key];
+      NM.app.commit();
+    };
+    const groupCrit = p.criteria.filter((c) => G.presCritIsGroup(p, c));
+    const personCrit = p.criteria.filter((c) => !G.presCritIsGroup(p, c));
+    const members = g.members.map((sid) => course.students.find((x) => x.id === sid)).filter(Boolean);
+    const memberBlock = (s) => {
+      const r = (p.results[s.id] = p.results[s.id] || { scores: {} });
+      r.scores = r.scores || {};
+      const res = G.presResult(p, s.id, level);
+      const devs = groupCrit.filter((c) => G.presDeviation(p, s.id, c));
+      return h(
+        'div',
+        { class: 'grp-member' + (r.status ? ' row-muted' : '') },
+        h(
+          'div',
+          { class: 'grp-member-head' },
+          h('strong', null, M.studentName(s)),
+          devs.length ? h('span', { class: 'chip dev-chip', title: 'Weicht ab bei: ' + devs.map((c) => c.name).join(', ') }, `◆ ${devs.length} abweichend`) : null,
+          h('span', { class: 'grp-member-res' }, res.score === null ? '' : `${fmtScore(res.score)} / ${fmtScore(res.max)} `, res.p === null ? h('span', { class: 'muted small' }, r.status ? UI.STATUS_SHORT[r.status] : 'noch keine Note') : UI.gradeBadge(res.p, level)),
+          UI.statusSelect(r.status, (v) => {
+            r.status = v;
+            NM.app.commit();
+          }, `grp-status-${s.id}`),
+          h(
+            'button',
+            {
+              class: 'link tiny',
+              title: 'Alle Kriterien dieser Person bewerten, auch abweichend von der Gruppe',
+              'data-focus-key': `grp-person-${s.id}`,
+              onclick: () => {
+                selected[a.id] = s.id;
+                rateMode[a.id] = 'person';
+                NM.app.rerender();
+              },
+            },
+            'einzeln ›'
+          )
+        ),
+        personCrit.map((c) => rateRow(c, r.scores[c.id], (n) => toggleScore(r.scores, c.id, n), { disabled: !!r.status && r.status !== 'ungewertet', key: `grp-${s.id}-${c.id}`, compact: true }))
+      );
+    };
+    return h(
+      'div',
+      { class: 'card rate-card' },
+      h(
+        'div',
+        { class: 'card-head' },
+        h('h2', null, 'Bewerten'),
+        toggle,
+        h(
+          'div',
+          { class: 'inline' },
+          h('button', { class: 'icon-btn', title: 'Vorherige Gruppe', 'aria-label': 'Vorherige Gruppe', onclick: () => pick(idx - 1) }, '‹'),
+          h(
+            'select',
+            {
+              class: 'input input-sm',
+              'aria-label': 'Gruppe',
+              'data-focus-key': 'rate-group',
+              onchange: (e) => {
+                selectedGroup[a.id] = e.target.value;
+                NM.app.rerender();
+              },
+            },
+            groups.map((x) => h('option', { value: x.id, selected: x === g }, `${x.name} (${x.members.length})` + (groupCrit.length && groupCrit.every((c) => has((x.scores || {})[c.id])) ? ' ✓' : '')))
+          ),
+          h('button', { class: 'icon-btn', title: 'Nächste Gruppe', 'aria-label': 'Nächste Gruppe', onclick: () => pick(idx + 1) }, '›')
+        )
+      ),
+      h(
+        'div',
+        { class: 'form-row' },
+        h('label', { class: 'field grow' }, h('span', null, 'Thema der Gruppe'), h('input', { class: 'input', value: g.topic || '', 'data-focus-key': `grp-topic-${g.id}`, onchange: setField('topic') })),
+        h('label', { class: 'field' }, h('span', null, 'Datum'), h('input', { class: 'input', type: 'date', value: g.date || '', onchange: setField('date') }))
+      ),
+      h('h3', { class: 'rate-sub' }, 'Für die ganze Gruppe'),
+      groupCrit.length ? h('div', { class: 'rate-list' }, groupCrit.map((c) => rateRow(c, g.scores[c.id], (n) => toggleScore(g.scores, c.id, n), { key: `grp-${c.id}` }))) : h('p', { class: 'muted' }, 'Keine Gruppenkriterien – alle Kriterien werden je Person bewertet.'),
+      h('h3', { class: 'rate-sub' }, personCrit.length ? 'Mitglieder – je Person' : 'Mitglieder'),
+      h('div', { class: 'grp-member-list' }, members.map(memberBlock)),
+      h('label', { class: 'field' }, h('span', null, 'Bemerkung zur Gruppe (erscheint auf den Bewertungsbögen aller Mitglieder)'), h('textarea', { class: 'input', rows: 2, 'data-focus-key': `grp-note-${g.id}`, onchange: setField('note') }, g.note || ''))
+    );
+  }
+
+  function personRateCard(course, a, level, students, toggle) {
+    const p = a.pres;
     const idx = Math.max(0, students.findIndex((s) => s.id === selected[a.id]));
     const s = students[idx];
     const pick = (i) => {
@@ -430,6 +773,8 @@
     const r = (p.results[s.id] = p.results[s.id] || { scores: {} });
     r.scores = r.scores || {};
     const res = G.presResult(p, s.id, level);
+    const g = G.presGroupOf(p, s.id);
+    const eff = G.presScores(p, s.id);
     const setField = (key) => (e) => {
       const v = e.target.value.trim();
       if (v) r[key] = v;
@@ -437,34 +782,42 @@
       NM.app.commit();
     };
     const rows = p.criteria.map((c) => {
-      const v = r.scores[c.id];
-      const has = v !== undefined && v !== null && v !== '';
-      return h(
-        'div',
-        { class: 'rate-row' },
-        h('div', { class: 'rate-name' }, h('strong', null, c.name), G.critWeight(c) !== 1 ? h('span', { class: 'chip' }, '×' + G.critWeight(c)) : null, h('div', { class: 'muted small' }, has ? (c.desc || {})[v] || '' : c.group || '')),
-        h(
-          'div',
-          { class: 'rate-btns', role: 'group', 'aria-label': c.name },
-          LEVELS.map((n) =>
-            h(
-              'button',
-              {
-                class: 'rate-btn' + (has && Number(v) === n ? ' active' : ''),
-                title: `${n}: ${(c.desc || {})[n] || ''}`,
-                'aria-pressed': String(has && Number(v) === n),
-                'data-focus-key': `rate-${c.id}-${n}`,
-                disabled: !!r.status && r.status !== 'ungewertet',
-                onclick: () => {
-                  if (has && Number(v) === n) delete r.scores[c.id];
-                  else r.scores[c.id] = n;
-                  NM.app.commit();
-                },
-              },
-              n
-            )
+      const own = r.scores[c.id];
+      const fromGroup = !!g && G.presCritIsGroup(p, c);
+      const gv = fromGroup ? (g.scores || {})[c.id] : undefined;
+      const dev = fromGroup && has(own);
+      const note = fromGroup
+        ? h(
+            'div',
+            { class: 'small ' + (dev ? 'dev-note' : 'muted') },
+            dev ? `◆ abweichend – Gruppe: ${has(gv) ? gv : '–'} ` : `Gruppenwert (${g.name})`,
+            dev
+              ? h(
+                  'button',
+                  {
+                    class: 'link tiny',
+                    title: 'Eigene Bewertung löschen, wieder den Gruppenwert verwenden',
+                    'data-focus-key': `rate-reset-${c.id}`,
+                    onclick: () => {
+                      delete r.scores[c.id];
+                      NM.app.commit();
+                    },
+                  },
+                  '↺ Gruppenwert'
+                )
+              : null
           )
-        )
+        : null;
+      return rateRow(
+        c,
+        eff[c.id],
+        (n) => {
+          // Gruppenwert gewählt → keine Abweichung; sonst setzen bzw. bei gleichem Wert aufheben
+          if ((fromGroup && has(gv) && Number(gv) === n) || (has(own) && Number(own) === n)) delete r.scores[c.id];
+          else r.scores[c.id] = n;
+          NM.app.commit();
+        },
+        { disabled: !!r.status && r.status !== 'ungewertet', note, key: `rate-${c.id}` }
       );
     });
     return h(
@@ -474,6 +827,7 @@
         'div',
         { class: 'card-head' },
         h('h2', null, 'Bewerten'),
+        toggle,
         h(
           'div',
           { class: 'inline' },
@@ -494,10 +848,11 @@
           h('button', { class: 'icon-btn', title: 'Nächste Person', 'aria-label': 'Nächste Person', onclick: () => pick(idx + 1) }, '›')
         )
       ),
+      g ? h('p', { class: 'small muted' }, `Mitglied von ${g.name}` + (g.topic ? ` („${g.topic}“)` : '') + ' – Gruppenkriterien übernehmen den Gruppenwert; ein anderer Wert gilt als Abweichung (◆).') : null,
       h(
         'div',
         { class: 'form-row' },
-        h('label', { class: 'field grow' }, h('span', null, 'Thema'), h('input', { class: 'input', value: r.topic || '', 'data-focus-key': `rate-topic-${s.id}`, onchange: setField('topic') })),
+        h('label', { class: 'field grow' }, h('span', null, 'Thema'), h('input', { class: 'input', value: r.topic || '', placeholder: (g && g.topic) || '', 'data-focus-key': `rate-topic-${s.id}`, onchange: setField('topic') })),
         h('label', { class: 'field' }, h('span', null, 'Datum'), h('input', { class: 'input', type: 'date', value: r.date || '', onchange: setField('date') })),
         h(
           'label',
@@ -527,9 +882,12 @@
     const p = a.pres;
     const all = M.activeStudents(course);
     const results = new Map(all.map((s) => [s.id, G.presResult(p, s.id, level)]));
-    const raw = (s, c) => ((p.results[s.id] || {}).scores || {})[c.id];
+    const eff = new Map(all.map((s) => [s.id, G.presScores(p, s.id)]));
+    const raw = (s, c) => eff.get(s.id)[c.id];
+    const groupName = (s) => (G.presGroupOf(p, s.id) || {}).name || null;
     const sort = UI.sorter('pres', {
-      topic: { get: (s) => (p.results[s.id] || {}).topic || null, first: 'asc' },
+      group: { get: groupName, first: 'asc' },
+      topic: { get: (s) => G.presTopic(p, s.id) || null, first: 'asc' },
       ...Object.fromEntries(p.criteria.map((c) => ['crit:' + c.id, { get: (s) => raw(s, c), first: 'desc' }])),
       sum: { get: (s) => results.get(s.id).score, first: 'desc' },
       grade: { get: (s) => results.get(s.id).p, first: 'desc' },
@@ -540,8 +898,9 @@
       'tr',
       null,
       sort.nameHeads(),
+      p.groupMode ? h('th', null, sort.head('group', 'Gruppe')) : null,
       h('th', null, sort.head('topic', 'Thema')),
-      p.criteria.map((c) => h('th', { class: 'center task-col', title: c.name }, sort.head('crit:' + c.id, h('span', { class: 'col-head' }, h('span', { class: 'col-name crit-short' }, c.name), h('span', { class: 'col-sub' }, '0–3' + (G.critWeight(c) !== 1 ? ' ×' + G.critWeight(c) : '')))))),
+      p.criteria.map((c) => h('th', { class: 'center task-col', title: c.name + (p.groupMode && G.presCritIsGroup(p, c) ? ' (Gruppe)' : '') }, sort.head('crit:' + c.id, h('span', { class: 'col-head' }, h('span', { class: 'col-name crit-short' }, c.name), h('span', { class: 'col-sub' }, '0–3' + (G.critWeight(c) !== 1 ? ' ×' + G.critWeight(c) : '')))))),
       h('th', { class: 'num' }, sort.head('sum', 'Σ')),
       h('th', { class: 'num' }, '%'),
       h('th', { class: 'center' }, sort.head('grade', 'Note')),
@@ -552,17 +911,24 @@
       const r = (p.results[s.id] = p.results[s.id] || { scores: {} });
       r.scores = r.scores || {};
       const res = results.get(s.id);
+      const g = G.presGroupOf(p, s.id);
+      const topic = G.presTopic(p, s.id);
       return h(
         'tr',
         { class: (r.status ? 'row-muted' : '') + (selected[a.id] === s.id ? ' row-current' : '') },
         UI.nameCells(s),
-        h('td', { class: 'muted small topic-col', title: r.topic || '' }, r.topic || ''),
-        p.criteria.map((c, ci) =>
-          h(
+        p.groupMode ? h('td', { class: 'small' }, g ? g.name : h('span', { class: 'muted' }, 'einzeln')) : null,
+        h('td', { class: 'muted small topic-col', title: topic }, topic),
+        p.criteria.map((c, ci) => {
+          const fromGroup = !!g && G.presCritIsGroup(p, c);
+          const gv = fromGroup ? (g.scores || {})[c.id] : undefined;
+          const dev = fromGroup && has(r.scores[c.id]);
+          return h(
             'td',
-            { class: 'center task-col' },
+            { class: 'center task-col', title: dev ? `abweichend – Gruppe: ${has(gv) ? gv : '–'} (leeren = Gruppenwert)` : fromGroup ? `Gruppenwert (${g.name}); eine andere Zahl gilt nur für diese Person` : null },
             UI.numberInput({
-              value: r.scores[c.id],
+              value: raw(s, c),
+              cls: dev ? 'dev' : fromGroup && has(gv) ? 'from-group' : '',
               grid: 'pres-' + a.id,
               row: ri,
               col: ci,
@@ -573,13 +939,13 @@
                   toast('Je Kriterium 0, 1, 2 oder 3 Punkte.', 'error');
                   return NM.app.rerender();
                 }
-                if (v === null) delete r.scores[c.id];
+                if (v === null || (fromGroup && has(gv) && Number(gv) === v)) delete r.scores[c.id];
                 else r.scores[c.id] = v;
                 NM.app.commit();
               },
             })
-          )
-        ),
+          );
+        }),
         h('td', { class: 'num strong' }, res.score === null ? '' : fmtScore(res.score)),
         h('td', { class: 'num muted' }, res.score === null || !res.max ? '' : fmtNum((res.score / res.max) * 100, 0)),
         h('td', { class: 'center' }, res.p === null ? (r.status ? h('span', { class: 'muted small' }, UI.STATUS_SHORT[r.status]) : '') : UI.gradeBadge(res.p, level)),

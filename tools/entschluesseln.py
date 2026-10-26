@@ -97,6 +97,21 @@ def _label(p, mss):
     return f"{ganz}{tendenz}"
 
 
+def _praes_punkte(pr, sid):
+    """Rohpunkte (0–3) je Kriterium einer Präsentation; bei Gruppen gilt der Gruppenwert, eine eigene Bewertung ersetzt ihn."""
+    leer = (None, "")
+    eigen = pr.get("results", {}).get(sid, {}).get("scores", {})
+    modus = pr.get("groupMode")
+    gruppe = next((g for g in pr.get("groups", []) if sid in g.get("members", [])), None) if modus else None
+    out = {}
+    for c in pr.get("criteria", []):
+        if eigen.get(c["id"]) not in leer:
+            out[c["id"]] = float(eigen[c["id"]])
+        elif gruppe and (modus == "group" or c.get("scope") != "person") and gruppe.get("scores", {}).get(c["id"]) not in leer:
+            out[c["id"]] = float(gruppe["scores"][c["id"]])
+    return out, gruppe
+
+
 def _teilpunkte(t, r):
     """Rohpunkte je Teil einer Arbeit in Teilen, z. B. „Theorie 8 + Praxis nachschreiben“."""
     teile = t.get("parts", [])
@@ -150,11 +165,16 @@ def schreibe_csv(daten, ordner):
                     else:
                         z.append(r.get("status") or text)
                 elif a.get("kind") == "pres":
-                    r = a.get("pres", {}).get("results", {}).get(sid, {})
-                    gewicht = {c["id"]: float(c.get("weight") or 1) for c in a.get("pres", {}).get("criteria", [])}
-                    punkte = sum(float(v) * gewicht.get(k, 1) for k, v in r.get("scores", {}).items() if v not in (None, ""))
-                    text = f"{punkte:g} Pkt." if r.get("scores") else ""
-                    z.append(r.get("status") or (f'{text} ({r["topic"]})' if text and r.get("topic") else text))
+                    pr = a.get("pres", {})
+                    r = pr.get("results", {}).get(sid, {})
+                    gewicht = {c["id"]: float(c.get("weight") or 1) for c in pr.get("criteria", [])}
+                    werte, gruppe = _praes_punkte(pr, sid)
+                    punkte = sum(v * gewicht.get(k, 1) for k, v in werte.items())
+                    text = f"{punkte:g} Pkt." if werte else ""
+                    thema = r.get("topic") or (gruppe or {}).get("topic")
+                    if text and gruppe:
+                        text += f' [{gruppe.get("name", "Gruppe")}]'
+                    z.append(r.get("status") or (f"{text} ({thema})" if text and thema else text))
                 else:
                     e = a.get("epo", {}).get("entries", {}).get(sid, {})
                     z.append(" ".join((c.get("r", "") + c.get("hw", "")) for c in e.values()))

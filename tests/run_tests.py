@@ -853,12 +853,101 @@ def run_pres_check(br, base):
     ok = bool(res) and res["tab"] and res["picker"] == "Referat Statistik" and res["rows"] == 12 \
         and res["rate"][0] == 12 and res["rate"][1] == 18 and res["rate"][2] == "Wahrscheinlichkeit" and res["rate"][3] == 5 and res["toggle"] \
         and res["cell"] == 3 and res["invalid"] == 3 and res["max"] == 24 and res["fromPool"] == 1 and res["own"] == ["Kreativität", "originell", 1] \
-        and res["tpl"] == [3, True, True, True] and res["menu"] == ["list", "key", "blank", "guide", "sheets"] and res["print"] == [True] * 4 \
+        and res["tpl"] == [4, True, True, True] and res["menu"] == ["list", "key", "blank", "guide", "sheets"] and res["print"] == [True] * 4 \
         and res["sheetsN"] == 7 and res["overview"] and res["jump"] and res["poolDel"] == [True, True] and res["restore"] == [True, "Startbestand ergänzen (1)", True, True] \
         and res["tplSave"] == [1, "Referat", True, 3] and res["groups"] == ["Vorlagen", "Frühere Bewertungen"] and res["fromTpl"] == [2, 2, True] \
         and res["menu2"] == ["list", "key", "blank", "guide", "sheets"] and res["guide"] == [True] * 4 and res["tplPrint"] and res["tplDel"] == [1, 2] \
         and res["stdTpl"] == [3, True, True] and res["stdRestore"] == [True, "Standardvorlagen ergänzen (1)", True, True]
     report("Präsentationen: bewerten (Knöpfe, Tabelle), Gewicht, Kriterien aus Pool/eigene, Vorlagen, Handreichung, Ausdrucke, Notenübersicht, Pool", ok and not br.errors, str(res) + "; ".join(br.errors))
+
+
+def run_group_check(br, base):
+    print("Gruppenpräsentationen (Gruppen, Gruppenwert, Abweichung, Druck, Auflösen):")
+    br.open(f"{base}/index.html?demo")
+    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.errors = []
+    res = br.eval("""(async () => {
+        const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
+        window.print = () => {};
+        const G = NM.grades;
+        const db = NM.app.db();
+        const c = db.courses[0];
+        const a = c.assessments.find((x) => x.name === 'Gruppenpräsentation Zufall');
+        const p = a.pres;
+        NM.app.state.ui.half[c.id] = 'HJ2';
+        NM.app.state.ui.presId[c.id] = a.id;
+        NM.app.select({ courseId: c.id, tab: 'pres' }); await wait();
+        const q = (k) => document.querySelector(`[data-focus-key="${k}"]`);
+        const out = {};
+        out.start = [q('pres-mode').value, document.querySelectorAll('.grp-row').length, !!q('rate-group'), document.querySelectorAll('.grp-member').length, document.querySelector('.grp-card').textContent.includes('Ohne Gruppe')];
+        const g1 = p.groups[0];
+        const [m0, m1] = g1.members;
+        const gl = p.criteria.find((x) => x.name === 'Gliederung');
+        const fs = p.criteria.find((x) => x.name === 'Freies Sprechen');
+        // Gruppenwert setzen: gilt für alle Mitglieder
+        q(`grp-${gl.id}-0`).click(); await wait();
+        out.groupVal = [g1.scores[gl.id], g1.members.map((sid) => G.presScores(p, sid)[gl.id])];
+        // Personenkriterium je Mitglied
+        q(`grp-${m0}-${fs.id}-1`).click(); await wait();
+        out.personVal = [p.results[m0].scores[fs.id], G.presScores(p, m1)[fs.id] !== 1 || p.results[m1].scores[fs.id] === 1];
+        // Abweichung in der Personenansicht setzen und zurücksetzen
+        q(`grp-person-${m1}`).click(); await wait();
+        out.personView = [!!q('rate-person'), q('rate-person').value === m1];
+        q(`rate-${gl.id}-2`).click(); await wait();
+        const devSet = [G.presDeviation(p, m1, gl), G.presScores(p, m1)[gl.id], !!document.querySelector('.dev-note')];
+        q(`rate-reset-${gl.id}`).click(); await wait();
+        q(`rate-${gl.id}-0`).click(); await wait(); // Gruppenwert gewählt → keine Abweichung
+        out.dev = [...devSet, G.presDeviation(p, m1, gl), G.presScores(p, m1)[gl.id]];
+        // Tabelle: Gruppenwert grau, andere Zahl = Abweichung
+        const cell = () => q(`ps-${m0}-${gl.id}`);
+        const fromGroup = cell().classList.contains('from-group');
+        cell().value = '3'; cell().dispatchEvent(new Event('change')); await wait();
+        out.table = [fromGroup, cell().classList.contains('dev'), G.presDeviation(p, m0, gl), [...document.querySelectorAll('[data-scroll-key="pres-results"] th')].some((th) => th.textContent.includes('Gruppe'))];
+        cell().value = '0'; cell().dispatchEvent(new Event('change')); await wait();
+        out.tableBack = G.presDeviation(p, m0, gl);
+        // Bewertungsart je Kriterium
+        q(`crit-scope-${gl.id}`).value = 'person'; q(`crit-scope-${gl.id}`).dispatchEvent(new Event('change')); await wait();
+        out.scope = [gl.scope, G.presScores(p, m1)[gl.id] === undefined];
+        q(`crit-scope-${gl.id}`).value = 'group'; q(`crit-scope-${gl.id}`).dispatchEvent(new Event('change')); await wait();
+        out.scopeBack = [gl.scope === undefined, G.presScores(p, m1)[gl.id]];
+        // Gruppen bearbeiten: neue Gruppe, Person hinzufügen und herausnehmen, löschen
+        [...document.querySelectorAll('.grp-card .btn-ghost')].find((b) => b.textContent === '+ Gruppe').click(); await wait();
+        const g4 = p.groups[3];
+        const add = q(`grp-add-${g4.id}`);
+        const free = add.options[1].value;
+        add.value = free; add.dispatchEvent(new Event('change')); await wait();
+        const added = [p.groups.length, g4.name, g4.members.slice()];
+        [...document.querySelectorAll('.grp-chip .chip-x')].find((b) => b.getAttribute('aria-label').startsWith('Aus Gruppe 4')).click(); await wait();
+        const removed = g4.members.length;
+        [...document.querySelectorAll('.grp-row .icon-btn')].find((b) => b.getAttribute('aria-label') === 'Gruppe löschen: Gruppe 4').click(); await wait();
+        out.edit = [added[0], added[1], added[2].length, removed, p.groups.length];
+        // Ausdrucke
+        const printed = (fn) => { fn(); const t = document.getElementById('print-root').textContent; document.body.classList.remove('printing'); return t; };
+        const list = printed(() => NM.print.pres(c, a, 'list'));
+        const sheet = printed(() => NM.print.pres(c, a, 'sheets', { sid: m1 }));
+        const guide = printed(() => NM.print.presGuide({ title: 'X', criteria: p.criteria, groupMode: p.groupMode }));
+        out.print = [list.includes('Gruppe 1') && list.includes(g1.topic), sheet.includes('Gruppe 1') && sheet.includes('für die Gruppe') && sheet.includes(g1.topic), guide.includes('für jede Person einzeln') && guide.includes('ganze Gruppe')];
+        // Gruppen übernehmen in eine neue Bewertung
+        const b = NM.model.newPres(c, 'HJ2', db.settings, p.criteria);
+        b.name = 'Zweite Runde'; b.pres.groupMode = 'group'; b.pres.groups = [];
+        c.assessments.push(b); NM.app.state.ui.presId[c.id] = b.id; NM.app.commit(); await wait();
+        const imp = q('grp-import');
+        imp.value = a.id; imp.dispatchEvent(new Event('change')); await wait();
+        out.import = [b.pres.groups.length, b.pres.groups.map((g) => g.members.length).join(), b.pres.groups.every((g) => !Object.keys(g.scores).length)];
+        // Auflösen: Gruppenwerte werden Einzelbewertung, Noten bleiben gleich
+        NM.app.state.ui.presId[c.id] = a.id; NM.app.rerender(); await wait();
+        const before = c.students.map((s) => G.presResult(p, s.id, 'sek1').p).join();
+        q('pres-mode').value = ''; q('pres-mode').dispatchEvent(new Event('change')); await wait();
+        document.querySelector('dialog .btn-primary').click(); await wait();
+        const after = c.students.map((s) => G.presResult(p, s.id, 'sek1').p).join();
+        out.dissolve = [p.groupMode === undefined, p.groups === undefined, before === after, p.results[m1].topic === g1.topic, !document.querySelector('.grp-card')];
+        NM.app.select({ tab: 'overview' }); await wait();
+        return out; })()""")
+    ok = bool(res) and res["start"] == ["mixed", 3, True, 3, True] and res["groupVal"][0] == 0 and res["groupVal"][1] == [0, 0, 0] \
+        and res["personVal"] == [1, True] and res["personView"] == [True, True] and res["dev"] == [True, 2, True, False, 0] \
+        and res["table"] == [True, True, True, True] and res["tableBack"] is False and res["scope"] == ["person", True] and res["scopeBack"] == [True, 0] \
+        and res["edit"] == [4, "Gruppe 4", 1, 0, 3] and res["print"] == [True] * 3 and res["import"] == [3, "3,4,3", True] and res["dissolve"] == [True] * 5
+    report("Gruppenpräsentationen: Gruppenwert für alle, Personenkriterien, Abweichung setzen/zurücksetzen, Tabelle, Gruppen bearbeiten/übernehmen, Druck, Auflösen ohne Notenänderung", ok and not br.errors, str(res) + "; ".join(br.errors))
 
 
 def run_moodle_check(br, base):
@@ -972,6 +1061,13 @@ def run_decrypt_tool(br, base):
     text = tool._teilpunkte(teile, {"scores": {"a": 3, "b": 4.5, "c": 1}})
     text2 = tool._teilpunkte(teile, {"scores": {"a": 3}, "partStatus": {"P": "nachschreiben"}})
     report("CSV: Rohpunkte je Teil", text == "Theorie 4 + Praxis 4.5" and text2 == "Theorie 3 + Praxis nachschreiben", text + " | " + text2)
+    # Gruppenpräsentation: Gruppenwert, Abweichung und Personenkriterium in der CSV
+    gp = {"groupMode": "mixed", "criteria": [{"id": "i"}, {"id": "v", "scope": "person"}],
+          "groups": [{"id": "g", "name": "G1", "members": ["a", "b"], "scores": {"i": 3, "v": 0}}],
+          "results": {"a": {"scores": {"v": 2}}, "b": {"scores": {"i": 1}}}}
+    wa, ga = tool._praes_punkte(gp, "a")
+    wb, _ = tool._praes_punkte(gp, "b")
+    report("CSV: Gruppenpräsentation (Gruppenwert, Abweichung)", wa == {"i": 3.0, "v": 2.0} and wb == {"i": 1.0} and ga["name"] == "G1", f"{wa} | {wb}")
 
 
 def main():
@@ -991,6 +1087,7 @@ def main():
         run_parts_check(br, base)
         run_print_menu_check(br, base)
         run_pres_check(br, base)
+        run_group_check(br, base)
         run_moodle_check(br, base)
         run_decrypt_tool(br, base)
     finally:
