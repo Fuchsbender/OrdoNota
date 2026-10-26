@@ -1,6 +1,6 @@
 # OrdoNota – Dokumentation
 
-Version 1.20.1 · Stand Oktober 2026
+Version 1.21.0 · Stand Oktober 2026
 
 OrdoNota (bis Version 1.11 „Notenmanager“) verwaltet Noten für die Sekundarstufe I (Noten 1–6 mit Tendenz) und die Mainzer Studienstufe (MSS, Punkte 00–15) an Schulen in Rheinland-Pfalz. Die App läuft vollständig lokal im Browser, verschlüsselt alle Daten mit einem Passwort und legt sie in einem Ordner ab, den der Synology Drive Client auf die DiskStation spiegelt.
 
@@ -455,7 +455,19 @@ Die Note erscheint in der Notenübersicht als eigene Spalte (◉, Sprung über �
 | 📊 Notenschlüssel und Notenspiegel | Schwellen je Note und Notenspiegel, ohne Namen |
 | 📝 Leere Bewertungsbögen | je aktive Person ein Bogen mit Name, Feld für Thema und Datum, je Kriterium Kästchen 0–3 mit Stufenbeschreibung, Summe, Note, Bemerkungszeilen – zum Ankreuzen während der Präsentation |
 | **Zum Austeilen** | |
+| 📋 Bewertungskriterien (Handreichung) | eine Seite für die Klasse vorab: alle Kriterien mit Gruppe, Gewicht und der Beschreibung jeder Stufe 0–3 (mit Punkten je Stufe), ohne Namen und Noten; Notenschlüssel wahlweise |
 | 🗒️ Bewertungsbogen je Person | je Person eine Seite: Thema, je Kriterium alle Stufen mit angekreuzter Stufe und Punkten, Summe, Prozent, Bemerkung; Note wahlweise, Linien für Datum und Unterschrift (alle oder eine Person) |
+
+### 8a.5 Vorlagen
+
+Eine **Vorlage** ist ein benannter Satz von Kriterien mit Reihenfolge, Gewichten und Stufenbeschreibungen, z. B. „Referat“ oder „Plakatpräsentation“. Vorlagen gelten für **alle Kurse und Schuljahre**.
+
+- **Speichern:** In der Karte „Kriterien“ einer Bewertung **„💾 Als Vorlage speichern“** und einen Namen eingeben. Gibt es den Namen schon, ersetzt die App nach Rückfrage die Kriterien dieser Vorlage.
+- **Neu aus dem Pool:** In der aufklappbaren Karte **„Vorlagen“** mit **„+ Vorlage aus dem Pool“** Name eingeben und Kriterien ankreuzen.
+- **Verwenden:** Beim Anlegen einer Bewertung unter **„Kriterien übernehmen von“** die Vorlage wählen (Gruppe „Vorlagen“; darunter stehen frühere Bewertungen).
+- **Verwalten:** In der Karte „Vorlagen“ umbenennen (✎), löschen (✕) und mit **„🖨 Handreichung“** die Bewertungskriterien der Vorlage für die Klasse drucken – auch ohne dass schon eine Bewertung existiert.
+
+Bewertungen sind unabhängig von ihrer Vorlage: Spätere Änderungen an der Vorlage oder ihr Löschen ändern bestehende Bewertungen nicht.
 
 > Präsentationen brauchen OrdoNota ab Version 1.20 auf allen Geräten (Datenformat 3, siehe 21.10).
 
@@ -571,7 +583,7 @@ In Tests, Mitarbeit/EPO und Notenübersicht fasst je ein Knopf **„🖨 Drucken
 | Tests | 📄 Ergebnisliste · 🧩 Ergebnisse nach Teilen · 📊 Notenschlüssel und Notenspiegel · ✂️ Ergebniszettel · 💬 Moodle-Rückmeldung | siehe 7.6, 7.7 und 7.8 |
 | Tests | ⛶ Beamer (eigener Knopf) | Vollbild ohne Namen: Notenspiegel, Punkteverteilung, Ø je Aufgabe (siehe 7.5) |
 | Sitzplan | 🖨 Drucken | Sitzplan des gewählten Raums mit Vornamen, Fotos und Lehrerpult, A4 (quer, wenn mehr Spalten als Reihen) |
-| Präsentationen | 📄 Bewertungsliste · 📊 Notenschlüssel · 📝 Leere Bewertungsbögen · 🗒️ Bewertungsbogen je Person | siehe 8a.4 |
+| Präsentationen | 📄 Bewertungsliste · 📊 Notenschlüssel · 📝 Leere Bewertungsbögen · 📋 Bewertungskriterien (Handreichung) · 🗒️ Bewertungsbogen je Person | siehe 8a.4; Handreichung auch je Vorlage (8a.5) |
 | Mitarbeit/EPO | 📄 Bewertungsliste | Bewertungsraster aller Stunden mit Ergebnis und Note je Person |
 | Mitarbeit/EPO | ✂️ Mitarbeitszettel zum Ausschneiden | ein Zettel pro Person (mehrere pro Blatt, gestrichelte Schnittlinie): Name, Kurs, Blockname und Zeitraum, Punktelegende, Bewertungen mit Datum im Tabellenkopf, Ergebnis mit Note sowie Linien für Datum und Unterschrift |
 
@@ -1001,7 +1013,7 @@ Berechnete Werte (Schnitte, Testnoten, EPO-Noten) werden **nie gespeichert**, so
   "kdf": "PBKDF2-SHA256",
   "savedAt": "2026-10-14T21:57:03.123Z",
   "device": "Laptop Schule",
-  "app": "1.20.1",
+  "app": "1.21.0",
   "pw":   { "salt": "<b64>", "iter": 600000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "rec":  { "salt": "<b64>", "iter": 100000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "data": { "iv": "<b64>", "ct": "<b64: verschlüsseltes JSON des Datenmodells>" }
@@ -1024,11 +1036,12 @@ Entschlüsselter Inhalt (`schema: 3`):
 ```js
 {
   schema: 3,                             // Datenformat (siehe 26.2)
-  savedWith: "1.20.1",                    // App-Version beim letzten Speichern
+  savedWith: "1.21.0",                    // App-Version beim letzten Speichern
   created: "<ISO>", savedAt: "<ISO>",
   settings: { autoLockMin, limitSek1, limitMss, precision, keepBackups, backupEveryMin, gradeColors,
               pomodoro: { enabled, count, work, short, long, tick: "off" | "work" | "always", alarm: "off" | "bell" | "gong" | "beep", volume } },
   criteriaPool: [ { id, group, name, desc: { 0, 1, 2, 3 } } ],   // Kriterien für Präsentationen (alle Kurse, seit 1.20)
+  presTemplates: [ { id, name, criteria: [ { poolId, group, name, desc, weight } ] } ],   // Vorlagen (seit 1.21)
   years:   [ { id, name: "2026/27" } ],
   courses: [ Course ]
 }
@@ -1096,7 +1109,7 @@ Das Skript startet einen unsichtbaren Chromium-Browser (Chrome, Edge, Chromium, 
 2. den Start der App im Demo-Modus und alle Reiter für einen Sek-I- und einen MSS-Kurs ohne JavaScript-Fehler,
 3. das Sortieren per Klick auf Spaltenköpfe (Tests, EPO, Notenübersicht; Richtung und leere Werte unten),
 4. den Pomodoro-Timer (Aktivieren, Farben je Zustand, Phasenwechsel, Zurücksetzen, Einstellungsdialog), das Layout des Reiters „Einstellungen“ bei aktivem Timer (keine Lücken zwischen den Karten, Auswahllisten nicht abgeschnitten, bei 1570 und 2560 px) und die Kürzel in der eingeklappten Kursliste, die weichen Übergänge (nur bei Reiter-, Kurs- und Halbjahreswechsel), das Ein-/Ausklappen der Kursliste, den Reiter „Tests“ in voller Breite, Arbeiten in Teilen (einschalten, Aufgaben und Punkte je Teil, Teil ausblenden, getrennt benoten, Status je Teil, Schlüssel je Teil, Ausdrucke inkl. „Ergebnisse nach Teilen“, Beamer, Teile aufheben), die Druckauswahl „🖨 Drucken …“ in Tests, EPO und Notenübersicht (Gruppen, Tooltips, Auswahl druckt, Abbrechen nicht) und den Haken „Unterschrift gesehen“ bei Klassenarbeiten (Zähler, Ausdruck), den Moodle-Import (Dateiauswahl im Dialog, Zuordnung, Status „fehlt“, Ausdruck mit und ohne Note, erneuter Import),
-5. den Excel-Export der Schülerliste (gültiges ZIP/XML, Umlaute und Sonderzeichen), das Kurs-Löschen nur mit „LÖSCHEN“, das Ein-/Ausblenden der Fotos im EPO-Reiter und im Sitzplan (auch im Druck) das Erweitern/Verkleinern des Sitzplan-Rasters an allen vier Seiten sowie das Ziehen (keine Wiederholung bis zum Auffüllen, automatisches Auffüllen, Note, Rückgängig, Abwesende/Herausgenommene) und den Reiter „Präsentationen“ (Bewerten per Knopf und in der Tabelle, Gewicht, Kriterien aus dem Pool und eigene, Vorlage, Ausdrucke, Spalte in der Notenübersicht, Pool bearbeiten, Startbestand ergänzen),
+5. den Excel-Export der Schülerliste (gültiges ZIP/XML, Umlaute und Sonderzeichen), das Kurs-Löschen nur mit „LÖSCHEN“, das Ein-/Ausblenden der Fotos im EPO-Reiter und im Sitzplan (auch im Druck) das Erweitern/Verkleinern des Sitzplan-Rasters an allen vier Seiten sowie das Ziehen (keine Wiederholung bis zum Auffüllen, automatisches Auffüllen, Note, Rückgängig, Abwesende/Herausgenommene) und den Reiter „Präsentationen“ (Bewerten per Knopf und in der Tabelle, Gewicht, Kriterien aus dem Pool und eigene, Vorlage, Ausdrucke, Spalte in der Notenübersicht, Pool bearbeiten, Startbestand ergänzen, Vorlagen speichern/anlegen/verwenden/drucken/löschen, Handreichung mit Notenschlüssel),
 6. das Notfallwerkzeug: Eine von der App echt verschlüsselte Datenbank wird mit `tools/entschluesseln.py` per Passwort und per Wiederherstellungsschlüssel entschlüsselt und mit dem Original verglichen. Dazu kommen falsches Passwort, manipulierte Datei und CSV-Ausgabe.
 
 Am Ende steht `ERGEBNIS: x von y bestanden`. Der Exit-Code ist 0, wenn alles bestanden ist.
@@ -1108,7 +1121,7 @@ Am Ende steht `ERGEBNIS: x von y bestanden`. Der Exit-Code ist 0, wenn alles bes
 | Datei | Prüft | Ausführen |
 |---|---|---|
 | `tests/grades.test.html` | Skalen, Eingabe-Parser, Rundung, Notenschlüssel (Vergleich mit Excel-Formeln), Bonus/Kappung, Status, Drittelparagraph, EPO (Werte aus der bisherigen EPO-Liste), Halbjahres-/Jahresnote, GK-Gewichtung, Präsentationen (Gewicht, Status, Schlüssel, Halbjahresnote), Arbeiten in Teilen (gemeinsam/getrennt, Gewichte, fehlender Teil, Status je Teil, ganze Noten je Teil, MSS) | im Browser öffnen |
-| `tests/model.test.html` | Migration älterer Datenbanken (SCHEMA 1 → 3, Kriterienpool, Startbestand ergänzen), neue Präsentation, Ablehnung neuerer Datenformate, Erhalt unbekannter Felder, Namensliste | im Browser öffnen |
+| `tests/model.test.html` | Migration älterer Datenbanken (SCHEMA 1 → 3, Kriterienpool, Startbestand ergänzen, Vorlagen), neue Präsentation, Ablehnung neuerer Datenformate, Erhalt unbekannter Felder, Namensliste | im Browser öffnen |
 | `tests/moodle.test.html` | CSV-Zerlegung, Erkennen und Zusammenführen von Antworten-/Bewertungen-CSV, bester Versuch, Textvergleich ohne Bewertungen, Zuordnung (Name, gemerkte E-Mail), Übernahme als Test, „fehlt“, erneuter Import, skalierte Punkte, Import in einen Teil | im Browser öffnen |
 | `tests/pomodoro.test.html` | Ablauf der Phasen (mit/ohne kurze bzw. lange Pause), Standardwerte, Migration der Einstellungen | im Browser öffnen |
 | `tests/crypto.test.html` | Anlegen, Entsperren, falsches Passwort, Wiederherstellungsschlüssel, Passwortwechsel, alte Sicherungen, Manipulationserkennung | im Browser öffnen (dauert einige Sekunden) |
@@ -1137,7 +1150,7 @@ In `js/model.js` stehen zwei Nummern:
 
 | Konstante | Bedeutung | Wann erhöhen |
 |---|---|---|
-| `APP_VERSION` (z. B. `1.20.1`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.20.1` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
+| `APP_VERSION` (z. B. `1.21.0`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.21.0` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
 | `SCHEMA` (z. B. `3`) | Version des Datenformats (2 seit 1.18: Arbeiten in Teilen; 3 seit 1.20: Präsentationen) | nur, wenn eine **ältere** App-Version die neuen Daten falsch verstehen würde (z. B. ein Feld ändert seine Bedeutung) |
 
 Öffnet eine App eine Datenbank mit höherem `SCHEMA`, verweigert sie das mit einer Meldung (siehe 21.10). Neue, nur *zusätzliche* Felder brauchen kein neues `SCHEMA`: Ältere Versionen lassen unbekannte Felder unverändert und speichern sie mit.

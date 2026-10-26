@@ -489,6 +489,53 @@
     doPrint(`${a.name} – ${blank ? 'Leere Bewertungsbögen' : 'Bewertungsbögen'}`, h('div', null, pages));
   }
 
+  /**
+   * Handreichung für Schülerinnen und Schüler: Kriterien mit Beschreibung jeder Stufe, Gewicht und Höchstpunkten,
+   * ohne Namen; key (optional): Notenschlüssel der Bewertung.
+   */
+  function presGuide({ title, course = null, criteria, key = null, level = 'sek1' }) {
+    const max = criteria.reduce((s, c) => s + 3 * G.critWeight(c), 0);
+    const rows = criteria.map((c) =>
+      h(
+        'tr',
+        null,
+        h('td', { class: 'p-pres-crit' }, h('strong', null, c.name), c.group ? h('div', { class: 'p-pres-group' }, c.group) : null),
+        LEVELS.map((n) => h('td', { class: 'p-pres-lvl' }, h('span', { class: 'p-pres-n' }, `${n * G.critWeight(c)} P.`), h('div', { class: 'p-pres-desc' }, (c.desc || {})[n] || ''))),
+        h('td', { class: 'p-pres-pts' }, G.critWeight(c) !== 1 ? `×${G.critWeight(c)}` : '', h('div', null, `max. ${fmtScore(3 * G.critWeight(c))}`))
+      )
+    );
+    const keyRows = key
+      ? key
+          .slice()
+          .reverse()
+          .filter((k) => k.p > 0)
+          .map((k) => h('td', null, h('div', null, h('strong', null, G.label(k.p, level))), h('div', null, 'ab ' + fmtScore(k.min))))
+      : null;
+    doPrint(
+      `${title} – Bewertungskriterien`,
+      h(
+        'div',
+        { class: 'p-page p-mr p-pres p-guide' },
+        h(
+          'div',
+          { class: 'p-mr-head' },
+          h('div', null, h('div', { class: 'p-mr-kicker' }, 'Bewertungskriterien'), h('h1', null, title), h('div', { class: 'p-mr-name' }, 'So wird deine Präsentation bewertet')),
+          course ? h('div', { class: 'p-mr-meta' }, h('strong', null, M.courseTitle(course))) : null
+        ),
+        h('p', { class: 'p-guide-intro' }, `Für jedes Kriterium gibt es 0 bis 3 Punkte; die Beschreibung zeigt, was für die jeweilige Stufe erwartet wird. Kriterien mit Gewicht (z. B. ×2) zählen mehrfach. Insgesamt sind ${fmtScore(max)} Punkte möglich.`),
+        h(
+          'table',
+          { class: 'p-pres-table' },
+          h('colgroup', null, h('col', { style: 'width:22%' }), LEVELS.map(() => h('col', { style: 'width:17%' })), h('col', { style: 'width:10%' })),
+          h('thead', null, h('tr', null, h('th', null, 'Kriterium'), LEVELS.map((n) => h('th', null, `Stufe ${n}`)), h('th', null, 'Gewicht'))),
+          h('tbody', null, rows)
+        ),
+        key ? h('div', { class: 'p-guide-key' }, h('h2', null, 'Notenschlüssel'), h('table', { class: 'p-table' }, h('tr', null, keyRows))) : null
+      ),
+      { landscape: false }
+    );
+  }
+
   // ---------- EPO ----------
 
   function epo(course, a) {
@@ -831,5 +878,5 @@
     );
   }
 
-  NM.print = { test, moodle, pres, epo, epoSlips, seating, course, studentsDialog };
+  NM.print = { test, moodle, pres, presGuide, epo, epoSlips, seating, course, studentsDialog };
 })((globalThis.NM = globalThis.NM || {}));

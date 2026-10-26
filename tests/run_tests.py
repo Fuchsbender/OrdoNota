@@ -797,13 +797,53 @@ def run_pres_check(br, base):
         const label = restore() && restore().textContent;
         restore().click(); await wait();
         out.restore = [noBtn, label, db.criteriaPool.some((x) => x.name === 'Lesbarkeit'), !restore()];
+        // Vorlagen: aus der Bewertung speichern (zweimal gleicher Name → ersetzen), aus dem Pool anlegen, verwenden, drucken, löschen
+        const saveTpl = async (name, replace) => {
+            [...document.querySelectorAll('.btn-ghost')].find((b) => b.textContent === '💾 Als Vorlage speichern').click(); await wait();
+            document.querySelector('dialog input').value = name; document.querySelector('dialog .btn-primary').click(); await wait();
+            if (replace) { document.querySelector('dialog .btn-primary').click(); await wait(); }
+        };
+        await saveTpl('Referat', false);
+        await saveTpl('referat', true);
+        out.tplSave = [db.presTemplates.length, db.presTemplates[0].name, db.presTemplates[0].criteria.length === p.criteria.length, db.presTemplates[0].criteria[1].weight];
+        document.querySelector('.tpl-card').open = true; await wait();
+        [...document.querySelectorAll('.tpl-card .btn-ghost')].find((b) => b.textContent === '+ Vorlage aus dem Pool').click(); await wait();
+        document.querySelector('dialog input.input').value = 'Plakat';
+        [...document.querySelectorAll('dialog .pool-check input')].slice(0, 2).forEach((x) => (x.checked = true));
+        document.querySelector('dialog .btn-primary').click(); await wait();
+        document.querySelector('.picker-add').click(); await wait();
+        const from2 = document.querySelectorAll('dialog select')[0];
+        const opt = [...from2.options].find((o) => o.textContent.startsWith('Plakat'));
+        from2.value = opt.value;
+        out.groups = [...from2.querySelectorAll('optgroup')].map((g) => g.label);
+        document.querySelector('dialog .btn-primary').click(); await wait();
+        const newest = c.assessments.filter((x) => x.kind === 'pres').pop();
+        out.fromTpl = [db.presTemplates.length, newest.pres.criteria.length, newest.pres.criteria[0].poolId === db.criteriaPool[0].id];
+        // Handreichung über die Druckauswahl (mit Notenschlüssel)
+        document.querySelector('[data-print-menu]').click(); await wait();
+        out.menu2 = [...document.querySelectorAll('dialog .print-option')].map((o) => o.dataset.print);
+        document.querySelector('dialog .print-option[data-print="guide"]').click(); await wait();
+        document.querySelector('dialog input[type=checkbox]').checked = true;
+        document.querySelector('dialog .btn-primary').click(); await wait();
+        const g1 = [document.title, document.getElementById('print-root').textContent];
+        document.body.classList.remove('printing');
+        out.guide = [g1[0].endsWith('– Bewertungskriterien'), g1[1].includes(newest.pres.criteria[0].desc[3]), g1[1].includes('Notenschlüssel'), !g1[1].includes(c.students[0].last)];
+        document.querySelector('.tpl-card').open = true; await wait();
+        document.querySelector(`[data-tpl-print="${db.presTemplates[1].id}"]`).click(); await wait();
+        out.tplPrint = document.title === 'Plakat – Bewertungskriterien' && !document.getElementById('print-root').textContent.includes('Notenschlüssel');
+        document.body.classList.remove('printing');
+        [...document.querySelectorAll('.tpl-card .icon-btn')].find((b) => b.getAttribute('aria-label') === 'Vorlage löschen: Plakat').click(); await wait();
+        document.querySelector('dialog .btn-danger').click(); await wait();
+        out.tplDel = [db.presTemplates.length, newest.pres.criteria.length];
         return out; })()""")
     ok = bool(res) and res["tab"] and res["picker"] == "Referat Statistik" and res["rows"] == 12 \
         and res["rate"][0] == 12 and res["rate"][1] == 18 and res["rate"][2] == "Wahrscheinlichkeit" and res["rate"][3] == 5 and res["toggle"] \
         and res["cell"] == 3 and res["invalid"] == 3 and res["max"] == 24 and res["fromPool"] == 1 and res["own"] == ["Kreativität", "originell", 1] \
-        and res["tpl"] == [2, True, True, True] and res["menu"] == ["list", "key", "blank", "sheets"] and res["print"] == [True] * 4 \
-        and res["sheetsN"] == 7 and res["overview"] and res["jump"] and res["poolDel"] == [True, True] and res["restore"] == [True, "Startbestand ergänzen (1)", True, True]
-    report("Präsentationen: bewerten (Knöpfe, Tabelle), Gewicht, Kriterien aus Pool/eigene, Vorlage, Ausdrucke, Notenübersicht, Pool", ok and not br.errors, str(res) + "; ".join(br.errors))
+        and res["tpl"] == [2, True, True, True] and res["menu"] == ["list", "key", "blank", "guide", "sheets"] and res["print"] == [True] * 4 \
+        and res["sheetsN"] == 7 and res["overview"] and res["jump"] and res["poolDel"] == [True, True] and res["restore"] == [True, "Startbestand ergänzen (1)", True, True] \
+        and res["tplSave"] == [1, "Referat", True, 3] and res["groups"] == ["Vorlagen", "Frühere Bewertungen"] and res["fromTpl"] == [2, 2, True] \
+        and res["menu2"] == ["list", "key", "blank", "guide", "sheets"] and res["guide"] == [True] * 4 and res["tplPrint"] and res["tplDel"] == [1, 2]
+    report("Präsentationen: bewerten (Knöpfe, Tabelle), Gewicht, Kriterien aus Pool/eigene, Vorlagen, Handreichung, Ausdrucke, Notenübersicht, Pool", ok and not br.errors, str(res) + "; ".join(br.errors))
 
 
 def run_moodle_check(br, base):

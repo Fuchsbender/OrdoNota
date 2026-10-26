@@ -39,12 +39,18 @@
   const full = M.defaultCriteriaPool();
   ok('Startbestand: fein gegliederte Kriterien (z. B. Medien: Übersichtlichkeit, Lesbarkeit, Gestaltung)', full.length >= 25 && ['Übersichtlichkeit', 'Lesbarkeit', 'Ansprechende Gestaltung'].every((n) => full.some((c) => c.name === n && c.group === 'Medien')) && new Set(full.map((c) => c.name)).size === full.length);
   ok('Startbestand ergänzen: nur fehlende (Bezeichnung, Groß/klein egal)', M.missingDefaultCriteria([]).length === full.length && M.missingDefaultCriteria([{ name: 'lesbarkeit' }, { name: 'Eigenes' }]).length === full.length - 1 && M.missingDefaultCriteria(full).length === 0);
+  ok('Vorlagen: beim Öffnen leere Liste, vorhandene bleiben', Array.isArray(np.presTemplates) && np.presTemplates.length === 0 && M.migrate({ schema: 3, years: [], courses: [], presTemplates: [{ id: 't', name: 'X', criteria: [] }] }).presTemplates.length === 1);
   const pdb = M.newDb();
   const pc = M.newCourse(pdb.years[0].id, { jahrgang: 12, type: 'gk' });
   const pa = M.newPres(pc, '12/1', pdb.settings, pdb.criteriaPool.slice(0, 3));
   ok('Neue Präsentation: Kopie der Kriterien mit eigener id, MSS-LIMIT', pa.kind === 'pres' && pa.pres.criteria.length === 3 && pa.pres.criteria[0].id !== pdb.criteriaPool[0].id && pa.pres.criteria[0].poolId === pdb.criteriaPool[0].id && pa.pres.limit === pdb.settings.limitMss && M.kindLabel(pa) === 'Präsentation');
   pa.pres.criteria[0].desc[0] = 'geändert';
   ok('Kriterium der Bewertung unabhängig vom Pool', pdb.criteriaPool[0].desc[0] !== 'geändert');
+  pa.pres.criteria[1].weight = 2;
+  const tp = M.newPresTemplate('Referat', pa.pres.criteria);
+  ok('Vorlage aus Bewertung: Reihenfolge, Gewicht, Pool-Bezug, eigene Kopie', tp.name === 'Referat' && tp.criteria.length === 3 && tp.criteria[1].weight === 2 && tp.criteria[0].poolId === pdb.criteriaPool[0].id && tp.criteria[0].desc !== pa.pres.criteria[0].desc && tp.criteria[0].desc[0] === 'geändert');
+  const fromTp = M.newPres(pc, '12/1', pdb.settings, tp.criteria);
+  ok('Bewertung aus Vorlage: neue ids, Gewicht übernommen', fromTp.pres.criteria[1].weight === 2 && fromTp.pres.criteria[0].poolId === pdb.criteriaPool[0].id && !fromTp.pres.criteria[0].id.startsWith('undefined'));
 
   // 1.18: Arbeiten in Teilen – Datenbanken mit SCHEMA 1 bleiben unverändert, werden als SCHEMA 2 gespeichert
   const plain = { id: 't', kind: 'test', half: 'HJ1', cat: 'ka', weight: 1, test: { limit: 50, precision: 1, custom: {}, tasks: [{ id: 'a', max: 5 }], results: { s: { scores: { a: 3 } } } } };

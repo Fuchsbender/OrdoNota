@@ -680,6 +680,11 @@ body.no-grade-colors .p-grade[style*='--g-hue'] { background: none; }
 .p-mr-table tr.p-mr-part td span { font-weight: 400; color: #444; }
 .p-table .p-part { background: #f0f0f0; font-weight: 600; }
 .p-parts .p-part-start { border-left: 1.2pt solid #000; }
+.p-guide-intro { font-size: 9.5pt; margin: 0 0 10px; }
+.p-guide .p-pres-lvl .p-pres-n { display: block; }
+.p-guide-key { margin-top: 14px; break-inside: avoid; }
+.p-guide-key h2 { font-size: 11pt; margin: 0 0 4px; }
+.p-guide-key td { text-align: center; font-size: 8.5pt; padding: 3px 5px; }
 .p-pres-topic { margin: 0 0 10px; font-size: 10pt; display: flex; align-items: baseline; gap: 6px; }
 .p-inline-line { display: inline-block; width: 70%; }
 .p-pres-table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 8.5pt; }

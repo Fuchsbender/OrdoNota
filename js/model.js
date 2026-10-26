@@ -9,7 +9,7 @@
   // 2 (1.18): Arbeiten in Teilen – getrennt benotete Teile würden ältere Versionen falsch rechnen.
   // 3 (1.20): Präsentationen (kind "pres") – ältere Versionen kennen diese Leistungsart nicht.
   const SCHEMA = 3;
-  const APP_VERSION = '1.20.1';
+  const APP_VERSION = '1.21.0';
 
   class NewerSchemaError extends Error {}
 
@@ -80,6 +80,7 @@
         pomodoro: Object.assign({}, POMODORO_DEFAULTS),
       },
       criteriaPool: defaultCriteriaPool(),
+      presTemplates: [],
       years: [year],
       courses: [],
     };
@@ -100,6 +101,8 @@
     db.settings.pomodoro = Object.assign({}, POMODORO_DEFAULTS, db.settings.pomodoro || {});
     // 1.20: Kriterienpool für Präsentationen (Startbestand nur, wenn es noch keinen gibt)
     if (!Array.isArray(db.criteriaPool)) db.criteriaPool = defaultCriteriaPool();
+    // 1.21: Vorlagen für Präsentationen (benannte Kriteriensätze)
+    if (!Array.isArray(db.presTemplates)) db.presTemplates = [];
     db.years = db.years || [];
     db.courses = db.courses || [];
     for (const c of db.courses) {
@@ -315,6 +318,11 @@
     return { id: uid(), poolId: c.poolId || c.id, group: c.group || '', name: c.name, desc: Object.assign({}, c.desc || {}), weight: Number(c.weight) > 0 ? Number(c.weight) : 1 };
   }
 
+  /** Vorlage aus Kriterien (einer Bewertung oder aus dem Pool): Reihenfolge, Gewichte und Stufen werden kopiert. */
+  function newPresTemplate(name, criteria) {
+    return { id: uid(), name, criteria: criteria.map((c) => ({ poolId: c.poolId || c.id, group: c.group || '', name: c.name, desc: Object.assign({}, c.desc || {}), weight: Number(c.weight) > 0 ? Number(c.weight) : 1 })) };
+  }
+
   function kindLabel(a) {
     return a.kind === 'test' ? 'Test' : a.kind === 'epo' ? 'EPO' : a.kind === 'pres' ? 'Präsentation' : 'Note';
   }
@@ -417,6 +425,7 @@
     presCriterion,
     defaultCriteriaPool,
     missingDefaultCriteria,
+    newPresTemplate,
     kindLabel,
     demoDb,
   };

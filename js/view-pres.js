@@ -38,7 +38,8 @@
     );
     if (!cur) {
       view.append(
-        UI.emptyState('Noch keine Präsentation in ' + half, 'Legen Sie eine Bewertung an: Kriterien aus dem Kriterienpool wählen, je Person 0–3 Punkte pro Kriterium vergeben – die Note wird wie bei Tests über den Notenschlüssel berechnet.'),
+        UI.emptyState('Noch keine Präsentation in ' + half, 'Legen Sie eine Bewertung an: Kriterien aus dem Kriterienpool oder einer Vorlage wählen, je Person 0–3 Punkte pro Kriterium vergeben – die Note wird wie bei Tests über den Notenschlüssel berechnet.'),
+        templatesCard(course, db),
         poolCard(db)
       );
       return;
@@ -47,6 +48,7 @@
       metaCard(course, cur, level),
       criteriaCard(db, cur),
       h('div', { class: 'test-layout' }, h('div', { class: 'pres-main' }, rateCard(course, cur, level), tableCard(course, cur, level)), keyCard(course, cur, level)),
+      templatesCard(course, db),
       poolCard(db)
     );
   }
@@ -78,17 +80,23 @@
     return { el, selected: () => boxes.filter(([, cb]) => cb.checked).map(([c]) => c) };
   }
 
-  /** Frühere Bewertungen (alle Kurse) als Vorlage für die Kriterien. */
+  /** Quellen für die Kriterien einer neuen Bewertung: gespeicherte Vorlagen und frühere Bewertungen (alle Kurse). */
   function templates(db) {
     const out = [];
-    for (const c of db.courses) for (const a of c.assessments) if (a.kind === 'pres' && a.pres.criteria.length) out.push({ a, label: `${a.name} – ${M.courseTitle(c)} (${a.pres.criteria.length} Kriterien)` });
+    for (const t of db.presTemplates || []) if (t.criteria.length) out.push({ group: 'Vorlagen', criteria: t.criteria, label: `${t.name} (${t.criteria.length} Kriterien)` });
+    for (const c of db.courses) for (const a of c.assessments) if (a.kind === 'pres' && a.pres.criteria.length) out.push({ group: 'Frühere Bewertungen', criteria: a.pres.criteria, label: `${a.name} – ${M.courseTitle(c)} (${a.pres.criteria.length} Kriterien)` });
     return out;
   }
 
   async function addPres(course, db, half) {
     const name = h('input', { class: 'input', value: 'Präsentation' });
     const tpl = templates(db);
-    const from = h('select', { class: 'input' }, h('option', { value: '' }, '— Kriterien aus dem Pool wählen —'), tpl.map((x, i) => h('option', { value: i }, x.label)));
+    const from = h(
+      'select',
+      { class: 'input' },
+      h('option', { value: '' }, '— Kriterien aus dem Pool wählen —'),
+      ['Vorlagen', 'Frühere Bewertungen'].map((g) => (tpl.some((x) => x.group === g) ? h('optgroup', { label: g }, tpl.map((x, i) => (x.group === g ? h('option', { value: i }, x.label) : null))) : null))
+    );
     const pick = poolChecklist(db);
     const v = await modal({
       title: 'Neue Präsentationsbewertung',
@@ -97,7 +105,7 @@
         'div',
         null,
         h('label', { class: 'field' }, h('span', null, 'Bezeichnung'), name),
-        tpl.length ? h('label', { class: 'field' }, h('span', null, 'Kriterien übernehmen von'), from) : null,
+        tpl.length ? h('label', { class: 'field' }, h('span', null, 'Kriterien übernehmen von (Vorlage oder frühere Bewertung)'), from) : null,
         h('p', { class: 'small' }, 'Kriterien aus dem Kriterienpool (Beschreibung der Stufen 0–3 beim Darüberfahren). Später lassen sich weitere hinzufügen, eigene anlegen, gewichten und sortieren.'),
         pick.el
       ),
@@ -112,7 +120,7 @@
       ],
     });
     if (v !== 'ok') return;
-    const crit = from.value !== '' ? tpl[Number(from.value)].a.pres.criteria : pick.selected();
+    const crit = from.value !== '' ? tpl[Number(from.value)].criteria : pick.selected();
     const a = M.newPres(course, half, db.settings, crit);
     a.name = name.value.trim() || 'Präsentation';
     course.assessments.push(a);
@@ -222,8 +230,23 @@
       { id: 'list', icon: '📄', label: 'Bewertungsliste', group: 'teacher', tip: 'Alle Personen mit Thema, Punkten je Kriterium, Summe, Prozent und Note; darunter Notenspiegel und Notenschlüssel.', run: () => NM.print.pres(course, a, 'list') },
       { id: 'key', icon: '📊', label: 'Notenschlüssel und Notenspiegel', group: 'teacher', tip: 'Punktschwellen je Note und Verteilung der Noten mit Statistik – ohne Namen.', run: () => NM.print.pres(course, a, 'key') },
       { id: 'blank', icon: '📝', label: 'Leere Bewertungsbögen', group: 'teacher', tip: 'Je aktive Person ein Bogen mit Name, Kriterien und Kästchen 0–3 samt Stufenbeschreibung – zum Ankreuzen während der Präsentation.', run: () => NM.print.pres(course, a, 'blank') },
+      { id: 'guide', icon: '📋', label: 'Bewertungskriterien (Handreichung)', group: 'students', tip: 'Eine Seite für alle vorab: Kriterien mit Gewicht und der Beschreibung jeder Stufe 0–3, ohne Namen und Noten; Notenschlüssel wahlweise.', run: () => guideDialog(course, a) },
       { id: 'sheets', icon: '🗒️', label: 'Bewertungsbogen je Person', group: 'students', tip: 'Je Person eine Seite mit Thema, Punkten je Kriterium samt Beschreibung der erreichten Stufe, Summe, Prozent, Bemerkung; Note wahlweise, Felder für Datum und Unterschrift.', run: () => sheetsDialog(course, a) },
     ]);
+  }
+
+  async function guideDialog(course, a) {
+    const level = G.courseLevel(course);
+    const withKey = h('input', { type: 'checkbox' });
+    const v = await modal({
+      title: 'Bewertungskriterien drucken',
+      body: h('div', null, h('p', { class: 'small' }, 'Handreichung für die Klasse: alle Kriterien mit Gewicht und Beschreibung der Stufen 0–3.'), h('label', { class: 'check' }, withKey, ' Notenschlüssel mit abdrucken (Punkte ab … für jede Note)')),
+      buttons: [
+        { label: 'Abbrechen', value: null },
+        { label: '🖨 Drucken', value: 'ok', kind: 'primary' },
+      ],
+    });
+    if (v === 'ok') NM.print.presGuide({ title: a.name, course, criteria: a.pres.criteria, key: withKey.checked ? G.keyForPres(a.pres, level) : null, level });
   }
 
   async function sheetsDialog(course, a) {
@@ -313,9 +336,22 @@
         'div',
         { class: 'inline wrap' },
         h('button', { class: 'btn btn-ghost', onclick: () => addFromPool(db, a) }, '+ aus dem Pool'),
-        h('button', { class: 'btn btn-ghost', onclick: () => addOwn(db, a) }, '+ eigenes Kriterium')
+        h('button', { class: 'btn btn-ghost', onclick: () => addOwn(db, a) }, '+ eigenes Kriterium'),
+        p.criteria.length ? h('button', { class: 'btn btn-ghost', title: 'Kriterien mit Reihenfolge und Gewichten als Vorlage für spätere Bewertungen speichern (alle Kurse)', onclick: () => saveAsTemplate(db, a) }, '💾 Als Vorlage speichern') : null
       )
     );
+  }
+
+  async function saveAsTemplate(db, a) {
+    const name = await NM.util.promptDialog('Als Vorlage speichern', 'Name der Vorlage', a.name);
+    if (name === null || !name.trim()) return;
+    const old = db.presTemplates.find((t) => t.name.toLowerCase() === name.trim().toLowerCase());
+    if (old && !(await confirmDialog('Vorlage ersetzen?', `Es gibt schon eine Vorlage „${old.name}“. Ihre Kriterien werden ersetzt.`, { okLabel: 'Ersetzen' }))) return;
+    const t = M.newPresTemplate(name.trim(), a.pres.criteria);
+    if (old) Object.assign(old, { criteria: t.criteria });
+    else db.presTemplates.push(t);
+    NM.app.commit();
+    toast(`Vorlage „${name.trim()}“ gespeichert.`, 'info');
   }
 
   function move(p, i, d) {
@@ -588,6 +624,100 @@
     const p = a.pres;
     const st = G.presStats(p, M.statStudents(course).map((s) => s.id), level);
     return NM.views.tests.keyCardFor(course, level, { focusId: a.id, key: G.keyForPres(p, level), counts: st.counts, holder: p, st, results: p.results });
+  }
+
+  // ---------- Vorlagen (für alle Kurse) ----------
+
+  function templatesCard(course, db) {
+    const ui = NM.app.state.ui;
+    const list = db.presTemplates || [];
+    return h(
+      'details',
+      {
+        class: 'card pool-card tpl-card',
+        open: !!ui.tplOpen,
+        ontoggle: (e) => {
+          ui.tplOpen = e.target.open;
+          NM.app.saveUi();
+        },
+      },
+      h('summary', null, h('h2', null, 'Vorlagen'), h('span', { class: 'muted small' }, ` ${list.length} ${list.length === 1 ? 'Vorlage' : 'Vorlagen'} · gelten für alle Kurse`)),
+      h('p', { class: 'muted small' }, 'Eine Vorlage ist ein benannter Satz von Kriterien mit Reihenfolge und Gewichten, z. B. „Referat“ oder „Plakatpräsentation“. Sie steht beim Anlegen einer Bewertung unter „Kriterien übernehmen von“ zur Auswahl. Speichern auch über „💾 Als Vorlage speichern“ in der Karte „Kriterien“.'),
+      list.length
+        ? h(
+            'div',
+            { class: 'table-wrap' },
+            h(
+              'table',
+              { class: 'table compact tpl-table' },
+              h('tbody', null, list.map((t) =>
+                h(
+                  'tr',
+                  null,
+                  h('td', null, h('strong', null, t.name)),
+                  h('td', { class: 'muted small', title: t.criteria.map((c) => c.name + (G.critWeight(c) !== 1 ? ' ×' + G.critWeight(c) : '')).join('\n') }, `${t.criteria.length} Kriterien: ` + t.criteria.map((c) => c.name).join(', ')),
+                  h(
+                    'td',
+                    null,
+                    h(
+                      'div',
+                      { class: 'inline' },
+                      h('button', { class: 'btn btn-sm', title: 'Bewertungskriterien dieser Vorlage als Handreichung für die Klasse drucken', 'data-tpl-print': t.id, onclick: () => NM.print.presGuide({ title: t.name, course, criteria: t.criteria, level: G.courseLevel(course) }) }, '🖨 Handreichung'),
+                      h(
+                        'button',
+                        {
+                          class: 'icon-btn',
+                          title: 'Umbenennen',
+                          'aria-label': 'Umbenennen: ' + t.name,
+                          onclick: async () => {
+                            const n = await NM.util.promptDialog('Vorlage umbenennen', 'Name der Vorlage', t.name);
+                            if (n === null || !n.trim()) return;
+                            t.name = n.trim();
+                            NM.app.commit();
+                          },
+                        },
+                        '✎'
+                      ),
+                      h(
+                        'button',
+                        {
+                          class: 'icon-btn',
+                          title: 'Vorlage löschen',
+                          'aria-label': 'Vorlage löschen: ' + t.name,
+                          onclick: async () => {
+                            if (!(await confirmDialog('Vorlage löschen?', `„${t.name}“ löschen? Bewertungen, die damit angelegt wurden, bleiben unverändert.`, { okLabel: 'Löschen', danger: true }))) return;
+                            db.presTemplates = db.presTemplates.filter((x) => x !== t);
+                            NM.app.commit();
+                          },
+                        },
+                        '✕'
+                      )
+                    )
+                  )
+                )
+              ))
+            )
+          )
+        : h('p', { class: 'muted' }, 'Noch keine Vorlagen.'),
+      h('button', { class: 'btn btn-ghost', onclick: () => newTemplate(db) }, '+ Vorlage aus dem Pool')
+    );
+  }
+
+  async function newTemplate(db) {
+    const name = h('input', { class: 'input', placeholder: 'z. B. Referat, Plakatpräsentation' });
+    const pick = poolChecklist(db);
+    const v = await modal({
+      title: 'Neue Vorlage',
+      wide: true,
+      body: h('div', null, h('label', { class: 'field' }, h('span', null, 'Name der Vorlage'), name), h('p', { class: 'small' }, 'Kriterien wählen (Gewichte und Reihenfolge lassen sich in einer Bewertung anpassen und mit „💾 Als Vorlage speichern“ übernehmen).'), pick.el),
+      buttons: [
+        { label: 'Abbrechen', value: null },
+        { label: 'Anlegen', value: 'ok', kind: 'primary', validate: () => (!name.value.trim() ? (toast('Bitte einen Namen eingeben.', 'error'), false) : !pick.selected().length ? (toast('Bitte mindestens ein Kriterium wählen.', 'error'), false) : true) },
+      ],
+    });
+    if (v !== 'ok') return;
+    db.presTemplates.push(M.newPresTemplate(name.value.trim(), pick.selected()));
+    NM.app.commit();
   }
 
   // ---------- Kriterienpool (für alle Kurse) ----------
