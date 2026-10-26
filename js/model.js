@@ -8,7 +8,7 @@
   // die Daten falsch verstehen würden. Ältere Versionen öffnen solche Datenbanken dann nicht.
   // 2 (1.18): Arbeiten in Teilen – getrennt benotete Teile würden ältere Versionen falsch rechnen.
   const SCHEMA = 2;
-  const APP_VERSION = '1.18.0';
+  const APP_VERSION = '1.18.1';
 
   class NewerSchemaError extends Error {}
 

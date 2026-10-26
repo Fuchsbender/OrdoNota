@@ -618,6 +618,12 @@ def run_parts_check(br, base):
         cell.value = '4'; cell.dispatchEvent(new Event('change')); await wait();
         out.partCols = document.querySelectorAll('thead th.part-col').length;
         out.partSum = NM.grades.testResult(t, sid, 'sek1').parts[1].score;
+        // Teil in der Ergebnistabelle ausblenden: Aufgabenspalten weg, Σ des Teils bleibt
+        const th1 = t.tasks.find((x) => x.partId === t.parts[0].id);
+        document.querySelector(`[data-focus-key="part-toggle-${t.parts[0].id}"]`).click(); await wait();
+        out.hide = [!document.querySelector(`[data-focus-key="ts-${sid}-${th1.id}"]`), !!document.querySelector(`[data-focus-key="ts-${sid}-${prax.id}"]`), document.querySelectorAll('thead th.part-col').length, NM.app.state.ui.hiddenParts[a.id].length];
+        document.querySelector(`[data-focus-key="part-toggle-${t.parts[0].id}"]`).click(); await wait();
+        out.show = !!document.querySelector(`[data-focus-key="ts-${sid}-${th1.id}"]`);
         // getrennt benoten
         const mode = document.querySelector('[data-focus-key="part-mode"]');
         mode.value = 'separate'; mode.dispatchEvent(new Event('change')); await wait();
@@ -650,11 +656,11 @@ def run_parts_check(br, base):
         document.querySelector('dialog .btn-primary').click(); await wait();
         out.off = [!t.parts, !t.partMode, t.tasks.length === nTasks, t.tasks.every((x) => !x.partId), !t.results[sid2].partStatus, document.querySelectorAll('.parts-table').length];
         return out; })()""")
-    ok = bool(res) and res["on"] == ["Theorie,Praxis", "sum", True, 2, 2] and res["same"] and res["partCols"] == 2 and res["partSum"] == 4 \
+    ok = bool(res) and res["on"] == ["Theorie,Praxis", "sum", True, 2, 2] and res["same"] and res["partCols"] == 2 and res["partSum"] == 4 and res["hide"] == [True, True, 2, 1] and res["show"] \
         and res["sep"] == ["separate", True, 4, 2] and res["grade"] and res["missing"] is None and res["pstatus"] == "nachschreiben" \
         and res["keyPart"] == "Praxis" and res["three"] == [3, True] and res["print"] == [True] * 4 and res["printParts"] and res["btn"] \
         and res["beamer"] >= 5 and res["off"] == [True, True, True, True, True, 0]
-    report("Teile: einschalten, Aufgabe/Punkte je Teil, getrennt benoten, Status je Teil, Schlüssel je Teil, Ausdrucke, Beamer, aufheben", ok and not br.errors, str(res) + "; ".join(br.errors))
+    report("Teile: einschalten, Aufgabe/Punkte je Teil, Teil ausblenden, getrennt benoten, Status je Teil, Schlüssel je Teil, Ausdrucke, Beamer, aufheben", ok and not br.errors, str(res) + "; ".join(br.errors))
 
 
 def run_moodle_check(br, base):

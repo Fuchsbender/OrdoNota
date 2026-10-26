@@ -396,6 +396,7 @@ select option { background: var(--surface); color: var(--text); }
 .task-group:first-of-type { border-top: 0; padding-top: 0; }
 .task-group-head { margin-bottom: 6px; }
 .table th.part-col, .table td.part-col { background: var(--surface-2); }
+.part-toggle.off { color: var(--muted); border-style: dashed; }
 .parts-table .part-name { width: 160px; }
 .parts-table .part-weight, .parts-table .part-limit { width: 72px; }
 .key-parts { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }

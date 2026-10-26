@@ -520,7 +520,18 @@
     const t = a.test;
     const max = G.testMaxScore(t);
     const sep = G.separateParts(t);
-    const groups = G.taskGroups(t);
+    // Ausgeblendete Teile: nur Σ (und Teilnote) ohne Aufgabenspalten; pro Gerät gemerkt
+    const ui = NM.app.state.ui;
+    const hidden = new Set(((ui.hiddenParts || {})[a.id] || []).filter((id) => G.hasParts(t) && t.parts.some((x) => x.id === id)));
+    const groups = G.taskGroups(t).map((g) => (g.part && hidden.has(g.part.id) ? { part: g.part, tasks: [], hidden: true } : g));
+    const toggle = (part) => {
+      const list = new Set((ui.hiddenParts = ui.hiddenParts || {})[a.id] || []);
+      if (list.has(part.id)) list.delete(part.id);
+      else list.add(part.id);
+      ui.hiddenParts[a.id] = [...list];
+      NM.app.saveUi();
+      NM.app.rerender();
+    };
     const all = M.activeStudents(course);
     const results = new Map(all.map((s) => [s.id, G.testResult(t, s.id, level)]));
     const score = (s, task) => ((t.results[s.id] || {}).scores || {})[task.id];
@@ -644,7 +655,27 @@
       h(
         'div',
         { class: 'card-head' },
-        h('div', { class: 'inline' }, h('h2', null, 'Ergebnisse'), sign ? signCount(t, all) : null),
+        h(
+          'div',
+          { class: 'inline wrap' },
+          h('h2', null, 'Ergebnisse'),
+          sign ? signCount(t, all) : null,
+          G.hasParts(t)
+            ? t.parts.map((part) =>
+                h(
+                  'button',
+                  {
+                    class: 'btn btn-sm part-toggle' + (hidden.has(part.id) ? ' off' : ''),
+                    'aria-pressed': String(!hidden.has(part.id)),
+                    'data-focus-key': `part-toggle-${part.id}`,
+                    title: hidden.has(part.id) ? `Aufgaben von „${part.name}“ einblenden` : `Aufgaben von „${part.name}“ ausblenden (Summe und Note bleiben sichtbar)`,
+                    onclick: () => toggle(part),
+                  },
+                  (hidden.has(part.id) ? '▸ ' : '▾ ') + part.name
+                )
+              )
+            : null
+        ),
         h('span', { class: 'muted small' }, 'Enter/↓ springt zur nächsten Person, Tab zur nächsten Aufgabe')
       ),
       students.length === 0

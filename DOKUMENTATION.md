@@ -1,6 +1,6 @@
 # OrdoNota – Dokumentation
 
-Version 1.18.0 · Stand Oktober 2026
+Version 1.18.1 · Stand Oktober 2026
 
 OrdoNota (bis Version 1.11 „Notenmanager“) verwaltet Noten für die Sekundarstufe I (Noten 1–6 mit Tendenz) und die Mainzer Studienstufe (MSS, Punkte 00–15) an Schulen in Rheinland-Pfalz. Die App läuft vollständig lokal im Browser, verschlüsselt alle Daten mit einem Passwort und legt sie in einem Ordner ab, den der Synology Drive Client auf die DiskStation spiegelt.
 
@@ -358,6 +358,8 @@ Bei getrennter Benotung gilt außerdem:
 - Die **Gesamtnote entsteht erst, wenn alle Teile eine Note haben.** Fehlt jemand in einem Teil, setzen Sie in der Spalte „Note“ dieses Teils **fehlt** oder **NS** (Nachschreiben). Der Status in der Spalte „Status“ gilt weiterhin für die ganze Arbeit (z. B. Täuschung → 6).
 - Der **Notenschlüssel** zeigt den Schlüssel des gewählten Teils (Umschalter über der Tabelle); Notenspiegel, Statistik und **Drittelparagraph** beziehen sich auf die Gesamtnote.
 - Die Beamer-Ansicht zeigt die Punkteverteilung je Teil.
+
+**Teil ausblenden:** Neben der Überschrift „Ergebnisse“ steht je Teil ein Knopf (z. B. **▾ Theorie**). Ein Klick blendet die Aufgabenspalten dieses Teils aus (**▸ Theorie**); Σ und (bei getrennter Benotung) die Teilnote bleiben sichtbar. So passt z. B. beim Eintragen des Praxisteils alles auf den Bildschirm. Der Zustand wird je Test auf diesem Gerät gemerkt; Ausdrucke zeigen immer alle Teile.
 
 **Moodle-Import in einen Teil:** Knopf **„⬆ Moodle“** in der Zeile des Teils. Die Fragen werden Aufgaben F1, F2, … dieses Teils, die anderen Teile bleiben unverändert. Die CSV-Dateien werden beim Teil gespeichert (eigene Karte „Moodle – Teilname“ mit „Erneut importieren“). Personen ohne beendeten Moodle-Versuch bekommen „fehlt“ für die ganze Arbeit, wenn sie noch gar keine Punkte haben; haben sie in einem anderen Teil schon Punkte, wird bei getrennter Benotung nur dieser Teil auf „fehlt“ gesetzt.
 
@@ -927,7 +929,7 @@ Eingabe (change) → Daten im Objekt ändern → NM.app.commit()
 
 Berechnete Werte (Schnitte, Testnoten, EPO-Noten) werden **nie gespeichert**, sondern bei jedem Zeichnen aus den Rohdaten berechnet.
 
-**Pro Gerät im Browser gespeichert** (`localStorage`/IndexedDB, nicht in der Datenbank): Ordner-Handle, Geräte-ID und -name, gewählter Kurs/Reiter/Halbjahr, Farbschema, ein-/ausgeklappte Kursliste, Stand des Pomodoro-Timers.
+**Pro Gerät im Browser gespeichert** (`localStorage`/IndexedDB, nicht in der Datenbank): Ordner-Handle, Geräte-ID und -name, gewählter Kurs/Reiter/Halbjahr, Farbschema, ein-/ausgeklappte Kursliste, ausgeblendete Teile in der Ergebnistabelle, Stand des Pomodoro-Timers.
 
 ## 23. Dateiformat der Datenbank
 
@@ -943,7 +945,7 @@ Berechnete Werte (Schnitte, Testnoten, EPO-Noten) werden **nie gespeichert**, so
   "kdf": "PBKDF2-SHA256",
   "savedAt": "2026-10-14T21:57:03.123Z",
   "device": "Laptop Schule",
-  "app": "1.18.0",
+  "app": "1.18.1",
   "pw":   { "salt": "<b64>", "iter": 600000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "rec":  { "salt": "<b64>", "iter": 100000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "data": { "iv": "<b64>", "ct": "<b64: verschlüsseltes JSON des Datenmodells>" }
@@ -966,7 +968,7 @@ Entschlüsselter Inhalt (`schema: 2`):
 ```js
 {
   schema: 2,                             // Datenformat (siehe 26.2)
-  savedWith: "1.18.0",                    // App-Version beim letzten Speichern
+  savedWith: "1.18.1",                    // App-Version beim letzten Speichern
   created: "<ISO>", savedAt: "<ISO>",
   settings: { autoLockMin, limitSek1, limitMss, precision, keepBackups, backupEveryMin, gradeColors,
               pomodoro: { enabled, count, work, short, long, tick: "off" | "work" | "always", alarm: "off" | "bell" | "gong" | "beep", volume } },
@@ -1033,7 +1035,7 @@ Das Skript startet einen unsichtbaren Chromium-Browser (Chrome, Edge, Chromium, 
 1. alle Testseiten (siehe 25.2),
 2. den Start der App im Demo-Modus und alle Reiter für einen Sek-I- und einen MSS-Kurs ohne JavaScript-Fehler,
 3. das Sortieren per Klick auf Spaltenköpfe (Tests, EPO, Notenübersicht; Richtung und leere Werte unten),
-4. den Pomodoro-Timer (Aktivieren, Farben je Zustand, Phasenwechsel, Zurücksetzen, Einstellungsdialog), das Layout des Reiters „Einstellungen“ bei aktivem Timer (keine Lücken zwischen den Karten, Auswahllisten nicht abgeschnitten, bei 1570 und 2560 px) und die Kürzel in der eingeklappten Kursliste, die weichen Übergänge (nur bei Reiter-, Kurs- und Halbjahreswechsel), das Ein-/Ausklappen der Kursliste, den Reiter „Tests“ in voller Breite, Arbeiten in Teilen (einschalten, Aufgaben und Punkte je Teil, getrennt benoten, Status je Teil, Schlüssel je Teil, Ausdrucke inkl. Teilübersicht, Beamer, Teile aufheben) und den Haken „Unterschrift gesehen“ bei Klassenarbeiten (Zähler, Ausdruck), den Moodle-Import (Dateiauswahl im Dialog, Zuordnung, Status „fehlt“, Ausdruck mit und ohne Note, erneuter Import),
+4. den Pomodoro-Timer (Aktivieren, Farben je Zustand, Phasenwechsel, Zurücksetzen, Einstellungsdialog), das Layout des Reiters „Einstellungen“ bei aktivem Timer (keine Lücken zwischen den Karten, Auswahllisten nicht abgeschnitten, bei 1570 und 2560 px) und die Kürzel in der eingeklappten Kursliste, die weichen Übergänge (nur bei Reiter-, Kurs- und Halbjahreswechsel), das Ein-/Ausklappen der Kursliste, den Reiter „Tests“ in voller Breite, Arbeiten in Teilen (einschalten, Aufgaben und Punkte je Teil, Teil ausblenden, getrennt benoten, Status je Teil, Schlüssel je Teil, Ausdrucke inkl. Teilübersicht, Beamer, Teile aufheben) und den Haken „Unterschrift gesehen“ bei Klassenarbeiten (Zähler, Ausdruck), den Moodle-Import (Dateiauswahl im Dialog, Zuordnung, Status „fehlt“, Ausdruck mit und ohne Note, erneuter Import),
 5. den Excel-Export der Schülerliste (gültiges ZIP/XML, Umlaute und Sonderzeichen), das Kurs-Löschen nur mit „LÖSCHEN“, das Ein-/Ausblenden der Fotos im EPO-Reiter und im Sitzplan (auch im Druck) das Erweitern/Verkleinern des Sitzplan-Rasters an allen vier Seiten sowie das Ziehen (keine Wiederholung bis zum Auffüllen, automatisches Auffüllen, Note, Rückgängig, Abwesende/Herausgenommene),
 6. das Notfallwerkzeug: Eine von der App echt verschlüsselte Datenbank wird mit `tools/entschluesseln.py` per Passwort und per Wiederherstellungsschlüssel entschlüsselt und mit dem Original verglichen. Dazu kommen falsches Passwort, manipulierte Datei und CSV-Ausgabe.
 
@@ -1075,7 +1077,7 @@ In `js/model.js` stehen zwei Nummern:
 
 | Konstante | Bedeutung | Wann erhöhen |
 |---|---|---|
-| `APP_VERSION` (z. B. `1.18.0`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.18.0` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
+| `APP_VERSION` (z. B. `1.18.1`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.18.1` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
 | `SCHEMA` (z. B. `2`) | Version des Datenformats (2 seit 1.18: Arbeiten in Teilen) | nur, wenn eine **ältere** App-Version die neuen Daten falsch verstehen würde (z. B. ein Feld ändert seine Bedeutung) |
 
 Öffnet eine App eine Datenbank mit höherem `SCHEMA`, verweigert sie das mit einer Meldung (siehe 21.10). Neue, nur *zusätzliche* Felder brauchen kein neues `SCHEMA`: Ältere Versionen lassen unbekannte Felder unverändert und speichern sie mit.
