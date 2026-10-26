@@ -13,7 +13,6 @@
     ['similar', 'leistungsgleich'],
   ];
   let picked = null; // angeklickte Person zum Verschieben/Tauschen: { setId, sid }
-  const DRAG_TYPE = 'application/x-ordonota-person';
 
   function data(course) {
     course.groupSets = course.groupSets || [];
@@ -206,7 +205,7 @@
     const assigned = new Set(set.groups.flatMap((g) => g.members));
     const free = M.activeStudents(course).filter((s) => !assigned.has(s.id));
     const ready = picked && picked.setId === set.id;
-    const move = (sid, target) => {
+    const moveTo = (sid, target) => {
       for (const g of set.groups) g.members = g.members.filter((x) => x !== sid);
       if (target) target.members.push(sid);
       picked = null;
@@ -228,22 +227,13 @@
         'button',
         {
           class: 'grp-person' + (picked && picked.setId === set.id && picked.sid === sid ? ' picked' : '') + (away.has(sid) ? ' away' : '') + (o.photos ? ' with-photo' : ''),
-          draggable: 'true',
           'data-sid': sid,
           'data-focus-key': `gp-${set.id}-${sid}`,
           title: (s ? fullName(s) + ' – ' : '') + 'ziehen oder anklicken und dann eine Gruppe bzw. Person anklicken (verschieben/tauschen)' + (sc && sc[sid] !== undefined ? ` · Halbjahresnote ${G.label(sc[sid], G.courseLevel(course))}` : ''),
-          ondragstart: (e) => {
-            // Eigener Datentyp: Eingabefelder (Name, Auftrag) nehmen ihn nicht als Text an
-            e.dataTransfer.setData(DRAG_TYPE, set.id + '|' + sid);
-            e.dataTransfer.effectAllowed = 'move';
-            e.currentTarget.classList.add('dragging');
-          },
-          ondragend: (e) => {
-            e.currentTarget.classList.remove('dragging');
-            for (const el of document.querySelectorAll('.drag-over')) el.classList.remove('drag-over');
-          },
+          onpointerdown: (e) => startDrag(e, sid),
           onclick: (e) => {
             e.stopPropagation();
+            if (dragged) return (dragged = false);
             if (!picked || picked.setId !== set.id) picked = { setId: set.id, sid };
             else if (picked.sid === sid) picked = null;
             else return swap(picked.sid, sid);
@@ -255,36 +245,85 @@
         s ? name(s) : '?'
       );
     };
-    // Ziehen und Ablegen: Die ganze Fläche (auch Lücken und Eingabefelder) erlaubt das Ablegen, damit kein Verbotszeichen
-    // erscheint; Ziel ist die Gruppe bzw. „Nicht eingeteilt“ unter dem Mauszeiger, sonst passiert nichts.
-    const zoneAt = (e) => e.target.closest && e.target.closest('.grp-box, .grp-free');
-    const ours = (e) => [...(e.dataTransfer.types || [])].includes(DRAG_TYPE);
-    const over = (e) => {
-      if (!ours(e)) return;
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-      const z = zoneAt(e);
-      for (const el of e.currentTarget.querySelectorAll('.drag-over')) if (el !== z) el.classList.remove('drag-over');
-      if (z) z.classList.add('drag-over');
-    };
-    const boardEvents = {
-      ondragenter: over,
-      ondragover: over,
-      ondragleave: (e) => {
-        if (!e.currentTarget.contains(e.relatedTarget)) for (const el of e.currentTarget.querySelectorAll('.drag-over')) el.classList.remove('drag-over');
-      },
-      ondrop: (e) => {
-        if (!ours(e)) return;
-        e.preventDefault();
-        const z = zoneAt(e);
-        const [setId, sid] = e.dataTransfer.getData(DRAG_TYPE).split('|');
-        if (!z || !sid || setId !== set.id) return NM.app.rerender();
-        move(sid, set.groups.find((g) => g.id === z.dataset.group) || null);
-      },
+    // Ziehen per Pointer-Events wie im Sitzplan (Maus, Stift, Touch; normaler Mauszeiger statt Verbotszeichen):
+    // auf eine Gruppe bzw. „Nicht eingeteilt“ ablegen = verschieben, auf eine Person = tauschen.
+    let boardEl = null;
+    let dragged = false; // nach einem Ziehen keinen Klick (Auswählen) auslösen
+    const startDrag = (e, sid) => {
+      if (e.button > 0) return;
+      const chipEl = e.currentTarget;
+      const x0 = e.clientX;
+      const y0 = e.clientY;
+      let ghost = null;
+      let over = null;
+      let lastEv = e;
+      const scroller = document.getElementById('main');
+      const target = (ev) => {
+        if (ghost) ghost.style.display = 'none';
+        const el = document.elementFromPoint(ev.clientX, ev.clientY);
+        if (ghost) ghost.style.display = '';
+        if (!el || !boardEl || !boardEl.contains(el)) return null;
+        const other = el.closest('.grp-person');
+        if (other && other !== chipEl) return other;
+        return el.closest('.grp-box, .grp-free');
+      };
+      const move = (ev) => {
+        lastEv = ev;
+        if (!ghost) {
+          if (Math.hypot(ev.clientX - x0, ev.clientY - y0) < 5) return;
+          const r = chipEl.getBoundingClientRect();
+          ghost = chipEl.cloneNode(true);
+          ghost.classList.add('grp-ghost');
+          ghost.dataset.dx = x0 - r.left;
+          ghost.dataset.dy = y0 - r.top;
+          Object.assign(ghost.style, { width: r.width + 'px', height: r.height + 'px' });
+          document.body.appendChild(ghost);
+          chipEl.classList.add('dragging');
+          document.body.classList.add('grp-dragging');
+        }
+        ghost.style.left = ev.clientX - ghost.dataset.dx + 'px';
+        ghost.style.top = ev.clientY - ghost.dataset.dy + 'px';
+        const t = target(ev);
+        if (t !== over) {
+          if (over) over.classList.remove('drag-over');
+          over = t;
+          if (over) over.classList.add('drag-over');
+        }
+      };
+      // Am oberen/unteren Rand automatisch scrollen
+      const timer = setInterval(() => {
+        if (!ghost || !scroller) return;
+        const b = scroller.getBoundingClientRect();
+        const d = lastEv.clientY < b.top + 60 ? -14 : lastEv.clientY > b.bottom - 60 ? 14 : 0;
+        if (d) {
+          scroller.scrollTop += d;
+          move(lastEv);
+        }
+      }, 30);
+      const up = (ev) => {
+        clearInterval(timer);
+        document.removeEventListener('pointermove', move);
+        document.removeEventListener('pointerup', up);
+        document.removeEventListener('pointercancel', up);
+        if (!ghost) return; // nur geklickt: das erledigt onclick
+        ghost.remove();
+        chipEl.classList.remove('dragging');
+        document.body.classList.remove('grp-dragging');
+        if (over) over.classList.remove('drag-over');
+        dragged = true;
+        setTimeout(() => (dragged = false), 0);
+        const t = ev.type === 'pointerup' ? target(ev) : null;
+        if (!t) return;
+        if (t.classList.contains('grp-person')) swap(sid, t.dataset.sid);
+        else moveTo(sid, set.groups.find((g) => g.id === t.dataset.group) || null);
+      };
+      document.addEventListener('pointermove', move);
+      document.addEventListener('pointerup', up);
+      document.addEventListener('pointercancel', up);
     };
     const dropZone = (target) => ({
       onclick: () => {
-        if (picked && picked.setId === set.id) move(picked.sid, target);
+        if (picked && picked.setId === set.id) moveTo(picked.sid, target);
       },
     });
     const cards = set.groups.map((g) => {
@@ -360,14 +399,13 @@
         h('div', { class: 'grp-people' }, g.members.map((sid, i) => chip(sid, g, i)))
       );
     });
-    return [
-      h(
+    boardEl = h(
         'div',
-        Object.assign({ class: 'grp-board' }, boardEvents),
+        { class: 'grp-board' },
         h('div', { class: 'grp-grid' }, cards),
         h('div', Object.assign({ class: 'grp-free' + (ready ? ' drop-ready' : ''), 'data-group': '' }, dropZone(null)), h('span', { class: 'muted small' }, free.length ? 'Nicht eingeteilt:' : 'Alle aktiven Personen sind eingeteilt.'), free.map((s) => chip(s.id, null, 0)))
-      ),
-    ];
+      );
+    return [boardEl];
   }
 
   function addGroupButton(set, key) {

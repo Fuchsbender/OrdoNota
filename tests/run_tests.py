@@ -952,6 +952,8 @@ def run_group_check(br, base):
 
 def run_groups_tab_check(br, base):
     print("Reiter Gruppen (Einteilung, Regeln, Abwesende, Fixieren, Verschieben, Puzzle, Beamer, Druck, Präsentation):")
+    # Großes Fenster, damit beim Ziehen Start und Ziel gleichzeitig sichtbar sind
+    br.call("Emulation.setDeviceMetricsOverride", width=1600, height=1200, deviceScaleFactor=1, mobile=False)
     br.open(f"{base}/index.html?demo")
     br.wait("!!document.querySelector('.overview-table')", 30)
     br.errors = []
@@ -995,18 +997,32 @@ def run_groups_tab_check(br, base):
         q(`gp-${set.id}-${y}`).click(); await wait(); q(`gp-${set.id}-${z}`).click(); await wait();
         out.click = [moved, ga.members.includes(z) && gb.members.includes(y)];
         // Ziehen und Ablegen
-        // Ziehen: Ablegen überall auf der Fläche erlaubt (kein Verbotszeichen), auch über Namen, Eingabefeldern und Lücken
-        const dt = new DataTransfer(); dt.setData('application/x-ordonota-person', set.id + '|' + y);
-        const fire = (el, type) => { const ev = new DragEvent(type, { dataTransfer: dt, bubbles: true, cancelable: true }); el.dispatchEvent(ev); return ev.defaultPrevented; };
-        const boxA = () => document.querySelector(`.grp-box[data-group="${ga.id}"]`);
-        const allowed = [fire(boxA(), 'dragenter'), fire(boxA().querySelector('.grp-person'), 'dragover'), fire(boxA().querySelector('.grp-task'), 'dragover')];
-        const marked = boxA().classList.contains('drag-over');
-        allowed.push(fire(document.querySelector('.grp-set .grp-grid'), 'dragover'));
-        fire(boxA(), 'dragover');
-        fire(boxA().querySelector('.grp-task'), 'drop'); await wait();
-        out.drag = [ga.members.includes(y) && !gb.members.includes(y), allowed.every(Boolean), marked, !document.querySelector('.drag-over'), !ga.task];
-        const plain = new DataTransfer(); plain.setData('text/plain', 'x');
-        out.drag.push(!(() => { const ev = new DragEvent('dragover', { dataTransfer: plain, bubbles: true, cancelable: true }); boxA().dispatchEvent(ev); return ev.defaultPrevented; })());
+        // Ziehen per Pointer-Events (wie im Sitzplan): auf eine Gruppe = verschieben, auf eine Person = tauschen, Lücke = nichts
+        const center = (el) => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+        const drag = async (el, toEl, at) => {
+            (toEl || el).scrollIntoView({ block: 'center' }); await wait(50);
+            const [x0, y0] = center(el);
+            el.dispatchEvent(new PointerEvent('pointerdown', { clientX: x0, clientY: y0, button: 0, bubbles: true }));
+            document.dispatchEvent(new PointerEvent('pointermove', { clientX: x0 + 10, clientY: y0 + 10, bubbles: true }));
+            const [x1, y1] = at || center(toEl);
+            document.dispatchEvent(new PointerEvent('pointermove', { clientX: x1, clientY: y1, bubbles: true }));
+            const ghost = !!document.querySelector('.grp-ghost');
+            const marked = toEl ? toEl.classList.contains('drag-over') || !!toEl.closest('.drag-over') : null;
+            document.dispatchEvent(new PointerEvent('pointerup', { clientX: x1, clientY: y1, bubbles: true }));
+            await wait();
+            return [ghost, marked];
+        };
+        const chipOf = (sid) => q(`gp-${set.id}-${sid}`);
+        const boxOf = (g) => document.querySelector(`.grp-box[data-group="${g.id}"]`);
+        const [gh1, mk1] = await drag(chipOf(y), boxOf(ga).querySelector('.grp-task'));
+        const movedA = ga.members.includes(y) && !gb.members.includes(y) && !ga.task;
+        const [u, v] = [ga.members[0], gb.members[0]];
+        await drag(chipOf(u), chipOf(v));
+        const swapped = ga.members.includes(v) && gb.members.includes(u);
+        const before = JSON.stringify(set.groups.map((g) => g.members));
+        const gr = document.querySelector('.grp-set .grp-grid').getBoundingClientRect();
+        await drag(chipOf(u), null, [gr.right - 2, gr.bottom + 200]);
+        out.drag = [gh1, mk1, movedA, swapped, JSON.stringify(set.groups.map((g) => g.members)) === before, !document.querySelector('.grp-ghost, .drag-over'), !document.body.classList.contains('grp-dragging')];
         // Name und Auftrag
         q('gb-task-' + ga.id).value = 'Plakat gestalten'; q('gb-task-' + ga.id).dispatchEvent(new Event('change')); await wait();
         q('gb-name-' + ga.id).value = 'Team Rot'; q('gb-name-' + ga.id).dispatchEvent(new Event('change')); await wait();
@@ -1088,11 +1104,12 @@ def run_groups_tab_check(br, base):
         NM.app.select({ tab: 'groups' }); await wait();
         return out; })()""")
     ok = bool(res) and res["start"] == ["Stationenlernen Prozent", 4, True, 9] and res["created"] == [True, "4,4,4", 12, "mixed", True, 0] \
-        and res["away"] == [False, 11, True] and res["lock"] == [True, True, 3] and res["click"] == [True, True] and res["drag"] == [True] * 6 \
+        and res["away"] == [False, 11, True] and res["lock"] == [True, True, 3] and res["click"] == [True, True] and res["drag"] == [True] * 7 \
         and res["edit"] == ["Plakat gestalten", "Team Rot"] and res["rule"] == [2, True] and res["ruleRoll"] == 0 and res["beamer"] == [True] * 4 and res["beamerFit"] == [True, True] and res["beamerToggle"] == [True, True, True, True, False, True] and res["beamerBack"] == [0, True] \
         and res["menu"] == ["list", "cards"] and res["print"] == [True] * 3 and res["puzzle"] == [True] * 7 and res["view"] == [True, True, True, True, False] and res["viewBack"] == [0, True] \
         and res["rebuild"] == [True, True, "Text A", 1] and res["beamerExperts"] == [True] * 4 \
         and res["toPres"] == ["mixed", 4, "Station 1: Grundwert", 3] and res["importOpts"][0].startswith("Gruppeneinteilungen") and res["fromSet"] == [4, "Station 2: Prozentwert"]
+    br.call("Emulation.clearDeviceMetricsOverride")
     report("Gruppen: Einteilung (Größe, leistungsgemischt), Abwesende, Fixieren, Anklicken/Ziehen, Auftrag, Regel mit Warnung, Beamer ohne Noten, Druck, Gruppenpuzzle, Übernahme in Präsentation", ok and not br.errors, str(res) + "; ".join(br.errors))
 
 
