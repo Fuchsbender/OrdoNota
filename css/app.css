@@ -396,6 +396,13 @@ select option { background: var(--surface); color: var(--text); }
 .task-group:first-of-type { border-top: 0; padding-top: 0; }
 .task-group-head { margin-bottom: 6px; }
 .table th.part-col, .table td.part-col { background: var(--surface-2); }
+.print-menu { display: flex; flex-direction: column; gap: 14px; min-width: min(420px, 80vw); }
+.print-menu h3 { margin: 0 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.print-menu section { display: flex; flex-direction: column; gap: 6px; }
+.print-option { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-2); color: var(--text); font: inherit; font-weight: 560; text-align: left; cursor: pointer; }
+.print-option:hover { border-color: var(--accent); background: var(--accent-soft); }
+.print-option:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.print-option-icon { width: 1.4em; text-align: center; }
 .part-toggle.off { color: var(--muted); border-style: dashed; }
 .parts-table .part-name { width: 160px; }
 .parts-table .part-weight, .parts-table .part-limit { width: 72px; }

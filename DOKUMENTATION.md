@@ -1,6 +1,6 @@
 # OrdoNota – Dokumentation
 
-Version 1.18.1 · Stand Oktober 2026
+Version 1.19.0 · Stand Oktober 2026
 
 OrdoNota (bis Version 1.11 „Notenmanager“) verwaltet Noten für die Sekundarstufe I (Noten 1–6 mit Tendenz) und die Mainzer Studienstufe (MSS, Punkte 00–15) an Schulen in Rheinland-Pfalz. Die App läuft vollständig lokal im Browser, verschlüsselt alle Daten mit einem Passwort und legt sie in einem Ordner ab, den der Synology Drive Client auf die DiskStation spiegelt.
 
@@ -236,7 +236,7 @@ Doppelte Namen werden übersprungen. Die Liste wird alphabetisch sortiert.
 
 **Bearbeiten:** Nach- und Vornamen direkt in der Tabelle ändern.
 
-**I-Status:** Ein Haken in der Spalte **„I-Status“** markiert die Person in allen Tabellen mit einem **I** hinter dem Namen, in Lehrerlisten (Test-Ergebnisliste, Kursliste, EPO-Liste) mit „(I)“. Auf Schülerzetteln und Schülerbögen erscheint die Markierung nicht. Noten von Personen mit I-Status zählen **nicht in die Statistik**: Notenspiegel, Ø Note, Anzahl je Note, Drittelparagraph, „Ø gelöst“ je Aufgabe und Beamer-Ansicht berücksichtigen sie nicht. Unter dem Notenspiegel steht dann „Ohne n Personen mit I-Status“ (nicht in der Beamer-Ansicht). Ihre eigenen Noten werden ganz normal berechnet.
+**I-Status:** Ein Haken in der Spalte **„I-Status“** markiert die Person in allen Tabellen mit einem **I** hinter dem Namen, in Lehrerlisten (Ergebnisliste, Notenliste, Bewertungsliste) mit „(I)“. Auf Ergebnis- und Mitarbeitszetteln und Leistungsbögen erscheint die Markierung nicht. Noten von Personen mit I-Status zählen **nicht in die Statistik**: Notenspiegel, Ø Note, Anzahl je Note, Drittelparagraph, „Ø gelöst“ je Aufgabe und Beamer-Ansicht berücksichtigen sie nicht. Unter dem Notenspiegel steht dann „Ohne n Personen mit I-Status“ (nicht in der Beamer-Ansicht). Ihre eigenen Noten werden ganz normal berechnet.
 
 **Zu- und Abgänge:** Bei einem Abgang den Haken **„Aktiv“** entfernen. Die Person bleibt mit allen Noten gespeichert, erscheint aber nicht mehr in Eingabetabellen, Ausdrucken und Exporten. **✕** löscht die Person samt aller Noten endgültig.
 
@@ -259,7 +259,7 @@ Doppelte Namen werden übersprungen. Die Liste wird alphabetisch sortiert.
 | Bezeichnung | z. B. „KA 1 – Terme“ |
 | Datum | Testdatum |
 | Bereich | **Klassen-/Kursarbeit** oder **Sonstige** (z. B. HÜ) |
-| Wertung | Haken **„nicht gewertet“**: Der Test bleibt mit allen Ergebnissen, Schlüssel und Notenspiegel erhalten, erscheint in der Notenübersicht und in der Kursliste aber nur ausgegraut und zählt **nicht** zur Halbjahresnote. |
+| Wertung | Haken **„nicht gewertet“**: Der Test bleibt mit allen Ergebnissen, Schlüssel und Notenspiegel erhalten, erscheint in der Notenübersicht und in der Notenliste aber nur ausgegraut und zählt **nicht** zur Halbjahresnote. |
 | Gewicht | Standard 1; z. B. 0,5 für eine kurze Überprüfung |
 | Punkte-Genauigkeit | Ganze, halbe oder Zehntel-Punkte. Gilt für Notenschlüssel und Summen. |
 | Teile | Haken **„Arbeit in Teilen“**: Die Arbeit besteht aus mehreren Teilen, z. B. Theorie und Praxis (siehe 7.8). |
@@ -286,7 +286,7 @@ In der Tabelle **Ergebnisse** die erreichten Punkte je Aufgabe eintragen (Komma 
 | Täuschung/Verweigerung | Note 6 bzw. 00 Punkte; wird beim Drittelparagraphen **nicht** mitgezählt |
 | nicht gewertet | Punkte und Note werden wie gewohnt berechnet und angezeigt, die Zeile ist ausgegraut. Die Arbeit zählt **nicht** zur Halbjahresnote dieser Person und nicht in Notenspiegel, Ø, Standardabweichung, „Ø gelöst“ und Drittelparagraph. In der Notenübersicht erscheint die Note ausgegraut. |
 
-**Unterschrift gesehen** (nur bei Klassen-/Kursarbeiten): In der letzten Spalte „Unterschrift“ abhaken, wenn die unterschriebene Arbeit zurück ist; das Datum wird gemerkt (Tooltip). Neben „Ergebnisse“ steht der Stand, z. B. „Unterschriften 9 / 11“ (gezählt werden Personen mit Note), grün hinterlegt, wenn alle da sind. Der Vermerk hat keinen Einfluss auf die Note und erscheint im Ausdruck „Liste“ als eigene Spalte.
+**Unterschrift gesehen** (nur bei Klassen-/Kursarbeiten): In der letzten Spalte „Unterschrift“ abhaken, wenn die unterschriebene Arbeit zurück ist; das Datum wird gemerkt (Tooltip). Neben „Ergebnisse“ steht der Stand, z. B. „Unterschriften 9 / 11“ (gezählt werden Personen mit Note), grün hinterlegt, wenn alle da sind. Der Vermerk hat keinen Einfluss auf die Note und erscheint im Ausdruck „Ergebnisliste“ als eigene Spalte.
 
 Die Zeile **„Ø gelöst“** zeigt je Aufgabe, wie viel Prozent der möglichen Punkte im Schnitt erreicht wurden. Daran sieht man schnell, welche Aufgabe schwer war.
 
@@ -308,13 +308,17 @@ Unter dem Schlüssel stehen das Balkendiagramm (Anzahl je ganzer Note 1–6), Te
 
 ### 7.6 Ausdrucke
 
-| Knopf | Inhalt |
+Der Knopf **„🖨 Drucken …“** öffnet eine Auswahl aller Druckarten des Tests, getrennt nach „Für die Lehrkraft“ und „Zum Austeilen“. Beim Darüberfahren zeigt ein Tooltip, was der Ausdruck enthält.
+
+| Druckart | Inhalt |
 |---|---|
-| 🖨 Schlüssel | Notenschlüssel und Notenspiegel (z. B. für das Klassenbuch oder die Fachleitung) |
-| 🖨 Liste | Alle Personen mit Punkten je Aufgabe, Σ, %, Note (bei Klassen-/Kursarbeiten mit Spalte „Unterschrift“); darunter Notenspiegel und Schlüssel |
-| 🖨 Schülerzettel | Ein Abschnitt pro Person zum Ausschneiden: erreichte und mögliche Punkte je Aufgabe, Prozent, Note |
-| 🖨 Teilübersicht | nur bei Arbeiten in Teilen (siehe 7.8): alle Personen mit Punkten, Prozent und (bei getrennter Benotung) Note je Teil, dazu die Gesamtwerte; darunter Notenspiegel und Schlüssel |
-| 🖨 Moodle-Ergebnisse | nur bei Tests aus Moodle (siehe 7.7): je Person eine Seite mit Ergebnis (Punkte, Prozent) oben, darunter Frage, gegebene Antwort, Lösung und Punkte; unten die **Note (Zahl und ausgeschrieben) wahlweise** sowie Linien für Datum und Unterschrift |
+| **Für die Lehrkraft** | |
+| 📄 Ergebnisliste | Alle Personen mit Punkten je Aufgabe, Σ, %, Note (bei Klassen-/Kursarbeiten mit Spalte „Unterschrift“); darunter Notenspiegel und Schlüssel |
+| 🧩 Ergebnisse nach Teilen | nur bei Arbeiten in Teilen (siehe 7.8): alle Personen mit Punkten, Prozent und (bei getrennter Benotung) Note je Teil, dazu die Gesamtwerte; darunter Notenspiegel und Schlüssel |
+| 📊 Notenschlüssel und Notenspiegel | Punktschwellen je Note und Notenspiegel mit Statistik, ohne Namen (z. B. für das Klassenbuch oder die Fachleitung) |
+| **Zum Austeilen** | |
+| ✂️ Ergebniszettel zum Ausschneiden | Ein Abschnitt pro Person: erreichte und mögliche Punkte je Aufgabe, Prozent, Note |
+| 💬 Moodle-Rückmeldung je Person | nur bei Tests aus Moodle (siehe 7.7): je Person eine Seite mit Ergebnis (Punkte, Prozent) oben, darunter Frage, gegebene Antwort, Lösung und Punkte; unten die **Note (Zahl und ausgeschrieben) wahlweise** sowie Linien für Datum und Unterschrift |
 
 ### 7.7 Moodle-Import
 
@@ -340,7 +344,7 @@ Regeln beim Import:
 
 **Erneut importieren** (Knopf in der Karte „Moodle“), z. B. nach Korrekturen in Moodle: Die Punkte der Moodle-Fragen werden ersetzt, eigene zusätzliche Aufgaben, Notenschlüssel, Gewicht und Status „nicht gewertet“/„Täuschung“ bleiben erhalten. Lädt man dabei nur die Bewertungen-CSV, bleiben die gespeicherten Antworttexte erhalten.
 
-**Ausdruck „🖨 Moodle-Ergebnisse“:** Im Dialog wählen Sie **alle** (je eine Seite) oder **eine Person** und ob die **Note** mitgedruckt wird. Oben steht das Ergebnis (Punkte, Prozent mit Balken), darunter je Frage Frage, „Deine Antwort“, Lösung und Punkte. Jede Zeile trägt ein Zeichen und einen farbigen Rand: ✓ richtig (grün), ◐ teilweise (orange hinterlegt), ✗ falsch (rot hinterlegt, Lösung fett), – keine Antwort. Durch die Zeichen bleibt der Ausdruck auch in Schwarzweiß lesbar; Zeilen werden nicht über Seiten getrennt. Unten steht – wenn gewählt – die **Note als Zahl und ausgeschrieben** (z. B. „2+ voll gut“, „2- noch gut“; MSS: „11 Punkte gut (2)“), darunter Linien für **Datum** und **Unterschrift der Lehrkraft** (auch ohne Note).
+**Ausdruck „💬 Moodle-Rückmeldung je Person“** (unter „🖨 Drucken …“): Im Dialog wählen Sie **alle** (je eine Seite) oder **eine Person** und ob die **Note** mitgedruckt wird. Oben steht das Ergebnis (Punkte, Prozent mit Balken), darunter je Frage Frage, „Deine Antwort“, Lösung und Punkte. Jede Zeile trägt ein Zeichen und einen farbigen Rand: ✓ richtig (grün), ◐ teilweise (orange hinterlegt), ✗ falsch (rot hinterlegt, Lösung fett), – keine Antwort. Durch die Zeichen bleibt der Ausdruck auch in Schwarzweiß lesbar; Zeilen werden nicht über Seiten getrennt. Unten steht – wenn gewählt – die **Note als Zahl und ausgeschrieben** (z. B. „2+ voll gut“, „2- noch gut“; MSS: „11 Punkte gut (2)“), darunter Linien für **Datum** und **Unterschrift der Lehrkraft** (auch ohne Note).
 
 ### 7.8 Arbeit in Teilen (z. B. Theorie und Praxis)
 
@@ -365,7 +369,7 @@ Bei getrennter Benotung gilt außerdem:
 
 **Teile aufheben:** Haken „Arbeit in Teilen“ entfernen. Alle Aufgaben und Punkte bleiben erhalten und werden wieder mit einem Schlüssel bewertet; Schlüssel, Gewichte und Status der einzelnen Teile gehen verloren (mit Rückfrage).
 
-**Ausdrucke:** „Liste“ und „Schülerzettel“ zeigen die Aufgaben nach Teilen mit Zwischensumme (bei getrennter Benotung zusätzlich die Teilnoten), „Schlüssel“ den Schlüssel je Teil, **„🖨 Teilübersicht“** eine kompakte Tabelle aller Personen mit Punkten, Prozent und Note je Teil und gesamt.
+**Ausdrucke:** „Ergebnisliste“ und „Ergebniszettel“ zeigen die Aufgaben nach Teilen mit Zwischensumme (bei getrennter Benotung zusätzlich die Teilnoten), „Notenschlüssel und Notenspiegel“ den Schlüssel je Teil, **„🧩 Ergebnisse nach Teilen“** eine kompakte Tabelle aller Personen mit Punkten, Prozent und Note je Teil und gesamt.
 
 > Arbeiten in Teilen brauchen OrdoNota ab Version 1.18 auf allen Geräten (Datenformat 2, siehe 21.10).
 
@@ -436,7 +440,7 @@ Name │ Klassen-/Kursarbeiten │ Ø │ Sonstige Leistungen          │ Ø �
 | Gerechnet | ungerundeter Gesamtschnitt + gerundete Note |
 | Gesetzt | Ihre Zeugnisnote, falls sie von der gerechneten abweicht (leer = gerechnete Note gilt) |
 | ✎ | Begründung für eine gesetzte Note (erscheint erst, wenn eine Note gesetzt ist) |
-| 💬 | Bemerkung zur Person (erscheint auf dem Schülerbogen) |
+| 💬 | Bemerkung zur Person (erscheint auf dem Leistungsbogen) |
 
 **Einzelnote hinzufügen:** **„+ Klassen-/Kursarbeit (Note direkt)“** oder **„+ Sonstige Note (HÜ, Heft, Referat …)“**. Es öffnet sich ein Dialog für Name, Datum, Gewicht, Bereich und Halbjahr. Diesen Dialog erreichen Sie später durch Klick auf den Spaltenkopf. Dort lässt sich die Spalte auch löschen.
 
@@ -453,7 +457,7 @@ Name │ Klassen-/Kursarbeiten │ Ø │ Sonstige Leistungen          │ Ø �
 
 Ungültige Eingaben werden rot markiert und nicht übernommen.
 
-**Gesetzte Noten:** Eine Eingabe in „Gesetzt“ überschreibt die gerechnete Note. Die Zeile wird farbig hinterlegt. Über **✎** können Sie eine Begründung hinterlegen. Sie erscheint auf dem Schülerbogen.
+**Gesetzte Noten:** Eine Eingabe in „Gesetzt“ überschreibt die gerechnete Note. Die Zeile wird farbig hinterlegt. Über **✎** können Sie eine Begründung hinterlegen. Sie erscheint auf dem Leistungsbogen.
 
 ### 9.2 Jahresnote
 
@@ -514,19 +518,21 @@ Zieht zufällig eine gewählte Anzahl von Personen, z. B. um Hausaufgaben einzus
 
 Alle Ausdrucke öffnen den Druckdialog des Browsers. Dort können Sie auch **„Als PDF speichern“** wählen. Breite Tabellen werden automatisch im Querformat gedruckt. Die Kopf- und Fußzeilen des Browsers (Datum, Dateipfad, Seitenzahl) werden unterdrückt; der Rand von 12 mm bleibt auf jeder Seite erhalten.
 
-| Wo | Knopf | Inhalt |
-|---|---|---|
-| Notenübersicht | 🖨 Kursliste | Notenliste des gewählten Halbjahres bzw. der Jahresnoten; gesetzte Noten mit * |
-| Notenübersicht | 🖨 Schülerbögen | Eine Seite je Person (Auswahl siehe unten) |
-| Notenübersicht | ⬇ CSV/Excel | Alle Noten und Ergebnisse des Kurses als CSV (Semikolon, öffnet direkt in Excel) |
-| Kurs & Schüler | ⬇ Excel | Schülerliste als Excel-Datei (.xlsx): Nr., Nachname, Vorname, I-Status, Aktiv (siehe 6.3) |
-| Tests | 🖨 Schlüssel / Liste / Schülerzettel / Teilübersicht / Moodle-Ergebnisse | siehe 7.6, 7.7 und 7.8 |
-| Tests | ⛶ Beamer | Vollbild ohne Namen: Notenspiegel, Punkteverteilung, Ø je Aufgabe (siehe 7.5) |
-| Sitzplan | 🖨 Drucken | Sitzplan des gewählten Raums mit Vornamen, Fotos und Lehrerpult, A4 (quer, wenn mehr Spalten als Reihen) |
-| Mitarbeit/EPO | 🖨 Liste | Bewertungsraster mit Ergebnis je Person |
-| Mitarbeit/EPO | 🖨 Schülerzettel | Ein Zettel pro Person zum Ausschneiden (mehrere pro Blatt, gestrichelte Schnittlinie): Name, Kurs, Blockname und Zeitraum, Punktelegende, Bewertungen mit Datum im Tabellenkopf, Ergebnis mit Note sowie Linien für Datum und Unterschrift |
+In Tests, Mitarbeit/EPO und Notenübersicht fasst je ein Knopf **„🖨 Drucken …“** alle Druckarten zusammen. Er öffnet eine Auswahl, gegliedert nach **„Für die Lehrkraft“** und **„Zum Austeilen“**; ein Tooltip beschreibt jede Druckart.
 
-**Schülerbögen:** Im Dialog wählen Sie **für wen** (alle oder eine Person), den **Zeitraum** (alle Halbjahre oder eines) und den **Inhalt**:
+| Wo | Druckart / Knopf | Inhalt |
+|---|---|---|
+| Notenübersicht | 📄 Notenliste | alle Leistungen, Schnitte und Noten des gewählten Halbjahres bzw. die Jahresnoten; gesetzte Noten mit * |
+| Notenübersicht | 👤 Leistungsbögen je Person | eine Seite je Person (Auswahl siehe unten) |
+| Notenübersicht | ⬇ CSV/Excel (eigener Knopf) | alle Noten und Ergebnisse des Kurses als CSV (Semikolon, öffnet direkt in Excel) |
+| Kurs & Schüler | ⬇ Excel | Schülerliste als Excel-Datei (.xlsx): Nr., Nachname, Vorname, I-Status, Aktiv (siehe 6.3) |
+| Tests | 📄 Ergebnisliste · 🧩 Ergebnisse nach Teilen · 📊 Notenschlüssel und Notenspiegel · ✂️ Ergebniszettel · 💬 Moodle-Rückmeldung | siehe 7.6, 7.7 und 7.8 |
+| Tests | ⛶ Beamer (eigener Knopf) | Vollbild ohne Namen: Notenspiegel, Punkteverteilung, Ø je Aufgabe (siehe 7.5) |
+| Sitzplan | 🖨 Drucken | Sitzplan des gewählten Raums mit Vornamen, Fotos und Lehrerpult, A4 (quer, wenn mehr Spalten als Reihen) |
+| Mitarbeit/EPO | 📄 Bewertungsliste | Bewertungsraster aller Stunden mit Ergebnis und Note je Person |
+| Mitarbeit/EPO | ✂️ Mitarbeitszettel zum Ausschneiden | ein Zettel pro Person (mehrere pro Blatt, gestrichelte Schnittlinie): Name, Kurs, Blockname und Zeitraum, Punktelegende, Bewertungen mit Datum im Tabellenkopf, Ergebnis mit Note sowie Linien für Datum und Unterschrift |
+
+**Leistungsbögen:** Im Dialog wählen Sie **für wen** (alle oder eine Person), den **Zeitraum** (alle Halbjahre oder eines) und den **Inhalt**:
 
 - Einzelnoten mit Datum und Gewicht
 - Schnitte (Klassenarbeiten / Sonstige)
@@ -945,7 +951,7 @@ Berechnete Werte (Schnitte, Testnoten, EPO-Noten) werden **nie gespeichert**, so
   "kdf": "PBKDF2-SHA256",
   "savedAt": "2026-10-14T21:57:03.123Z",
   "device": "Laptop Schule",
-  "app": "1.18.1",
+  "app": "1.19.0",
   "pw":   { "salt": "<b64>", "iter": 600000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "rec":  { "salt": "<b64>", "iter": 100000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "data": { "iv": "<b64>", "ct": "<b64: verschlüsseltes JSON des Datenmodells>" }
@@ -968,7 +974,7 @@ Entschlüsselter Inhalt (`schema: 2`):
 ```js
 {
   schema: 2,                             // Datenformat (siehe 26.2)
-  savedWith: "1.18.1",                    // App-Version beim letzten Speichern
+  savedWith: "1.19.0",                    // App-Version beim letzten Speichern
   created: "<ISO>", savedAt: "<ISO>",
   settings: { autoLockMin, limitSek1, limitMss, precision, keepBackups, backupEveryMin, gradeColors,
               pomodoro: { enabled, count, work, short, long, tick: "off" | "work" | "always", alarm: "off" | "bell" | "gong" | "beep", volume } },
@@ -1035,7 +1041,7 @@ Das Skript startet einen unsichtbaren Chromium-Browser (Chrome, Edge, Chromium, 
 1. alle Testseiten (siehe 25.2),
 2. den Start der App im Demo-Modus und alle Reiter für einen Sek-I- und einen MSS-Kurs ohne JavaScript-Fehler,
 3. das Sortieren per Klick auf Spaltenköpfe (Tests, EPO, Notenübersicht; Richtung und leere Werte unten),
-4. den Pomodoro-Timer (Aktivieren, Farben je Zustand, Phasenwechsel, Zurücksetzen, Einstellungsdialog), das Layout des Reiters „Einstellungen“ bei aktivem Timer (keine Lücken zwischen den Karten, Auswahllisten nicht abgeschnitten, bei 1570 und 2560 px) und die Kürzel in der eingeklappten Kursliste, die weichen Übergänge (nur bei Reiter-, Kurs- und Halbjahreswechsel), das Ein-/Ausklappen der Kursliste, den Reiter „Tests“ in voller Breite, Arbeiten in Teilen (einschalten, Aufgaben und Punkte je Teil, Teil ausblenden, getrennt benoten, Status je Teil, Schlüssel je Teil, Ausdrucke inkl. Teilübersicht, Beamer, Teile aufheben) und den Haken „Unterschrift gesehen“ bei Klassenarbeiten (Zähler, Ausdruck), den Moodle-Import (Dateiauswahl im Dialog, Zuordnung, Status „fehlt“, Ausdruck mit und ohne Note, erneuter Import),
+4. den Pomodoro-Timer (Aktivieren, Farben je Zustand, Phasenwechsel, Zurücksetzen, Einstellungsdialog), das Layout des Reiters „Einstellungen“ bei aktivem Timer (keine Lücken zwischen den Karten, Auswahllisten nicht abgeschnitten, bei 1570 und 2560 px) und die Kürzel in der eingeklappten Kursliste, die weichen Übergänge (nur bei Reiter-, Kurs- und Halbjahreswechsel), das Ein-/Ausklappen der Kursliste, den Reiter „Tests“ in voller Breite, Arbeiten in Teilen (einschalten, Aufgaben und Punkte je Teil, Teil ausblenden, getrennt benoten, Status je Teil, Schlüssel je Teil, Ausdrucke inkl. „Ergebnisse nach Teilen“, Beamer, Teile aufheben), die Druckauswahl „🖨 Drucken …“ in Tests, EPO und Notenübersicht (Gruppen, Tooltips, Auswahl druckt, Abbrechen nicht) und den Haken „Unterschrift gesehen“ bei Klassenarbeiten (Zähler, Ausdruck), den Moodle-Import (Dateiauswahl im Dialog, Zuordnung, Status „fehlt“, Ausdruck mit und ohne Note, erneuter Import),
 5. den Excel-Export der Schülerliste (gültiges ZIP/XML, Umlaute und Sonderzeichen), das Kurs-Löschen nur mit „LÖSCHEN“, das Ein-/Ausblenden der Fotos im EPO-Reiter und im Sitzplan (auch im Druck) das Erweitern/Verkleinern des Sitzplan-Rasters an allen vier Seiten sowie das Ziehen (keine Wiederholung bis zum Auffüllen, automatisches Auffüllen, Note, Rückgängig, Abwesende/Herausgenommene),
 6. das Notfallwerkzeug: Eine von der App echt verschlüsselte Datenbank wird mit `tools/entschluesseln.py` per Passwort und per Wiederherstellungsschlüssel entschlüsselt und mit dem Original verglichen. Dazu kommen falsches Passwort, manipulierte Datei und CSV-Ausgabe.
 
@@ -1077,7 +1083,7 @@ In `js/model.js` stehen zwei Nummern:
 
 | Konstante | Bedeutung | Wann erhöhen |
 |---|---|---|
-| `APP_VERSION` (z. B. `1.18.1`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.18.1` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
+| `APP_VERSION` (z. B. `1.19.0`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.19.0` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
 | `SCHEMA` (z. B. `2`) | Version des Datenformats (2 seit 1.18: Arbeiten in Teilen) | nur, wenn eine **ältere** App-Version die neuen Daten falsch verstehen würde (z. B. ein Feld ändert seine Bedeutung) |
 
 Öffnet eine App eine Datenbank mit höherem `SCHEMA`, verweigert sie das mit einer Meldung (siehe 21.10). Neue, nur *zusätzliche* Felder brauchen kein neues `SCHEMA`: Ältere Versionen lassen unbekannte Felder unverändert und speichern sie mit.

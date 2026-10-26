@@ -108,6 +108,7 @@
    * modal({title, body, buttons:[{label, value, kind:'primary'|'danger'}], onOpen})
    * Liefert Promise mit dem value des gedrückten Buttons (oder null bei Esc).
    * Buttons mit validate: () => true|false verhindern das Schließen.
+   * onOpen(dlg, done): done(value) schließt den Dialog mit diesem Ergebnis (z. B. aus Knöpfen im Inhalt).
    */
   function modal({ title, body, buttons, wide = false, onOpen }) {
     return new Promise((resolve) => {
@@ -155,7 +156,7 @@
       dlg.showModal();
       const first = dlg.querySelector('input, select, textarea');
       if (first) first.focus();
-      if (onOpen) onOpen(dlg);
+      if (onOpen) onOpen(dlg, done);
     });
   }
 

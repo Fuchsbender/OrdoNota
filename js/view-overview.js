@@ -22,8 +22,10 @@
         h(
           'div',
           { class: 'inline' },
-          h('button', { class: 'btn', onclick: () => NM.print.course(course, half) }, '🖨 Kursliste'),
-          h('button', { class: 'btn', onclick: () => NM.print.studentsDialog(course) }, '🖨 Schülerbögen'),
+          UI.printButton('Drucken: ' + M.courseTitle(course), [
+            { id: 'course', icon: '📄', label: half === 'Jahr' ? 'Notenliste der Jahresnoten' : `Notenliste ${half}`, group: 'teacher', tip: half === 'Jahr' ? 'Alle Personen mit beiden Halbjahresnoten, gerechneter Jahresnote und Jahresnote; gesetzte Noten mit *.' : 'Alle Personen mit allen Leistungen des Halbjahres, Schnitten und Halbjahresnote; gesetzte Noten mit *.', run: () => NM.print.course(course, half) },
+            { id: 'sheets', icon: '👤', label: 'Leistungsbögen je Person', group: 'students', tip: 'Eine Seite je Person mit Einzelnoten, Schnitten und Zeugnisnote, z. B. für Elterngespräche. Personen, Zeitraum und Inhalt wählen Sie im nächsten Schritt.', run: () => NM.print.studentsDialog(course) },
+          ]),
           h('button', { class: 'btn', onclick: () => exportCsv(course) }, '⬇ CSV/Excel')
         )
       )
@@ -272,7 +274,7 @@
       'button',
       {
         class: 'icon-btn' + (c ? ' has-note' : ''),
-        title: c ? 'Bemerkung: ' + c : 'Bemerkung zur Person (erscheint auf dem Schülerbogen)',
+        title: c ? 'Bemerkung: ' + c : 'Bemerkung zur Person (erscheint auf dem Leistungsbogen)',
         'aria-label': 'Bemerkung',
         onclick: async () => {
           const ta = h('textarea', { class: 'input', rows: 4, value: c });

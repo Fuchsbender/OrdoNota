@@ -141,11 +141,7 @@
             'div',
             { class: 'inline' },
             h('button', { class: 'btn', title: 'Notenspiegel und Punkteverteilung ohne Namen im Vollbild', onclick: () => beamerView(course, a, level) }, '⛶ Beamer'),
-            h('button', { class: 'btn', onclick: () => NM.print.test(course, a, 'key') }, '🖨 Schlüssel'),
-            h('button', { class: 'btn', onclick: () => NM.print.test(course, a, 'list') }, '🖨 Liste'),
-            h('button', { class: 'btn', onclick: () => NM.print.test(course, a, 'students') }, '🖨 Schülerzettel'),
-            G.hasParts(t) ? h('button', { class: 'btn', title: 'Alle Personen mit Punkten und Noten je Teil', onclick: () => NM.print.test(course, a, 'parts') }, '🖨 Teilübersicht') : null,
-            NM.moodle.hasData(t) ? h('button', { class: 'btn', title: 'Je Person eine Seite mit Fragen, Antworten und Punkten', onclick: () => moodlePrint(course, a) }, '🖨 Moodle-Ergebnisse') : null,
+            printButton(course, a),
             h(
               'button',
               {
@@ -164,6 +160,19 @@
         )
       )
     );
+  }
+
+  /** Alle Ausdrucke eines Tests in einem Auswahlfenster. */
+  function printButton(course, a) {
+    const t = a.test;
+    const ka = a.cat === 'ka';
+    return UI.printButton('Drucken: ' + a.name, [
+      { id: 'list', icon: '📄', label: 'Ergebnisliste', group: 'teacher', tip: 'Alle Personen mit Punkten je Aufgabe, Summe, Prozent und Note' + (ka ? ', mit Spalte „Unterschrift“' : '') + '; darunter Notenspiegel und Notenschlüssel.', run: () => NM.print.test(course, a, 'list') },
+      G.hasParts(t) ? { id: 'parts', icon: '🧩', label: 'Ergebnisse nach Teilen', group: 'teacher', tip: 'Kompakt: je Person Punkte, Prozent und (bei getrennter Benotung) Note jedes Teils sowie gesamt; darunter Notenspiegel und Schlüssel.', run: () => NM.print.test(course, a, 'parts') } : null,
+      { id: 'key', icon: '📊', label: 'Notenschlüssel und Notenspiegel', group: 'teacher', tip: 'Punktschwellen je Note und Verteilung der Noten mit Statistik und Drittelparagraph – ohne Namen, z. B. für Klassenbuch oder Fachleitung.', run: () => NM.print.test(course, a, 'key') },
+      { id: 'students', icon: '✂️', label: 'Ergebniszettel zum Ausschneiden', group: 'students', tip: 'Je Person ein Abschnitt mit erreichten und möglichen Punkten je Aufgabe, Prozent und Note – mehrere pro Blatt.', run: () => NM.print.test(course, a, 'students') },
+      NM.moodle.hasData(t) ? { id: 'moodle', icon: '💬', label: 'Moodle-Rückmeldung je Person', group: 'students', tip: 'Je Person eine Seite mit Frage, gegebener Antwort, Lösung und Punkten; Note wahlweise, Felder für Datum und Unterschrift.', run: () => moodlePrint(course, a) } : null,
+    ]);
   }
 
   // Einstellungen des Schlüssels – für den Test oder (bei getrennt benoteten Teilen) für einen Teil
@@ -1112,14 +1121,14 @@
     if (sum.mismatch.length) toast(`Hinweis: Bei ${sum.mismatch.join(', ')} weicht die Summe der Fragenpunkte (gerundet) von der Moodle-Bewertung ab.`, 'warn', 9000);
   }
 
-  /** Dialog: Moodle-Ergebnisse drucken (alle oder eine Person, mit oder ohne Note). */
+  /** Dialog: Moodle-Rückmeldung drucken (alle oder eine Person, mit oder ohne Note). */
   async function moodlePrint(course, a) {
     const level = G.courseLevel(course);
     const withResult = M.activeStudents(course).filter((s) => G.testResult(a.test, s.id, level).score !== null);
     const who = h('select', { class: 'input' }, h('option', { value: '' }, `Alle (${withResult.length}, je eine Seite)`), withResult.map((s) => h('option', { value: s.id }, M.studentName(s))));
     const grade = h('input', { type: 'checkbox', checked: true });
     const v = await modal({
-      title: 'Moodle-Ergebnisse drucken',
+      title: 'Moodle-Rückmeldung drucken',
       body: h('div', null, h('label', { class: 'field' }, h('span', null, 'Wer'), who), h('label', { class: 'check' }, grade, ' Note mit ausdrucken')),
       buttons: [
         { label: 'Abbrechen', value: null },

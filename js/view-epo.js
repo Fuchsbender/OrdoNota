@@ -95,8 +95,10 @@
             'div',
             { class: 'inline' },
             h('button', { class: 'btn btn-primary', onclick: () => addLesson(a) }, '+ Stunde'),
-            h('button', { class: 'btn', onclick: () => NM.print.epo(course, a) }, '🖨 Liste'),
-            h('button', { class: 'btn', title: 'Ein Zettel pro Person zum Ausschneiden, mit Feld für Datum und Unterschrift', onclick: () => NM.print.epoSlips(course, a) }, '🖨 Schülerzettel'),
+            UI.printButton('Drucken: ' + a.name, [
+              { id: 'list', icon: '📄', label: 'Bewertungsliste', group: 'teacher', tip: 'Bewertungsraster aller Stunden mit Summe, Prozent, Fehlstunden, Hausaufgaben-Vermerken und Note je Person.', run: () => NM.print.epo(course, a) },
+              { id: 'slips', icon: '✂️', label: 'Mitarbeitszettel zum Ausschneiden', group: 'students', tip: 'Ein Zettel pro Person mit Punktelegende, Bewertungen je Stunde, Ergebnis und Note sowie Feldern für Datum und Unterschrift – mehrere pro Blatt.', run: () => NM.print.epoSlips(course, a) },
+            ]),
             h(
               'button',
               {

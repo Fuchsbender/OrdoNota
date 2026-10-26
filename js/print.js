@@ -1,4 +1,4 @@
-/* OrdoNota – Druckansichten (Kursliste, Test, EPO, Schülerbögen). */
+/* OrdoNota – Druckansichten (Notenliste, Test, EPO, Leistungsbögen). */
 (function (NM) {
   'use strict';
   const { h, clear, modal, fmtNum, fmtScore, fmtDate, gradeStyle } = NM.util;
@@ -166,7 +166,7 @@
       return doPrint(`${a.name} – Notenschlüssel`, h('div', { class: 'p-page' }, header(course, a.name, testMeta(course, a)), h('div', { class: 'p-cols' }, h('div', null, h('h2', null, 'Notenschlüssel'), keyTables(course, a, level)), h('div', null, h('h2', null, sep ? 'Notenspiegel (Gesamtnote)' : 'Notenspiegel'), statsBlock(course, a, level)))));
     }
     if (mode === 'parts') {
-      // Teilübersicht: je Person Punkte, Prozent (und Note) je Teil, dann Gesamt
+      // Ergebnisse nach Teilen: je Person Punkte, Prozent (und Note) je Teil, dann Gesamt
       const rows = students.map((s, i) => {
         const r = t.results[s.id] || {};
         const res = G.testResult(t, s.id, level);
@@ -190,11 +190,11 @@
       });
       const per = sep ? 3 : 2;
       return doPrint(
-        `${a.name} – Teilübersicht`,
+        `${a.name} – Ergebnisse nach Teilen`,
         h(
           'div',
           { class: 'p-page' },
-          header(course, a.name + ' – Teilübersicht', testMeta(course, a)),
+          header(course, a.name + ' – Ergebnisse nach Teilen', testMeta(course, a)),
           h(
             'table',
             { class: 'p-table p-full p-parts' },
@@ -240,7 +240,7 @@
       });
       const cols = t.tasks.length + groups.filter((g) => g.part).length * (sep ? 2 : 1);
       return doPrint(
-        `${a.name} – Ergebnisse`,
+        `${a.name} – Ergebnisliste`,
         h(
           'div',
           { class: 'p-page' },
@@ -274,7 +274,7 @@
         { landscape: cols > 10 }
       );
     }
-    // Schülerzettel zum Ausschneiden
+    // Ergebniszettel zum Ausschneiden
     const slips = students.map((s) => {
       const r = t.results[s.id] || {};
       const res = G.testResult(t, s.id, level);
@@ -288,10 +288,10 @@
         h('div', { class: 'p-slip-result' }, res.p === null ? UI.STATUS_SHORT[r.status] || (pg && res.score !== null ? 'Gesamtnote erst, wenn alle Teile bewertet sind' : 'keine Wertung') : ['Ergebnis: ', res.score !== null && G.testMaxScore(t) ? fmtNum((res.score / G.testMaxScore(t)) * 100, 0) + ' % · ' : '', 'Note ', h('strong', { class: 'p-big' }, G.label(res.p, level)), level === 'mss' ? ` Punkte (${G.wholeGrade(res.p)}${G.tendency(res.p)})` : ''])
       );
     });
-    doPrint(`${a.name} – Schülerzettel`, h('div', { class: 'p-slips' }, slips));
+    doPrint(`${a.name} – Ergebniszettel`, h('div', { class: 'p-slips' }, slips));
   }
 
-  // ---------- Moodle-Ergebnisse ----------
+  // ---------- Moodle-Rückmeldung ----------
 
   const MOODLE_MARK = { ok: ['✓', 'richtig'], part: ['◐', 'teilweise'], wrong: ['✗', 'falsch'], none: ['–', 'keine Antwort'] };
 
@@ -368,7 +368,7 @@
         )
       );
     });
-    doPrint(`${a.name} – Moodle-Ergebnisse`, h('div', null, pages));
+    doPrint(`${a.name} – Moodle-Rückmeldung`, h('div', null, pages));
   }
 
   // ---------- EPO ----------
@@ -393,7 +393,7 @@
       );
     });
     doPrint(
-      `${a.name} – Mitarbeit`,
+      `${a.name} – Bewertungsliste`,
       h(
         'div',
         { class: 'p-page' },
@@ -449,7 +449,7 @@
         h('div', { class: 'p-sign' }, h('span', null, 'Datum'), h('span', null, 'Unterschrift'))
       );
     });
-    doPrint(`${a.name} – Schülerzettel`, h('div', { class: 'p-slips' }, slips));
+    doPrint(`${a.name} – Mitarbeitszettel`, h('div', { class: 'p-slips' }, slips));
   }
 
   // ---------- Sitzplan ----------
@@ -478,7 +478,7 @@
     );
   }
 
-  // ---------- Kursliste ----------
+  // ---------- Notenliste ----------
 
   function course(c, half) {
     const level = G.courseLevel(c);
@@ -546,7 +546,7 @@
     );
   }
 
-  // ---------- Schülerbögen ----------
+  // ---------- Leistungsbögen ----------
 
   const SHEET_OPTS = [
     ['grades', 'Einzelnoten mit Datum und Gewicht', true],
@@ -564,7 +564,7 @@
     const halfSel = h('select', { class: 'input' }, h('option', { value: '' }, 'Alle Halbjahre'), halves.map((x) => h('option', { value: x }, x)));
     const boxes = SHEET_OPTS.map(([k, label, def]) => [k, h('input', { type: 'checkbox', checked: def })]);
     const v = await modal({
-      title: 'Schülerbögen drucken',
+      title: 'Leistungsbögen drucken',
       body: h(
         'div',
         null,
@@ -581,7 +581,7 @@
     const opts = Object.fromEntries(boxes.map(([k, cb]) => [k, cb.checked]));
     const list = who.value ? students.filter((s) => s.id === who.value) : students;
     const hs = halfSel.value ? [halfSel.value] : halves;
-    doPrint(`${M.courseTitle(c)} – Schülerbögen`, h('div', null, list.map((s) => studentSheet(c, s, hs, opts))));
+    doPrint(`${M.courseTitle(c)} – Leistungsbögen`, h('div', null, list.map((s) => studentSheet(c, s, hs, opts))));
   }
 
   function studentSheet(c, s, halves, o) {

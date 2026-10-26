@@ -644,8 +644,10 @@ def run_parts_check(br, base):
         out.three = [t.parts.length, t.parts[2].limit === t.limit];
         const printed = (mode) => { NM.print.test(c, a, mode); const txt = document.getElementById('print-root').textContent; document.body.classList.remove('printing'); return txt; };
         out.print = ['parts', 'list', 'students', 'key'].map((m) => { const x = printed(m); return x.includes('Theorie') && x.includes('Praxis'); });
-        out.printParts = printed('parts').includes('Teilübersicht');
-        out.btn = !![...document.querySelectorAll('.btn')].find((b) => b.textContent === '🖨 Teilübersicht');
+        out.printParts = printed('parts').includes('Ergebnisse nach Teilen');
+        document.querySelector('[data-print-menu]').click(); await wait();
+        out.btn = !!document.querySelector('dialog .print-option[data-print="parts"]');
+        document.querySelector('dialog .modal-actions .btn').click(); await wait();
         [...document.querySelectorAll('.btn')].find((b) => b.textContent === '⛶ Beamer').click(); await wait();
         out.beamer = document.querySelectorAll('.beamer h2').length;
         document.querySelector('.beamer-close').click(); await wait();
@@ -661,6 +663,48 @@ def run_parts_check(br, base):
         and res["keyPart"] == "Praxis" and res["three"] == [3, True] and res["print"] == [True] * 4 and res["printParts"] and res["btn"] \
         and res["beamer"] >= 5 and res["off"] == [True, True, True, True, True, 0]
     report("Teile: einschalten, Aufgabe/Punkte je Teil, Teil ausblenden, getrennt benoten, Status je Teil, Schlüssel je Teil, Ausdrucke, Beamer, aufheben", ok and not br.errors, str(res) + "; ".join(br.errors))
+
+
+def run_print_menu_check(br, base):
+    print("Druckauswahl (Tests, EPO, Notenübersicht):")
+    br.open(f"{base}/index.html?demo")
+    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.errors = []
+    res = br.eval("""(async () => {
+        const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
+        window.print = () => {};
+        const c = NM.app.db().courses[0];
+        const out = {};
+        // Menü öffnen, Optionen lesen, eine Druckart wählen → Dokumenttitel der Druckansicht
+        const pick = async (id) => {
+            const btns = document.querySelectorAll('[data-print-menu]');
+            btns[0].click(); await wait();
+            const opts = [...document.querySelectorAll('dialog .print-option')];
+            const info = { n: opts.length, ids: opts.map((o) => o.dataset.print), tips: opts.every((o) => o.title.length > 20), groups: [...document.querySelectorAll('dialog .print-menu h3')].map((x) => x.textContent), menus: btns.length };
+            document.querySelector(`dialog .print-option[data-print="${id}"]`).click(); await wait();
+            info.open = !!document.querySelector('dialog');
+            info.title = document.title;
+            document.body.classList.remove('printing');
+            return info;
+        };
+        NM.app.select({ courseId: c.id, tab: 'tests' }); await wait();
+        out.oldButtons = [...document.querySelectorAll('.btn')].filter((b) => b.textContent.startsWith('🖨') && !b.hasAttribute('data-print-menu')).length;
+        out.tests = await pick('list');
+        NM.app.select({ tab: 'epo' }); await wait();
+        out.epo = await pick('slips');
+        NM.app.select({ tab: 'overview' }); await wait();
+        out.overview = await pick('course');
+        // Abbrechen druckt nichts
+        document.querySelector('[data-print-menu]').click(); await wait();
+        document.querySelector('dialog .modal-actions .btn').click(); await wait();
+        out.cancel = [!document.querySelector('dialog'), !document.body.classList.contains('printing')];
+        return out; })()""")
+    t, e, o = (res or {}).get("tests", {}), (res or {}).get("epo", {}), (res or {}).get("overview", {})
+    ok = bool(res) and res["oldButtons"] == 0 and t.get("ids", [])[:1] == ["list"] and "key" in t.get("ids", []) and "students" in t.get("ids", []) and t.get("tips") \
+        and t.get("groups") == ["Für die Lehrkraft", "Zum Austeilen"] and t.get("menus") == 1 and not t.get("open") and t.get("title", "").endswith("– Ergebnisliste") \
+        and e.get("ids") == ["list", "slips"] and e.get("title", "").endswith("– Mitarbeitszettel") \
+        and o.get("ids") == ["course", "sheets"] and o.get("tips") and res["cancel"] == [True, True]
+    report("Druckauswahl: ein Knopf je Reiter, Druckarten mit Tooltip nach Lehrkraft/Austeilen, Auswahl druckt, Abbrechen nicht", ok and not br.errors, str(res) + "; ".join(br.errors))
 
 
 def run_moodle_check(br, base):
@@ -791,6 +835,7 @@ def main():
         run_tests_view_check(br, base)
         run_settings_layout_check(br, base)
         run_parts_check(br, base)
+        run_print_menu_check(br, base)
         run_moodle_check(br, base)
         run_decrypt_tool(br, base)
     finally:

@@ -277,6 +277,57 @@
     return h('div', { class: 'empty' }, h('h2', null, title), text ? h('p', null, text) : null, button || null);
   }
 
+  const PRINT_GROUPS = [
+    ['teacher', 'Für die Lehrkraft'],
+    ['students', 'Zum Austeilen'],
+  ];
+
+  /**
+   * Ein Knopf „🖨 Drucken …“ statt vieler Druckknöpfe: öffnet eine Auswahl aller Druckarten.
+   * options: [{ id, icon, label, tip, group: 'teacher' | 'students', run }]; null-Einträge werden übersprungen.
+   */
+  function printButton(title, options) {
+    return h('button', { class: 'btn', title: 'Druckart wählen', 'aria-haspopup': 'dialog', 'data-print-menu': '', onclick: () => printMenu(title, options) }, '🖨 Drucken …');
+  }
+
+  async function printMenu(title, options) {
+    const list = options.filter(Boolean);
+    let close = null;
+    const body = h(
+      'div',
+      { class: 'print-menu' },
+      PRINT_GROUPS.map(([group, label]) => {
+        const items = list.filter((o) => o.group === group);
+        return items.length
+          ? h(
+              'section',
+              null,
+              h('h3', null, label),
+              items.map((o) =>
+                h(
+                  'button',
+                  { type: 'button', class: 'print-option', title: o.tip, 'data-print': o.id, onclick: () => close(o) },
+                  h('span', { class: 'print-option-icon', 'aria-hidden': 'true' }, o.icon),
+                  h('span', null, o.label)
+                )
+              )
+            )
+          : null;
+      })
+    );
+    const choice = await modal({
+      title,
+      body,
+      buttons: [{ label: 'Abbrechen', value: null }],
+      onOpen: (dlg, done) => {
+        close = done;
+        const first = dlg.querySelector('.print-option');
+        if (first) first.focus();
+      },
+    });
+    if (choice) choice.run();
+  }
+
   function catLabel(cat) {
     return cat === 'ka' ? 'Klassen-/Kursarbeit' : 'Sonstige';
   }
@@ -298,5 +349,6 @@
     emptyState,
     catLabel,
     fmtDate,
+    printButton,
   };
 })((globalThis.NM = globalThis.NM || {}));
