@@ -1,6 +1,6 @@
 # OrdoNota – Dokumentation
 
-Version 1.24.2 · Stand Oktober 2026
+Version 1.24.3 · Stand Oktober 2026
 
 OrdoNota (bis Version 1.11 „Notenmanager“) verwaltet Noten für die Sekundarstufe I (Noten 1–6 mit Tendenz) und die Mainzer Studienstufe (MSS, Punkte 00–15) an Schulen in Rheinland-Pfalz. Die App läuft vollständig lokal im Browser, verschlüsselt alle Daten mit einem Passwort und legt sie in einem Ordner ab, den der Synology Drive Client auf die DiskStation spiegelt.
 
@@ -610,7 +610,7 @@ Gruppen bilden für Gruppenaufträge, Lernaufträge, Stationenlernen, Gruppenpuz
 **Nacharbeiten:**
 - **🎲 Neu würfeln** mischt alle nicht fixierten Gruppen neu. **🔒** fixiert eine Gruppe, sie bleibt beim Neuwürfeln unverändert.
 - **⚙ Verfahren** ändert Größe, Verfahren und Abwechslung (wahlweise sofort neu würfeln).
-- Personen **ziehen** und in einer anderen Gruppe (oder bei „Nicht eingeteilt“) ablegen – oder **anklicken** und dann eine Gruppe anklicken (verschieben) bzw. eine andere Person anklicken (tauschen).
+- Personen **ziehen** und in einer anderen Gruppe (oder bei „Nicht eingeteilt“) ablegen – die Zielgruppe wird beim Ziehen hervorgehoben; wer zwischen den Gruppen loslässt, bleibt, wo er war – oder **anklicken** und dann eine Gruppe anklicken (verschieben) bzw. eine andere Person anklicken (tauschen).
 - Gruppennamen ändern, je Gruppe einen **Auftrag/ein Thema** eintragen, „+ Gruppe“, Gruppe mit ✕ löschen (Mitglieder werden „nicht eingeteilt“).
 - Umschalter **📷 Fotos** und **Nachnamen** neben der Einteilung: Fotos (bzw. Personensymbol) bei den Namen zeigen, Nachnamen ausblenden (bei gleichen Vornamen mit Initiale). Pro Gerät gemerkt; beim Darüberfahren steht immer der volle Name.
 - Werden Regeln verletzt (z. B. nach einem Verschieben von Hand) oder sind Abwesende eingeteilt, erscheint ein Hinweis ⚠.
@@ -1078,7 +1078,7 @@ Berechnete Werte (Schnitte, Testnoten, EPO-Noten) werden **nie gespeichert**, so
   "kdf": "PBKDF2-SHA256",
   "savedAt": "2026-10-14T21:57:03.123Z",
   "device": "Laptop Schule",
-  "app": "1.24.2",
+  "app": "1.24.3",
   "pw":   { "salt": "<b64>", "iter": 600000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "rec":  { "salt": "<b64>", "iter": 100000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "data": { "iv": "<b64>", "ct": "<b64: verschlüsseltes JSON des Datenmodells>" }
@@ -1101,7 +1101,7 @@ Entschlüsselter Inhalt (`schema: 4`):
 ```js
 {
   schema: 4,                             // Datenformat (siehe 26.2)
-  savedWith: "1.24.2",                    // App-Version beim letzten Speichern
+  savedWith: "1.24.3",                    // App-Version beim letzten Speichern
   created: "<ISO>", savedAt: "<ISO>",
   settings: { autoLockMin, limitSek1, limitMss, precision, keepBackups, backupEveryMin, gradeColors,
               pomodoro: { enabled, count, work, short, long, tick: "off" | "work" | "always", alarm: "off" | "bell" | "gong" | "beep", volume } },
@@ -1223,7 +1223,7 @@ In `js/model.js` stehen zwei Nummern:
 
 | Konstante | Bedeutung | Wann erhöhen |
 |---|---|---|
-| `APP_VERSION` (z. B. `1.24.2`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.24.2` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
+| `APP_VERSION` (z. B. `1.24.3`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.24.3` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
 | `SCHEMA` (z. B. `4`) | Version des Datenformats (2 seit 1.18: Arbeiten in Teilen; 3 seit 1.20: Präsentationen; 4 seit 1.23: Gruppenpräsentationen) | nur, wenn eine **ältere** App-Version die neuen Daten falsch verstehen würde (z. B. ein Feld ändert seine Bedeutung) |
 
 Öffnet eine App eine Datenbank mit höherem `SCHEMA`, verweigert sie das mit einer Meldung (siehe 21.10). Neue, nur *zusätzliche* Felder brauchen kein neues `SCHEMA`: Ältere Versionen lassen unbekannte Felder unverändert und speichern sie mit.

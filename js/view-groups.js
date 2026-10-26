@@ -13,6 +13,7 @@
     ['similar', 'leistungsgleich'],
   ];
   let picked = null; // angeklickte Person zum Verschieben/Tauschen: { setId, sid }
+  const DRAG_TYPE = 'application/x-ordonota-person';
 
   function data(course) {
     course.groupSets = course.groupSets || [];
@@ -231,7 +232,16 @@
           'data-sid': sid,
           'data-focus-key': `gp-${set.id}-${sid}`,
           title: (s ? fullName(s) + ' – ' : '') + 'ziehen oder anklicken und dann eine Gruppe bzw. Person anklicken (verschieben/tauschen)' + (sc && sc[sid] !== undefined ? ` · Halbjahresnote ${G.label(sc[sid], G.courseLevel(course))}` : ''),
-          ondragstart: (e) => e.dataTransfer.setData('text/plain', set.id + '|' + sid),
+          ondragstart: (e) => {
+            // Eigener Datentyp: Eingabefelder (Name, Auftrag) nehmen ihn nicht als Text an
+            e.dataTransfer.setData(DRAG_TYPE, set.id + '|' + sid);
+            e.dataTransfer.effectAllowed = 'move';
+            e.currentTarget.classList.add('dragging');
+          },
+          ondragend: (e) => {
+            e.currentTarget.classList.remove('dragging');
+            for (const el of document.querySelectorAll('.drag-over')) el.classList.remove('drag-over');
+          },
           onclick: (e) => {
             e.stopPropagation();
             if (!picked || picked.setId !== set.id) picked = { setId: set.id, sid };
@@ -245,13 +255,34 @@
         s ? name(s) : '?'
       );
     };
-    const dropZone = (target) => ({
-      ondragover: (e) => e.preventDefault(),
-      ondrop: (e) => {
-        e.preventDefault();
-        const [setId, sid] = e.dataTransfer.getData('text/plain').split('|');
-        if (sid && setId === set.id) move(sid, target);
+    // Ziehen und Ablegen: Die ganze Fläche (auch Lücken und Eingabefelder) erlaubt das Ablegen, damit kein Verbotszeichen
+    // erscheint; Ziel ist die Gruppe bzw. „Nicht eingeteilt“ unter dem Mauszeiger, sonst passiert nichts.
+    const zoneAt = (e) => e.target.closest && e.target.closest('.grp-box, .grp-free');
+    const ours = (e) => [...(e.dataTransfer.types || [])].includes(DRAG_TYPE);
+    const over = (e) => {
+      if (!ours(e)) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      const z = zoneAt(e);
+      for (const el of e.currentTarget.querySelectorAll('.drag-over')) if (el !== z) el.classList.remove('drag-over');
+      if (z) z.classList.add('drag-over');
+    };
+    const boardEvents = {
+      ondragenter: over,
+      ondragover: over,
+      ondragleave: (e) => {
+        if (!e.currentTarget.contains(e.relatedTarget)) for (const el of e.currentTarget.querySelectorAll('.drag-over')) el.classList.remove('drag-over');
       },
+      ondrop: (e) => {
+        if (!ours(e)) return;
+        e.preventDefault();
+        const z = zoneAt(e);
+        const [setId, sid] = e.dataTransfer.getData(DRAG_TYPE).split('|');
+        if (!z || !sid || setId !== set.id) return NM.app.rerender();
+        move(sid, set.groups.find((g) => g.id === z.dataset.group) || null);
+      },
+    };
+    const dropZone = (target) => ({
       onclick: () => {
         if (picked && picked.setId === set.id) move(picked.sid, target);
       },
@@ -330,8 +361,12 @@
       );
     });
     return [
-      h('div', { class: 'grp-grid' }, cards),
-      h('div', Object.assign({ class: 'grp-free' + (ready ? ' drop-ready' : ''), 'data-group': '' }, dropZone(null)), h('span', { class: 'muted small' }, free.length ? 'Nicht eingeteilt:' : 'Alle aktiven Personen sind eingeteilt.'), free.map((s) => chip(s.id, null, 0))),
+      h(
+        'div',
+        Object.assign({ class: 'grp-board' }, boardEvents),
+        h('div', { class: 'grp-grid' }, cards),
+        h('div', Object.assign({ class: 'grp-free' + (ready ? ' drop-ready' : ''), 'data-group': '' }, dropZone(null)), h('span', { class: 'muted small' }, free.length ? 'Nicht eingeteilt:' : 'Alle aktiven Personen sind eingeteilt.'), free.map((s) => chip(s.id, null, 0)))
+      ),
     ];
   }
 

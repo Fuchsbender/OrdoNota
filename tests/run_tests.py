@@ -995,9 +995,18 @@ def run_groups_tab_check(br, base):
         q(`gp-${set.id}-${y}`).click(); await wait(); q(`gp-${set.id}-${z}`).click(); await wait();
         out.click = [moved, ga.members.includes(z) && gb.members.includes(y)];
         // Ziehen und Ablegen
-        const dt = new DataTransfer(); dt.setData('text/plain', set.id + '|' + y);
-        document.querySelector(`.grp-box[data-group="${ga.id}"]`).dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true })); await wait();
-        out.drag = ga.members.includes(y) && !gb.members.includes(y);
+        // Ziehen: Ablegen überall auf der Fläche erlaubt (kein Verbotszeichen), auch über Namen, Eingabefeldern und Lücken
+        const dt = new DataTransfer(); dt.setData('application/x-ordonota-person', set.id + '|' + y);
+        const fire = (el, type) => { const ev = new DragEvent(type, { dataTransfer: dt, bubbles: true, cancelable: true }); el.dispatchEvent(ev); return ev.defaultPrevented; };
+        const boxA = () => document.querySelector(`.grp-box[data-group="${ga.id}"]`);
+        const allowed = [fire(boxA(), 'dragenter'), fire(boxA().querySelector('.grp-person'), 'dragover'), fire(boxA().querySelector('.grp-task'), 'dragover')];
+        const marked = boxA().classList.contains('drag-over');
+        allowed.push(fire(document.querySelector('.grp-set .grp-grid'), 'dragover'));
+        fire(boxA(), 'dragover');
+        fire(boxA().querySelector('.grp-task'), 'drop'); await wait();
+        out.drag = [ga.members.includes(y) && !gb.members.includes(y), allowed.every(Boolean), marked, !document.querySelector('.drag-over'), !ga.task];
+        const plain = new DataTransfer(); plain.setData('text/plain', 'x');
+        out.drag.push(!(() => { const ev = new DragEvent('dragover', { dataTransfer: plain, bubbles: true, cancelable: true }); boxA().dispatchEvent(ev); return ev.defaultPrevented; })());
         // Name und Auftrag
         q('gb-task-' + ga.id).value = 'Plakat gestalten'; q('gb-task-' + ga.id).dispatchEvent(new Event('change')); await wait();
         q('gb-name-' + ga.id).value = 'Team Rot'; q('gb-name-' + ga.id).dispatchEvent(new Event('change')); await wait();
@@ -1079,7 +1088,7 @@ def run_groups_tab_check(br, base):
         NM.app.select({ tab: 'groups' }); await wait();
         return out; })()""")
     ok = bool(res) and res["start"] == ["Stationenlernen Prozent", 4, True, 9] and res["created"] == [True, "4,4,4", 12, "mixed", True, 0] \
-        and res["away"] == [False, 11, True] and res["lock"] == [True, True, 3] and res["click"] == [True, True] and res["drag"] \
+        and res["away"] == [False, 11, True] and res["lock"] == [True, True, 3] and res["click"] == [True, True] and res["drag"] == [True] * 6 \
         and res["edit"] == ["Plakat gestalten", "Team Rot"] and res["rule"] == [2, True] and res["ruleRoll"] == 0 and res["beamer"] == [True] * 4 and res["beamerFit"] == [True, True] and res["beamerToggle"] == [True, True, True, True, False, True] and res["beamerBack"] == [0, True] \
         and res["menu"] == ["list", "cards"] and res["print"] == [True] * 3 and res["puzzle"] == [True] * 7 and res["view"] == [True, True, True, True, False] and res["viewBack"] == [0, True] \
         and res["rebuild"] == [True, True, "Text A", 1] and res["beamerExperts"] == [True] * 4 \
