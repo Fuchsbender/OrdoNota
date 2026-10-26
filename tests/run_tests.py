@@ -1014,7 +1014,17 @@ def run_groups_tab_check(br, base):
         q('gs-beamer').click(); await wait();
         const bm = document.querySelector('.grp-beamer');
         out.beamer = [!!bm, bm.querySelectorAll('.grp-tile').length === set.groups.length, !bm.textContent.includes('Ø'), !bm.textContent.includes('Nicht zusammen')];
-        bm.querySelector('.beamer-close').click(); await wait();
+        // Schrift füllt den Bildschirm, ohne zu scrollen; Fotos und Nachnamen per Umschalter
+        const grid = bm.querySelector('.grp-beamer-grid');
+        const s0 = c.students.find((x) => x.id === set.groups.find((g) => g.members.length).members[0]);
+        const tileText = () => bm.querySelector('.grp-tile').textContent;
+        out.beamerFit = [parseFloat(grid.style.fontSize) >= 24, grid.scrollHeight <= grid.clientHeight + 1];
+        bm.querySelector('[data-beamer-toggle="photos"]').click(); await wait();
+        bm.querySelector('[data-beamer-toggle="last"]').click(); await wait();
+        out.beamerToggle = [bm.querySelectorAll('.grp-photo').length === all().length, !tileText().includes(s0.last), tileText().includes(s0.first), NM.app.state.ui.groupBeamer.photos, NM.app.state.ui.groupBeamer.last, grid.scrollHeight <= grid.clientHeight + 1];
+        bm.querySelector('[data-beamer-toggle="photos"]').click(); bm.querySelector('[data-beamer-toggle="last"]').click(); await wait();
+        out.beamerBack = [bm.querySelectorAll('.grp-photo').length, tileText().includes(s0.last)];
+        bm.querySelector('[data-beamer-close]').click(); await wait();
         // Druck
         document.querySelector('[data-print-menu]').click(); await wait();
         out.menu = [...document.querySelectorAll('dialog .print-option')].map((o) => o.dataset.print);
@@ -1044,7 +1054,7 @@ def run_groups_tab_check(br, base):
         return out; })()""")
     ok = bool(res) and res["start"] == ["Stationenlernen Prozent", 4, True, 9] and res["created"] == [True, "4,4,4", 12, "mixed", True, 0] \
         and res["away"] == [False, 11, True] and res["lock"] == [True, True, 3] and res["click"] == [True, True] and res["drag"] \
-        and res["edit"] == ["Plakat gestalten", "Team Rot"] and res["rule"] == [2, True] and res["ruleRoll"] == 0 and res["beamer"] == [True] * 4 \
+        and res["edit"] == ["Plakat gestalten", "Team Rot"] and res["rule"] == [2, True] and res["ruleRoll"] == 0 and res["beamer"] == [True] * 4 and res["beamerFit"] == [True, True] and res["beamerToggle"] == [True, True, True, True, False, True] and res["beamerBack"] == [0, True] \
         and res["menu"] == ["list", "cards"] and res["print"] == [True] * 3 and res["puzzle"] == [True] * 4 \
         and res["toPres"] == ["mixed", 4, "Station 1: Grundwert", 3] and res["importOpts"][0].startswith("Gruppeneinteilungen") and res["fromSet"] == [4, "Station 2: Prozentwert"]
     report("Gruppen: Einteilung (Größe, leistungsgemischt), Abwesende, Fixieren, Anklicken/Ziehen, Auftrag, Regel mit Warnung, Beamer ohne Noten, Druck, Gruppenpuzzle, Übernahme in Präsentation", ok and not br.errors, str(res) + "; ".join(br.errors))

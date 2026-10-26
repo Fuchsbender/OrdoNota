@@ -451,12 +451,20 @@ select option { background: var(--surface); color: var(--text); }
 .grp-rule-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
 .grp-rule h3 { margin: 4px 0; font-size: 14px; }
 .grp-rule .grp-members { margin-bottom: 6px; }
-.grp-beamer-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(14em, 1fr)); gap: 2vw; }
-.grp-tile { border: 2px solid var(--border); border-radius: 12px; padding: 0.8em 1em; background: var(--surface); }
-.grp-tile h3 { margin: 0 0 0.3em; font-size: 1.2em; color: var(--accent); }
-.grp-tile-task { font-weight: 600; margin-bottom: 0.4em; }
+.grp-beamer { display: flex; flex-direction: column; overflow: hidden; }
+.grp-beamer h1 { margin: 0 0 2vh; padding-right: 400px; font-size: 1.6em; }
+.grp-beamer-bar { position: absolute; top: 2vh; right: 2vw; display: flex; gap: 8px; }
+.grp-beamer-toggle { opacity: 0.6; }
+.grp-beamer-toggle.active { opacity: 1; border-color: var(--accent); color: var(--accent); }
+.grp-beamer-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(9em, 1fr)); gap: 0.5em; align-content: start; }
+.grp-tile { border: 2px solid var(--border); border-radius: 12px; padding: 0.35em 0.5em; background: var(--surface); }
+.grp-tile h3 { margin: 0 0 0.15em; font-size: 0.85em; text-transform: none; letter-spacing: 0; color: var(--accent); }
+.grp-tile-task { font-weight: 600; font-size: 0.7em; margin-bottom: 0.2em; }
 .grp-tile ul { list-style: none; margin: 0; padding: 0; }
-.grp-tile li { padding: 0.15em 0; font-size: 1.1em; }
+.grp-tile li { display: flex; align-items: center; gap: 0.3em; padding: 0.05em 0; line-height: 1.2; }
+.grp-tile .grp-letter { font-size: 0.6em; }
+.grp-photo { width: 1.5em; height: 1.5em; border-radius: 50%; object-fit: cover; flex: none; background: var(--surface-2); }
+@media (max-width: 800px) { .grp-beamer h1 { padding-right: 0; margin-top: 3em; } }
 @media (max-width: 640px) { .grp-row { grid-template-columns: minmax(0, 1fr) auto; } .grp-row > .icon-btn { grid-row: 1; grid-column: 2; } .grp-members { grid-column: 1 / -1; } }
 .row-current td { background: var(--accent-soft); }
 .topic-col { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

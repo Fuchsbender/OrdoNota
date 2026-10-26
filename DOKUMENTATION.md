@@ -1,6 +1,6 @@
 # OrdoNota – Dokumentation
 
-Version 1.24.0 · Stand Oktober 2026
+Version 1.24.1 · Stand Oktober 2026
 
 OrdoNota (bis Version 1.11 „Notenmanager“) verwaltet Noten für die Sekundarstufe I (Noten 1–6 mit Tendenz) und die Mainzer Studienstufe (MSS, Punkte 00–15) an Schulen in Rheinland-Pfalz. Die App läuft vollständig lokal im Browser, verschlüsselt alle Daten mit einem Passwort und legt sie in einem Ordner ab, den der Synology Drive Client auf die DiskStation spiegelt.
 
@@ -622,7 +622,7 @@ Gruppen bilden für Gruppenaufträge, Lernaufträge, Stationenlernen, Gruppenpuz
 **Gruppenpuzzle:** In einer Einteilung (den Stammgruppen) **„🧩 Expertengruppen bilden“** klicken. Jede Person der Stammgruppe bekommt einen Buchstaben (A, B, C … = Teilthema); alle mit A bilden die Expertengruppe A usw. So sitzt aus jeder Stammgruppe genau eine Person in jeder Expertengruppe. Die Expertengruppen sind eine eigene Einteilung (mit Hinweis auf die Stammgruppen); die Buchstaben stehen auch auf Beamer und Ausdruck der Stammgruppen.
 
 **Zeigen, drucken, übernehmen:**
-- **⛶ Beamer:** alle Gruppen groß mit Auftrag und Namen im Vollbild (Esc schließt).
+- **⛶ Beamer:** alle Gruppen mit Auftrag und Namen im Vollbild (Esc schließt). Die Schrift wird automatisch so groß gewählt, dass alle Gruppen ohne Scrollen auf den Bildschirm passen. Umschalter oben rechts: **📷 Fotos** (Foto bzw. Personensymbol vor dem Namen) und **Nachnamen** (aus: nur Vornamen, bei gleichen Vornamen mit Initiale, z. B. „Lea B.“). Beide werden pro Gerät gemerkt.
 - **🖨 Drucken …:** *Gruppeneinteilung* (alle Gruppen auf einer Seite zum Aushängen) oder *Gruppenkarten* (je Gruppe eine Karte zum Ausschneiden).
 - **→ In Präsentation übernehmen:** kopiert die Gruppen in eine Präsentation des Kurses; der Auftrag wird zum Thema der Gruppe. Eine Einzelpräsentation wird dabei zur Gruppenpräsentation (Kriterien je Gruppe oder Person, siehe 8a.6). Umgekehrt geht es in der Präsentation über „Gruppen übernehmen von …“.
 
@@ -1061,7 +1061,7 @@ Eingabe (change) → Daten im Objekt ändern → NM.app.commit()
 
 Berechnete Werte (Schnitte, Testnoten, EPO-Noten) werden **nie gespeichert**, sondern bei jedem Zeichnen aus den Rohdaten berechnet.
 
-**Pro Gerät im Browser gespeichert** (`localStorage`/IndexedDB, nicht in der Datenbank): Ordner-Handle, Geräte-ID und -name, gewählter Kurs/Reiter/Halbjahr, Farbschema, ein-/ausgeklappte Kursliste, ausgeblendete Teile in der Ergebnistabelle, Stand des Pomodoro-Timers.
+**Pro Gerät im Browser gespeichert** (`localStorage`/IndexedDB, nicht in der Datenbank): Ordner-Handle, Geräte-ID und -name, gewählter Kurs/Reiter/Halbjahr, Farbschema, ein-/ausgeklappte Kursliste, ausgeblendete Teile in der Ergebnistabelle, Umschalter der Gruppen-Beameransicht (Fotos, Nachnamen), Stand des Pomodoro-Timers.
 
 ## 23. Dateiformat der Datenbank
 
@@ -1077,7 +1077,7 @@ Berechnete Werte (Schnitte, Testnoten, EPO-Noten) werden **nie gespeichert**, so
   "kdf": "PBKDF2-SHA256",
   "savedAt": "2026-10-14T21:57:03.123Z",
   "device": "Laptop Schule",
-  "app": "1.24.0",
+  "app": "1.24.1",
   "pw":   { "salt": "<b64>", "iter": 600000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "rec":  { "salt": "<b64>", "iter": 100000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "data": { "iv": "<b64>", "ct": "<b64: verschlüsseltes JSON des Datenmodells>" }
@@ -1100,7 +1100,7 @@ Entschlüsselter Inhalt (`schema: 4`):
 ```js
 {
   schema: 4,                             // Datenformat (siehe 26.2)
-  savedWith: "1.24.0",                    // App-Version beim letzten Speichern
+  savedWith: "1.24.1",                    // App-Version beim letzten Speichern
   created: "<ISO>", savedAt: "<ISO>",
   settings: { autoLockMin, limitSek1, limitMss, precision, keepBackups, backupEveryMin, gradeColors,
               pomodoro: { enabled, count, work, short, long, tick: "off" | "work" | "always", alarm: "off" | "bell" | "gong" | "beep", volume } },
@@ -1180,7 +1180,7 @@ Das Skript startet einen unsichtbaren Chromium-Browser (Chrome, Edge, Chromium, 
 2. den Start der App im Demo-Modus und alle Reiter für einen Sek-I- und einen MSS-Kurs ohne JavaScript-Fehler,
 3. das Sortieren per Klick auf Spaltenköpfe (Tests, EPO, Notenübersicht; Richtung und leere Werte unten),
 4. den Pomodoro-Timer (Aktivieren, Farben je Zustand, Phasenwechsel, Zurücksetzen, Einstellungsdialog), das Layout des Reiters „Einstellungen“ bei aktivem Timer (keine Lücken zwischen den Karten, Auswahllisten nicht abgeschnitten, bei 1570 und 2560 px) und die Kürzel in der eingeklappten Kursliste, die weichen Übergänge (nur bei Reiter-, Kurs- und Halbjahreswechsel), das Ein-/Ausklappen der Kursliste, den Reiter „Tests“ in voller Breite, Arbeiten in Teilen (einschalten, Aufgaben und Punkte je Teil, Teil ausblenden, getrennt benoten, Status je Teil, Schlüssel je Teil, Ausdrucke inkl. „Ergebnisse nach Teilen“, Beamer, Teile aufheben), die Druckauswahl „🖨 Drucken …“ in Tests, EPO und Notenübersicht (Gruppen, Tooltips, Auswahl druckt, Abbrechen nicht) und den Haken „Unterschrift gesehen“ bei Klassenarbeiten (Zähler, Ausdruck), den Moodle-Import (Dateiauswahl im Dialog, Zuordnung, Status „fehlt“, Ausdruck mit und ohne Note, erneuter Import),
-5. den Excel-Export der Schülerliste (gültiges ZIP/XML, Umlaute und Sonderzeichen), das Kurs-Löschen nur mit „LÖSCHEN“, das Ein-/Ausblenden der Fotos im EPO-Reiter und im Sitzplan (auch im Druck) das Erweitern/Verkleinern des Sitzplan-Rasters an allen vier Seiten sowie das Ziehen (keine Wiederholung bis zum Auffüllen, automatisches Auffüllen, Note, Rückgängig, Abwesende/Herausgenommene) und den Reiter „Präsentationen“ (Bewerten per Knopf und in der Tabelle, Gewicht, Kriterien aus dem Pool und eigene, Vorlage, Ausdrucke, Spalte in der Notenübersicht, Pool bearbeiten, Startbestand ergänzen, Vorlagen speichern/anlegen/verwenden/drucken/löschen, Standardvorlagen vorhanden und ergänzen, Handreichung mit Notenschlüssel) und Gruppenpräsentationen (Gruppenwert für alle Mitglieder, Personenkriterien, Abweichung setzen/zurücksetzen, Tabelle, Gruppen bearbeiten/übernehmen, Druck, Auflösen ohne Notenänderung), den Reiter „Gruppen“ (neue Einteilung, Abwesende, Fixieren, Anklicken/Ziehen, Auftrag, Regel mit Warnung, Beamer ohne Noten, Druck, Gruppenpuzzle, Übernahme in eine Präsentation),
+5. den Excel-Export der Schülerliste (gültiges ZIP/XML, Umlaute und Sonderzeichen), das Kurs-Löschen nur mit „LÖSCHEN“, das Ein-/Ausblenden der Fotos im EPO-Reiter und im Sitzplan (auch im Druck) das Erweitern/Verkleinern des Sitzplan-Rasters an allen vier Seiten sowie das Ziehen (keine Wiederholung bis zum Auffüllen, automatisches Auffüllen, Note, Rückgängig, Abwesende/Herausgenommene) und den Reiter „Präsentationen“ (Bewerten per Knopf und in der Tabelle, Gewicht, Kriterien aus dem Pool und eigene, Vorlage, Ausdrucke, Spalte in der Notenübersicht, Pool bearbeiten, Startbestand ergänzen, Vorlagen speichern/anlegen/verwenden/drucken/löschen, Standardvorlagen vorhanden und ergänzen, Handreichung mit Notenschlüssel) und Gruppenpräsentationen (Gruppenwert für alle Mitglieder, Personenkriterien, Abweichung setzen/zurücksetzen, Tabelle, Gruppen bearbeiten/übernehmen, Druck, Auflösen ohne Notenänderung), den Reiter „Gruppen“ (neue Einteilung, Abwesende, Fixieren, Anklicken/Ziehen, Auftrag, Regel mit Warnung, Beamer ohne Noten mit Schrift passend zum Bildschirm und Umschaltern für Fotos/Nachnamen, Druck, Gruppenpuzzle, Übernahme in eine Präsentation),
 6. das Notfallwerkzeug: Eine von der App echt verschlüsselte Datenbank wird mit `tools/entschluesseln.py` per Passwort und per Wiederherstellungsschlüssel entschlüsselt und mit dem Original verglichen. Dazu kommen falsches Passwort, manipulierte Datei und CSV-Ausgabe.
 
 Am Ende steht `ERGEBNIS: x von y bestanden`. Der Exit-Code ist 0, wenn alles bestanden ist.
@@ -1222,7 +1222,7 @@ In `js/model.js` stehen zwei Nummern:
 
 | Konstante | Bedeutung | Wann erhöhen |
 |---|---|---|
-| `APP_VERSION` (z. B. `1.24.0`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.24.0` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
+| `APP_VERSION` (z. B. `1.24.1`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.24.1` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
 | `SCHEMA` (z. B. `4`) | Version des Datenformats (2 seit 1.18: Arbeiten in Teilen; 3 seit 1.20: Präsentationen; 4 seit 1.23: Gruppenpräsentationen) | nur, wenn eine **ältere** App-Version die neuen Daten falsch verstehen würde (z. B. ein Feld ändert seine Bedeutung) |
 
 Öffnet eine App eine Datenbank mit höherem `SCHEMA`, verweigert sie das mit einer Meldung (siehe 21.10). Neue, nur *zusätzliche* Felder brauchen kein neues `SCHEMA`: Ältere Versionen lassen unbekannte Felder unverändert und speichern sie mit.

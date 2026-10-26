@@ -533,29 +533,80 @@
 
   // ---------- Beamer und Druck ----------
 
-  function groupTiles(course, set, cls) {
+  /** Namen für Beamer und Ausdruck; ohne Nachnamen nur der Vorname (bei gleichen Vornamen mit Initiale). */
+  function displayName(course, last) {
+    if (last) return (s) => fullName(s);
+    const count = {};
+    for (const s of course.students) count[s.first] = (count[s.first] || 0) + 1;
+    return (s) => (!s.first ? s.last : count[s.first] > 1 && s.last ? `${s.first} ${s.last[0]}.` : s.first);
+  }
+
+  /** Kacheln je Gruppe; opts.photos: Foto bzw. Personensymbol vor dem Namen, opts.last: Nachnamen zeigen. */
+  function groupTiles(course, set, cls, { photos = false, last = true } = {}) {
     const all = byId(course);
+    const name = displayName(course, last);
     const expertSet = course.groupSets.find((x) => x.homeId === set.id);
     return set.groups
       .filter((g) => g.members.length)
       .map((g) =>
         h(
           'div',
-          { class: cls },
+          { class: cls + (photos ? ' with-photos' : '') },
           h('h3', null, g.name),
           g.task ? h('div', { class: cls + '-task' }, g.task) : null,
           h(
             'ul',
             null,
-            g.members.map((sid, i) => h('li', null, expertSet ? h('span', { class: 'grp-letter' }, GR.letter(i)) : null, all.get(sid) ? fullName(all.get(sid)) : '?'))
+            g.members.map((sid, i) => {
+              const s = all.get(sid);
+              return h('li', null, photos ? h('img', { class: 'grp-photo', src: (s && s.photo) || M.PERSON_ICON, alt: '' }) : null, expertSet ? h('span', { class: 'grp-letter' }, GR.letter(i)) : null, h('span', null, s ? name(s) : '?'));
+            })
           )
         )
       );
   }
 
+  /** Vollbild für den Beamer: Schrift so groß wie möglich, Fotos und Nachnamen per Umschalter (pro Gerät gemerkt). */
   function beamer(course, set) {
+    const ui = NM.app.state.ui;
+    const opt = (ui.groupBeamer = Object.assign({ photos: false, last: true }, ui.groupBeamer || {}));
+    const grid = h('div', { class: 'grp-beamer-grid' });
+    const toggle = (key, label, title) =>
+      h(
+        'button',
+        {
+          class: 'btn grp-beamer-toggle' + (opt[key] ? ' active' : ''),
+          'aria-pressed': String(!!opt[key]),
+          'data-beamer-toggle': key,
+          title,
+          onclick: (e) => {
+            opt[key] = !opt[key];
+            e.currentTarget.classList.toggle('active', opt[key]);
+            e.currentTarget.setAttribute('aria-pressed', String(opt[key]));
+            NM.app.saveUi();
+            draw();
+          },
+        },
+        label
+      );
+    // Größte Schrift, bei der alle Gruppen ohne Scrollen auf den Bildschirm passen
+    const fit = () => {
+      let size = Math.max(16, Math.min(96, Math.floor(overlay.clientHeight / 8)));
+      for (; size > 14; size -= 2) {
+        grid.style.fontSize = size + 'px';
+        if (grid.scrollHeight <= grid.clientHeight + 1 && grid.scrollWidth <= grid.clientWidth + 1) break;
+      }
+      grid.style.fontSize = size + 'px';
+    };
+    const draw = () => {
+      grid.replaceChildren(...groupTiles(course, set, 'grp-tile', opt));
+      fit();
+      // Fotos laden nachträglich und ändern die Höhe
+      for (const img of grid.querySelectorAll('img')) if (!img.complete) img.addEventListener('load', fit, { once: true });
+    };
     const close = () => {
       document.removeEventListener('keydown', onKey);
+      window.removeEventListener('resize', fit);
       if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
       overlay.remove();
     };
@@ -565,15 +616,24 @@
     const overlay = h(
       'div',
       { class: 'beamer grp-beamer', role: 'dialog', 'aria-label': 'Beamer-Ansicht' },
-      h('button', { class: 'btn beamer-close', onclick: close, title: 'Schließen (Esc)' }, '✕ Schließen'),
+      h(
+        'div',
+        { class: 'grp-beamer-bar' },
+        toggle('photos', '📷 Fotos', 'Fotos (bzw. Personensymbol) vor den Namen zeigen'),
+        toggle('last', 'Nachnamen', 'Nachnamen zeigen oder ausblenden (bei gleichen Vornamen bleibt die Initiale)'),
+        h('button', { class: 'btn', 'data-beamer-close': '', onclick: close, title: 'Schließen (Esc)' }, '✕ Schließen')
+      ),
       h('h1', null, set.name, h('span', { class: 'muted' }, ' · ' + M.courseTitle(course))),
-      h('div', { class: 'grp-beamer-grid' }, groupTiles(course, set, 'grp-tile'))
+      grid
     );
     document.body.appendChild(overlay);
+    draw();
     document.addEventListener('keydown', onKey);
+    window.addEventListener('resize', fit);
     if (overlay.requestFullscreen) overlay.requestFullscreen().catch(() => {});
     overlay.addEventListener('fullscreenchange', () => {
       if (!document.fullscreenElement) close();
+      else fit();
     });
   }
 
