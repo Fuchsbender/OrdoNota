@@ -31,6 +31,13 @@
   throws('Kaputter Inhalt wird abgelehnt', () => M.migrate(null));
 
   // Unbekannte Felder bleiben erhalten (Vorwärtsverträglichkeit innerhalb eines Schemas)
+  // 1.18: Arbeiten in Teilen – Datenbanken mit SCHEMA 1 bleiben unverändert, werden als SCHEMA 2 gespeichert
+  const plain = { id: 't', kind: 'test', half: 'HJ1', cat: 'ka', weight: 1, test: { limit: 50, precision: 1, custom: {}, tasks: [{ id: 'a', max: 5 }], results: { s: { scores: { a: 3 } } } } };
+  const v1 = M.migrate({ schema: 1, years: [], courses: [{ id: 'c', jahrgang: 8, students: [], assessments: [JSON.parse(JSON.stringify(plain))] }] });
+  ok('SCHEMA 1 → 2 ohne Änderung an Tests', v1.schema === 2 && M.SCHEMA === 2 && JSON.stringify(v1.courses[0].assessments[0]) === JSON.stringify(plain));
+  const withParts = M.migrate({ schema: 2, years: [], courses: [{ id: 'c', jahrgang: 8, students: [], assessments: [Object.assign(JSON.parse(JSON.stringify(plain)), { test: Object.assign({}, plain.test, { parts: [{ id: 'T', name: 'Theorie', weight: 2, limit: 40, custom: { 5: 3 } }], partMode: 'separate' }) })] }] });
+  ok('Teile bleiben beim Öffnen erhalten', withParts.courses[0].assessments[0].test.parts[0].weight === 2 && withParts.courses[0].assessments[0].test.partMode === 'separate');
+
   const extra = M.migrate({ schema: 1, years: [], courses: [], zusatz: { a: 1 } });
   ok('Unbekannte Felder bleiben erhalten', extra.zusatz && extra.zusatz.a === 1);
 

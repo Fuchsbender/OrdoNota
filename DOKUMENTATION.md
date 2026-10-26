@@ -1,6 +1,6 @@
 # OrdoNota – Dokumentation
 
-Version 1.17.1 · Stand Oktober 2026
+Version 1.18.0 · Stand Oktober 2026
 
 OrdoNota (bis Version 1.11 „Notenmanager“) verwaltet Noten für die Sekundarstufe I (Noten 1–6 mit Tendenz) und die Mainzer Studienstufe (MSS, Punkte 00–15) an Schulen in Rheinland-Pfalz. Die App läuft vollständig lokal im Browser, verschlüsselt alle Daten mit einem Passwort und legt sie in einem Ordner ab, den der Synology Drive Client auf die DiskStation spiegelt.
 
@@ -262,6 +262,7 @@ Doppelte Namen werden übersprungen. Die Liste wird alphabetisch sortiert.
 | Wertung | Haken **„nicht gewertet“**: Der Test bleibt mit allen Ergebnissen, Schlüssel und Notenspiegel erhalten, erscheint in der Notenübersicht und in der Kursliste aber nur ausgegraut und zählt **nicht** zur Halbjahresnote. |
 | Gewicht | Standard 1; z. B. 0,5 für eine kurze Überprüfung |
 | Punkte-Genauigkeit | Ganze, halbe oder Zehntel-Punkte. Gilt für Notenschlüssel und Summen. |
+| Teile | Haken **„Arbeit in Teilen“**: Die Arbeit besteht aus mehreren Teilen, z. B. Theorie und Praxis (siehe 7.8). |
 | Notenstufen | nur Sek I: **mit Tendenzen** (1, 1-, 2+ … 6, Standard) oder **nur ganze Noten (1–6)**, z. B. für kurze Tests mit wenigen Punkten. Eine ganze Note beginnt dort, wo sonst ihre Minus-Note beginnt; die 4 also ab LIMIT (siehe 15.2). Beim Umstellen werden von Hand geänderte Schwellen zurückgesetzt (mit Rückfrage). |
 | LIMIT | Sek I: Prozentsatz für die **4-**; MSS: Prozentsatz für **04 Punkte**. Neue Tests übernehmen den Standard aus den Einstellungen. |
 
@@ -312,6 +313,7 @@ Unter dem Schlüssel stehen das Balkendiagramm (Anzahl je ganzer Note 1–6), Te
 | 🖨 Schlüssel | Notenschlüssel und Notenspiegel (z. B. für das Klassenbuch oder die Fachleitung) |
 | 🖨 Liste | Alle Personen mit Punkten je Aufgabe, Σ, %, Note (bei Klassen-/Kursarbeiten mit Spalte „Unterschrift“); darunter Notenspiegel und Schlüssel |
 | 🖨 Schülerzettel | Ein Abschnitt pro Person zum Ausschneiden: erreichte und mögliche Punkte je Aufgabe, Prozent, Note |
+| 🖨 Teilübersicht | nur bei Arbeiten in Teilen (siehe 7.8): alle Personen mit Punkten, Prozent und (bei getrennter Benotung) Note je Teil, dazu die Gesamtwerte; darunter Notenspiegel und Schlüssel |
 | 🖨 Moodle-Ergebnisse | nur bei Tests aus Moodle (siehe 7.7): je Person eine Seite mit Ergebnis (Punkte, Prozent) oben, darunter Frage, gegebene Antwort, Lösung und Punkte; unten die **Note (Zahl und ausgeschrieben) wahlweise** sowie Linien für Datum und Unterschrift |
 
 ### 7.7 Moodle-Import
@@ -339,6 +341,31 @@ Regeln beim Import:
 **Erneut importieren** (Knopf in der Karte „Moodle“), z. B. nach Korrekturen in Moodle: Die Punkte der Moodle-Fragen werden ersetzt, eigene zusätzliche Aufgaben, Notenschlüssel, Gewicht und Status „nicht gewertet“/„Täuschung“ bleiben erhalten. Lädt man dabei nur die Bewertungen-CSV, bleiben die gespeicherten Antworttexte erhalten.
 
 **Ausdruck „🖨 Moodle-Ergebnisse“:** Im Dialog wählen Sie **alle** (je eine Seite) oder **eine Person** und ob die **Note** mitgedruckt wird. Oben steht das Ergebnis (Punkte, Prozent mit Balken), darunter je Frage Frage, „Deine Antwort“, Lösung und Punkte. Jede Zeile trägt ein Zeichen und einen farbigen Rand: ✓ richtig (grün), ◐ teilweise (orange hinterlegt), ✗ falsch (rot hinterlegt, Lösung fett), – keine Antwort. Durch die Zeichen bleibt der Ausdruck auch in Schwarzweiß lesbar; Zeilen werden nicht über Seiten getrennt. Unten steht – wenn gewählt – die **Note als Zahl und ausgeschrieben** (z. B. „2+ voll gut“, „2- noch gut“; MSS: „11 Punkte gut (2)“), darunter Linien für **Datum** und **Unterschrift der Lehrkraft** (auch ohne Note).
+
+### 7.8 Arbeit in Teilen (z. B. Theorie und Praxis)
+
+Eine Klassenarbeit kann aus mehreren Teilen bestehen, z. B. einem Theorie- und einem Praxisteil oder Hörverstehen, Lesen und Schreiben. Haken **„Arbeit in Teilen“** in den Eckdaten setzen: Es entstehen die Teile „Theorie“ und „Praxis“, alle vorhandenen Aufgaben gehören zunächst zum ersten Teil. In der Karte **„Teile“** lassen sich die Teile umbenennen, mit **„+ Teil“** weitere anlegen und mit **✕** entfernen (mit ihren Aufgaben und Punkten). In der Karte „Aufgaben“ hat jeder Teil eigene Knöpfe „+ Aufgabe“ und „+ Bonusaufgabe“.
+
+**Wertung** (Auswahl in der Karte „Teile“):
+
+| Wertung | Note |
+|---|---|
+| **gemeinsam bepunktet** | Alle Punkte zählen zusammen, ein Notenschlüssel über die Gesamtpunktzahl (wie ohne Teile). Die Teile gliedern Aufgaben, Ergebnistabelle und Ausdrucke; je Teil stehen Σ und % da. |
+| **getrennt benotet** | Jeder Teil hat einen eigenen Notenschlüssel (LIMIT, Punkte-Genauigkeit, Notenstufen, eigene Schwellen) und eine eigene Note. Die Gesamtnote ist der gewichtete Schnitt der Teilnoten, auf eine Notenstufe gerundet (Gewichte je Teil, z. B. 1 : 2; Formel in 15.5). |
+
+Bei getrennter Benotung gilt außerdem:
+
+- Die **Gesamtnote entsteht erst, wenn alle Teile eine Note haben.** Fehlt jemand in einem Teil, setzen Sie in der Spalte „Note“ dieses Teils **fehlt** oder **NS** (Nachschreiben). Der Status in der Spalte „Status“ gilt weiterhin für die ganze Arbeit (z. B. Täuschung → 6).
+- Der **Notenschlüssel** zeigt den Schlüssel des gewählten Teils (Umschalter über der Tabelle); Notenspiegel, Statistik und **Drittelparagraph** beziehen sich auf die Gesamtnote.
+- Die Beamer-Ansicht zeigt die Punkteverteilung je Teil.
+
+**Moodle-Import in einen Teil:** Knopf **„⬆ Moodle“** in der Zeile des Teils. Die Fragen werden Aufgaben F1, F2, … dieses Teils, die anderen Teile bleiben unverändert. Die CSV-Dateien werden beim Teil gespeichert (eigene Karte „Moodle – Teilname“ mit „Erneut importieren“). Personen ohne beendeten Moodle-Versuch bekommen „fehlt“ für die ganze Arbeit, wenn sie noch gar keine Punkte haben; haben sie in einem anderen Teil schon Punkte, wird bei getrennter Benotung nur dieser Teil auf „fehlt“ gesetzt.
+
+**Teile aufheben:** Haken „Arbeit in Teilen“ entfernen. Alle Aufgaben und Punkte bleiben erhalten und werden wieder mit einem Schlüssel bewertet; Schlüssel, Gewichte und Status der einzelnen Teile gehen verloren (mit Rückfrage).
+
+**Ausdrucke:** „Liste“ und „Schülerzettel“ zeigen die Aufgaben nach Teilen mit Zwischensumme (bei getrennter Benotung zusätzlich die Teilnoten), „Schlüssel“ den Schlüssel je Teil, **„🖨 Teilübersicht“** eine kompakte Tabelle aller Personen mit Punkten, Prozent und Note je Teil und gesamt.
+
+> Arbeiten in Teilen brauchen OrdoNota ab Version 1.18 auf allen Geräten (Datenformat 2, siehe 21.10).
 
 ## 8. Reiter „Mitarbeit/EPO“
 
@@ -491,7 +518,7 @@ Alle Ausdrucke öffnen den Druckdialog des Browsers. Dort können Sie auch **„
 | Notenübersicht | 🖨 Schülerbögen | Eine Seite je Person (Auswahl siehe unten) |
 | Notenübersicht | ⬇ CSV/Excel | Alle Noten und Ergebnisse des Kurses als CSV (Semikolon, öffnet direkt in Excel) |
 | Kurs & Schüler | ⬇ Excel | Schülerliste als Excel-Datei (.xlsx): Nr., Nachname, Vorname, I-Status, Aktiv (siehe 6.3) |
-| Tests | 🖨 Schlüssel / Liste / Schülerzettel / Moodle-Ergebnisse | siehe 7.6 und 7.7 |
+| Tests | 🖨 Schlüssel / Liste / Schülerzettel / Teilübersicht / Moodle-Ergebnisse | siehe 7.6, 7.7 und 7.8 |
 | Tests | ⛶ Beamer | Vollbild ohne Namen: Notenspiegel, Punkteverteilung, Ø je Aufgabe (siehe 7.5) |
 | Sitzplan | 🖨 Drucken | Sitzplan des gewählten Raums mit Vornamen, Fotos und Lehrerpult, A4 (quer, wenn mehr Spalten als Reihen) |
 | Mitarbeit/EPO | 🖨 Liste | Bewertungsraster mit Ergebnis je Person |
@@ -642,6 +669,21 @@ Prozentwerte auf ganze Prozent gerundet.
 
 Greift, wenn gilt: (Anzahl Noten 5 und 6 − Anzahl „Täuschung/Verweigerung“) **>** (Anzahl gewerteter Arbeiten) / 3.
 Als 5 und 6 zählen alle Stufen von 5+ bis 6 (Punkte 0–3). „fehlt“ und „Nachschreiben“ zählen nicht mit, ebenso wenig Personen mit I-Status (siehe 6.2) und einzeln „nicht gewertete“ Arbeiten (siehe 7.3).
+
+### 15.5 Arbeiten in Teilen
+
+**Gemeinsam bepunktet:** wie ein Test ohne Teile (15.1–15.3) über die Summe aller Aufgaben.
+
+**Getrennt benotet:** Jeder Teil wird wie ein eigener Test bewertet (Schlüssel aus seinem LIMIT, seiner Höchstpunktzahl und Genauigkeit; Bonus wird an der Bestnote des Teils gekappt). Dann:
+
+```
+Gesamt = Σ (Rechenwert der Teilnote × Gewicht des Teils) / Σ Gewichte      (Sek I: Dezimalnote, MSS: Punkte)
+Note   = Gesamt auf eine Notenstufe gerundet (18)
+```
+
+**Beispiel (Sek I, Theorie : Praxis = 1 : 2):** Theorie 2- (2,33), Praxis 4- (4,33) → (2,33 + 2·4,33)/3 = 3,66 → **4+**. MSS: 15 und 06 Punkte bei 1 : 1 → 10,5 → **11**.
+
+Fehlt eine Teilnote, gibt es keine Gesamtnote. Der Drittelparagraph (15.4) wird auf die Gesamtnoten angewendet.
 
 ## 16. Mitarbeit/EPO-Berechnung
 
@@ -796,7 +838,7 @@ uv run --with cryptography tools/entschluesseln.py /pfad/zu/notenmanager.nmdb
 | (keine) | fragt nach dem Passwort und schreibt `<datei>_klartext.json` |
 | `-w`, `--wiederherstellung` | fragt nach dem Wiederherstellungsschlüssel statt dem Passwort |
 | `-o DATEI` | Name der Ausgabedatei |
-| `--csv ORDNER` | zusätzlich eine CSV-Datei je Kurs (Excel-kompatibel) mit Einzelnoten, Test-Rohpunkten, EPO-Kürzeln, gesetzten Noten und Bemerkungen |
+| `--csv ORDNER` | zusätzlich eine CSV-Datei je Kurs (Excel-kompatibel) mit Einzelnoten, Test-Rohpunkten (bei Arbeiten in Teilen je Teil), EPO-Kürzeln, gesetzten Noten und Bemerkungen |
 | `-f` | vorhandene Ausgabedatei überschreiben |
 
 Das Passwort wird verdeckt abgefragt und nirgends gespeichert. Die CSV-Dateien enthalten **Rohdaten**. Berechnete Schnitte und Testnoten erzeugt nur die App.
@@ -901,7 +943,7 @@ Berechnete Werte (Schnitte, Testnoten, EPO-Noten) werden **nie gespeichert**, so
   "kdf": "PBKDF2-SHA256",
   "savedAt": "2026-10-14T21:57:03.123Z",
   "device": "Laptop Schule",
-  "app": "1.17.1",
+  "app": "1.18.0",
   "pw":   { "salt": "<b64>", "iter": 600000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "rec":  { "salt": "<b64>", "iter": 100000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "data": { "iv": "<b64>", "ct": "<b64: verschlüsseltes JSON des Datenmodells>" }
@@ -919,12 +961,12 @@ Berechnete Werte (Schnitte, Testnoten, EPO-Noten) werden **nie gespeichert**, so
 
 ## 24. Datenmodell
 
-Entschlüsselter Inhalt (`schema: 1`):
+Entschlüsselter Inhalt (`schema: 2`):
 
 ```js
 {
-  schema: 1,                             // Datenformat (siehe 26.2)
-  savedWith: "1.17.1",                    // App-Version beim letzten Speichern
+  schema: 2,                             // Datenformat (siehe 26.2)
+  savedWith: "1.18.0",                    // App-Version beim letzten Speichern
   created: "<ISO>", savedAt: "<ISO>",
   settings: { autoLockMin, limitSek1, limitMss, precision, keepBackups, backupEveryMin, gradeColors,
               pomodoro: { enabled, count, work, short, long, tick: "off" | "work" | "always", alarm: "off" | "bell" | "gong" | "beep", volume } },
@@ -955,9 +997,11 @@ Assessment = {
   name, date: "YYYY-MM-DD", weight, ungraded?,   // ungraded: zählt nicht zur Note
   manual?: { grades: { "<sid>": { p } | { status } } },
   test?:   { limit, precision, wholeGrades?,                            // wholeGrades: nur ganze Noten (Sek I)
-             tasks: [ { id, name, max, bonus?, moodleNr? } ],   // moodleNr: Fragennummer in Moodle
+             tasks: [ { id, name, max, bonus?, moodleNr?, partId? } ],   // moodleNr: Fragennummer in Moodle; partId: Teil
              custom: { "<p>": Mindestpunktzahl },
-             results: { "<sid>": { scores: { "<taskId>": Zahl }, status?, signed? } },   // signed: Datum „Unterschrift gesehen“
+             parts?: [ { id, name, weight, limit?, precision?, custom?, wholeGrades?, moodle? } ],   // Arbeit in Teilen (seit 1.18)
+             partMode?: "sum" | "separate",                       // gemeinsam bepunktet / getrennt benotet
+             results: { "<sid>": { scores: { "<taskId>": Zahl }, status?, signed?, partStatus? } },   // signed: Datum „Unterschrift gesehen“; partStatus: { "<partId>": "fehlt" | "nachschreiben" }
              moodle?: { importedAt, totalMax,                                     // nur bei Moodle-Import
                         files: [ { name, kind: "answers" | "grades", text } ],    // Original-CSV-Dateien
                         answers: { "<sid>": { "<taskId>": { q, a, c } } } } },   // Frage, gegebene, richtige Antwort
@@ -969,6 +1013,8 @@ Assessment = {
 ```
 
 `p` ist immer eine Punktzahl 0–15. `status` ∈ `fehlt`, `nachschreiben`, `taeuschung`; bei Testergebnissen zusätzlich `ungewertet` (Note wird berechnet, zählt aber nicht; Abfrage über `NM.grades.ungradedFor(a, sid)`).
+
+Bei Arbeiten in Teilen gehören Aufgaben ohne gültige `partId` zum ersten Teil. Schlüsselfelder (`limit`, `precision`, `custom`, `wholeGrades`) und `weight` der Teile gelten nur bei `partMode: "separate"`; ein Moodle-Import in einen Teil speichert seine Daten in `parts[].moodle` (gleiche Struktur wie `test.moodle`).
 
 `NM.model.migrate()` ergänzt beim Öffnen fehlende Felder. Neue Felder bitte dort mit Standardwert nachtragen.
 
@@ -987,7 +1033,7 @@ Das Skript startet einen unsichtbaren Chromium-Browser (Chrome, Edge, Chromium, 
 1. alle Testseiten (siehe 25.2),
 2. den Start der App im Demo-Modus und alle Reiter für einen Sek-I- und einen MSS-Kurs ohne JavaScript-Fehler,
 3. das Sortieren per Klick auf Spaltenköpfe (Tests, EPO, Notenübersicht; Richtung und leere Werte unten),
-4. den Pomodoro-Timer (Aktivieren, Farben je Zustand, Phasenwechsel, Zurücksetzen, Einstellungsdialog), das Layout des Reiters „Einstellungen“ bei aktivem Timer (keine Lücken zwischen den Karten, Auswahllisten nicht abgeschnitten, bei 1570 und 2560 px) und die Kürzel in der eingeklappten Kursliste, die weichen Übergänge (nur bei Reiter-, Kurs- und Halbjahreswechsel), das Ein-/Ausklappen der Kursliste, den Reiter „Tests“ in voller Breite und den Haken „Unterschrift gesehen“ bei Klassenarbeiten (Zähler, Ausdruck), den Moodle-Import (Dateiauswahl im Dialog, Zuordnung, Status „fehlt“, Ausdruck mit und ohne Note, erneuter Import),
+4. den Pomodoro-Timer (Aktivieren, Farben je Zustand, Phasenwechsel, Zurücksetzen, Einstellungsdialog), das Layout des Reiters „Einstellungen“ bei aktivem Timer (keine Lücken zwischen den Karten, Auswahllisten nicht abgeschnitten, bei 1570 und 2560 px) und die Kürzel in der eingeklappten Kursliste, die weichen Übergänge (nur bei Reiter-, Kurs- und Halbjahreswechsel), das Ein-/Ausklappen der Kursliste, den Reiter „Tests“ in voller Breite, Arbeiten in Teilen (einschalten, Aufgaben und Punkte je Teil, getrennt benoten, Status je Teil, Schlüssel je Teil, Ausdrucke inkl. Teilübersicht, Beamer, Teile aufheben) und den Haken „Unterschrift gesehen“ bei Klassenarbeiten (Zähler, Ausdruck), den Moodle-Import (Dateiauswahl im Dialog, Zuordnung, Status „fehlt“, Ausdruck mit und ohne Note, erneuter Import),
 5. den Excel-Export der Schülerliste (gültiges ZIP/XML, Umlaute und Sonderzeichen), das Kurs-Löschen nur mit „LÖSCHEN“, das Ein-/Ausblenden der Fotos im EPO-Reiter und im Sitzplan (auch im Druck) das Erweitern/Verkleinern des Sitzplan-Rasters an allen vier Seiten sowie das Ziehen (keine Wiederholung bis zum Auffüllen, automatisches Auffüllen, Note, Rückgängig, Abwesende/Herausgenommene),
 6. das Notfallwerkzeug: Eine von der App echt verschlüsselte Datenbank wird mit `tools/entschluesseln.py` per Passwort und per Wiederherstellungsschlüssel entschlüsselt und mit dem Original verglichen. Dazu kommen falsches Passwort, manipulierte Datei und CSV-Ausgabe.
 
@@ -999,9 +1045,9 @@ Am Ende steht `ERGEBNIS: x von y bestanden`. Der Exit-Code ist 0, wenn alles bes
 
 | Datei | Prüft | Ausführen |
 |---|---|---|
-| `tests/grades.test.html` | Skalen, Eingabe-Parser, Rundung, Notenschlüssel (Vergleich mit Excel-Formeln), Bonus/Kappung, Status, Drittelparagraph, EPO (Werte aus der bisherigen EPO-Liste), Halbjahres-/Jahresnote, GK-Gewichtung | im Browser öffnen |
-| `tests/model.test.html` | Migration älterer Datenbanken, Ablehnung neuerer Datenformate, Erhalt unbekannter Felder, Namensliste | im Browser öffnen |
-| `tests/moodle.test.html` | CSV-Zerlegung, Erkennen und Zusammenführen von Antworten-/Bewertungen-CSV, bester Versuch, Textvergleich ohne Bewertungen, Zuordnung (Name, gemerkte E-Mail), Übernahme als Test, „fehlt“, erneuter Import, skalierte Punkte | im Browser öffnen |
+| `tests/grades.test.html` | Skalen, Eingabe-Parser, Rundung, Notenschlüssel (Vergleich mit Excel-Formeln), Bonus/Kappung, Status, Drittelparagraph, EPO (Werte aus der bisherigen EPO-Liste), Halbjahres-/Jahresnote, GK-Gewichtung, Arbeiten in Teilen (gemeinsam/getrennt, Gewichte, fehlender Teil, Status je Teil, ganze Noten je Teil, MSS) | im Browser öffnen |
+| `tests/model.test.html` | Migration älterer Datenbanken (SCHEMA 1 → 2), Ablehnung neuerer Datenformate, Erhalt unbekannter Felder, Namensliste | im Browser öffnen |
+| `tests/moodle.test.html` | CSV-Zerlegung, Erkennen und Zusammenführen von Antworten-/Bewertungen-CSV, bester Versuch, Textvergleich ohne Bewertungen, Zuordnung (Name, gemerkte E-Mail), Übernahme als Test, „fehlt“, erneuter Import, skalierte Punkte, Import in einen Teil | im Browser öffnen |
 | `tests/pomodoro.test.html` | Ablauf der Phasen (mit/ohne kurze bzw. lange Pause), Standardwerte, Migration der Einstellungen | im Browser öffnen |
 | `tests/crypto.test.html` | Anlegen, Entsperren, falsches Passwort, Wiederherstellungsschlüssel, Passwortwechsel, alte Sicherungen, Manipulationserkennung | im Browser öffnen (dauert einige Sekunden) |
 | `tests/storage.test.html` | Schreiben/Lesen, rollierende Sicherungen, externe Änderung, erzwungenes Überschreiben, Lock-Datei, Konfliktkopie | **über `http://localhost`**, z. B. `python3 -m http.server` im Programmordner, dann `http://localhost:8000/tests/storage.test.html` |
@@ -1029,8 +1075,8 @@ In `js/model.js` stehen zwei Nummern:
 
 | Konstante | Bedeutung | Wann erhöhen |
 |---|---|---|
-| `APP_VERSION` (z. B. `1.17.1`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.17.1` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
-| `SCHEMA` (z. B. `1`) | Version des Datenformats | nur, wenn eine **ältere** App-Version die neuen Daten falsch verstehen würde (z. B. ein Feld ändert seine Bedeutung) |
+| `APP_VERSION` (z. B. `1.18.0`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.18.0` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
+| `SCHEMA` (z. B. `2`) | Version des Datenformats (2 seit 1.18: Arbeiten in Teilen) | nur, wenn eine **ältere** App-Version die neuen Daten falsch verstehen würde (z. B. ein Feld ändert seine Bedeutung) |
 
 Öffnet eine App eine Datenbank mit höherem `SCHEMA`, verweigert sie das mit einer Meldung (siehe 21.10). Neue, nur *zusätzliche* Felder brauchen kein neues `SCHEMA`: Ältere Versionen lassen unbekannte Felder unverändert und speichern sie mit.
 

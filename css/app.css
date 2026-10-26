@@ -392,6 +392,16 @@ select option { background: var(--surface); color: var(--text); }
 .task-name { width: 70px; }
 .task-max { width: 58px; text-align: right; }
 .task-bonus { display: flex; align-items: center; gap: 3px; font-size: 12px; color: var(--muted); padding: 0 4px; cursor: pointer; }
+.task-group { padding: 8px 0 10px; border-top: 1px solid var(--border); }
+.task-group:first-of-type { border-top: 0; padding-top: 0; }
+.task-group-head { margin-bottom: 6px; }
+.table th.part-col, .table td.part-col { background: var(--surface-2); }
+.parts-table .part-name { width: 160px; }
+.parts-table .part-weight, .parts-table .part-limit { width: 72px; }
+.key-parts { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.key-parts .segmented { flex-wrap: wrap; align-self: flex-start; }
+.key-parts p { margin: 0; }
+.key-sub { margin: 14px 0 6px; font-size: 13px; }
 .test-layout { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 16px; align-items: start; }
 .test-layout > .card { margin-bottom: 16px; }
 .grid-table th.col-tight { width: 1%; } /* Status/Unterschrift nur so breit wie nötig; Platz geht an die Aufgaben */
@@ -631,6 +641,13 @@ body.no-grade-colors .p-grade[style*='--g-hue'] { background: none; }
 .p-mr-table .p-mr-pts { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .p-mr-table td.p-mr-c { color: #555; }
 .p-mr-table td.p-mr-a em { color: #888; }
+.p-mr-table tr.p-mr-part td { padding: 9px 6px 4px; border-bottom: 1pt solid #000; font-weight: 700; font-size: 9.5pt; }
+.p-mr-table tr.p-mr-part td span { font-weight: 400; color: #444; }
+.p-table .p-part { background: #f0f0f0; font-weight: 600; }
+.p-parts .p-part-start { border-left: 1.2pt solid #000; }
+.p-keyparts { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: flex-start; }
+.p-keypart h3 { margin: 6px 0 4px; font-size: 10pt; }
+.p-keypart h3 small { font-weight: 400; color: #444; }
 .p-mr-sym { display: inline-block; width: 1.2em; margin-right: 4px; text-align: center; font-weight: 700; }
 .p-mr-ok td.p-mr-nr { border-left-color: var(--mr-ok); }
 .p-mr-ok .p-mr-sym { color: var(--mr-ok); }

@@ -219,8 +219,84 @@
     return (test.tasks || []).reduce((s, t) => s + (t.bonus ? 0 : Number(t.max) || 0), 0);
   }
 
-  /** Ergebnis einer Schülerin/eines Schülers in einem Test. */
+  // ---------- Arbeiten in Teilen (z. B. Theorie/Praxis) ----------
+  // test.parts = [{ id, name, weight, limit?, precision?, custom?, wholeGrades?, moodle? }], test.partMode = 'sum' | 'separate',
+  // task.partId ordnet die Aufgabe einem Teil zu (ohne gültige Zuordnung: erster Teil).
+  // 'sum': ein Schlüssel über die Gesamtpunktzahl, Teile nur zur Gliederung.
+  // 'separate': jeder Teil hat einen eigenen Schlüssel; Gesamtnote = gewichteter Schnitt der Teilnoten, auf eine Stufe gerundet.
+
+  function hasParts(test) {
+    return Array.isArray(test.parts) && test.parts.length > 0;
+  }
+
+  function separateParts(test) {
+    return hasParts(test) && test.partMode === 'separate';
+  }
+
+  /** Aufgaben eines Teils (Aufgaben ohne gültige Zuordnung gehören zum ersten Teil). */
+  function partTasks(test, part) {
+    const ids = new Set(test.parts.map((x) => x.id));
+    const first = test.parts[0].id;
+    return (test.tasks || []).filter((t) => (ids.has(t.partId) ? t.partId : first) === part.id);
+  }
+
+  /** Aufgaben gruppiert nach Teil: [{ part, tasks }]; ohne Teile eine Gruppe mit part = null. */
+  function taskGroups(test) {
+    return hasParts(test) ? test.parts.map((part) => ({ part, tasks: partTasks(test, part) })) : [{ part: null, tasks: test.tasks || [] }];
+  }
+
+  /** Aufgaben in Anzeigereihenfolge: nach Teil gruppiert, innerhalb des Teils wie eingegeben. */
+  function orderedTasks(test) {
+    return hasParts(test) ? test.parts.flatMap((part) => partTasks(test, part)) : test.tasks || [];
+  }
+
+  /**
+   * Ein Teil als eigenständiger Test (nur Aufgaben des Teils). Bei 'separate' mit dem Schlüssel des Teils,
+   * sonst mit den Einstellungen des Tests; Status je Teil (partStatus) ersetzt dort den Status.
+   */
+  function partAsTest(test, part) {
+    const own = separateParts(test);
+    const results = {};
+    for (const [sid, r] of Object.entries(test.results || {})) {
+      const ps = own ? (r.partStatus || {})[part.id] : null;
+      results[sid] = { scores: r.scores || {}, status: r.status === 'fehlt' || r.status === 'nachschreiben' || r.status === 'taeuschung' || !ps ? r.status : ps };
+    }
+    return {
+      limit: own && part.limit !== undefined ? part.limit : test.limit,
+      precision: own && part.precision !== undefined ? part.precision : test.precision,
+      custom: (own ? part.custom : test.custom) || {},
+      wholeGrades: own ? !!part.wholeGrades : !!test.wholeGrades,
+      tasks: partTasks(test, part),
+      results,
+    };
+  }
+
+  /** Notenschlüssel eines Teils (bei 'separate'). */
+  function keyForPart(test, part, level) {
+    return keyForTest(partAsTest(test, part), level);
+  }
+
+  /** Notenspiegel eines Teils (bei 'separate'; Drittelparagraph gilt nur für die Gesamtnote). */
+  function partStats(test, part, studentIds, level) {
+    return testStats(partAsTest(test, part), studentIds, level);
+  }
+
+  /** Ergebnis einer Schülerin/eines Schülers in einem Test. Bei Teilen zusätzlich parts: [{ partId, score, max, p, status }]. */
   function testResult(test, sid, level) {
+    const res = separateParts(test) ? separateResult(test, sid, level) : plainResult(test, sid, level);
+    if (hasParts(test)) {
+      res.parts =
+        res.parts ||
+        test.parts.map((part) => {
+          const pt = partAsTest(test, part);
+          const r = plainResult(pt, sid, level);
+          return { partId: part.id, score: r.score, max: testMaxScore(pt), p: null, status: r.status };
+        });
+    }
+    return res;
+  }
+
+  function plainResult(test, sid, level) {
     const r = (test.results || {})[sid] || {};
     const status = r.status || '';
     if (status === 'fehlt' || status === 'nachschreiben') return { status, score: null, p: null };
@@ -240,6 +316,30 @@
     if (!any) return { status, score: null, p: null };
     const score = roundToPrecision(sum, test.precision);
     return { status, score, bonus, p: scoreToPoints(score, key) };
+  }
+
+  /** 'separate': Teilnoten je Teil, Gesamtnote erst, wenn alle Teile eine Note haben. */
+  function separateResult(test, sid, level) {
+    const r = (test.results || {})[sid] || {};
+    const status = r.status || '';
+    const parts = test.parts.map((part) => {
+      const pt = partAsTest(test, part);
+      const pr = plainResult(pt, sid, level);
+      return { partId: part.id, score: pr.score, max: testMaxScore(pt), p: pr.p, status: pr.status, bonus: pr.bonus || 0 };
+    });
+    if (status === 'fehlt' || status === 'nachschreiben') return { status, score: null, p: null, parts };
+    if (status === 'taeuschung') return { status, score: null, p: 0, parts };
+    const scored = parts.filter((x) => x.score !== null);
+    const score = scored.length ? roundToPrecision(scored.reduce((s, x) => s + x.score, 0), 0.01) : null;
+    const bonus = parts.reduce((s, x) => s + x.bonus, 0);
+    if (parts.some((x) => x.p === null)) return { status, score, bonus, p: null, parts };
+    const v = weightedAvg(parts.map((x, i) => ({ v: calcValue(x.p, level), w: partWeight(test.parts[i]) })));
+    return { status, score, bonus, p: roundValue(v, level), parts };
+  }
+
+  function partWeight(part) {
+    const w = Number(part.weight);
+    return w > 0 ? w : 1;
   }
 
   /** Zählt diese Leistung für diese Person nicht? (ganze Leistung oder einzelne Testarbeit „nicht gewertet“) */
@@ -457,6 +557,15 @@
     testMaxScore,
     testResult,
     testStats,
+    hasParts,
+    separateParts,
+    partTasks,
+    orderedTasks,
+    taskGroups,
+    partAsTest,
+    keyForPart,
+    partStats,
+    partWeight,
     EPO_RATINGS,
     EPO_DEFAULT_POINTS,
     epoDefaultTable,

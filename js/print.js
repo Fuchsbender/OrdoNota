@@ -52,10 +52,11 @@
 
   // ---------- Test ----------
 
-  function keyTable(course, a, level, { counts = true } = {}) {
+  function keyTable(course, a, level, { counts = true, part = null } = {}) {
     const t = a.test;
-    const key = G.keyForTest(t, level);
-    const st = G.testStats(t, M.statStudents(course).map((s) => s.id), level);
+    const ids = M.statStudents(course).map((s) => s.id);
+    const key = part ? G.keyForPart(t, part, level) : G.keyForTest(t, level);
+    const st = part ? G.partStats(t, part, ids, level) : G.testStats(t, ids, level);
     return h(
       'table',
       { class: 'p-table p-key' },
@@ -79,6 +80,13 @@
           )
       )
     );
+  }
+
+  /** Schlüssel des Tests bzw. (getrennt benotete Teile) je Teil mit Überschrift. */
+  function keyTables(course, a, level, opts = {}) {
+    const t = a.test;
+    if (!G.separateParts(t)) return keyTable(course, a, level, opts);
+    return h('div', { class: 'p-keyparts' }, t.parts.map((part) => h('div', { class: 'p-keypart' }, h('h3', null, part.name, h('small', null, ` · ${fmtScore(G.testMaxScore(G.partAsTest(t, part)))} P. · LIMIT ${fmtScore(part.limit)} %`)), keyTable(course, a, level, Object.assign({}, opts, { part })))));
   }
 
   function statsBlock(course, a, level) {
@@ -106,15 +114,109 @@
 
   function testMeta(course, a) {
     const t = a.test;
-    return [fmtDate(a.date), UI.catLabel(a.cat), `Höchstpunktzahl ${fmtScore(G.testMaxScore(t))}`, `LIMIT ${fmtScore(t.limit)} %`, G.wholeOnly(t, G.courseLevel(course)) ? 'nur ganze Noten' : null].filter(Boolean).join(' · ');
+    const level = G.courseLevel(course);
+    const parts = G.hasParts(t)
+      ? G.separateParts(t)
+        ? 'Teile (getrennt benotet, Gewicht ' + t.parts.map((x) => fmtScore(G.partWeight(x))).join(' : ') + '): ' + t.parts.map((x) => x.name).join(', ')
+        : 'Teile: ' + t.parts.map((x) => x.name).join(', ')
+      : null;
+    return [fmtDate(a.date), UI.catLabel(a.cat), `Höchstpunktzahl ${fmtScore(G.testMaxScore(t))}`, G.separateParts(t) ? null : `LIMIT ${fmtScore(t.limit)} %`, !G.separateParts(t) && G.wholeOnly(t, level) ? 'nur ganze Noten' : null, parts].filter(Boolean).join(' · ');
+  }
+
+  /** Aufgabentabelle (erreicht/möglich) je Person; bei Teilen mit Zwischensumme je Teil. */
+  function taskTable(t, scores, res, cls) {
+    const head = [];
+    const got = [];
+    const max = [];
+    G.taskGroups(t).forEach((g, gi) => {
+      for (const task of g.tasks) {
+        head.push(h('th', null, task.name + (task.bonus ? ' (B)' : '')));
+        got.push(h('td', { class: 'n' }, fmtScore(scores[task.id])));
+        max.push(h('td', { class: 'n' }, fmtScore(task.max)));
+      }
+      if (g.part) {
+        const pr = res.parts[gi];
+        head.push(h('th', { class: 'p-part' }, 'Σ ' + g.part.name));
+        got.push(h('td', { class: 'n p-part' }, pr.score === null ? '' : fmtScore(pr.score)));
+        max.push(h('td', { class: 'n p-part' }, fmtScore(pr.max)));
+      }
+    });
+    return h(
+      'table',
+      { class: 'p-table ' + cls },
+      h('tr', null, h('th', null, 'Aufgabe'), head, h('th', null, 'Σ')),
+      h('tr', null, h('td', null, 'erreicht'), got, h('td', { class: 'n' }, res.score === null ? '' : h('strong', null, fmtScore(res.score)))),
+      h('tr', null, h('td', null, 'möglich'), max, h('td', { class: 'n' }, fmtScore(G.testMaxScore(t))))
+    );
+  }
+
+  /** „Theorie: 2 · Praxis: 3-“ (getrennt benotete Teile). */
+  function partGrades(t, res, level) {
+    if (!G.separateParts(t)) return null;
+    return t.parts.map((part, i) => `${part.name}: ${res.parts[i].p === null ? UI.STATUS_SHORT[res.parts[i].status] || '–' : G.label(res.parts[i].p, level)}`).join(' · ');
   }
 
   function test(course, a, mode) {
     const level = G.courseLevel(course);
     const t = a.test;
     const students = M.activeStudents(course);
+    const sep = G.separateParts(t);
+    const groups = G.taskGroups(t);
     if (mode === 'key') {
-      return doPrint(`${a.name} – Notenschlüssel`, h('div', { class: 'p-page' }, header(course, a.name, testMeta(course, a)), h('div', { class: 'p-cols' }, h('div', null, h('h2', null, 'Notenschlüssel'), keyTable(course, a, level)), h('div', null, h('h2', null, 'Notenspiegel'), statsBlock(course, a, level)))));
+      return doPrint(`${a.name} – Notenschlüssel`, h('div', { class: 'p-page' }, header(course, a.name, testMeta(course, a)), h('div', { class: 'p-cols' }, h('div', null, h('h2', null, 'Notenschlüssel'), keyTables(course, a, level)), h('div', null, h('h2', null, sep ? 'Notenspiegel (Gesamtnote)' : 'Notenspiegel'), statsBlock(course, a, level)))));
+    }
+    if (mode === 'parts') {
+      // Teilübersicht: je Person Punkte, Prozent (und Note) je Teil, dann Gesamt
+      const rows = students.map((s, i) => {
+        const r = t.results[s.id] || {};
+        const res = G.testResult(t, s.id, level);
+        return h(
+          'tr',
+          null,
+          h('td', { class: 'n' }, i + 1),
+          h('td', null, pname(s)),
+          t.parts.map((part, pi) => {
+            const pr = res.parts[pi];
+            return [
+              h('td', { class: 'n p-part-start' }, pr.score === null ? '' : fmtScore(pr.score)),
+              h('td', { class: 'n' }, pr.score === null || !pr.max ? '' : fmtNum((pr.score / pr.max) * 100, 0)),
+              sep ? h('td', { class: 'c' }, pr.p === null ? UI.STATUS_SHORT[pr.status] || '' : badge(pr.p, level)) : null,
+            ];
+          }),
+          h('td', { class: 'n p-part-start' }, res.score === null ? '' : h('strong', null, fmtScore(res.score))),
+          h('td', { class: 'n' }, res.score === null || !G.testMaxScore(t) ? '' : fmtNum((res.score / G.testMaxScore(t)) * 100, 0)),
+          h('td', { class: 'c' + (r.status === 'ungewertet' ? ' p-ungraded' : '') }, res.p === null ? UI.STATUS_SHORT[r.status] || '' : badge(res.p, level))
+        );
+      });
+      const per = sep ? 3 : 2;
+      return doPrint(
+        `${a.name} – Teilübersicht`,
+        h(
+          'div',
+          { class: 'p-page' },
+          header(course, a.name + ' – Teilübersicht', testMeta(course, a)),
+          h(
+            'table',
+            { class: 'p-table p-full p-parts' },
+            h(
+              'thead',
+              null,
+              h(
+                'tr',
+                null,
+                h('th', { rowspan: 2 }, 'Nr.'),
+                h('th', { rowspan: 2 }, 'Name'),
+                t.parts.map((part) => h('th', { colspan: per, class: 'p-part-start' }, part.name, h('br'), h('small', null, `${fmtScore(G.testMaxScore(G.partAsTest(t, part)))} P.` + (sep ? ` · Gewicht ${fmtScore(G.partWeight(part))}` : '')))),
+                h('th', { colspan: 3, class: 'p-part-start' }, 'Gesamt', h('br'), h('small', null, `${fmtScore(G.testMaxScore(t))} P.`))
+              ),
+              h('tr', null, t.parts.map(() => [h('th', { class: 'p-part-start' }, 'Pkt.'), h('th', null, '%'), sep ? h('th', null, 'Note') : null]), h('th', { class: 'p-part-start' }, 'Pkt.'), h('th', null, '%'), h('th', null, 'Note'))
+            ),
+            h('tbody', null, rows)
+          ),
+          h('div', { class: 'p-cols' }, h('div', null, statsBlock(course, a, level)), h('div', null, keyTables(course, a, level, { counts: false })))
+        ),
+        { landscape: t.parts.length * per + 5 > 12 }
+      );
     }
     if (mode === 'list') {
       const rows = students.map((s, i) => {
@@ -125,13 +227,18 @@
           null,
           h('td', { class: 'n' }, i + 1),
           h('td', null, pname(s)),
-          t.tasks.map((task) => h('td', { class: 'n' }, r.scores ? fmtScore(r.scores[task.id]) : '')),
+          groups.map((g, gi) => [
+            g.tasks.map((task) => h('td', { class: 'n' }, r.scores ? fmtScore(r.scores[task.id]) : '')),
+            g.part ? h('td', { class: 'n p-part' }, res.parts[gi].score === null ? '' : fmtScore(res.parts[gi].score)) : null,
+            g.part && sep ? h('td', { class: 'c p-part' }, res.parts[gi].p === null ? UI.STATUS_SHORT[res.parts[gi].status] || '' : badge(res.parts[gi].p, level)) : null,
+          ]),
           h('td', { class: 'n' }, res.score === null ? '' : fmtScore(res.score)),
           h('td', { class: 'n' }, res.score === null || !G.testMaxScore(t) ? '' : fmtNum((res.score / G.testMaxScore(t)) * 100, 0)),
           h('td', { class: 'c' + (r.status === 'ungewertet' ? ' p-ungraded' : '') }, res.p === null ? UI.STATUS_SHORT[r.status] || '' : [badge(res.p, level), r.status === 'ungewertet' ? h('small', null, ' n. gew.') : null]),
           a.cat === 'ka' ? h('td', { class: 'c' }, r.signed ? '✓ ' + NM.util.fmtDateShort(r.signed) : '') : null
         );
       });
+      const cols = t.tasks.length + groups.filter((g) => g.part).length * (sep ? 2 : 1);
       return doPrint(
         `${a.name} – Ergebnisse`,
         h(
@@ -141,30 +248,44 @@
           h(
             'table',
             { class: 'p-table p-full' },
-            h('thead', null, h('tr', null, h('th', null, 'Nr.'), h('th', null, 'Name'), t.tasks.map((task) => h('th', null, task.name, h('br'), h('small', null, fmtScore(task.max) + (task.bonus ? ' B' : '')))), h('th', null, 'Σ'), h('th', null, '%'), h('th', null, 'Note'), a.cat === 'ka' ? h('th', null, 'Unterschr.') : null)),
+            h(
+              'thead',
+              null,
+              h(
+                'tr',
+                null,
+                h('th', null, 'Nr.'),
+                h('th', null, 'Name'),
+                groups.map((g) => [
+                  g.tasks.map((task) => h('th', null, task.name, h('br'), h('small', null, fmtScore(task.max) + (task.bonus ? ' B' : '')))),
+                  g.part ? h('th', { class: 'p-part' }, 'Σ', h('br'), h('small', null, g.part.name)) : null,
+                  g.part && sep ? h('th', { class: 'p-part' }, 'Note', h('br'), h('small', null, g.part.name)) : null,
+                ]),
+                h('th', null, 'Σ'),
+                h('th', null, '%'),
+                h('th', null, 'Note'),
+                a.cat === 'ka' ? h('th', null, 'Unterschr.') : null
+              )
+            ),
             h('tbody', null, rows)
           ),
-          h('div', { class: 'p-cols' }, h('div', null, statsBlock(course, a, level)), h('div', null, keyTable(course, a, level, { counts: false })))
+          h('div', { class: 'p-cols' }, h('div', null, statsBlock(course, a, level)), h('div', null, keyTables(course, a, level, { counts: false })))
         ),
-        { landscape: t.tasks.length > 10 }
+        { landscape: cols > 10 }
       );
     }
     // Schülerzettel zum Ausschneiden
     const slips = students.map((s) => {
       const r = t.results[s.id] || {};
       const res = G.testResult(t, s.id, level);
+      const pg = partGrades(t, res, level);
       return h(
         'div',
         { class: 'p-slip' },
         h('div', { class: 'p-slip-head' }, h('strong', null, M.studentName(s)), h('span', null, `${a.name} · ${M.courseTitle(course)} · ${fmtDate(a.date)}`)),
-        h(
-          'table',
-          { class: 'p-table p-slip-table' },
-          h('tr', null, h('th', null, 'Aufgabe'), t.tasks.map((task) => h('th', null, task.name + (task.bonus ? ' (B)' : ''))), h('th', null, 'Σ')),
-          h('tr', null, h('td', null, 'erreicht'), t.tasks.map((task) => h('td', { class: 'n' }, r.scores ? fmtScore(r.scores[task.id]) : '')), h('td', { class: 'n' }, res.score === null ? '' : h('strong', null, fmtScore(res.score)))),
-          h('tr', null, h('td', null, 'möglich'), t.tasks.map((task) => h('td', { class: 'n' }, fmtScore(task.max))), h('td', { class: 'n' }, fmtScore(G.testMaxScore(t))))
-        ),
-        h('div', { class: 'p-slip-result' }, res.p === null ? UI.STATUS_SHORT[r.status] || 'keine Wertung' : ['Ergebnis: ', res.score !== null && G.testMaxScore(t) ? fmtNum((res.score / G.testMaxScore(t)) * 100, 0) + ' % · ' : '', 'Note ', h('strong', { class: 'p-big' }, G.label(res.p, level)), level === 'mss' ? ` Punkte (${G.wholeGrade(res.p)}${G.tendency(res.p)})` : ''])
+        taskTable(t, r.scores || {}, res, 'p-slip-table'),
+        pg ? h('div', { class: 'p-slip-result' }, 'Teilnoten: ', pg) : null,
+        h('div', { class: 'p-slip-result' }, res.p === null ? UI.STATUS_SHORT[r.status] || (pg && res.score !== null ? 'Gesamtnote erst, wenn alle Teile bewertet sind' : 'keine Wertung') : ['Ergebnis: ', res.score !== null && G.testMaxScore(t) ? fmtNum((res.score / G.testMaxScore(t)) * 100, 0) + ' % · ' : '', 'Note ', h('strong', { class: 'p-big' }, G.label(res.p, level)), level === 'mss' ? ` Punkte (${G.wholeGrade(res.p)}${G.tendency(res.p)})` : ''])
       );
     });
     doPrint(`${a.name} – Schülerzettel`, h('div', { class: 'p-slips' }, slips));
@@ -178,7 +299,7 @@
   function moodle(course, a, { sid = null, withGrade = true } = {}) {
     const level = G.courseLevel(course);
     const t = a.test;
-    const answers = (t.moodle && t.moodle.answers) || {};
+    const answers = NM.moodle.answersOf(t);
     const max = G.testMaxScore(t);
     const students = M.activeStudents(course).filter((s) => (!sid || s.id === sid) && G.testResult(t, s.id, level).score !== null);
     // Markierung nach Punkten (auch in Moodle von Hand korrigierte); „keine Antwort“ nur ohne Punkte
@@ -189,7 +310,11 @@
       const ans = answers[s.id] || {};
       const res = G.testResult(t, s.id, level);
       const pct = max ? (res.score / max) * 100 : null;
-      const rows = t.tasks.map((task, i) => {
+      const rows = G.taskGroups(t).flatMap((g, gi) => [
+        g.part ? h('tr', { class: 'p-mr-part' }, h('td', { colspan: 5 }, g.part.name, h('span', null, ` · ${fmtScore(res.parts[gi].score)} / ${fmtScore(res.parts[gi].max)} Punkte` + (G.separateParts(t) && res.parts[gi].p !== null && withGrade ? ` · ${G.label(res.parts[gi].p, level)}` : '')))) : null,
+        ...g.tasks.map((task) => taskRow(task, t.tasks.indexOf(task))),
+      ]);
+      function taskRow(task, i) {
         const x = ans[task.id] || {};
         const v = scores[task.id];
         const m = mark(v, task, x);
@@ -202,7 +327,7 @@
           h('td', { class: 'p-mr-c' }, x.c || ''),
           h('td', { class: 'p-mr-pts' }, m ? h('span', { class: 'p-mr-sym', title: MOODLE_MARK[m][1] }, MOODLE_MARK[m][0]) : null, `${fmtScore(v)} / ${fmtScore(task.max)}${task.bonus ? ' B' : ''}`)
         );
-      });
+      }
       return h(
         'div',
         { class: 'p-page p-break p-mr' },
@@ -496,13 +621,8 @@
               'div',
               { class: 'p-detail' },
               h('h3', null, a.name, ' – Punkte je Aufgabe'),
-              h(
-                'table',
-                { class: 'p-table' },
-                h('tr', null, h('th', null, 'Aufgabe'), t.tasks.map((task) => h('th', null, task.name + (task.bonus ? ' (B)' : ''))), h('th', null, 'Σ')),
-                h('tr', null, h('td', null, 'erreicht'), t.tasks.map((task) => h('td', { class: 'n' }, fmtScore(res[task.id]))), h('td', { class: 'n' }, tr.score === null ? '' : fmtScore(tr.score))),
-                h('tr', null, h('td', null, 'möglich'), t.tasks.map((task) => h('td', { class: 'n' }, fmtScore(task.max))), h('td', { class: 'n' }, fmtScore(G.testMaxScore(t))))
-              )
+              taskTable(t, res, tr, ''),
+              partGrades(t, tr, level) ? h('p', { class: 'p-note' }, 'Teilnoten: ', partGrades(t, tr, level)) : null
             )
           );
         }

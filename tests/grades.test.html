@@ -168,6 +168,59 @@
     eq('Ganze Noten: Wort ohne Tendenz', G.gradeWord(G.testResult(wt, 'x', 'sek1').p), 'sehr gut');
   }
 
+  // Arbeiten in Teilen (Theorie/Praxis)
+  {
+    const L = (p) => G.label(p, 'sek1');
+    const parts = () => [{ id: 'T', name: 'Theorie', weight: 1 }, { id: 'P', name: 'Praxis', weight: 1 }];
+    const base = () => ({ limit: 50, precision: 1, custom: {}, tasks: [{ id: 'a', max: 10, partId: 'T' }, { id: 'b', max: 10, partId: 'P' }], results: {} });
+    // gemeinsam bepunktet: gleiche Note wie ohne Teile, dazu Teilsummen
+    const one = base();
+    one.results.x = { scores: { a: 8, b: 9 } };
+    const sum = Object.assign(base(), { parts: parts(), partMode: 'sum', results: one.results });
+    eq('Teile „sum“: gleiche Note wie einteilig', [G.testResult(sum, 'x', 'sek1').p, G.testResult(one, 'x', 'sek1').p], [12, 12]);
+    eq('Teile „sum“: Teilsummen', G.testResult(sum, 'x', 'sek1').parts.map((x) => [x.score, x.max]), [[8, 10], [9, 10]]);
+    eq('Ohne Teile: kein parts-Feld', G.testResult(one, 'x', 'sek1').parts, undefined);
+    // getrennt benotet
+    const sep = Object.assign(base(), { parts: parts(), partMode: 'separate' });
+    sep.results = { x: { scores: { a: 9, b: 6 } }, y: { scores: { a: 9 } }, z: { scores: { a: 9 }, partStatus: { P: 'nachschreiben' } }, t: { scores: { a: 9 }, status: 'taeuschung' }, f: { scores: { a: 9 }, status: 'fehlt' } };
+    const rx = G.testResult(sep, 'x', 'sek1');
+    eq('Teile „separate“: Teilnoten 1- und 3-', rx.parts.map((x) => L(x.p)), ['1-', '3-']);
+    eq('Teile „separate“ 1 : 1: (1,33 + 3,33) / 2 → 2-', L(rx.p), '2-');
+    eq('Teile „separate“: Summe der Teilpunkte', rx.score, 15);
+    sep.parts[0].weight = 2;
+    eq('Teile „separate“ 2 : 1: (2·1,33 + 3,33) / 3 → 2', L(G.testResult(sep, 'x', 'sek1').p), '2');
+    sep.parts[0].weight = 1;
+    eq('Teile „separate“: fehlender Teil → keine Gesamtnote', [G.testResult(sep, 'y', 'sek1').p, G.testResult(sep, 'y', 'sek1').parts[0].p], [null, 13]);
+    eq('Teile „separate“: Status je Teil', [G.testResult(sep, 'z', 'sek1').p, G.testResult(sep, 'z', 'sek1').parts[1].status], [null, 'nachschreiben']);
+    eq('Teile „separate“: Täuschung → 6', G.testResult(sep, 't', 'sek1').p, 0);
+    eq('Teile „separate“: fehlt → keine Note', G.testResult(sep, 'f', 'sek1').p, null);
+    eq('Teile „separate“: Statistik zählt nur vollständige', G.testStats(sep, ['x', 'y', 'z', 't', 'f'], 'sek1').n, 2);
+    eq('Teile „separate“: Teilstatistik', G.partStats(sep, sep.parts[0], ['x', 'y', 'z', 't', 'f'], 'sek1').n, 4);
+    // eigener Schlüssel je Teil
+    sep.parts[1].limit = 40;
+    eq('Teile „separate“: LIMIT je Teil', [G.keyForPart(sep, sep.parts[0], 'sek1')[4].min, G.keyForPart(sep, sep.parts[1], 'sek1')[4].min], [5, 4]);
+    delete sep.parts[1].limit;
+    sep.parts[1].custom = { 7: 7 };
+    eq('Teile „separate“: eigene Schwelle je Teil', L(G.testResult(sep, 'x', 'sek1').parts[1].p), '4+');
+    delete sep.parts[1].custom;
+    // nur ganze Noten in einem Teil, 1 : 2
+    sep.parts[0].wholeGrades = true;
+    sep.parts[1].weight = 2;
+    sep.results.w = { scores: { a: 9, b: 8 } };
+    eq('Teile „separate“: ganze Noten in Teil 1 (9/10 → 1)', L(G.testResult(sep, 'w', 'sek1').parts[0].p), '1');
+    eq('Teile „separate“: (1,00 + 2·2,00) / 3 → 2+', L(G.testResult(sep, 'w', 'sek1').p), '2+');
+    // MSS: 15 und 06 → 10,5 → 11
+    const mss = { limit: 45, precision: 1, custom: {}, parts: parts(), partMode: 'separate', tasks: [{ id: 'a', max: 10, partId: 'T' }, { id: 'b', max: 10, partId: 'P' }], results: { x: { scores: { a: 10, b: 5 } } } };
+    eq('Teile „separate“ MSS: 15 und 06 → 11 (ab ,5 aufrunden)', [G.testResult(mss, 'x', 'mss').parts.map((x) => x.p), G.testResult(mss, 'x', 'mss').p], [[15, 6], 11]);
+    // Bonus je Teil, gekappt an der Bestnote des Teils
+    const bon = { limit: 50, precision: 1, custom: {}, parts: parts(), partMode: 'separate', tasks: [{ id: 'a', max: 10, partId: 'T' }, { id: 'c', max: 2, bonus: true, partId: 'T' }, { id: 'b', max: 10, partId: 'P' }], results: { x: { scores: { a: 10, c: 2, b: 10 } } } };
+    eq('Teile: Bonus je Teil (12/10 → 1)', [G.testResult(bon, 'x', 'sek1').parts[0].score, G.testResult(bon, 'x', 'sek1').parts[0].p, G.testResult(bon, 'x', 'sek1').p], [12, 14, 14]);
+    // Reihenfolge und Zuordnung
+    const ord = { parts: parts(), tasks: [{ id: 'a', partId: 'T' }, { id: 'b', partId: 'P' }, { id: 'c', partId: 'T' }, { id: 'd', partId: 'weg' }] };
+    eq('Teile: Aufgaben nach Teil geordnet, ungültige Zuordnung → erster Teil', G.orderedTasks(ord).map((t) => t.id).join(), 'a,c,d,b');
+    eq('Teile: drei Teile möglich', G.partTasks({ parts: [...parts(), { id: 'H', name: 'Hören' }], tasks: [{ id: 'h', partId: 'H' }] }, { id: 'H' }).length, 1);
+  }
+
   lines.unshift(fails === 0 ? 'ALLE TESTS BESTANDEN' : fails + ' FEHLGESCHLAGEN');
   
   document.getElementById('out').textContent = lines.join('\n');

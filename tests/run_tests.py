@@ -591,6 +591,72 @@ def run_settings_layout_check(br, base):
     report("Einstellungen ohne Lücken bei 1570/2560 px, Auswahllisten nicht abgeschnitten, Kürzel „MSS12“ passt", ok and not br.errors, str(out) + "; ".join(br.errors))
 
 
+def run_parts_check(br, base):
+    print("Arbeit in Teilen (Theorie/Praxis):")
+    br.open(f"{base}/index.html?demo")
+    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.errors = []
+    res = br.eval("""(async () => {
+        const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
+        window.print = () => {};
+        const c = NM.app.db().courses[0];
+        const a = c.assessments.find((x) => x.kind === 'test');
+        const t = a.test;
+        NM.app.state.ui.testId[c.id] = a.id;
+        NM.app.select({ courseId: c.id, tab: 'tests' }); await wait();
+        const before = Object.fromEntries(c.students.map((s) => [s.id, NM.grades.testResult(t, s.id, 'sek1').p]));
+        const box = document.querySelector('[data-focus-key="test-parts"]');
+        box.checked = true; box.dispatchEvent(new Event('change')); await wait();
+        const out = {};
+        out.on = [t.parts.map((x) => x.name).join(), t.partMode, t.tasks.every((x) => x.partId === t.parts[0].id), document.querySelectorAll('.parts-table tbody tr').length, document.querySelectorAll('.task-group').length];
+        out.same = c.students.every((s) => NM.grades.testResult(t, s.id, 'sek1').p === before[s.id]);
+        // Aufgabe im Teil Praxis anlegen und Punkte eintragen
+        [...document.querySelectorAll('.task-group')][1].querySelector('.btn-ghost').click(); await wait();
+        const prax = t.tasks.find((x) => x.partId === t.parts[1].id);
+        const sid = c.students[0].id;
+        const cell = document.querySelector(`[data-focus-key="ts-${sid}-${prax.id}"]`);
+        cell.value = '4'; cell.dispatchEvent(new Event('change')); await wait();
+        out.partCols = document.querySelectorAll('thead th.part-col').length;
+        out.partSum = NM.grades.testResult(t, sid, 'sek1').parts[1].score;
+        // getrennt benoten
+        const mode = document.querySelector('[data-focus-key="part-mode"]');
+        mode.value = 'separate'; mode.dispatchEvent(new Event('change')); await wait();
+        out.sep = [t.partMode, t.parts.every((x) => x.limit === t.limit && x.custom), document.querySelectorAll('thead th.part-col').length, document.querySelectorAll('.key-parts .seg').length];
+        const r0 = NM.grades.testResult(t, sid, 'sek1');
+        out.grade = r0.p !== null && r0.parts.every((x) => x.p !== null);
+        // Person ohne Praxis-Punkte: Gesamtnote leer, Status für den Teil setzbar
+        const sid2 = c.students[1].id;
+        out.missing = NM.grades.testResult(t, sid2, 'sek1').p;
+        const ps = document.querySelector(`[data-focus-key="ts-pstatus-${sid2}-${t.parts[1].id}"]`);
+        ps.value = 'nachschreiben'; ps.dispatchEvent(new Event('change')); await wait();
+        out.pstatus = t.results[sid2].partStatus[t.parts[1].id];
+        // Schlüssel des zweiten Teils
+        [...document.querySelectorAll('.key-parts .seg')][1].click(); await wait();
+        out.keyPart = document.querySelector('.key-parts .seg.active').textContent;
+        // dritter Teil, Ausdrucke, Beamer
+        [...document.querySelectorAll('.btn-ghost')].find((b) => b.textContent === '+ Teil').click(); await wait();
+        out.three = [t.parts.length, t.parts[2].limit === t.limit];
+        const printed = (mode) => { NM.print.test(c, a, mode); const txt = document.getElementById('print-root').textContent; document.body.classList.remove('printing'); return txt; };
+        out.print = ['parts', 'list', 'students', 'key'].map((m) => { const x = printed(m); return x.includes('Theorie') && x.includes('Praxis'); });
+        out.printParts = printed('parts').includes('Teilübersicht');
+        out.btn = !![...document.querySelectorAll('.btn')].find((b) => b.textContent === '🖨 Teilübersicht');
+        [...document.querySelectorAll('.btn')].find((b) => b.textContent === '⛶ Beamer').click(); await wait();
+        out.beamer = document.querySelectorAll('.beamer h2').length;
+        document.querySelector('.beamer-close').click(); await wait();
+        // Teile aufheben: Aufgaben bleiben, Teilfelder weg
+        const nTasks = t.tasks.length;
+        const box2 = document.querySelector('[data-focus-key="test-parts"]');
+        box2.checked = false; box2.dispatchEvent(new Event('change')); await wait();
+        document.querySelector('dialog .btn-primary').click(); await wait();
+        out.off = [!t.parts, !t.partMode, t.tasks.length === nTasks, t.tasks.every((x) => !x.partId), !t.results[sid2].partStatus, document.querySelectorAll('.parts-table').length];
+        return out; })()""")
+    ok = bool(res) and res["on"] == ["Theorie,Praxis", "sum", True, 2, 2] and res["same"] and res["partCols"] == 2 and res["partSum"] == 4 \
+        and res["sep"] == ["separate", True, 4, 2] and res["grade"] and res["missing"] is None and res["pstatus"] == "nachschreiben" \
+        and res["keyPart"] == "Praxis" and res["three"] == [3, True] and res["print"] == [True] * 4 and res["printParts"] and res["btn"] \
+        and res["beamer"] >= 5 and res["off"] == [True, True, True, True, True, 0]
+    report("Teile: einschalten, Aufgabe/Punkte je Teil, getrennt benoten, Status je Teil, Schlüssel je Teil, Ausdrucke, Beamer, aufheben", ok and not br.errors, str(res) + "; ".join(br.errors))
+
+
 def run_moodle_check(br, base):
     print("Moodle-Import (Dialog, Übernahme, Ausdruck):")
     br.open(f"{base}/index.html?demo")
@@ -696,6 +762,12 @@ def run_decrypt_tool(br, base):
         report(f"CSV je Kurs ({len(csvs)} Dateien)", len(csvs) == len(sample["db"]["courses"]))
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
+    # Arbeit in Teilen: Rohpunkte je Teil in der CSV (Aufgabe ohne gültigen Teil → erster Teil)
+    teile = {"parts": [{"id": "T", "name": "Theorie"}, {"id": "P", "name": "Praxis"}],
+             "tasks": [{"id": "a", "partId": "T"}, {"id": "b", "partId": "P"}, {"id": "c"}]}
+    text = tool._teilpunkte(teile, {"scores": {"a": 3, "b": 4.5, "c": 1}})
+    text2 = tool._teilpunkte(teile, {"scores": {"a": 3}, "partStatus": {"P": "nachschreiben"}})
+    report("CSV: Rohpunkte je Teil", text == "Theorie 4 + Praxis 4.5" and text2 == "Theorie 3 + Praxis nachschreiben", text + " | " + text2)
 
 
 def main():
@@ -712,6 +784,7 @@ def main():
         run_sidebar_check(br, base)
         run_tests_view_check(br, base)
         run_settings_layout_check(br, base)
+        run_parts_check(br, base)
         run_moodle_check(br, base)
         run_decrypt_tool(br, base)
     finally:

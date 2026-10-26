@@ -3,6 +3,7 @@
   'use strict';
   const { uid } = NM.util;
   const M = NM.model;
+  const G = NM.grades;
 
   // ---------- CSV ----------
 
@@ -245,7 +246,7 @@
    * map: Moodle-Person → studentId (fehlend = nicht übernehmen).
    * Kursmitglieder ohne beendeten Versuch bekommen „fehlt“, sofern noch keine Punkte eingetragen sind.
    */
-  function applyImport(course, a, parsed, map, { half, settings, name, date, cat } = {}) {
+  function applyImport(course, a, parsed, map, { half, settings, name, date, cat, partId = null } = {}) {
     const isNew = !a;
     if (isNew) {
       a = M.newTest(course, half, settings);
@@ -257,17 +258,22 @@
       else if (dates.length) a.date = dates.sort()[Math.floor(dates.length / 2)];
     }
     const t = a.test;
+    // Import in einen Teil der Arbeit (Aufgaben, Dateien und Genauigkeit gehören dann zum Teil)
+    const part = partId && G.hasParts(t) ? t.parts.find((x) => x.id === partId) || null : null;
+    const inPart = (x) => !part || x.partId === part.id || (part === t.parts[0] && !t.parts.some((y) => y.id === x.partId));
     const taskOf = {};
     for (const { nr, max } of parsed.questions) {
-      let task = t.tasks.find((x) => x.moodleNr === nr);
+      let task = t.tasks.find((x) => x.moodleNr === nr && inPart(x));
       if (!task) {
         task = { id: uid(), name: 'F' + nr, max, moodleNr: nr };
+        if (part) task.partId = part.id;
         t.tasks.push(task);
       }
       task.max = max;
       taskOf[nr] = task;
     }
-    const moodle = (t.moodle = t.moodle || { answers: {} });
+    const owner = part || t;
+    const moodle = (owner.moodle = owner.moodle || { answers: {} });
     moodle.files = parsed.files.map((f) => ({ name: f.name, kind: f.kind, text: f.text }));
     moodle.importedAt = new Date().toISOString();
     moodle.totalMax = parsed.totalMax;
@@ -291,6 +297,7 @@
         values.push(v);
       }
       if (r.status === 'fehlt' || r.status === 'nachschreiben') delete r.status;
+      if (part && r.partStatus) delete r.partStatus[part.id];
       if (Object.keys(p.answers).length) {
         moodle.answers[sid] = {};
         for (const { nr } of parsed.questions) moodle.answers[sid][taskOf[nr].id] = p.answers[nr];
@@ -300,20 +307,61 @@
       summary.imported++;
       done.add(sid);
     }
+    const filled = (v) => v !== null && v !== undefined && v !== '';
+    const partTaskIds = part ? new Set(G.partTasks(t, part).map((x) => x.id)) : null;
     for (const s of M.activeStudents(course)) {
       if (done.has(s.id)) continue;
       const r = t.results[s.id];
-      const hasScores = r && r.scores && Object.values(r.scores).some((v) => v !== null && v !== undefined && v !== '');
-      if (hasScores || (r && r.status)) continue;
+      const scores = (r && r.scores) || {};
+      const hasScores = Object.values(scores).some(filled);
+      if (r && r.status) continue;
+      if (hasScores) {
+        // Nur dieser Teil fehlt: bei getrennt benoteten Teilen als Status des Teils vermerken
+        if (part && G.separateParts(t) && !Object.keys(scores).some((id) => partTaskIds.has(id) && filled(scores[id])) && !(r.partStatus || {})[part.id]) {
+          r.partStatus = Object.assign(r.partStatus || {}, { [part.id]: 'fehlt' });
+          summary.missing.push(M.studentName(s));
+        }
+        continue;
+      }
       t.results[s.id] = { scores: {}, status: 'fehlt' };
       summary.missing.push(M.studentName(s));
     }
     const prec = precisionFor(values);
-    if (isNew || prec < Number(t.precision)) t.precision = prec;
+    const precOwner = part && G.separateParts(t) ? part : t;
+    const curPrec = precOwner.precision !== undefined ? precOwner.precision : t.precision;
+    if (isNew || prec < Number(curPrec)) precOwner.precision = prec;
     if (isNew) course.assessments.push(a);
     summary.assessment = a;
     return summary;
   }
 
-  NM.moodle = { parseCsv, parseExport, parseDate, questionText, matchStudents, applyImport, precisionFor };
+  /** Moodle-Daten eines Tests: beim Test selbst und bei seinen Teilen. */
+  function sources(test) {
+    return [test.moodle, ...(test.parts || []).map((p) => p.moodle)].filter(Boolean);
+  }
+
+  function hasData(test) {
+    return sources(test).length > 0;
+  }
+
+  /** Fragen und Antworten je Person aus allen Moodle-Importen des Tests: { sid: { taskId: { q, a, c } } }. */
+  function answersOf(test) {
+    const out = {};
+    for (const mo of sources(test)) for (const [sid, x] of Object.entries(mo.answers || {})) out[sid] = Object.assign(out[sid] || {}, x);
+    return out;
+  }
+
+  /** Mehrere Moodle-Importe zu einem zusammenfassen (wenn Teile aufgehoben werden). */
+  function mergeData(list) {
+    const answers = {};
+    for (const mo of list) for (const [sid, x] of Object.entries(mo.answers || {})) answers[sid] = Object.assign(answers[sid] || {}, x);
+    return {
+      importedAt: list.map((m) => m.importedAt || '').sort().pop(),
+      totalMax: list.reduce((s, m) => s + (Number(m.totalMax) || 0), 0),
+      files: list.flatMap((m) => m.files || []),
+      answers,
+    };
+  }
+
+  NM.moodle = { parseCsv, parseExport, parseDate, questionText, matchStudents, applyImport, precisionFor, hasData, answersOf, mergeData };
 })((globalThis.NM = globalThis.NM || {}));

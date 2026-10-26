@@ -97,6 +97,19 @@ def _label(p, mss):
     return f"{ganz}{tendenz}"
 
 
+def _teilpunkte(t, r):
+    """Rohpunkte je Teil einer Arbeit in Teilen, z. B. „Theorie 8 + Praxis nachschreiben“."""
+    teile = t.get("parts", [])
+    ids = {p["id"] for p in teile}
+    zu = {a["id"]: (a.get("partId") if a.get("partId") in ids else teile[0]["id"]) for a in t.get("tasks", [])}
+    texte = []
+    for p in teile:
+        status = (r.get("partStatus") or {}).get(p["id"])
+        werte = [float(v) for k, v in r.get("scores", {}).items() if zu.get(k) == p["id"] and v not in (None, "")]
+        texte.append(f'{p.get("name", "")} {status or (f"{sum(werte):g}" if werte else "–")}')
+    return " + ".join(texte)
+
+
 def schreibe_csv(daten, ordner):
     """Eine CSV je Kurs mit den direkt eingetragenen Noten und gesetzten Noten.
 
@@ -126,9 +139,12 @@ def schreibe_csv(daten, ordner):
                     g = a.get("manual", {}).get("grades", {}).get(sid, {})
                     z.append(g.get("status") or _label(g.get("p"), mss))
                 elif a.get("kind") == "test":
-                    r = a.get("test", {}).get("results", {}).get(sid, {})
+                    t = a.get("test", {})
+                    r = t.get("results", {}).get(sid, {})
                     punkte = sum(float(v) for v in r.get("scores", {}).values() if v not in (None, ""))
                     text = f"{punkte:g} Pkt." if r.get("scores") else ""
+                    if text and t.get("parts"):
+                        text = _teilpunkte(t, r) + " = " + text
                     if r.get("status") == "ungewertet":
                         z.append(f"{text} (nicht gewertet)".strip())
                     else:

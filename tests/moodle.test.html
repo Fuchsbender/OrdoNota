@@ -102,6 +102,34 @@
   const s2 = MO.applyImport(c2, null, scaled, MO.matchStudents(scaled.persons, c2.students), { half: '12/1', settings: db.settings });
   ok('Skalierte Punkte: Zehntel und Hinweis auf Abweichung', s2.assessment.test.precision === 0.1 && s2.mismatch.length === 1 && s2.assessment.test.limit === db.settings.limitMss);
 
+  // Import in einen Teil einer Arbeit (Theorie von Hand, Praxis aus Moodle)
+  {
+    const c3 = M.newCourse(db.years[0].id, { klasse: '10a', fach: 'Info', jahrgang: 10, type: 'sek1' });
+    c3.students = M.parseNames('Müller, Anna\nSchmidt, Jonas\nWeber, Lena\nZiegler, Tom');
+    const [an, jo, le, to] = c3.students.map((x) => x.id);
+    const a3 = M.newTest(c3, 'HJ1', db.settings);
+    const t3 = a3.test;
+    t3.parts = [{ id: 'T', name: 'Theorie', weight: 1 }, { id: 'P', name: 'Praxis', weight: 1 }];
+    t3.partMode = 'separate';
+    t3.tasks = [{ id: 'th', name: 'A1', max: 5, partId: 'T' }];
+    t3.results = { [an]: { scores: { th: 4 } }, [jo]: { scores: { th: 5 } }, [le]: { scores: { th: 3 } } };
+    c3.assessments.push(a3);
+    const m3 = MO.matchStudents(p.persons, c3.students);
+    m3.delete(p.persons.find((x) => x.first === 'Fritz'));
+    const s3 = MO.applyImport(c3, a3, p, m3, { partId: 'P' });
+    ok('Teil-Import: Fragen als Aufgaben im Teil Praxis', t3.tasks.filter((x) => x.partId === 'P').map((x) => x.name).join() === 'F1,F2,F3' && t3.tasks[0].id === 'th');
+    ok('Teil-Import: Dateien beim Teil, nicht beim Test', !!t3.parts[1].moodle && t3.parts[1].moodle.files.length === 2 && !t3.moodle);
+    ok('Teil-Import: Genauigkeit beim Teil, Test unverändert', t3.parts[1].precision === 0.5 && t3.precision === db.settings.precision);
+    const r3 = G.testResult(t3, an, 'sek1');
+    ok('Teil-Import: Teilpunkte und Gesamtnote', r3.parts[0].score === 4 && r3.parts[1].score === 2.5 && r3.p !== null);
+    ok('Teil-Import: nicht beendet bei vorhandener Theorie → nur Teil „fehlt“', t3.results[le].partStatus.P === 'fehlt' && !t3.results[le].status && G.testResult(t3, le, 'sek1').p === null);
+    ok('Teil-Import: ganz ohne Punkte → Arbeit „fehlt“', t3.results[to].status === 'fehlt' && s3.missing.length === 2);
+    const pIds = t3.tasks.filter((x) => x.partId === 'P').map((x) => x.id).join();
+    MO.applyImport(c3, a3, p2, MO.matchStudents(p2.persons, c3.students), { partId: 'P' });
+    ok('Teil-Import erneut: gleiche Aufgaben, Theorie unberührt', t3.tasks.filter((x) => x.partId === 'P').map((x) => x.id).join() === pIds && t3.tasks.length === 4 && t3.results[an].scores.th === 4);
+    ok('Teil-Import erneut: neue Punkte im Teil', G.testResult(t3, an, 'sek1').parts[1].score === 3);
+  }
+
   document.getElementById('out').textContent = (fails ? `${fails} FEHLGESCHLAGEN` : 'ALLE TESTS BESTANDEN') + '\n\n' + lines.join('\n');
 </script>
 </body>

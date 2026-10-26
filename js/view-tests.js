@@ -42,11 +42,14 @@
       view.appendChild(UI.emptyState('Noch kein Test in ' + half, 'Legen Sie einen Test an: Aufgaben mit Höchstpunktzahlen festlegen, Rohpunkte eintragen – Note, Notenspiegel und Drittelparagraph werden automatisch berechnet.'));
       return;
     }
-    view.append(...[metaCard(course, cur, level), cur.test.moodle ? moodleCard(course, db, cur) : null, tasksCard(cur), h('div', { class: 'test-layout' }, resultsCard(course, cur, level), keyCard(course, cur, level))].filter(Boolean));
+    const t = cur.test;
+    const moodleCards = [t.moodle ? moodleCard(course, db, cur, null) : null, ...(G.hasParts(t) ? t.parts.filter((x) => x.moodle).map((x) => moodleCard(course, db, cur, x)) : [])];
+    view.append(...[metaCard(course, cur, level), ...moodleCards, G.hasParts(t) ? partsCard(course, db, cur, level) : null, tasksCard(cur), h('div', { class: 'test-layout' }, resultsCard(course, cur, level), keyCard(course, cur, level))].filter(Boolean));
   }
 
   function metaCard(course, a, level) {
     const t = a.test;
+    const sep = G.separateParts(t);
     const set = (fn) => (e) => {
       fn(e.target.value);
       NM.app.commit();
@@ -110,65 +113,30 @@
         h(
           'label',
           { class: 'field' },
-          h('span', null, 'Punkte-Genauigkeit'),
+          h('span', null, 'Teile'),
           h(
-            'select',
-            { class: 'input', onchange: set((v) => (t.precision = Number(v))) },
-            [
-              [1, 'Ganze Punkte'],
-              [0.5, 'Halbe Punkte'],
-              [0.1, 'Zehntel'],
-            ].map(([v, l]) => h('option', { value: v, selected: Number(t.precision) === v }, l))
+            'label',
+            { class: 'check field-check', title: 'Die Arbeit besteht aus mehreren Teilen, z. B. Theorie und Praxis – gemeinsam bepunktet oder getrennt benotet' },
+            h('input', { type: 'checkbox', checked: G.hasParts(t), 'data-focus-key': 'test-parts', onchange: (e) => toggleParts(a, e.target.checked) }),
+            ' Arbeit in Teilen'
           )
         ),
-        level === 'mss'
+        sep ? null : h('label', { class: 'field' }, h('span', null, 'Punkte-Genauigkeit'), precisionSelect(t)),
+        sep || level === 'mss'
+          ? null
+          : h('label', { class: 'field', title: 'Bei Tests mit wenigen Punkten: nur 1, 2, 3, 4, 5, 6 vergeben. Eine ganze Note beginnt dort, wo sonst ihre Minus-Note beginnt (4 ab LIMIT).' }, h('span', null, 'Notenstufen'), gradeStepsSelect(t)),
+        sep
           ? null
           : h(
               'label',
-              { class: 'field', title: 'Bei Tests mit wenigen Punkten: nur 1, 2, 3, 4, 5, 6 vergeben. Eine ganze Note beginnt dort, wo sonst ihre Minus-Note beginnt (4 ab LIMIT).' },
-              h('span', null, 'Notenstufen'),
-              h(
-                'select',
-                {
-                  class: 'input',
-                  onchange: async (e) => {
-                    const whole = e.target.value === 'whole';
-                    if (t.custom && Object.keys(t.custom).length) {
-                      if (!(await confirmDialog('Notenstufen umstellen?', 'Von Hand geänderte Schwellen im Notenschlüssel passen nicht mehr und werden zurückgesetzt.', { okLabel: 'Umstellen' }))) return NM.app.rerender();
-                      t.custom = {};
-                    }
-                    if (whole) t.wholeGrades = true;
-                    else delete t.wholeGrades;
-                    NM.app.commit();
-                  },
-                },
-                h('option', { value: 'tend', selected: !t.wholeGrades }, 'mit Tendenzen (2+, 2, 2-)'),
-                h('option', { value: 'whole', selected: !!t.wholeGrades }, 'nur ganze Noten (1–6)')
-              )
+              { class: 'field narrow', title: level === 'mss' ? 'Ab diesem Prozentsatz gibt es 4 Punkte (4-)' : 'Ab diesem Prozentsatz gibt es eine 4-' },
+              h('span', null, level === 'mss' ? 'LIMIT 04 P. (%)' : t.wholeGrades ? 'LIMIT 4 (%)' : 'LIMIT 4- (%)'),
+              limitInput(t, level)
             ),
-        h(
-          'label',
-          { class: 'field narrow', title: level === 'mss' ? 'Ab diesem Prozentsatz gibt es 4 Punkte (4-)' : 'Ab diesem Prozentsatz gibt es eine 4-' },
-          h('span', null, level === 'mss' ? 'LIMIT 04 P. (%)' : t.wholeGrades ? 'LIMIT 4 (%)' : 'LIMIT 4- (%)'),
-          h('input', {
-            class: 'input',
-            type: 'number',
-            min: 20,
-            max: 80,
-            step: 1,
-            value: t.limit,
-            onchange: (e) => {
-              const v = parseNum(e.target.value);
-              if (!(v >= 20 && v <= 80)) return toast('LIMIT bitte zwischen 20 und 80 %.', 'error');
-              t.limit = v;
-              NM.app.commit();
-            },
-          })
-        ),
         h(
           'div',
           { class: 'field actions-end' },
-          h('span', null, ' '),
+          h('span', null, ' '),
           h(
             'div',
             { class: 'inline' },
@@ -176,7 +144,8 @@
             h('button', { class: 'btn', onclick: () => NM.print.test(course, a, 'key') }, '🖨 Schlüssel'),
             h('button', { class: 'btn', onclick: () => NM.print.test(course, a, 'list') }, '🖨 Liste'),
             h('button', { class: 'btn', onclick: () => NM.print.test(course, a, 'students') }, '🖨 Schülerzettel'),
-            t.moodle ? h('button', { class: 'btn', title: 'Je Person eine Seite mit Fragen, Antworten und Punkten', onclick: () => moodlePrint(course, a) }, '🖨 Moodle-Ergebnisse') : null,
+            G.hasParts(t) ? h('button', { class: 'btn', title: 'Alle Personen mit Punkten und Noten je Teil', onclick: () => NM.print.test(course, a, 'parts') }, '🖨 Teilübersicht') : null,
+            NM.moodle.hasData(t) ? h('button', { class: 'btn', title: 'Je Person eine Seite mit Fragen, Antworten und Punkten', onclick: () => moodlePrint(course, a) }, '🖨 Moodle-Ergebnisse') : null,
             h(
               'button',
               {
@@ -197,97 +166,337 @@
     );
   }
 
+  // Einstellungen des Schlüssels – für den Test oder (bei getrennt benoteten Teilen) für einen Teil
+
+  function precisionSelect(obj, cls = '') {
+    return h(
+      'select',
+      {
+        class: 'input ' + cls,
+        'aria-label': 'Punkte-Genauigkeit',
+        onchange: (e) => {
+          obj.precision = Number(e.target.value);
+          NM.app.commit();
+        },
+      },
+      [
+        [1, 'Ganze Punkte'],
+        [0.5, 'Halbe Punkte'],
+        [0.1, 'Zehntel'],
+      ].map(([v, l]) => h('option', { value: v, selected: Number(obj.precision) === v }, l))
+    );
+  }
+
+  function gradeStepsSelect(obj, cls = '') {
+    return h(
+      'select',
+      {
+        class: 'input ' + cls,
+        'aria-label': 'Notenstufen',
+        onchange: async (e) => {
+          const whole = e.target.value === 'whole';
+          if (obj.custom && Object.keys(obj.custom).length) {
+            if (!(await confirmDialog('Notenstufen umstellen?', 'Von Hand geänderte Schwellen im Notenschlüssel passen nicht mehr und werden zurückgesetzt.', { okLabel: 'Umstellen' }))) return NM.app.rerender();
+            obj.custom = {};
+          }
+          if (whole) obj.wholeGrades = true;
+          else delete obj.wholeGrades;
+          NM.app.commit();
+        },
+      },
+      h('option', { value: 'tend', selected: !obj.wholeGrades }, 'mit Tendenzen (2+, 2, 2-)'),
+      h('option', { value: 'whole', selected: !!obj.wholeGrades }, 'nur ganze Noten (1–6)')
+    );
+  }
+
+  function limitInput(obj, level, cls = '') {
+    return h('input', {
+      class: 'input ' + cls,
+      type: 'number',
+      min: 20,
+      max: 80,
+      step: 1,
+      value: obj.limit,
+      'aria-label': level === 'mss' ? 'LIMIT 04 Punkte (%)' : 'LIMIT (%)',
+      onchange: (e) => {
+        const v = parseNum(e.target.value);
+        if (!(v >= 20 && v <= 80)) return toast('LIMIT bitte zwischen 20 und 80 %.', 'error');
+        obj.limit = v;
+        NM.app.commit();
+      },
+    });
+  }
+
+  // ---------- Arbeit in Teilen ----------
+
+  async function toggleParts(a, on) {
+    const t = a.test;
+    if (on) {
+      t.parts = [
+        { id: uid(), name: 'Theorie', weight: 1 },
+        { id: uid(), name: 'Praxis', weight: 1 },
+      ];
+      t.partMode = 'sum';
+      for (const task of t.tasks) task.partId = t.parts[0].id;
+      // Ein vorhandener Moodle-Import gehört jetzt zum ersten Teil (dort liegen seine Aufgaben)
+      if (t.moodle) {
+        t.parts[0].moodle = t.moodle;
+        delete t.moodle;
+      }
+      return NM.app.commit();
+    }
+    const sep = G.separateParts(t);
+    if (!(await confirmDialog('Teile aufheben?', 'Alle Aufgaben werden wieder zu einer Arbeit mit einem Notenschlüssel zusammengefasst.' + (sep ? ' Schlüssel, Gewichte und Status der einzelnen Teile gehen verloren.' : ''), { okLabel: 'Aufheben' }))) return NM.app.rerender();
+    t.tasks = G.orderedTasks(t);
+    const mos = t.parts.map((x) => x.moodle).filter(Boolean);
+    if (mos.length && !t.moodle) t.moodle = mos.length === 1 ? mos[0] : NM.moodle.mergeData(mos);
+    for (const task of t.tasks) delete task.partId;
+    for (const r of Object.values(t.results)) delete r.partStatus;
+    delete t.parts;
+    delete t.partMode;
+    NM.app.commit();
+  }
+
+  function setPartMode(t, mode) {
+    t.partMode = mode;
+    if (mode === 'separate') {
+      // Jeder Teil startet mit den Einstellungen des Tests
+      for (const part of t.parts) initPartKey(t, part);
+    }
+    NM.app.commit();
+  }
+
+  function initPartKey(t, part) {
+    if (part.limit === undefined) part.limit = t.limit;
+    if (part.precision === undefined) part.precision = t.precision;
+    if (part.wholeGrades === undefined && t.wholeGrades) part.wholeGrades = true;
+    part.custom = part.custom || {};
+  }
+
+  function addPart(t) {
+    const part = { id: uid(), name: 'Teil ' + (t.parts.length + 1), weight: 1 };
+    if (G.separateParts(t)) initPartKey(t, part);
+    t.parts.push(part);
+    NM.app.commit();
+  }
+
+  async function removePart(a, part) {
+    const t = a.test;
+    if (t.parts.length <= 1) return toggleParts(a, false);
+    const tasks = G.partTasks(t, part);
+    const ids = new Set(tasks.map((x) => x.id));
+    const used = Object.values(t.results).some((r) => Object.keys(r.scores || {}).some((id) => ids.has(id)));
+    const what = tasks.length ? ` mit ${tasks.length} ${tasks.length === 1 ? 'Aufgabe' : 'Aufgaben'}` : '';
+    if (!(await confirmDialog('Teil entfernen?', `„${part.name}“${what} entfernen?` + (used ? ' Die eingetragenen Punkte dieses Teils werden gelöscht.' : ''), { okLabel: 'Entfernen', danger: true }))) return;
+    t.tasks = t.tasks.filter((x) => !ids.has(x.id));
+    for (const r of Object.values(t.results)) {
+      if (r.scores) for (const id of ids) delete r.scores[id];
+      if (r.partStatus) delete r.partStatus[part.id];
+    }
+    t.parts = t.parts.filter((x) => x !== part);
+    NM.app.commit();
+  }
+
+  function partsCard(course, db, a, level) {
+    const t = a.test;
+    const sep = G.separateParts(t);
+    const head = h(
+      'tr',
+      null,
+      h('th', null, 'Teil'),
+      h('th', { class: 'num' }, 'Aufgaben'),
+      h('th', { class: 'num' }, 'Höchstpunkte'),
+      sep
+        ? [
+            h('th', { class: 'num', title: 'Gewicht der Teilnote in der Gesamtnote' }, 'Gewicht'),
+            h('th', null, level === 'mss' ? 'LIMIT 04 P. (%)' : 'LIMIT (%)'),
+            h('th', null, 'Genauigkeit'),
+            level === 'mss' ? null : h('th', null, 'Notenstufen'),
+          ]
+        : null,
+      h('th', null, '')
+    );
+    const rows = t.parts.map((part) => {
+      const tasks = G.partTasks(t, part);
+      return h(
+        'tr',
+        null,
+        h(
+          'td',
+          null,
+          h('input', {
+            class: 'input input-sm part-name',
+            value: part.name,
+            'data-focus-key': `part-name-${part.id}`,
+            'aria-label': 'Name des Teils',
+            onchange: (e) => {
+              part.name = e.target.value.trim() || part.name;
+              NM.app.commit();
+            },
+          })
+        ),
+        h('td', { class: 'num' }, tasks.length),
+        h('td', { class: 'num' }, fmtScore(G.testMaxScore({ tasks }))),
+        sep
+          ? [
+              h(
+                'td',
+                { class: 'num' },
+                h('input', {
+                  class: 'input input-sm part-weight',
+                  type: 'number',
+                  min: 0.5,
+                  step: 0.5,
+                  value: G.partWeight(part),
+                  'aria-label': 'Gewicht ' + part.name,
+                  onchange: (e) => {
+                    const v = parseNum(e.target.value);
+                    if (!(v > 0)) return toast('Ungültiges Gewicht.', 'error');
+                    part.weight = v;
+                    NM.app.commit();
+                  },
+                })
+              ),
+              h('td', null, limitInput(part, level, 'input-sm part-limit')),
+              h('td', null, precisionSelect(part, 'input-sm')),
+              level === 'mss' ? null : h('td', null, gradeStepsSelect(part, 'input-sm')),
+            ]
+          : null,
+        h(
+          'td',
+          null,
+          h(
+            'div',
+            { class: 'inline' },
+            h('button', { class: 'btn btn-sm', title: `Moodle-Test in den Teil „${part.name}“ übernehmen`, onclick: () => moodleImport(course, db, a.half, a, part.id) }, '⬆ Moodle'),
+            h('button', { class: 'icon-btn', title: 'Teil entfernen', 'aria-label': 'Teil entfernen: ' + part.name, onclick: () => removePart(a, part) }, '✕')
+          )
+        )
+      );
+    });
+    return h(
+      'div',
+      { class: 'card' },
+      h(
+        'div',
+        { class: 'card-head' },
+        h('h2', null, 'Teile'),
+        h(
+          'label',
+          { class: 'inline small' },
+          'Wertung ',
+          h(
+            'select',
+            { class: 'input input-sm', 'data-focus-key': 'part-mode', onchange: (e) => setPartMode(t, e.target.value) },
+            h('option', { value: 'sum', selected: !sep }, 'gemeinsam bepunktet (ein Notenschlüssel)'),
+            h('option', { value: 'separate', selected: sep }, 'getrennt benotet (Note je Teil, gewichtet)')
+          )
+        )
+      ),
+      h('div', { class: 'table-wrap' }, h('table', { class: 'table compact parts-table' }, h('thead', null, head), h('tbody', null, rows))),
+      h(
+        'div',
+        { class: 'inline wrap' },
+        h('button', { class: 'btn btn-ghost', onclick: () => addPart(t) }, '+ Teil'),
+        h(
+          'span',
+          { class: 'muted small' },
+          sep
+            ? `Gesamtnote = gewichteter Schnitt der Teilnoten (${t.parts.map((x) => fmtScore(G.partWeight(x))).join(' : ')}), auf eine Notenstufe gerundet. Sie entsteht erst, wenn alle Teile bewertet sind.`
+            : 'Alle Punkte zählen zusammen; die Note ergibt sich aus der Gesamtpunktzahl. Die Teile gliedern Aufgaben, Ergebnisse und Ausdrucke.'
+        )
+      )
+    );
+  }
+
   function tasksCard(a) {
     const t = a.test;
     const max = G.testMaxScore(t);
     const bonusMax = t.tasks.filter((x) => x.bonus).reduce((s, x) => s + (Number(x.max) || 0), 0);
+    const add = (part, bonus) =>
+      h(
+        'button',
+        {
+          class: 'btn btn-ghost',
+          onclick: () => {
+            const task = bonus ? { id: uid(), name: 'Bonus', max: 2, bonus: true } : { id: uid(), name: nextTaskName(t.tasks), max: 5 };
+            if (part) task.partId = part.id;
+            t.tasks.push(task);
+            NM.app.commit();
+          },
+        },
+        bonus ? '+ Bonusaufgabe' : '+ Aufgabe'
+      );
     return h(
       'div',
       { class: 'card' },
       h('div', { class: 'card-head' }, h('h2', null, 'Aufgaben'), h('span', { class: 'muted' }, `Höchstpunktzahl ${fmtScore(max)}`, bonusMax ? ` + ${fmtScore(bonusMax)} Bonus` : '')),
-      h(
-        'div',
-        { class: 'tasks' },
-        t.tasks.map((task, i) =>
-          h(
-            'div',
-            { class: 'task' + (task.bonus ? ' bonus' : '') },
-            h('input', {
-              class: 'input input-sm task-name',
-              value: task.name,
-              title: 'Bezeichnung',
-              'data-focus-key': `task-name-${task.id}`,
-              onchange: (e) => {
-                task.name = e.target.value.trim();
-                NM.app.commit();
-              },
-            }),
-            h('input', {
-              class: 'input input-sm task-max',
-              value: fmtScore(task.max),
-              title: 'Höchstpunktzahl',
-              inputmode: 'decimal',
-              'data-focus-key': `task-max-${task.id}`,
-              onchange: (e) => {
-                const v = parseNum(e.target.value);
-                if (!(v >= 0)) return toast('Ungültige Punktzahl.', 'error');
-                task.max = v;
-                NM.app.commit();
-              },
-            }),
-            h(
-              'label',
-              { class: 'task-bonus', title: 'Bonus: zählt zur erreichten Punktzahl, nicht zur Höchstpunktzahl' },
-              h('input', {
-                type: 'checkbox',
-                checked: !!task.bonus,
-                onchange: (e) => {
-                  task.bonus = e.target.checked;
-                  NM.app.commit();
-                },
-              }),
-              'Bonus'
-            ),
-            h(
-              'button',
-              {
-                class: 'icon-btn',
-                title: 'Aufgabe entfernen',
-                'aria-label': 'Aufgabe entfernen',
-                onclick: async () => {
-                  const used = Object.values(t.results).some((r) => r.scores && r.scores[task.id] !== undefined && r.scores[task.id] !== null && r.scores[task.id] !== '');
-                  if (used && !(await confirmDialog('Aufgabe entfernen?', 'Für diese Aufgabe sind schon Punkte eingetragen. Sie werden gelöscht.', { okLabel: 'Entfernen', danger: true }))) return;
-                  t.tasks.splice(i, 1);
-                  for (const r of Object.values(t.results)) if (r.scores) delete r.scores[task.id];
-                  NM.app.commit();
-                },
-              },
-              '✕'
-            )
-          )
-        ),
+      G.taskGroups(t).map(({ part, tasks }) =>
         h(
-          'button',
-          {
-            class: 'btn btn-ghost',
-            onclick: () => {
-              t.tasks.push({ id: uid(), name: nextTaskName(t.tasks), max: 5 });
-              NM.app.commit();
-            },
-          },
-          '+ Aufgabe'
-        ),
-        h(
-          'button',
-          {
-            class: 'btn btn-ghost',
-            onclick: () => {
-              t.tasks.push({ id: uid(), name: 'Bonus', max: 2, bonus: true });
-              NM.app.commit();
-            },
-          },
-          '+ Bonusaufgabe'
+          'div',
+          { class: part ? 'task-group' : null },
+          part ? h('div', { class: 'task-group-head' }, h('strong', null, part.name), h('span', { class: 'muted small' }, ` · ${fmtScore(G.testMaxScore({ tasks }))} Punkte`)) : null,
+          h('div', { class: 'tasks' }, tasks.map((task) => taskItem(t, task)), add(part, false), add(part, true))
         )
+      )
+    );
+  }
+
+  function taskItem(t, task) {
+    return h(
+      'div',
+      { class: 'task' + (task.bonus ? ' bonus' : '') },
+      h('input', {
+        class: 'input input-sm task-name',
+        value: task.name,
+        title: 'Bezeichnung',
+        'data-focus-key': `task-name-${task.id}`,
+        onchange: (e) => {
+          task.name = e.target.value.trim();
+          NM.app.commit();
+        },
+      }),
+      h('input', {
+        class: 'input input-sm task-max',
+        value: fmtScore(task.max),
+        title: 'Höchstpunktzahl',
+        inputmode: 'decimal',
+        'data-focus-key': `task-max-${task.id}`,
+        onchange: (e) => {
+          const v = parseNum(e.target.value);
+          if (!(v >= 0)) return toast('Ungültige Punktzahl.', 'error');
+          task.max = v;
+          NM.app.commit();
+        },
+      }),
+      h(
+        'label',
+        { class: 'task-bonus', title: 'Bonus: zählt zur erreichten Punktzahl, nicht zur Höchstpunktzahl' },
+        h('input', {
+          type: 'checkbox',
+          checked: !!task.bonus,
+          onchange: (e) => {
+            task.bonus = e.target.checked;
+            NM.app.commit();
+          },
+        }),
+        'Bonus'
+      ),
+      h(
+        'button',
+        {
+          class: 'icon-btn',
+          title: 'Aufgabe entfernen',
+          'aria-label': 'Aufgabe entfernen',
+          onclick: async () => {
+            const used = Object.values(t.results).some((r) => r.scores && r.scores[task.id] !== undefined && r.scores[task.id] !== null && r.scores[task.id] !== '');
+            if (used && !(await confirmDialog('Aufgabe entfernen?', 'Für diese Aufgabe sind schon Punkte eingetragen. Sie werden gelöscht.', { okLabel: 'Entfernen', danger: true }))) return;
+            t.tasks.splice(t.tasks.indexOf(task), 1);
+            for (const r of Object.values(t.results)) if (r.scores) delete r.scores[task.id];
+            NM.app.commit();
+          },
+        },
+        '✕'
       )
     );
   }
@@ -305,14 +514,26 @@
     return 'A' + ((nums.length ? Math.max(...nums) : 0) + 1);
   }
 
+  const colHead = (name, sub) => h('span', { class: 'col-head' }, h('span', { class: 'col-name' }, name), h('span', { class: 'col-sub' }, sub));
+
   function resultsCard(course, a, level) {
     const t = a.test;
     const max = G.testMaxScore(t);
+    const sep = G.separateParts(t);
+    const groups = G.taskGroups(t);
     const all = M.activeStudents(course);
     const results = new Map(all.map((s) => [s.id, G.testResult(t, s.id, level)]));
     const score = (s, task) => ((t.results[s.id] || {}).scores || {})[task.id];
     const sort = UI.sorter('test', {
       ...Object.fromEntries(t.tasks.map((task) => ['task:' + task.id, { get: (s) => score(s, task), first: 'desc' }])),
+      ...Object.fromEntries(
+        groups
+          .filter((g) => g.part)
+          .flatMap((g, i) => [
+            ['part:' + g.part.id, { get: (s) => results.get(s.id).parts[i].score, first: 'desc' }],
+            ['pgrade:' + g.part.id, { get: (s) => results.get(s.id).parts[i].p, first: 'desc' }],
+          ])
+      ),
       sum: { get: (s) => results.get(s.id).score, first: 'desc' },
       pct: { get: (s) => results.get(s.id).score, first: 'desc' },
       grade: { get: (s) => results.get(s.id).p, first: 'desc' },
@@ -326,7 +547,11 @@
       'tr',
       null,
       sort.nameHeads(),
-      t.tasks.map((task) => h('th', { class: 'center task-col' + (task.bonus ? ' bonus' : '') }, sort.head('task:' + task.id, h('span', { class: 'col-head' }, h('span', { class: 'col-name' }, task.name || '–'), h('span', { class: 'col-sub' }, fmtScore(task.max) + (task.bonus ? ' B' : '')))))),
+      groups.map((g) => [
+        g.tasks.map((task) => h('th', { class: 'center task-col' + (task.bonus ? ' bonus' : '') }, sort.head('task:' + task.id, colHead(task.name || '–', fmtScore(task.max) + (task.bonus ? ' B' : ''))))),
+        g.part ? h('th', { class: 'num part-col' }, sort.head('part:' + g.part.id, colHead('Σ', g.part.name))) : null,
+        g.part && sep ? h('th', { class: 'center part-col' }, sort.head('pgrade:' + g.part.id, colHead('Note', g.part.name))) : null,
+      ]),
       h('th', { class: 'num' }, sort.head('sum', 'Σ')),
       h('th', { class: 'num' }, sort.head('pct', '%')),
       h('th', { class: 'center' }, sort.head('grade', 'Note')),
@@ -338,30 +563,35 @@
       r.scores = r.scores || {};
       const res = results.get(s.id);
       const blocked = !!r.status; // auch „nicht gewertet“: Note bleibt sichtbar, Zeile ausgegraut
+      let ci = 0;
       return h(
         'tr',
         { class: blocked ? 'row-muted' : '' },
         UI.nameCells(s),
-        t.tasks.map((task, ci) =>
-          h(
-            'td',
-            { class: 'center task-col' },
-            UI.numberInput({
-              value: r.scores[task.id],
-              grid: 'test-' + a.id,
-              row: ri,
-              col: ci,
-              key: `ts-${s.id}-${task.id}`,
-              max: task.max,
-              cls: task.bonus ? 'bonus' : '',
-              onSet: (v) => {
-                if (v === null) delete r.scores[task.id];
-                else r.scores[task.id] = v;
-                NM.app.commit();
-              },
-            })
-          )
-        ),
+        groups.map((g, gi) => [
+          g.tasks.map((task) =>
+            h(
+              'td',
+              { class: 'center task-col' },
+              UI.numberInput({
+                value: r.scores[task.id],
+                grid: 'test-' + a.id,
+                row: ri,
+                col: ci++,
+                key: `ts-${s.id}-${task.id}`,
+                max: task.max,
+                cls: task.bonus ? 'bonus' : '',
+                onSet: (v) => {
+                  if (v === null) delete r.scores[task.id];
+                  else r.scores[task.id] = v;
+                  NM.app.commit();
+                },
+              })
+            )
+          ),
+          g.part ? h('td', { class: 'num part-col' }, res.parts[gi].score === null ? '' : fmtScore(res.parts[gi].score)) : null,
+          g.part && sep ? h('td', { class: 'center part-col' }, partGradeCell(s, r, g.part, res.parts[gi], level)) : null,
+        ]),
         h('td', { class: 'num strong' }, res.score === null ? '' : fmtScore(res.score)),
         h('td', { class: 'num muted' }, res.score === null || !max ? '' : fmtNum((res.score / max) * 100, 0)),
         h('td', { class: 'center' }, res.p === null ? (r.status ? h('span', { class: 'muted small' }, UI.STATUS_SHORT[r.status]) : '') : UI.gradeBadge(res.p, level)),
@@ -398,10 +628,14 @@
       'tr',
       { class: 'foot' },
       h('td', { class: 'sticky-col', colspan: 2 }, 'Ø gelöst'),
-      t.tasks.map((task) => {
-        const avg = taskAverage(t, M.statStudents(course), task);
-        return h('td', { class: 'center muted small' }, avg === null || !task.max ? '' : fmtNum((avg / task.max) * 100, 0) + ' %');
-      }),
+      groups.map((g) => [
+        g.tasks.map((task) => {
+          const avg = taskAverage(t, M.statStudents(course), task);
+          return h('td', { class: 'center muted small' }, avg === null || !task.max ? '' : fmtNum((avg / task.max) * 100, 0) + ' %');
+        }),
+        g.part ? h('td', { class: 'part-col' }) : null,
+        g.part && sep ? h('td', { class: 'part-col' }) : null,
+      ]),
       h('td', { colspan: sign ? 5 : 4 })
     );
     return h(
@@ -419,11 +653,45 @@
     );
   }
 
+  /** Teilnote (getrennt benotete Teile); ohne Note Auswahl „fehlt“/„Nachschreiben“ nur für diesen Teil. */
+  function partGradeCell(s, r, part, pr, level) {
+    const ps = (r.partStatus || {})[part.id] || '';
+    if (pr.p !== null && !ps) return UI.gradeBadge(pr.p, level);
+    if (r.status) return '';
+    return h(
+      'select',
+      {
+        class: 'cell-select',
+        title: `Status im Teil „${part.name}“`,
+        'aria-label': `Status im Teil ${part.name}: ${M.studentName(s)}`,
+        'data-focus-key': `ts-pstatus-${s.id}-${part.id}`,
+        onchange: (e) => {
+          r.partStatus = r.partStatus || {};
+          if (e.target.value) r.partStatus[part.id] = e.target.value;
+          else delete r.partStatus[part.id];
+          if (!Object.keys(r.partStatus).length) delete r.partStatus;
+          NM.app.commit();
+        },
+      },
+      [
+        ['', '—'],
+        ['fehlt', 'fehlt'],
+        ['nachschreiben', 'NS'],
+      ].map(([v, l]) => h('option', { value: v, selected: ps === v }, l))
+    );
+  }
+
+  const keyPart = {}; // gewählter Teil im Notenschlüssel je Test (getrennt benotete Teile)
+
   function keyCard(course, a, level) {
     const t = a.test;
-    const max = G.testMaxScore(t);
-    const key = G.keyForTest(t, level);
-    const st = G.testStats(t, M.statStudents(course).map((s) => s.id), level);
+    const ids = M.statStudents(course).map((s) => s.id);
+    const st = G.testStats(t, ids, level);
+    // Getrennt benotete Teile: Schlüssel des gewählten Teils, Notenspiegel und Drittelparagraph der Gesamtnote
+    const part = G.separateParts(t) ? t.parts.find((x) => x.id === keyPart[a.id]) || t.parts[0] : null;
+    const holder = part || t;
+    const key = part ? G.keyForPart(t, part, level) : G.keyForTest(t, level);
+    const counts = part ? G.partStats(t, part, ids, level).counts : st.counts;
     const anyCustom = key.some((k) => k.custom);
     const rows = key
       .slice()
@@ -443,22 +711,22 @@
                   class: 'cell-input num-input' + (k.custom ? ' custom' : ''),
                   value: fmtScore(k.min),
                   title: k.custom ? 'Von Hand gesetzt' : 'Berechnet – zum Anpassen überschreiben',
-                  'data-focus-key': `key-${a.id}-${k.p}`,
+                  'data-focus-key': `key-${a.id}-${part ? part.id + '-' : ''}${k.p}`,
                   'data-select-all': '',
                   inputmode: 'decimal',
                   onfocus: (e) => e.target.select(),
                   onchange: (e) => {
                     const v = parseNum(e.target.value);
-                    t.custom = t.custom || {};
-                    if (v === null) delete t.custom[k.p];
+                    holder.custom = holder.custom || {};
+                    if (v === null) delete holder.custom[k.p];
                     else if (v === undefined || v < 0) return toast('Ungültige Punktzahl.', 'error');
-                    else t.custom[k.p] = v;
+                    else holder.custom[k.p] = v;
                     NM.app.commit();
                   },
                 })
           ),
           h('td', { class: 'num muted' }, fmtNum(k.pct, 1)),
-          h('td', { class: 'num' }, st.counts[k.p] || '')
+          h('td', { class: 'num' }, counts[k.p] || '')
         )
       );
     return h(
@@ -474,7 +742,7 @@
               {
                 class: 'btn btn-sm',
                 onclick: () => {
-                  t.custom = {};
+                  holder.custom = {};
                   NM.app.commit();
                 },
               },
@@ -482,12 +750,38 @@
             )
           : null
       ),
+      part
+        ? h(
+            'div',
+            { class: 'key-parts' },
+            h(
+              'div',
+              { class: 'segmented', role: 'group', 'aria-label': 'Teil' },
+              t.parts.map((x) =>
+                h(
+                  'button',
+                  {
+                    class: 'seg' + (x === part ? ' active' : ''),
+                    'aria-pressed': String(x === part),
+                    onclick: () => {
+                      keyPart[a.id] = x.id;
+                      NM.app.rerender();
+                    },
+                  },
+                  x.name
+                )
+              )
+            ),
+            h('p', { class: 'muted small' }, `Höchstpunktzahl ${fmtScore(G.testMaxScore(G.partAsTest(t, part)))} · LIMIT ${fmtScore(part.limit)} %` + (G.wholeOnly(part, level) ? ' · nur ganze Noten' : ''))
+          )
+        : null,
       h(
         'table',
         { class: 'table compact key-table' },
         h('thead', null, h('tr', null, h('th', null, level === 'mss' ? 'Punkte' : 'Note'), level === 'mss' ? h('th', null, 'Note') : null, h('th', { class: 'num' }, 'ab Pkt.'), h('th', { class: 'num' }, 'ab %'), h('th', { class: 'num' }, 'Anz.'))),
         h('tbody', null, rows)
       ),
+      part ? h('h3', { class: 'key-sub' }, 'Notenspiegel der Gesamtnote') : null,
       distribution(st, level),
       h(
         'div',
@@ -559,10 +853,9 @@
     const t = a.test;
     const max = G.testMaxScore(t);
     const step = Number(t.precision) || 1;
-    const key = G.keyForTest(t, level);
     const students = M.statStudents(course);
     const st = G.testStats(t, students.map((s) => s.id), level);
-    const taskRows = t.tasks.map((task) => {
+    const taskRows = G.orderedTasks(t).map((task) => {
       const avg = taskAverage(t, students, task);
       const pct = avg === null || !task.max ? null : Math.min(100, (avg / task.max) * 100);
       return h(
@@ -575,19 +868,35 @@
       );
     });
     // Bereich je Stufe: von der eigenen Schwelle bis knapp unter die nächsthöhere
-    const ordered = key.slice().sort((x, y) => y.p - x.p);
-    const rows = ordered.map((k, i) => {
-      const upper = i === 0 ? max : ordered[i - 1].min - step;
-      const range = upper < k.min ? '–' : upper === k.min ? fmtScore(k.min) : `${fmtScore(k.min)} – ${fmtScore(upper)}`;
+    const rangeTable = (key, maxScore, step, counts) => {
+      const ordered = key.slice().sort((x, y) => y.p - x.p);
+      const rows = ordered.map((k, i) => {
+        const upper = i === 0 ? maxScore : ordered[i - 1].min - step;
+        const range = upper < k.min ? '–' : upper === k.min ? fmtScore(k.min) : `${fmtScore(k.min)} – ${fmtScore(upper)}`;
+        return h(
+          'tr',
+          null,
+          h('td', null, UI.gradeBadge(k.p, level)),
+          level === 'mss' ? h('td', { class: 'muted' }, G.wholeGrade(k.p) + G.tendency(k.p)) : null,
+          h('td', { class: 'num' }, range),
+          h('td', { class: 'num strong' }, counts[k.p] || '')
+        );
+      });
       return h(
-        'tr',
-        null,
-        h('td', null, UI.gradeBadge(k.p, level)),
-        level === 'mss' ? h('td', { class: 'muted' }, G.wholeGrade(k.p) + G.tendency(k.p)) : null,
-        h('td', { class: 'num' }, range),
-        h('td', { class: 'num strong' }, st.counts[k.p] || '')
+        'table',
+        { class: 'table compact' },
+        h('thead', null, h('tr', null, h('th', null, level === 'mss' ? 'Punkte' : 'Note'), level === 'mss' ? h('th', null, 'Note') : null, h('th', { class: 'num' }, 'Rohpunkte'), h('th', { class: 'num' }, 'Anzahl'))),
+        h('tbody', null, rows)
       );
-    });
+    };
+    const ids = students.map((s) => s.id);
+    // Getrennt benotete Teile: Punkteverteilung je Teil (eigener Schlüssel)
+    const distTables = G.separateParts(t)
+      ? t.parts.map((part) => {
+          const pt = G.partAsTest(t, part);
+          return [h('h2', null, 'Punkteverteilung ' + part.name), rangeTable(G.keyForPart(t, part, level), G.testMaxScore(pt), Number(pt.precision) || 1, G.partStats(t, part, ids, level).counts)];
+        })
+      : [h('h2', null, 'Punkteverteilung'), rangeTable(G.keyForTest(t, level), max, step, st.counts)];
     const close = () => {
       document.removeEventListener('keydown', onKey);
       if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
@@ -622,17 +931,7 @@
           taskRows.length ? h('h2', { class: 'beamer-sub' }, 'Ø erreicht je Aufgabe') : null,
           taskRows.length ? h('div', { class: 'task-bars' }, taskRows) : null
         ),
-        h(
-          'section',
-          null,
-          h('h2', null, 'Punkteverteilung'),
-          h(
-            'table',
-            { class: 'table compact' },
-            h('thead', null, h('tr', null, h('th', null, level === 'mss' ? 'Punkte' : 'Note'), level === 'mss' ? h('th', null, 'Note') : null, h('th', { class: 'num' }, 'Rohpunkte'), h('th', { class: 'num' }, 'Anzahl'))),
-            h('tbody', null, rows)
-          )
-        )
+        h('section', null, distTables)
       )
     );
     document.body.appendChild(overlay);
@@ -646,8 +945,8 @@
 
   // ---------- Moodle ----------
 
-  function moodleCard(course, db, a) {
-    const mo = a.test.moodle;
+  function moodleCard(course, db, a, part) {
+    const mo = part ? part.moodle : a.test.moodle;
     const kindLabel = { answers: 'Antworten', grades: 'Bewertungen' };
     return h(
       'div',
@@ -655,14 +954,14 @@
       h(
         'div',
         { class: 'card-head' },
-        h('h2', null, 'Moodle'),
+        h('h2', null, part ? `Moodle – ${part.name}` : 'Moodle'),
         h('span', { class: 'muted small' }, 'Importiert am ', new Date(mo.importedAt).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }))
       ),
       h(
         'div',
         { class: 'inline wrap' },
         (mo.files || []).map((f) => h('button', { class: 'btn btn-sm', title: 'Gespeicherte Originaldatei herunterladen', onclick: () => NM.util.download(f.name, f.text, 'text/csv;charset=utf-8') }, `⬇ ${kindLabel[f.kind] || 'CSV'}: ${f.name}`)),
-        h('button', { class: 'btn btn-sm', title: 'z. B. nach Korrekturen in Moodle: Punkte neu übernehmen, eigene Aufgaben und Einstellungen bleiben', onclick: () => moodleImport(course, db, a.half, a) }, '⬆ Erneut importieren')
+        h('button', { class: 'btn btn-sm', title: 'z. B. nach Korrekturen in Moodle: Punkte neu übernehmen, eigene Aufgaben und Einstellungen bleiben', onclick: () => moodleImport(course, db, a.half, a, part ? part.id : null) }, '⬆ Erneut importieren')
       ),
       (mo.files || []).some((f) => f.kind === 'grades')
         ? null
@@ -670,8 +969,10 @@
     );
   }
 
-  /** Dialog: Moodle-CSV-Dateien wählen, Personen zuordnen, in einen neuen (target = null) oder bestehenden Test übernehmen. */
-  async function moodleImport(course, db, half, target) {
+  /** Dialog: Moodle-CSV-Dateien wählen, Personen zuordnen, in einen neuen (target = null) oder bestehenden Test (ggf. in einen Teil) übernehmen. */
+  async function moodleImport(course, db, half, target, partId = null) {
+    const part = target && partId ? (target.test.parts || []).find((x) => x.id === partId) : null;
+    const again = target && (part ? !!part.moodle : !!target.test.moodle);
     const MO = NM.moodle;
     const students = M.activeStudents(course);
     let parsed = null;
@@ -745,13 +1046,14 @@
     }
 
     const v = await modal({
-      title: target ? `Moodle-Import erneut: ${target.name}` : 'Moodle-Import',
+      title: !target ? 'Moodle-Import' : part ? `Moodle-Import in „${part.name}“: ${target.name}` : `Moodle-Import erneut: ${target.name}`,
       wide: true,
       body: h(
         'div',
         null,
         h('p', { class: 'small' }, 'Aus Moodle (Test → Ergebnisse) die Antworten-CSV und die Bewertungen-CSV herunterladen und hier beide auswählen. Die Note berechnet OrdoNota mit dem eigenen Notenschlüssel. Beide Dateien werden verschlüsselt im Test gespeichert.'),
-        target ? h('p', { class: 'small' }, 'Die Punkte der Moodle-Fragen werden ersetzt. Eigene Aufgaben, Notenschlüssel und Einstellungen bleiben erhalten.') : null,
+        again ? h('p', { class: 'small' }, 'Die Punkte der Moodle-Fragen werden ersetzt. Eigene Aufgaben, Notenschlüssel und Einstellungen bleiben erhalten.') : null,
+        part && !again ? h('p', { class: 'small' }, `Jede Moodle-Frage wird eine Aufgabe (F1, F2, …) im Teil „${part.name}“. Die anderen Teile bleiben unverändert.`) : null,
         h('label', { class: 'field' }, h('span', null, 'CSV-Dateien (eine oder beide)'), fileInput),
         target ? null : h('label', { class: 'field' }, h('span', null, 'Bezeichnung'), name),
         box
@@ -771,7 +1073,7 @@
       ],
     });
     if (v !== 'ok') return;
-    const sum = MO.applyImport(course, target, parsed, map, { half, settings: db.settings, name: name.value.trim() });
+    const sum = MO.applyImport(course, target, parsed, map, { half, settings: db.settings, name: name.value.trim(), partId });
     NM.app.state.ui.testId[course.id] = sum.assessment.id;
     NM.app.saveUi();
     NM.app.commit();
