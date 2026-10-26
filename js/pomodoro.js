@@ -319,7 +319,7 @@
     const sel = (label, key, options, testLabel, test) =>
       h(
         'label',
-        { class: 'field' },
+        { class: 'field span2' },
         h('span', null, label),
         h(
           'div',
@@ -327,7 +327,7 @@
           h(
             'select',
             {
-              class: 'input',
+              class: 'input grow',
               onchange: (e) => {
                 p[key] = e.target.value;
                 changed();

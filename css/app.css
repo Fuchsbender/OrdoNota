@@ -160,6 +160,8 @@ select.input { padding-right: 4px; }
 .field > span { font-size: 12px; color: var(--muted); font-weight: 520; }
 .field.narrow { width: 110px; }
 .inline > .input[type='number'] { width: 80px; }
+.inline > select.input.grow { flex: 1; min-width: 0; }
+.inline > .btn { flex: none; }
 .field.grow { flex: 1; min-width: 200px; }
 .field.span2 { grid-column: 1 / -1; }
 .check { display: flex; align-items: center; gap: 6px; margin: 6px 0; cursor: pointer; }
@@ -220,6 +222,8 @@ select.input { padding-right: 4px; }
 }
 .sidebar.collapsed .side-toggle { display: flex; width: 100%; margin: 0 0 8px; }
 .course-chip { display: flex; flex-direction: column; align-items: center; width: 100%; padding: 6px 2px; margin-bottom: 2px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text); cursor: pointer; font: inherit; font-size: 12px; line-height: 1.25; }
+.course-chip .course-name, .course-chip .course-meta { max-width: 100%; overflow: hidden; white-space: nowrap; letter-spacing: -0.02em; }
+.course-chip .course-name { font-size: 11.5px; }
 .course-chip .course-meta { font-size: 10.5px; }
 .course-chip:hover { background: var(--surface-2); }
 .course-chip.active { background: var(--accent-soft); }
@@ -261,6 +265,9 @@ select.input { padding-right: 4px; }
 .card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
 .card-head h2 { margin: 0; }
 .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 0 16px; align-items: start; }
+/* Karten unterschiedlicher Höhe lückenlos in Spalten (Einstellungen) */
+.masonry { columns: 380px; column-gap: 16px; }
+.masonry > .card { break-inside: avoid; }
 .empty { text-align: center; padding: 48px 20px; color: var(--muted); }
 .empty h2 { color: var(--text); font-size: 17px; }
 .empty p { max-width: 520px; margin: 0 auto 16px; }

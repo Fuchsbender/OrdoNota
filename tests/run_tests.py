@@ -553,6 +553,44 @@ def run_tests_view_check(br, base):
     report("Tests: volle Breite, Unterschrift abhaken/zählen/drucken, nur bei Klassenarbeiten", ok and not br.errors, str(res) + "; ".join(br.errors))
 
 
+def run_settings_layout_check(br, base):
+    print("Layout Einstellungen (Pomodoro aktiv) und eingeklappte Kursliste:")
+    out = {}
+    for width in (1570, 2560):
+        br.call("Emulation.setDeviceMetricsOverride", width=width, height=1300, deviceScaleFactor=1, mobile=False)
+        br.open(f"{base}/index.html?demo")
+        br.wait("!!document.querySelector('.overview-table')", 30)
+        br.errors = []
+        res = br.eval("""(async () => {
+            const wait = (ms = 250) => new Promise((r) => setTimeout(r, ms));
+            NM.app.db().settings.pomodoro.enabled = true;
+            if (!NM.app.state.ui.sideCollapsed) { document.querySelector('.side-toggle').click(); await wait(450); }
+            NM.app.select({ tab: 'settings' }); await wait();
+            const cards = [...document.querySelectorAll('.masonry > .card')].map((c) => c.getBoundingClientRect());
+            // Größte Lücke zwischen zwei Karten derselben Spalte
+            let gap = 0;
+            for (const c of cards) {
+                const above = cards.filter((o) => Math.abs(o.left - c.left) < 2 && o.bottom <= c.top).map((o) => c.top - o.bottom);
+                if (above.length) gap = Math.max(gap, Math.min(...above));
+            }
+            // Auswahllisten breit genug für den längsten Eintrag (Canvas-Messung)
+            const ctx = document.createElement('canvas').getContext('2d');
+            const selOk = [...document.querySelectorAll('.masonry select')].every((s) => {
+                ctx.font = getComputedStyle(s).font;
+                const need = Math.max(...[...s.options].map((o) => ctx.measureText(o.text).width));
+                return s.clientWidth >= need + 24;
+            });
+            const chipOk = [...document.querySelectorAll('.course-chip .course-name, .course-chip .course-meta')]
+                .every((e) => e.scrollWidth <= e.clientWidth + 1 && e.getBoundingClientRect().left >= e.closest('.course-chip').getBoundingClientRect().left - 1);
+            const r = { cards: cards.length, gap: Math.round(gap), selOk, chipOk };
+            document.querySelector('.side-toggle').click(); await wait(450);
+            return r; })()""")
+        out[width] = res
+    br.call("Emulation.clearDeviceMetricsOverride")
+    ok = all(r and r["cards"] == 7 and r["gap"] <= 20 and r["selOk"] and r["chipOk"] for r in out.values())
+    report("Einstellungen ohne Lücken bei 1570/2560 px, Auswahllisten nicht abgeschnitten, Kürzel „MSS12“ passt", ok and not br.errors, str(out) + "; ".join(br.errors))
+
+
 def run_moodle_check(br, base):
     print("Moodle-Import (Dialog, Übernahme, Ausdruck):")
     br.open(f"{base}/index.html?demo")
@@ -673,6 +711,7 @@ def main():
         run_transition_check(br, base)
         run_sidebar_check(br, base)
         run_tests_view_check(br, base)
+        run_settings_layout_check(br, base)
         run_moodle_check(br, base)
         run_decrypt_tool(br, base)
     finally:

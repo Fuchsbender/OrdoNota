@@ -7,7 +7,7 @@
   function render(view, { db }) {
     view.append(
       h('div', { class: 'view-head' }, h('h1', null, 'Einstellungen')),
-      h('div', { class: 'grid-2' }, securityCard(db), defaultsCard(db), storageCard(db), yearsCard(db), displayCard(db), pomodoroCard(db), infoCard())
+      h('div', { class: 'masonry' }, securityCard(db), defaultsCard(db), storageCard(db), yearsCard(db), displayCard(db), pomodoroCard(db), infoCard())
     );
   }
 
