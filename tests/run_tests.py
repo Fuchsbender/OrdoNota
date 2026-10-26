@@ -789,12 +789,20 @@ def run_pres_check(br, base):
         del.click(); await wait();
         document.querySelector('dialog .btn-danger').click(); await wait();
         out.poolDel = [!db.criteriaPool.some((x) => x.name === 'Kreativität'), p.criteria.some((x) => x.name === 'Kreativität')];
+        // Startbestand ergänzen: Knopf nur, wenn Kriterien fehlen
+        const restore = () => [...document.querySelectorAll('.pool-card .btn-ghost')].find((b) => b.textContent.startsWith('Startbestand ergänzen'));
+        const noBtn = !restore();
+        const lesb = [...document.querySelectorAll('.pool-item .icon-btn')].find((b) => b.getAttribute('aria-label') === 'Aus dem Pool löschen: Lesbarkeit');
+        lesb.click(); await wait(); document.querySelector('dialog .btn-danger').click(); await wait();
+        const label = restore() && restore().textContent;
+        restore().click(); await wait();
+        out.restore = [noBtn, label, db.criteriaPool.some((x) => x.name === 'Lesbarkeit'), !restore()];
         return out; })()""")
     ok = bool(res) and res["tab"] and res["picker"] == "Referat Statistik" and res["rows"] == 12 \
         and res["rate"][0] == 12 and res["rate"][1] == 18 and res["rate"][2] == "Wahrscheinlichkeit" and res["rate"][3] == 5 and res["toggle"] \
         and res["cell"] == 3 and res["invalid"] == 3 and res["max"] == 24 and res["fromPool"] == 1 and res["own"] == ["Kreativität", "originell", 1] \
         and res["tpl"] == [2, True, True, True] and res["menu"] == ["list", "key", "blank", "sheets"] and res["print"] == [True] * 4 \
-        and res["sheetsN"] == 7 and res["overview"] and res["jump"] and res["poolDel"] == [True, True]
+        and res["sheetsN"] == 7 and res["overview"] and res["jump"] and res["poolDel"] == [True, True] and res["restore"] == [True, "Startbestand ergänzen (1)", True, True]
     report("Präsentationen: bewerten (Knöpfe, Tabelle), Gewicht, Kriterien aus Pool/eigene, Vorlage, Ausdrucke, Notenübersicht, Pool", ok and not br.errors, str(res) + "; ".join(br.errors))
 
 

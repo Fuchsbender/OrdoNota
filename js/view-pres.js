@@ -595,6 +595,7 @@
   function poolCard(db) {
     const ui = NM.app.state.ui;
     const groups = [...new Set(db.criteriaPool.map((c) => c.group || 'Sonstiges'))];
+    const missing = M.missingDefaultCriteria(db.criteriaPool);
     return h(
       'details',
       {
@@ -664,7 +665,22 @@
           },
         },
         '+ Kriterium'
-      )
+      ),
+      missing.length
+        ? h(
+            'button',
+            {
+              class: 'btn btn-ghost',
+              title: 'Fehlende Kriterien aus dem Startbestand von OrdoNota hinzufügen: ' + missing.map((c) => c.name).join(', '),
+              onclick: () => {
+                db.criteriaPool.push(...M.missingDefaultCriteria(db.criteriaPool));
+                NM.app.commit();
+                toast(`${missing.length} ${missing.length === 1 ? 'Kriterium' : 'Kriterien'} aus dem Startbestand ergänzt.`, 'info');
+              },
+            },
+            `Startbestand ergänzen (${missing.length})`
+          )
+        : null
     );
   }
 

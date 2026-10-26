@@ -9,7 +9,7 @@
   // 2 (1.18): Arbeiten in Teilen – getrennt benotete Teile würden ältere Versionen falsch rechnen.
   // 3 (1.20): Präsentationen (kind "pres") – ältere Versionen kennen diese Leistungsart nicht.
   const SCHEMA = 3;
-  const APP_VERSION = '1.20.0';
+  const APP_VERSION = '1.20.1';
 
   class NewerSchemaError extends Error {}
 
@@ -24,24 +24,44 @@
 
   // Startbestand des Kriterienpools für Präsentationen (je Kriterium 0–3 Punkte mit Beschreibung je Stufe)
   const PRES_POOL = [
-    ['Inhalt', 'Fachliche Richtigkeit', ['viele fachliche Fehler', 'einige Fehler', 'weitgehend richtig', 'durchgehend richtig und präzise']],
-    ['Inhalt', 'Gliederung und roter Faden', ['keine erkennbare Gliederung', 'Gliederung lückenhaft', 'klar gegliedert', 'klar gegliedert, schlüssige Übergänge']],
-    ['Inhalt', 'Umfang und Tiefe', ['Thema kaum erfasst', 'oberflächlich', 'Thema angemessen erfasst', 'Thema vertieft und eigenständig erschlossen']],
-    ['Inhalt', 'Quellen', ['keine Quellen', 'Quellen unvollständig', 'Quellen angegeben', 'Quellen vollständig und kritisch ausgewählt']],
-    ['Vortrag', 'Freies Sprechen', ['abgelesen', 'überwiegend abgelesen', 'weitgehend frei', 'frei mit Stichwörtern']],
-    ['Vortrag', 'Sprechweise (Lautstärke, Tempo)', ['kaum verständlich', 'zu leise oder zu schnell', 'gut verständlich', 'lebendig und gut verständlich']],
-    ['Vortrag', 'Blickkontakt und Körpersprache', ['kein Blickkontakt', 'wenig Blickkontakt', 'Blickkontakt meist vorhanden', 'souverän und zugewandt']],
-    ['Vortrag', 'Zeitrahmen', ['deutlich über-/unterschritten', 'merklich abweichend', 'knapp eingehalten', 'genau eingehalten']],
-    ['Medien', 'Gestaltung der Folien/Medien', ['unübersichtlich', 'überladen oder knapp', 'übersichtlich', 'übersichtlich und ansprechend']],
-    ['Medien', 'Einsatz der Medien', ['nicht passend', 'wenig unterstützend', 'unterstützt den Vortrag', 'gezielt und wirkungsvoll eingesetzt']],
+    ['Inhalt', 'Fachliche Richtigkeit', ['viele fachliche Fehler', 'einige Fehler', 'wenige kleine Fehler', 'fehlerfrei und präzise']],
+    ['Inhalt', 'Vollständigkeit', ['wesentliche Aspekte fehlen', 'einige Aspekte fehlen', 'weitgehend vollständig', 'alle wesentlichen Aspekte']],
+    ['Inhalt', 'Tiefe der Auseinandersetzung', ['bloße Aufzählung', 'oberflächlich', 'Zusammenhänge erklärt', 'eigenständig vertieft']],
+    ['Inhalt', 'Beispiele und Veranschaulichung', ['keine Beispiele', 'wenige oder unpassende', 'passende Beispiele', 'treffend und anschaulich']],
+    ['Inhalt', 'Quellenangaben', ['keine Quellen', 'unvollständig', 'vollständig', 'vollständig, seriöse Quellen']],
+    ['Aufbau', 'Einleitung', ['fehlt', 'knapp, ohne Überblick', 'führt ins Thema ein', 'weckt Interesse und gibt Überblick']],
+    ['Aufbau', 'Gliederung', ['nicht erkennbar', 'sprunghaft', 'erkennbar', 'klar und nachvollziehbar']],
+    ['Aufbau', 'Übergänge und roter Faden', ['keine Übergänge', 'abrupte Wechsel', 'meist verbunden', 'flüssig, durchgehender roter Faden']],
+    ['Aufbau', 'Schluss und Fazit', ['fehlt', 'endet abrupt', 'fasst zusammen', 'Fazit mit Ausblick oder eigener Bewertung']],
+    ['Vortrag', 'Freies Sprechen', ['abgelesen', 'überwiegend abgelesen', 'weitgehend frei', 'frei mit Stichwortzettel']],
+    ['Vortrag', 'Lautstärke', ['kaum zu hören', 'teils zu leise', 'gut hörbar', 'gut hörbar und bewusst eingesetzt']],
+    ['Vortrag', 'Sprechtempo und Pausen', ['viel zu schnell oder zu langsam', 'ungleichmäßig', 'angemessen', 'angemessen mit gezielten Pausen']],
+    ['Vortrag', 'Betonung', ['monoton', 'wenig Betonung', 'betont', 'lebendig, hebt Wichtiges hervor']],
+    ['Vortrag', 'Blickkontakt', ['kein Blickkontakt', 'selten', 'meist vorhanden', 'mit dem ganzen Publikum']],
+    ['Vortrag', 'Körpersprache', ['unruhig oder abgewandt', 'verkrampft', 'offen und ruhig', 'sicher, unterstützt die Aussagen']],
+    ['Vortrag', 'Zeitrahmen', ['deutlich über- oder unterschritten', 'merklich abweichend', 'knapp eingehalten', 'genau eingehalten']],
+    ['Medien', 'Übersichtlichkeit', ['überladen und unstrukturiert', 'teils überladen', 'übersichtlich', 'klar strukturiert, wenig Text je Folie']],
+    ['Medien', 'Lesbarkeit', ['kaum lesbar', 'teils zu klein oder kontrastarm', 'gut lesbar', 'gut lesbar, einheitliche Schrift']],
+    ['Medien', 'Ansprechende Gestaltung', ['lieblos', 'uneinheitlich', 'ansprechend', 'ansprechend und durchdacht']],
+    ['Medien', 'Bilder und Grafiken', ['keine oder unpassend', 'rein dekorativ', 'passend', 'erklären die Inhalte']],
+    ['Medien', 'Rechtschreibung', ['viele Fehler', 'einige Fehler', 'vereinzelte Fehler', 'fehlerfrei']],
+    ['Medien', 'Zusammenspiel von Medium und Vortrag', ['Folien werden vorgelesen', 'teilweise abgestimmt', 'passt zum Vortrag', 'ergänzt den Vortrag gezielt']],
+    ['Medien', 'Handout', ['fehlt', 'lückenhaft', 'vollständig', 'vollständig, übersichtlich und hilfreich']],
     ['Sprache', 'Fachsprache', ['keine Fachbegriffe', 'Fachbegriffe teils falsch', 'Fachbegriffe richtig', 'sicher und erklärt']],
-    ['Sprache', 'Verständlichkeit', ['schwer verständlich', 'teilweise verständlich', 'verständlich', 'anschaulich mit Beispielen']],
+    ['Sprache', 'Verständlichkeit', ['schwer verständlich', 'teilweise verständlich', 'verständlich', 'anschaulich erklärt']],
+    ['Sprache', 'Ausdruck und Satzbau', ['umgangssprachlich, unvollständig', 'holprig', 'angemessen', 'treffend und abwechslungsreich']],
     ['Austausch', 'Fragen beantworten', ['keine Antworten', 'unsicher', 'meist sicher', 'sicher und fundiert']],
     ['Austausch', 'Einbindung des Publikums', ['kein Bezug zum Publikum', 'wenig Bezug', 'Publikum angesprochen', 'Publikum aktiv eingebunden']],
   ];
 
   function defaultCriteriaPool() {
     return PRES_POOL.map(([group, name, d]) => ({ id: uid(), group, name, desc: { 0: d[0], 1: d[1], 2: d[2], 3: d[3] } }));
+  }
+
+  /** Kriterien des Startbestands, die im Pool fehlen (Vergleich über die Bezeichnung). */
+  function missingDefaultCriteria(pool) {
+    const have = new Set((pool || []).map((c) => (c.name || '').trim().toLowerCase()));
+    return defaultCriteriaPool().filter((c) => !have.has(c.name.toLowerCase()));
   }
 
   function newDb() {
@@ -348,7 +368,7 @@
     });
     c8.assessments.push(e);
     // Präsentationen im 2. Halbjahr (Kriterien aus dem Startbestand)
-    const pr = newPres(c8, 'HJ2', db.settings, db.criteriaPool.filter((x) => ['Fachliche Richtigkeit', 'Gliederung und roter Faden', 'Freies Sprechen', 'Gestaltung der Folien/Medien', 'Fragen beantworten'].includes(x.name)));
+    const pr = newPres(c8, 'HJ2', db.settings, db.criteriaPool.filter((x) => ['Fachliche Richtigkeit', 'Gliederung', 'Freies Sprechen', 'Übersichtlichkeit', 'Fragen beantworten'].includes(x.name)));
     pr.name = 'Referat Statistik';
     pr.pres.criteria[0].weight = 2;
     const topics = ['Mittelwert', 'Median', 'Boxplot', 'Streuung', 'Diagramme', 'Umfragen'];
@@ -396,6 +416,7 @@
     newPres,
     presCriterion,
     defaultCriteriaPool,
+    missingDefaultCriteria,
     kindLabel,
     demoDb,
   };

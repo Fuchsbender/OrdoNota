@@ -36,6 +36,9 @@
   ok('Kriterienpool beim Öffnen angelegt (Startbestand)', np.schema === 3 && np.criteriaPool.length >= 10 && np.criteriaPool.every((c) => c.id && c.name && c.desc && c.desc[0] && c.desc[3]));
   const own = M.migrate({ schema: 3, years: [], courses: [], criteriaPool: [] });
   ok('Leerer Pool bleibt leer (vom Nutzer geleert)', own.criteriaPool.length === 0);
+  const full = M.defaultCriteriaPool();
+  ok('Startbestand: fein gegliederte Kriterien (z. B. Medien: Übersichtlichkeit, Lesbarkeit, Gestaltung)', full.length >= 25 && ['Übersichtlichkeit', 'Lesbarkeit', 'Ansprechende Gestaltung'].every((n) => full.some((c) => c.name === n && c.group === 'Medien')) && new Set(full.map((c) => c.name)).size === full.length);
+  ok('Startbestand ergänzen: nur fehlende (Bezeichnung, Groß/klein egal)', M.missingDefaultCriteria([]).length === full.length && M.missingDefaultCriteria([{ name: 'lesbarkeit' }, { name: 'Eigenes' }]).length === full.length - 1 && M.missingDefaultCriteria(full).length === 0);
   const pdb = M.newDb();
   const pc = M.newCourse(pdb.years[0].id, { jahrgang: 12, type: 'gk' });
   const pa = M.newPres(pc, '12/1', pdb.settings, pdb.criteriaPool.slice(0, 3));
