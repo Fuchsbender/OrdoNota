@@ -444,6 +444,13 @@ select option { background: var(--surface); color: var(--text); }
 .grp-person:hover { border-color: var(--accent); }
 .grp-person.picked { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 .grp-person.away { opacity: 0.55; text-decoration: line-through; }
+.grp-person.with-photo { padding-left: 3px; }
+.grp-person .grp-photo { width: 22px; height: 22px; }
+.grp-set-info { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.grp-set-info p { flex: 1; min-width: 240px; margin: 0; }
+.grp-view-toggle { opacity: 0.65; }
+.grp-view-toggle.active { opacity: 1; border-color: var(--accent); color: var(--accent); }
+.grp-experts { border-left: 3px solid var(--accent); }
 .grp-letter { display: inline-grid; place-items: center; min-width: 1.4em; height: 1.4em; border-radius: 4px; background: var(--accent-soft); color: var(--accent-strong); font-size: 0.8em; font-weight: 700; margin-right: 2px; }
 .grp-person.picked .grp-letter { background: var(--surface); }
 .grp-free { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 8px; border: 1px dashed var(--border); border-radius: var(--radius-sm); margin-bottom: 10px; min-height: 40px; }
@@ -452,8 +459,10 @@ select option { background: var(--surface); color: var(--text); }
 .grp-rule h3 { margin: 4px 0; font-size: 14px; }
 .grp-rule .grp-members { margin-bottom: 6px; }
 .grp-beamer { display: flex; flex-direction: column; overflow: hidden; }
-.grp-beamer h1 { margin: 0 0 2vh; padding-right: 400px; font-size: 1.6em; }
-.grp-beamer-bar { position: absolute; top: 2vh; right: 2vw; display: flex; gap: 8px; }
+.grp-beamer-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 1vh 2vw; margin-bottom: 2vh; }
+.grp-beamer h1 { margin: 0; font-size: 1.6em; }
+.grp-beamer-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
+.grp-beamer-bar .btn, .grp-beamer-bar .seg { font-size: 16px; padding: 6px 12px; }
 .grp-beamer-toggle { opacity: 0.6; }
 .grp-beamer-toggle.active { opacity: 1; border-color: var(--accent); color: var(--accent); }
 .grp-beamer-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(9em, 1fr)); gap: 0.5em; align-content: start; }
@@ -464,7 +473,6 @@ select option { background: var(--surface); color: var(--text); }
 .grp-tile li { display: flex; align-items: center; gap: 0.3em; padding: 0.05em 0; line-height: 1.2; }
 .grp-tile .grp-letter { font-size: 0.6em; }
 .grp-photo { width: 1.5em; height: 1.5em; border-radius: 50%; object-fit: cover; flex: none; background: var(--surface-2); }
-@media (max-width: 800px) { .grp-beamer h1 { padding-right: 0; margin-top: 3em; } }
 @media (max-width: 640px) { .grp-row { grid-template-columns: minmax(0, 1fr) auto; } .grp-row > .icon-btn { grid-row: 1; grid-column: 2; } .grp-members { grid-column: 1 / -1; } }
 .row-current td { background: var(--accent-soft); }
 .topic-col { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -988,14 +988,14 @@ def run_groups_tab_check(br, base):
         // Anklicken: verschieben und tauschen
         const [ga, gb] = [set.groups[1], set.groups[2]];
         const x = ga.members[0];
-        q('gp-' + x).click(); await wait();
+        q(`gp-${set.id}-${x}`).click(); await wait();
         document.querySelector(`.grp-box[data-group="${gb.id}"]`).click(); await wait();
         const moved = gb.members.includes(x) && !ga.members.includes(x);
         const [y, z] = [ga.members[0], gb.members[0]];
-        q('gp-' + y).click(); await wait(); q('gp-' + z).click(); await wait();
+        q(`gp-${set.id}-${y}`).click(); await wait(); q(`gp-${set.id}-${z}`).click(); await wait();
         out.click = [moved, ga.members.includes(z) && gb.members.includes(y)];
         // Ziehen und Ablegen
-        const dt = new DataTransfer(); dt.setData('text/plain', y);
+        const dt = new DataTransfer(); dt.setData('text/plain', set.id + '|' + y);
         document.querySelector(`.grp-box[data-group="${ga.id}"]`).dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true })); await wait();
         out.drag = ga.members.includes(y) && !gb.members.includes(y);
         // Name und Auftrag
@@ -1032,10 +1032,36 @@ def run_groups_tab_check(br, base):
         const txt = document.getElementById('print-root').textContent;
         out.print = [document.title.endsWith('Gruppeneinteilung'), document.querySelectorAll('#print-root .p-grp').length === set.groups.length, !txt.includes('Ø')];
         document.body.classList.remove('printing');
-        // Gruppenpuzzle
+        // Anzeige in der App: Fotos und Nachnamen umschalten
+        const first = c.students.find((x) => x.id === set.groups[0].members[0]);
+        const chipText = () => q(`gp-${set.id}-${first.id}`).textContent;
+        q('gv-photos').click(); await wait(); q('gv-last').click(); await wait();
+        out.view = [document.querySelectorAll('.grp-set .grp-person .grp-photo').length > 0, chipText().includes(first.first), !chipText().includes(first.last), NM.app.state.ui.groupView.photos, NM.app.state.ui.groupView.last];
+        q('gv-photos').click(); await wait(); q('gv-last').click(); await wait();
+        out.viewBack = [document.querySelectorAll('.grp-set .grp-photo').length, chipText().includes(first.last)];
+        // Gruppenpuzzle: Expertengruppen erscheinen unter den Stammgruppen (gleiche Einteilung, kein eigener Eintrag)
+        const pickers = document.querySelectorAll('.picker-item:not(.picker-add)').length;
         q('gs-experts').click(); await wait();
         const ex = c.groupSets[c.groupSets.length - 1];
-        out.puzzle = [ex.homeId === set.id, ex.groups.length === Math.max(...set.groups.map((g) => g.members.length)), ex.groups[0].members.length === set.groups.length, NM.app.state.ui.groupSetId[c.id] === ex.id];
+        const exCard = document.querySelector('.grp-experts');
+        out.puzzle = [ex.homeId === set.id, ex.groups.length === Math.max(...set.groups.map((g) => g.members.length)), ex.groups[0].members.length === set.groups.length, !!exCard && exCard.querySelectorAll('.grp-box').length === ex.groups.length, document.querySelectorAll('.picker-item:not(.picker-add)').length === pickers, !q('gs-experts'), !!document.querySelector('.grp-set .grp-letter')];
+        // Stammgruppen ändern → Hinweis, „↻ Neu bilden“ passt an (Teilthema bleibt)
+        q('gb-task-' + ex.groups[0].id).value = 'Text A'; q('gb-task-' + ex.groups[0].id).dispatchEvent(new Event('change')); await wait();
+        const [h0, h1] = [set.groups[0], set.groups[1]];
+        [h0.members[0], h1.members[1]] = [h1.members[1], h0.members[0]]; NM.app.commit(); await wait();
+        const stale = !!document.querySelector('.grp-experts .notice.warn');
+        q('ex-rebuild').click(); await wait();
+        out.rebuild = [stale, !document.querySelector('.grp-experts .notice.warn'), ex.groups[0].task, c.groupSets.filter((x) => x.homeId === set.id).length];
+        // Beamer: Umschalter Stamm-/Expertengruppen
+        q('gs-beamer').click(); await wait();
+        const bm2 = document.querySelector('.grp-beamer');
+        const t1 = bm2.querySelector('h1').textContent;
+        bm2.querySelector('[data-beamer-which="experts"]').click(); await wait();
+        out.beamerExperts = [t1.startsWith(set.name), bm2.querySelector('h1').textContent.includes('Expertengruppen'), bm2.querySelectorAll('.grp-tile').length === ex.groups.length];
+        bm2.querySelector('[data-beamer-close]').click(); await wait();
+        q('ex-beamer').click(); await wait();
+        out.beamerExperts.push(document.querySelector('.grp-beamer h1').textContent.includes('Expertengruppen'));
+        document.querySelector('[data-beamer-close]').click(); await wait();
         // In eine Präsentation übernehmen (Einzel → Gruppen, Auftrag → Thema)
         NM.app.state.ui.groupSetId[c.id] = 'gs1'; NM.app.rerender(); await wait();
         const pres = c.assessments.find((a) => a.name === 'Referat Statistik');
@@ -1055,7 +1081,8 @@ def run_groups_tab_check(br, base):
     ok = bool(res) and res["start"] == ["Stationenlernen Prozent", 4, True, 9] and res["created"] == [True, "4,4,4", 12, "mixed", True, 0] \
         and res["away"] == [False, 11, True] and res["lock"] == [True, True, 3] and res["click"] == [True, True] and res["drag"] \
         and res["edit"] == ["Plakat gestalten", "Team Rot"] and res["rule"] == [2, True] and res["ruleRoll"] == 0 and res["beamer"] == [True] * 4 and res["beamerFit"] == [True, True] and res["beamerToggle"] == [True, True, True, True, False, True] and res["beamerBack"] == [0, True] \
-        and res["menu"] == ["list", "cards"] and res["print"] == [True] * 3 and res["puzzle"] == [True] * 4 \
+        and res["menu"] == ["list", "cards"] and res["print"] == [True] * 3 and res["puzzle"] == [True] * 7 and res["view"] == [True, True, True, True, False] and res["viewBack"] == [0, True] \
+        and res["rebuild"] == [True, True, "Text A", 1] and res["beamerExperts"] == [True] * 4 \
         and res["toPres"] == ["mixed", 4, "Station 1: Grundwert", 3] and res["importOpts"][0].startswith("Gruppeneinteilungen") and res["fromSet"] == [4, "Station 2: Prozentwert"]
     report("Gruppen: Einteilung (Größe, leistungsgemischt), Abwesende, Fixieren, Anklicken/Ziehen, Auftrag, Regel mit Warnung, Beamer ohne Noten, Druck, Gruppenpuzzle, Übernahme in Präsentation", ok and not br.errors, str(res) + "; ".join(br.errors))
 
