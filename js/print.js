@@ -553,6 +553,17 @@
     );
   }
 
+  // ---------- Gruppen ----------
+
+  /** Gruppeneinteilung: 'list' (alle Gruppen auf einer Seite) | 'cards' (je Gruppe eine Karte zum Ausschneiden). Ohne Noten und Regeln. */
+  function groups(course, set, mode, tiles) {
+    const cards = mode === 'cards';
+    doPrint(
+      `${set.name} – ${cards ? 'Gruppenkarten' : 'Gruppeneinteilung'}`,
+      h('div', { class: 'p-page' }, cards ? null : header(course, set.name, [fmtDate(set.date), `${tiles.length} Gruppen`].filter(Boolean).join(' · ')), h('div', { class: cards ? 'p-grp-cards' : 'p-grp-grid' }, tiles))
+    );
+  }
+
   // ---------- EPO ----------
 
   function epo(course, a) {
@@ -897,5 +908,5 @@
     );
   }
 
-  NM.print = { test, moodle, pres, presGuide, epo, epoSlips, seating, course, studentsDialog };
+  NM.print = { test, moodle, pres, presGuide, groups, epo, epoSlips, seating, course, studentsDialog };
 })((globalThis.NM = globalThis.NM || {}));

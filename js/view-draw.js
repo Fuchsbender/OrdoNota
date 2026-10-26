@@ -318,5 +318,5 @@
     );
   }
 
-  NM.views.draw = { render, pool, drawStudents };
+  NM.views.draw = { render, pool, drawStudents, absent };
 })((globalThis.NM = globalThis.NM || {}));

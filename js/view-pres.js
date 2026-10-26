@@ -566,14 +566,14 @@
       p.groups.push({ id: NM.util.uid(), name: 'Gruppe ' + n, members: [], scores: {} });
       NM.app.commit();
     };
-    const importFrom = async (id) => {
-      const src = sources.find((x) => x.id === id);
+    const sets = (course.groupSets || []).filter((x) => x.groups.some((g) => g.members.length));
+    const importFrom = async (value) => {
+      const [kind, id] = value.split(':');
+      const src = kind === 'set' ? sets.find((x) => x.id === id) : sources.find((x) => x.id === id);
       if (!src) return;
-      if (p.groups.some((g) => g.members.length) && !(await confirmDialog('Gruppen ersetzen?', 'Die bisherigen Gruppen dieser Bewertung (mit ihren Gruppenwerten) werden ersetzt.', { okLabel: 'Ersetzen', danger: true }))) return NM.app.rerender();
-      const ids = new Set(course.students.map((s) => s.id));
-      p.groups = src.pres.groups.filter((g) => g.members.length).map((g) => ({ id: NM.util.uid(), name: g.name, members: g.members.filter((sid) => ids.has(sid)), scores: {} }));
-      NM.app.commit();
-      toast(`${p.groups.length} Gruppen aus „${src.name}“ übernommen.`, 'info');
+      // Präsentation: Thema der Gruppe mitnehmen; Einteilung: Auftrag wird Thema
+      const groups = kind === 'set' ? src.groups.map((g) => ({ name: g.name, members: g.members, topic: g.task })) : src.pres.groups.map((g) => ({ name: g.name, members: g.members }));
+      if (!(await applyGroups(a, { name: src.name, groups }, course))) NM.app.rerender();
     };
     return h(
       'div',
@@ -584,17 +584,35 @@
         'div',
         { class: 'inline wrap' },
         h('button', { class: 'btn btn-ghost', 'data-focus-key': 'grp-new', onclick: addGroup }, '+ Gruppe'),
-        sources.length
+        sources.length || sets.length
           ? h(
               'select',
               { class: 'input input-sm', 'aria-label': 'Gruppen übernehmen von', 'data-focus-key': 'grp-import', onchange: (e) => importFrom(e.target.value) },
               h('option', { value: '' }, 'Gruppen übernehmen von …'),
-              sources.map((x) => h('option', { value: x.id }, `${x.name} (${x.half}, ${x.pres.groups.filter((g) => g.members.length).length} Gruppen)`))
+              sets.length ? h('optgroup', { label: 'Gruppeneinteilungen (Reiter „Gruppen“)' }, sets.map((x) => h('option', { value: 'set:' + x.id }, `${x.name} (${x.groups.filter((g) => g.members.length).length} Gruppen)`))) : null,
+              sources.length ? h('optgroup', { label: 'Andere Präsentationen' }, sources.map((x) => h('option', { value: 'pres:' + x.id }, `${x.name} (${x.half}, ${x.pres.groups.filter((g) => g.members.length).length} Gruppen)`))) : null
             )
           : null
       ),
       h('p', { class: 'muted small' }, free.length ? `Ohne Gruppe (werden einzeln bewertet): ${free.map((s) => M.studentName(s)).join(', ')}` : 'Alle aktiven Personen sind einer Gruppe zugeordnet.')
     );
+  }
+
+  /**
+   * Gruppen in eine Präsentation übernehmen (aus einer anderen Präsentation oder einer Einteilung im Reiter „Gruppen“).
+   * src: { name, groups: [{ name, members, topic? }] }; ohne Punkte. Schaltet eine Einzelpräsentation auf Gruppen um.
+   */
+  async function applyGroups(a, src, course = NM.app.currentCourse()) {
+    const p = a.pres;
+    if (p.groupMode && (p.groups || []).some((g) => g.members.length) && !(await confirmDialog('Gruppen ersetzen?', `Die bisherigen Gruppen von „${a.name}“ (mit ihren Gruppenwerten) werden ersetzt.`, { okLabel: 'Ersetzen', danger: true }))) return false;
+    const ids = new Set(course.students.map((s) => s.id));
+    if (!p.groupMode) p.groupMode = 'mixed';
+    p.groups = src.groups
+      .filter((g) => g.members.length)
+      .map((g) => Object.assign({ id: NM.util.uid(), name: g.name, members: g.members.filter((sid) => ids.has(sid)), scores: {} }, g.topic || g.task ? { topic: g.topic || g.task } : {}));
+    NM.app.commit();
+    toast(`${p.groups.length} Gruppen aus „${src.name}“ in „${a.name}“ übernommen.`, 'info');
+    return true;
   }
 
   // ---------- Bewerten (große Knöpfe; bei Gruppen wahlweise für die Gruppe oder eine Person) ----------
@@ -1197,5 +1215,5 @@
   }
 
   NM.views = NM.views || {};
-  NM.views.pres = { render };
+  NM.views.pres = { render, applyGroups };
 })((globalThis.NM = globalThis.NM || {}));

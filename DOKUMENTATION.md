@@ -1,6 +1,6 @@
 # OrdoNota – Dokumentation
 
-Version 1.23.0 · Stand Oktober 2026
+Version 1.24.0 · Stand Oktober 2026
 
 OrdoNota (bis Version 1.11 „Notenmanager“) verwaltet Noten für die Sekundarstufe I (Noten 1–6 mit Tendenz) und die Mainzer Studienstufe (MSS, Punkte 00–15) an Schulen in Rheinland-Pfalz. Die App läuft vollständig lokal im Browser, verschlüsselt alle Daten mit einem Passwort und legt sie in einem Ordner ab, den der Synology Drive Client auf die DiskStation spiegelt.
 
@@ -22,6 +22,7 @@ OrdoNota (bis Version 1.11 „Notenmanager“) verwaltet Noten für die Sekundar
 9. [Reiter „Notenübersicht“](#9-reiter-notenübersicht)
 10. [Reiter „Sitzplan“](#10-reiter-sitzplan)
     - [10a. Reiter „Ziehen“](#10a-reiter-ziehen)
+    - [10b. Reiter „Gruppen“](#10b-reiter-gruppen)
 11. [Drucken und Exportieren](#11-drucken-und-exportieren)
 12. [Reiter „Einstellungen“](#12-reiter-einstellungen)
 13. [Tastaturbedienung](#13-tastaturbedienung)
@@ -62,6 +63,7 @@ OrdoNota deckt vier Anwendungsfälle ab:
 | Mitarbeit über eine feste Zahl von Stunden bewerten | **Mitarbeit/EPO** | Note je Person aus den Stundenbewertungen |
 | Alle Noten gewichtet zur Zeugnisnote zusammenführen | **Notenübersicht** | Halbjahresnote, Jahresnote, gesetzte Noten |
 | Präsentationen nach Kriterien bewerten | **Präsentationen** | Note je Person aus 0–3 Punkten je Kriterium, Bewertungsbögen |
+| Gruppen für Aufträge, Gruppenpuzzle oder Vorträge bilden | **Gruppen** | Einteilung nach Regeln und Leistung, Beamer, Gruppenkarten |
 | Sitzordnung für einen oder mehrere Räume planen | **Sitzplan** | Sitzplan mit Vornamen (und Fotos) zum Ziehen und Drucken |
 
 Ergebnisse aus Tests und EPO-Blöcken erscheinen **automatisch** in der Notenübersicht. Dort lassen sich zusätzlich Einzelnoten direkt eintragen (z. B. Heft, Referat, Hausaufgabenüberprüfung).
@@ -132,7 +134,7 @@ Der Browser merkt sich den Datenordner. Beim nächsten Start erscheint direkt **
 
 ### 3.5 Demo-Modus
 
-`index.html?demo` öffnet die App mit Beispieldaten (Kurs 8b Mathe, Sek I, und MSS 12 M LK). Enthalten sind u. a. Arbeiten in Teilen (8b, 2. HJ: „KA 2 – Geometrie“, zwei Teile gemeinsam bepunktet; MSS 12: „Kursarbeit 2 – Analysis“, drei Teile getrennt benotet mit Gewicht 1 : 2 : 1, eine Person mit fehlendem Teil) und Präsentationen (8b, 2. HJ: „Referat Statistik“ und „HA vorstellen“ nach der Standardvorlage, „Gruppenpräsentation Zufall“ mit drei Gruppen, Personenkriterien und einer Abweichung; MSS 12: „Kurzvortrag Extremwerte“). Statt echter Fotos hat jede Person ein Personensymbol, damit sich Sitzplan und Fotoanzeige im EPO ausprobieren lassen. **Nichts wird gespeichert.** Der Demo-Modus eignet sich zum Ausprobieren und Kennenlernen. Zum Ausprobieren des Moodle-Imports (Abschnitt 7.7) liegen im Ordner `demo/` eine Antworten- und eine Bewertungen-CSV, deren Namen zum Kurs 8b Mathe passen.
+`index.html?demo` öffnet die App mit Beispieldaten (Kurs 8b Mathe, Sek I, und MSS 12 M LK). Enthalten sind u. a. Arbeiten in Teilen (8b, 2. HJ: „KA 2 – Geometrie“, zwei Teile gemeinsam bepunktet; MSS 12: „Kursarbeit 2 – Analysis“, drei Teile getrennt benotet mit Gewicht 1 : 2 : 1, eine Person mit fehlendem Teil) und Präsentationen (8b, 2. HJ: „Referat Statistik“ und „HA vorstellen“ nach der Standardvorlage, „Gruppenpräsentation Zufall“ mit drei Gruppen, Personenkriterien und einer Abweichung; Reiter „Gruppen“: „Stationenlernen Prozent“ mit Aufträgen und einer Regel; MSS 12: „Kurzvortrag Extremwerte“). Statt echter Fotos hat jede Person ein Personensymbol, damit sich Sitzplan und Fotoanzeige im EPO ausprobieren lassen. **Nichts wird gespeichert.** Der Demo-Modus eignet sich zum Ausprobieren und Kennenlernen. Zum Ausprobieren des Moodle-Imports (Abschnitt 7.7) liegen im Ordner `demo/` eine Antworten- und eine Bewertungen-CSV, deren Namen zum Kurs 8b Mathe passen.
 
 ## 4. Arbeiten mit mehreren Geräten
 
@@ -175,7 +177,7 @@ Technisch schreibt die App dazu die Datei `notenmanager.lock.json` in den Dateno
 | **Speicherstatus** | „Speichert …“, „Gespeichert 10:14“, „Ungespeicherte Änderungen“ oder rot „Nicht gespeichert!“ |
 | **☾** | Hell/Dunkel umschalten |
 | **🔒 Sperren** | Speichert, entfernt den Geräte-Hinweis und sperrt die Datenbank |
-| **Reiter** | Kurs & Schüler, Tests, Mitarbeit/EPO, Präsentationen, Ziehen, Notenübersicht, Sitzplan, Einstellungen (in der Skizze aus Platzgründen gekürzt). Beim Wechsel von Reiter, Kurs oder Halbjahr blendet der Inhalt weich ein und der Unterstrich gleitet zum neuen Reiter; beim Eintragen von Werten gibt es keine Animation. Bei „Bewegung reduzieren“ im Betriebssystem entfällt beides. |
+| **Reiter** | Kurs & Schüler, Tests, Mitarbeit/EPO, Präsentationen, Ziehen, Gruppen, Notenübersicht, Sitzplan, Einstellungen (in der Skizze aus Platzgründen gekürzt). Beim Wechsel von Reiter, Kurs oder Halbjahr blendet der Inhalt weich ein und der Unterstrich gleitet zum neuen Reiter; beim Eintragen von Werten gibt es keine Animation. Bei „Bewegung reduzieren“ im Betriebssystem entfällt beides. |
 | **Kursliste** | Kurse des gewählten Schuljahres, sortiert nach Jahrgang. Zeigt Stufe (Sek I/MSS) und Zahl der aktiven Schüler/innen. **«** neben „Kurse“ klappt die Liste gleitend nach links ein (ohne Animation, wenn im Betriebssystem „Bewegung reduzieren“ eingestellt ist): Es bleibt eine schmale Leiste mit Kürzeln (Klasse und Fach, voller Name beim Darüberfahren), über die sich weiter Kurse wechseln lassen; **»** klappt sie wieder aus. Der Zustand wird auf diesem Gerät gemerkt. |
 | **Halbjahres-Umschalter** | In Tests, EPO und Notenübersicht: HJ1/HJ2 bzw. 11/1, 11/2, 12/1, 12/2, 13; in der Notenübersicht zusätzlich „Jahresnote“ |
 
@@ -483,7 +485,7 @@ Bei einer Gruppenpräsentation wird die Gruppe **einmal** bewertet, und die Punk
    - **Einzelpräsentation** – wie bisher.
    - **Gruppen – Kriterien je Gruppe oder Person:** In der Karte „Kriterien“ legt die Spalte **„Bewertet“** für jedes Kriterium fest, ob es einmal für die Gruppe (Standard, z. B. Inhalt, Gliederung, Medien) oder für jede Person einzeln bewertet wird (z. B. Freies Sprechen, Blickkontakt, Fragen beantworten). Die Einstellung wird in Vorlagen mitgespeichert.
    - **Gruppen – alles als Gruppe:** Alle Kriterien werden für die Gruppe bewertet; Unterschiede nur über Abweichungen.
-2. **Gruppen bilden** in der Karte **„Gruppen“**: „+ Gruppe“, Namen ändern, Personen über „+ Person“ hinzufügen und mit × herausnehmen, Gruppe mit ✕ löschen. **„Gruppen übernehmen von …“** kopiert die Gruppen (ohne Punkte) einer anderen Präsentation des Kurses. Personen ohne Gruppe werden einzeln bewertet; eine Präsentation darf also gemischt sein.
+2. **Gruppen bilden** in der Karte **„Gruppen“**: „+ Gruppe“, Namen ändern, Personen über „+ Person“ hinzufügen und mit × herausnehmen, Gruppe mit ✕ löschen. **„Gruppen übernehmen von …“** kopiert die Gruppen (ohne Punkte) einer Gruppeneinteilung aus dem Reiter „Gruppen“ (Auftrag wird Thema, siehe 10b) oder einer anderen Präsentation des Kurses. Personen ohne Gruppe werden einzeln bewertet; eine Präsentation darf also gemischt sein.
 3. **Bewerten** mit dem Umschalter **Gruppe / Person**:
    - **Gruppe:** Gruppe wählen (‹ ›), Thema und Datum der Gruppe, Knöpfe 0–3 für die Gruppenkriterien; darunter je Mitglied die Personenkriterien, Summe, Note und Status. „einzeln ›“ springt zur Personenansicht.
    - **Person:** alle Kriterien einer Person. Bei Gruppenkriterien ist der Gruppenwert vorgewählt. Ein anderer Wert gilt als **Abweichung (◆)** und ersetzt den Gruppenwert nur für diese Person; **„↺ Gruppenwert“** nimmt sie zurück.
@@ -591,6 +593,39 @@ Zieht zufällig eine gewählte Anzahl von Personen, z. B. um Hausaufgaben einzus
 - **↶ Rückgängig** (bei der letzten Ziehung) stellt den Pool wie vor der Ziehung wieder her und löscht die angelegte Notenspalte – mit Rückfrage, besonders wenn schon Noten eingetragen sind.
 - **Frühere Ziehungen** (aufklappbar) listen Datum, Spalte und die Gezogenen. Die Noten lassen sich dort **nachtragen oder ändern** (Enter springt zur nächsten Person); sie landen in der Notenspalte der jeweiligen Ziehung.
 
+## 10b. Reiter „Gruppen“
+
+Gruppen bilden für Gruppenaufträge, Lernaufträge, Stationenlernen, Gruppenpuzzle (Stamm- und Expertengruppen) oder Gruppenvorträge. Die Einteilungen bleiben im Kurs gespeichert.
+
+**Neue Einteilung** („+ Neue Einteilung“):
+- **Bezeichnung**, dann **Personen je Gruppe** oder **Anzahl Gruppen**. Die Vorschau zeigt die Größen. Der Rest wird auf die Gruppen verteilt, es gibt keine Mini-Gruppe (15 Personen à 4 → 4 · 4 · 4 · 3; 13 à 4 → 5 · 4 · 4).
+- **Verfahren:**
+  - *zufällig*;
+  - *leistungsgemischt*: jede Gruppe hat einen ähnlichen Notenschnitt;
+  - *leistungsgleich*: Personen mit ähnlicher Note zusammen.
+  Grundlage ist die gerundete Halbjahresnote des aktuellen Halbjahres; Personen ohne Note zählen wie der Durchschnitt. Der Gruppenschnitt (Ø) erscheint nur in der App, nie auf dem Beamer oder im Ausdruck.
+- **Abwechslung:** möglichst nicht mit denselben Personen wie in der zuletzt angelegten Einteilung.
+- **Heute abwesend** (aufklappbare Karte, gemeinsam mit dem Reiter „Ziehen“, nur bis zum Neuladen): Diese Personen werden ausgelassen und stehen unter „Nicht eingeteilt“.
+
+**Nacharbeiten:**
+- **🎲 Neu würfeln** mischt alle nicht fixierten Gruppen neu. **🔒** fixiert eine Gruppe, sie bleibt beim Neuwürfeln unverändert.
+- **⚙ Verfahren** ändert Größe, Verfahren und Abwechslung (wahlweise sofort neu würfeln).
+- Personen **ziehen** und in einer anderen Gruppe (oder bei „Nicht eingeteilt“) ablegen – oder **anklicken** und dann eine Gruppe anklicken (verschieben) bzw. eine andere Person anklicken (tauschen).
+- Gruppennamen ändern, je Gruppe einen **Auftrag/ein Thema** eintragen, „+ Gruppe“, Gruppe mit ✕ löschen (Mitglieder werden „nicht eingeteilt“).
+- Werden Regeln verletzt (z. B. nach einem Verschieben von Hand) oder sind Abwesende eingeteilt, erscheint ein Hinweis ⚠.
+
+**Regeln** (aufklappbare Karte, gelten für alle Einteilungen des Kurses):
+- **Nicht zusammen:** Diese Paare kommen nie in dieselbe Gruppe.
+- **Zusammen:** Diese Paare bleiben zusammen (z. B. Unterstützung).
+- Regeln gehen beim Würfeln vor Leistung und Abwechslung. Sie sind vertraulich: verschlüsselt gespeichert wie alle Daten und nur in dieser Karte zu sehen – nie auf dem Beamer oder im Ausdruck.
+
+**Gruppenpuzzle:** In einer Einteilung (den Stammgruppen) **„🧩 Expertengruppen bilden“** klicken. Jede Person der Stammgruppe bekommt einen Buchstaben (A, B, C … = Teilthema); alle mit A bilden die Expertengruppe A usw. So sitzt aus jeder Stammgruppe genau eine Person in jeder Expertengruppe. Die Expertengruppen sind eine eigene Einteilung (mit Hinweis auf die Stammgruppen); die Buchstaben stehen auch auf Beamer und Ausdruck der Stammgruppen.
+
+**Zeigen, drucken, übernehmen:**
+- **⛶ Beamer:** alle Gruppen groß mit Auftrag und Namen im Vollbild (Esc schließt).
+- **🖨 Drucken …:** *Gruppeneinteilung* (alle Gruppen auf einer Seite zum Aushängen) oder *Gruppenkarten* (je Gruppe eine Karte zum Ausschneiden).
+- **→ In Präsentation übernehmen:** kopiert die Gruppen in eine Präsentation des Kurses; der Auftrag wird zum Thema der Gruppe. Eine Einzelpräsentation wird dabei zur Gruppenpräsentation (Kriterien je Gruppe oder Person, siehe 8a.6). Umgekehrt geht es in der Präsentation über „Gruppen übernehmen von …“.
+
 ## 11. Drucken und Exportieren
 
 Alle Ausdrucke öffnen den Druckdialog des Browsers. Dort können Sie auch **„Als PDF speichern“** wählen. Breite Tabellen werden automatisch im Querformat gedruckt. Die Kopf- und Fußzeilen des Browsers (Datum, Dateipfad, Seitenzahl) werden unterdrückt; der Rand von 12 mm bleibt auf jeder Seite erhalten.
@@ -606,6 +641,7 @@ In Tests, Mitarbeit/EPO und Notenübersicht fasst je ein Knopf **„🖨 Drucken
 | Tests | 📄 Ergebnisliste · 🧩 Ergebnisse nach Teilen · 📊 Notenschlüssel und Notenspiegel · ✂️ Ergebniszettel · 💬 Moodle-Rückmeldung | siehe 7.6, 7.7 und 7.8 |
 | Tests | ⛶ Beamer (eigener Knopf) | Vollbild ohne Namen: Notenspiegel, Punkteverteilung, Ø je Aufgabe (siehe 7.5) |
 | Sitzplan | 🖨 Drucken | Sitzplan des gewählten Raums mit Vornamen, Fotos und Lehrerpult, A4 (quer, wenn mehr Spalten als Reihen) |
+| Gruppen | 📄 Gruppeneinteilung · 🗂️ Gruppenkarten | siehe 10b; ohne Noten und Regeln |
 | Präsentationen | 📄 Bewertungsliste · 📊 Notenschlüssel · 📝 Leere Bewertungsbögen · 📋 Bewertungskriterien (Handreichung) · 🗒️ Bewertungsbogen je Person | siehe 8a.4; Handreichung auch je Vorlage (8a.5) |
 | Mitarbeit/EPO | 📄 Bewertungsliste | Bewertungsraster aller Stunden mit Ergebnis und Note je Person |
 | Mitarbeit/EPO | ✂️ Mitarbeitszettel zum Ausschneiden | ein Zettel pro Person (mehrere pro Blatt, gestrichelte Schnittlinie): Name, Kurs, Blockname und Zeitraum, Punktelegende, Bewertungen mit Datum im Tabellenkopf, Ergebnis mit Note sowie Linien für Datum und Unterschrift |
@@ -1006,10 +1042,11 @@ Reines HTML/CSS/JavaScript ohne Build-Schritt und ohne externe Bibliotheken. Die
 | `js/storage.js` | `NM.storage` | `FolderStore` (File System Access API): Lesen/Schreiben, Sicherungen, Lock, Konflikterkennung; `MemoryStore` für den Demo-Modus |
 | `js/pomodoro.js` | `NM.pomodoro` | Pomodoro-Timer: Ablauf (`next`), Anzeige in der Kopfzeile, Töne per Web Audio, Einstellungsformular |
 | `js/model.js` | `NM.model` | Datenmodell: neue Datenbank/Kurse/Leistungen, Migration, Namensliste parsen, Demo-Daten |
+| `js/groups.js` | `NM.groups` | Gruppenbildung (rein, ohne DOM): Gruppengrößen, Verteilung nach Regeln/Leistung/Abwechslung (Kostenfunktion + Tauschsuche), Regelprüfung, Expertengruppen |
 | `js/moodle.js` | `NM.moodle` | Moodle-Import (rein, ohne DOM): CSV zerlegen, Antworten-/Bewertungen-CSV erkennen und zusammenführen, Personen zuordnen, als Test übernehmen |
 | `js/ui.js` | `NM.ui` | Wiederverwendbare Bausteine: Halbjahres-Umschalter, Noten-Eingabezellen, Badges, Leistungs-Dialog |
 | `js/app.js` | `NM.app` | Anwendungskern: Anmeldung, Sitzung, Autosave, Sperre, Layout, Navigation, Neuzeichnen mit Fokus-Erhalt, Tabellen-Tastatur |
-| `js/view-*.js` | `NM.views.*` | Je ein Reiter: `course`, `tests`, `epo`, `pres` (Präsentationen), `draw`, `overview`, `seating`, `settings` |
+| `js/view-*.js` | `NM.views.*` | Je ein Reiter: `course`, `tests`, `epo`, `pres` (Präsentationen), `draw`, `groups` (Gruppen), `overview`, `seating`, `settings` |
 | `js/print.js` | `NM.print` | Druckansichten |
 | `css/app.css` | – | Gestaltung inkl. Hell/Dunkel (Farb-Tokens auf `:root`) und Druck-CSS |
 
@@ -1040,7 +1077,7 @@ Berechnete Werte (Schnitte, Testnoten, EPO-Noten) werden **nie gespeichert**, so
   "kdf": "PBKDF2-SHA256",
   "savedAt": "2026-10-14T21:57:03.123Z",
   "device": "Laptop Schule",
-  "app": "1.23.0",
+  "app": "1.24.0",
   "pw":   { "salt": "<b64>", "iter": 600000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "rec":  { "salt": "<b64>", "iter": 100000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "data": { "iv": "<b64>", "ct": "<b64: verschlüsseltes JSON des Datenmodells>" }
@@ -1063,7 +1100,7 @@ Entschlüsselter Inhalt (`schema: 4`):
 ```js
 {
   schema: 4,                             // Datenformat (siehe 26.2)
-  savedWith: "1.23.0",                    // App-Version beim letzten Speichern
+  savedWith: "1.24.0",                    // App-Version beim letzten Speichern
   created: "<ISO>", savedAt: "<ISO>",
   settings: { autoLockMin, limitSek1, limitMss, precision, keepBackups, backupEveryMin, gradeColors,
               pomodoro: { enabled, count, work, short, long, tick: "off" | "work" | "always", alarm: "off" | "bell" | "gong" | "beep", volume } },
@@ -1086,7 +1123,11 @@ Course = {
   seatingPlans?: [ { id, name, cols, rows, desk: "top" | "bottom", pos: { "<studentId>": { x, y } } } ],   // Räume
   seatingSaved?: [ { id, name, room, savedAt, cols, rows, desk, pos } ],                         // gespeicherte Stände
   draw: { out: { "<studentId>": { how: "drawn" | "manual", date } },   // nicht im Pool (gezogen / herausgenommen)
-          history: [ { id, date, half, aid, sids: [ studentId ], prevOut } ] }   // Ziehungen; aid = angelegte Einzelnote
+          history: [ { id, date, half, aid, sids: [ studentId ], prevOut } ] },   // Ziehungen; aid = angelegte Einzelnote
+  groupSets: [ { id, name, date, opts?: { by: "size" | "count", n, mode: "random" | "mixed" | "similar", vary },
+                 homeId?,   // Expertengruppen: id der Stammgruppen (Gruppenpuzzle)
+                 groups: [ { id, name, members: [ studentId ], task?, locked? } ] } ],   // seit 1.24: Reiter „Gruppen“
+  groupRules: { apart: [ [ studentId, studentId ] ], together: [ [ studentId, studentId ] ] }   // vertraulich, nie gedruckt
 }
 
 Assessment = {
@@ -1139,7 +1180,7 @@ Das Skript startet einen unsichtbaren Chromium-Browser (Chrome, Edge, Chromium, 
 2. den Start der App im Demo-Modus und alle Reiter für einen Sek-I- und einen MSS-Kurs ohne JavaScript-Fehler,
 3. das Sortieren per Klick auf Spaltenköpfe (Tests, EPO, Notenübersicht; Richtung und leere Werte unten),
 4. den Pomodoro-Timer (Aktivieren, Farben je Zustand, Phasenwechsel, Zurücksetzen, Einstellungsdialog), das Layout des Reiters „Einstellungen“ bei aktivem Timer (keine Lücken zwischen den Karten, Auswahllisten nicht abgeschnitten, bei 1570 und 2560 px) und die Kürzel in der eingeklappten Kursliste, die weichen Übergänge (nur bei Reiter-, Kurs- und Halbjahreswechsel), das Ein-/Ausklappen der Kursliste, den Reiter „Tests“ in voller Breite, Arbeiten in Teilen (einschalten, Aufgaben und Punkte je Teil, Teil ausblenden, getrennt benoten, Status je Teil, Schlüssel je Teil, Ausdrucke inkl. „Ergebnisse nach Teilen“, Beamer, Teile aufheben), die Druckauswahl „🖨 Drucken …“ in Tests, EPO und Notenübersicht (Gruppen, Tooltips, Auswahl druckt, Abbrechen nicht) und den Haken „Unterschrift gesehen“ bei Klassenarbeiten (Zähler, Ausdruck), den Moodle-Import (Dateiauswahl im Dialog, Zuordnung, Status „fehlt“, Ausdruck mit und ohne Note, erneuter Import),
-5. den Excel-Export der Schülerliste (gültiges ZIP/XML, Umlaute und Sonderzeichen), das Kurs-Löschen nur mit „LÖSCHEN“, das Ein-/Ausblenden der Fotos im EPO-Reiter und im Sitzplan (auch im Druck) das Erweitern/Verkleinern des Sitzplan-Rasters an allen vier Seiten sowie das Ziehen (keine Wiederholung bis zum Auffüllen, automatisches Auffüllen, Note, Rückgängig, Abwesende/Herausgenommene) und den Reiter „Präsentationen“ (Bewerten per Knopf und in der Tabelle, Gewicht, Kriterien aus dem Pool und eigene, Vorlage, Ausdrucke, Spalte in der Notenübersicht, Pool bearbeiten, Startbestand ergänzen, Vorlagen speichern/anlegen/verwenden/drucken/löschen, Standardvorlagen vorhanden und ergänzen, Handreichung mit Notenschlüssel) und Gruppenpräsentationen (Gruppenwert für alle Mitglieder, Personenkriterien, Abweichung setzen/zurücksetzen, Tabelle, Gruppen bearbeiten/übernehmen, Druck, Auflösen ohne Notenänderung),
+5. den Excel-Export der Schülerliste (gültiges ZIP/XML, Umlaute und Sonderzeichen), das Kurs-Löschen nur mit „LÖSCHEN“, das Ein-/Ausblenden der Fotos im EPO-Reiter und im Sitzplan (auch im Druck) das Erweitern/Verkleinern des Sitzplan-Rasters an allen vier Seiten sowie das Ziehen (keine Wiederholung bis zum Auffüllen, automatisches Auffüllen, Note, Rückgängig, Abwesende/Herausgenommene) und den Reiter „Präsentationen“ (Bewerten per Knopf und in der Tabelle, Gewicht, Kriterien aus dem Pool und eigene, Vorlage, Ausdrucke, Spalte in der Notenübersicht, Pool bearbeiten, Startbestand ergänzen, Vorlagen speichern/anlegen/verwenden/drucken/löschen, Standardvorlagen vorhanden und ergänzen, Handreichung mit Notenschlüssel) und Gruppenpräsentationen (Gruppenwert für alle Mitglieder, Personenkriterien, Abweichung setzen/zurücksetzen, Tabelle, Gruppen bearbeiten/übernehmen, Druck, Auflösen ohne Notenänderung), den Reiter „Gruppen“ (neue Einteilung, Abwesende, Fixieren, Anklicken/Ziehen, Auftrag, Regel mit Warnung, Beamer ohne Noten, Druck, Gruppenpuzzle, Übernahme in eine Präsentation),
 6. das Notfallwerkzeug: Eine von der App echt verschlüsselte Datenbank wird mit `tools/entschluesseln.py` per Passwort und per Wiederherstellungsschlüssel entschlüsselt und mit dem Original verglichen. Dazu kommen falsches Passwort, manipulierte Datei und CSV-Ausgabe.
 
 Am Ende steht `ERGEBNIS: x von y bestanden`. Der Exit-Code ist 0, wenn alles bestanden ist.
@@ -1153,6 +1194,7 @@ Am Ende steht `ERGEBNIS: x von y bestanden`. Der Exit-Code ist 0, wenn alles bes
 | `tests/grades.test.html` | Skalen, Eingabe-Parser, Rundung, Notenschlüssel (Vergleich mit Excel-Formeln), Bonus/Kappung, Status, Drittelparagraph, EPO (Werte aus der bisherigen EPO-Liste), Halbjahres-/Jahresnote, GK-Gewichtung, Präsentationen (Gewicht, Status, Schlüssel, Halbjahresnote, Gruppen: Gruppenwert, Abweichung, Personenkriterium, Modus „alles als Gruppe“), Arbeiten in Teilen (gemeinsam/getrennt, Gewichte, fehlender Teil, Status je Teil, ganze Noten je Teil, MSS) | im Browser öffnen |
 | `tests/model.test.html` | Migration älterer Datenbanken (SCHEMA 1 → 4, Kriterienpool, Startbestand ergänzen, Vorlagen, Standardvorlagen), neue Präsentation, Ablehnung neuerer Datenformate, Erhalt unbekannter Felder, Namensliste | im Browser öffnen |
 | `tests/moodle.test.html` | CSV-Zerlegung, Erkennen und Zusammenführen von Antworten-/Bewertungen-CSV, bester Versuch, Textvergleich ohne Bewertungen, Zuordnung (Name, gemerkte E-Mail), Übernahme als Test, „fehlt“, erneuter Import, skalierte Punkte, Import in einen Teil | im Browser öffnen |
+| `tests/groups.test.html` | Gruppengrößen (Rest verteilt), Verteilung (alle genau einmal), Regeln „nicht zusammen“/„zusammen“, leistungsgemischt/-gleich, fehlende Noten, Abwechslung (auch Minimum), Expertengruppen, Migration | im Browser öffnen |
 | `tests/pomodoro.test.html` | Ablauf der Phasen (mit/ohne kurze bzw. lange Pause), Standardwerte, Migration der Einstellungen | im Browser öffnen |
 | `tests/crypto.test.html` | Anlegen, Entsperren, falsches Passwort, Wiederherstellungsschlüssel, Passwortwechsel, alte Sicherungen, Manipulationserkennung | im Browser öffnen (dauert einige Sekunden) |
 | `tests/storage.test.html` | Schreiben/Lesen, rollierende Sicherungen, externe Änderung, erzwungenes Überschreiben, Lock-Datei, Konfliktkopie | **über `http://localhost`**, z. B. `python3 -m http.server` im Programmordner, dann `http://localhost:8000/tests/storage.test.html` |
@@ -1180,7 +1222,7 @@ In `js/model.js` stehen zwei Nummern:
 
 | Konstante | Bedeutung | Wann erhöhen |
 |---|---|---|
-| `APP_VERSION` (z. B. `1.23.0`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.23.0` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
+| `APP_VERSION` (z. B. `1.24.0`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.24.0` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
 | `SCHEMA` (z. B. `4`) | Version des Datenformats (2 seit 1.18: Arbeiten in Teilen; 3 seit 1.20: Präsentationen; 4 seit 1.23: Gruppenpräsentationen) | nur, wenn eine **ältere** App-Version die neuen Daten falsch verstehen würde (z. B. ein Feld ändert seine Bedeutung) |
 
 Öffnet eine App eine Datenbank mit höherem `SCHEMA`, verweigert sie das mit einer Meldung (siehe 21.10). Neue, nur *zusätzliche* Felder brauchen kein neues `SCHEMA`: Ältere Versionen lassen unbekannte Felder unverändert und speichern sie mit.

@@ -10,7 +10,7 @@
   // 3 (1.20): Präsentationen (kind "pres") – ältere Versionen kennen diese Leistungsart nicht.
   // 4 (1.23): Gruppenpräsentationen – ältere Versionen würden Gruppenwerte ignorieren und falsche Noten zeigen.
   const SCHEMA = 4;
-  const APP_VERSION = '1.23.0';
+  const APP_VERSION = '1.24.0';
 
   class NewerSchemaError extends Error {}
 
@@ -135,6 +135,9 @@
     for (const c of db.courses) {
       c.students = c.students || [];
       c.assessments = c.assessments || [];
+      // 1.24: Gruppeneinteilungen und Regeln (Reiter „Gruppen“)
+      c.groupSets = Array.isArray(c.groupSets) ? c.groupSets : [];
+      c.groupRules = Object.assign({ apart: [], together: [] }, c.groupRules || {});
       c.overrides = c.overrides || {};
       c.comments = c.comments || {};
       if (c.wHalf1 === undefined) c.wHalf1 = 1;
@@ -465,6 +468,24 @@
       t2.test.results[s.id] = { scores: { g1: Math.round(4 * f), g2: Math.round(6 * f * 2) / 2, g3: Math.round(8 * (f - 0.05) * 2) / 2, g4: Math.round(10 * f), g5: i % 3 === 0 ? 1 : '' } };
     });
     c8.assessments.push(t2);
+
+    // Gruppeneinteilung mit Aufträgen und einer Regel
+    const st = c8.students;
+    c8.groupRules = { apart: [[st[1].id, st[7].id]], together: [] };
+    c8.groupSets = [
+      {
+        id: 'gs1',
+        name: 'Stationenlernen Prozent',
+        date: '2026-10-12',
+        opts: { by: 'size', n: 3, mode: 'mixed', vary: true },
+        groups: [
+          { id: 'gg1', name: 'Gruppe 1', task: 'Station 1: Grundwert', members: [st[0].id, st[5].id, st[10].id] },
+          { id: 'gg2', name: 'Gruppe 2', task: 'Station 2: Prozentwert', members: [st[1].id, st[6].id, st[9].id] },
+          { id: 'gg3', name: 'Gruppe 3', task: 'Station 3: Prozentsatz', members: [st[2].id, st[7].id, st[8].id] },
+          { id: 'gg4', name: 'Gruppe 4', task: 'Station 4: Zinsen', members: [st[3].id, st[4].id, st[11].id] },
+        ],
+      },
+    ];
 
     const c12 = newCourse(year.id, { klasse: 'MSS 12', fach: 'M LK', jahrgang: 12, type: 'lk' });
     c12.students = parseNames(names.slice(0, 9).join('\n'));

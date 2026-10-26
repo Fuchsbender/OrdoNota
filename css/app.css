@@ -429,6 +429,34 @@ select option { background: var(--surface); color: var(--text); }
 .chip-x { border: 0; background: none; color: var(--muted); cursor: pointer; font: inherit; padding: 0 2px; line-height: 1; }
 .chip-x:hover { color: var(--danger); }
 .grp-add { width: auto; max-width: 160px; }
+/* Reiter „Gruppen“ */
+.notice.warn { background: var(--warn-soft); color: var(--text); margin: 8px 0; }
+.grp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin: 10px 0; }
+.grp-box { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-2); padding: 8px; display: flex; flex-direction: column; gap: 6px; min-height: 120px; }
+.grp-box.locked { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.grp-box.drop-ready, .grp-free.drop-ready { outline: 2px dashed var(--accent); outline-offset: -2px; cursor: pointer; }
+.grp-box-head { display: flex; align-items: center; gap: 6px; }
+.grp-box-name { flex: 1; min-width: 0; font-weight: 600; }
+.icon-btn.active { color: var(--accent); }
+.grp-task { font-size: 12px; }
+.grp-people { display: flex; flex-wrap: wrap; gap: 4px; }
+.grp-person { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 999px; padding: 3px 10px; font: inherit; font-size: 13px; cursor: grab; }
+.grp-person:hover { border-color: var(--accent); }
+.grp-person.picked { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.grp-person.away { opacity: 0.55; text-decoration: line-through; }
+.grp-letter { display: inline-grid; place-items: center; min-width: 1.4em; height: 1.4em; border-radius: 4px; background: var(--accent-soft); color: var(--accent-strong); font-size: 0.8em; font-weight: 700; margin-right: 2px; }
+.grp-person.picked .grp-letter { background: var(--surface); }
+.grp-free { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 8px; border: 1px dashed var(--border); border-radius: var(--radius-sm); margin-bottom: 10px; min-height: 40px; }
+.grp-away-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 2px 12px; }
+.grp-rule-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.grp-rule h3 { margin: 4px 0; font-size: 14px; }
+.grp-rule .grp-members { margin-bottom: 6px; }
+.grp-beamer-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(14em, 1fr)); gap: 2vw; }
+.grp-tile { border: 2px solid var(--border); border-radius: 12px; padding: 0.8em 1em; background: var(--surface); }
+.grp-tile h3 { margin: 0 0 0.3em; font-size: 1.2em; color: var(--accent); }
+.grp-tile-task { font-weight: 600; margin-bottom: 0.4em; }
+.grp-tile ul { list-style: none; margin: 0; padding: 0; }
+.grp-tile li { padding: 0.15em 0; font-size: 1.1em; }
 @media (max-width: 640px) { .grp-row { grid-template-columns: minmax(0, 1fr) auto; } .grp-row > .icon-btn { grid-row: 1; grid-column: 2; } .grp-members { grid-column: 1 / -1; } }
 .row-current td { background: var(--accent-soft); }
 .topic-col { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -723,6 +751,18 @@ body.no-grade-colors .p-grade[style*='--g-hue'] { background: none; }
 .p-pres-note span { font-size: 7.5pt; letter-spacing: 0.06em; text-transform: uppercase; color: #666; }
 .p-pres-note p { margin: 2px 0 0; }
 .p-group-start td { border-top: 1.5pt solid #444; }
+.p-grp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8pt; }
+.p-grp, .p-grp-card { border: 1pt solid #444; border-radius: 4pt; padding: 6pt 8pt; break-inside: avoid; }
+#print-root .p-grp h3, #print-root .p-grp-card h3 { margin: 0 0 3pt; font-size: 12pt; text-transform: none; letter-spacing: 0; color: #000; }
+.p-grp-task, .p-grp-card-task { font-weight: 600; font-size: 10pt; margin-bottom: 3pt; }
+.p-grp ul, .p-grp-card ul { margin: 0; padding: 0; list-style: none; font-size: 10.5pt; }
+.p-grp li, .p-grp-card li { padding: 1pt 0; }
+.p-grp-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+.p-grp-card { border: 1pt dashed #888; border-radius: 0; padding: 12pt; min-height: 120pt; }
+#print-root .p-grp-card h3 { font-size: 16pt; }
+.p-grp-card-task { font-size: 12pt; }
+.p-grp-card ul { font-size: 12pt; }
+.p-grp .grp-letter, .p-grp-card .grp-letter { background: none; border: 0.75pt solid #444; color: #000; }
 .p-pres-lines { height: 48pt; background: repeating-linear-gradient(transparent 0 15pt, #999 15pt 15.75pt); }
 .p-keyparts { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: flex-start; }
 .p-keypart h3 { margin: 6px 0 4px; font-size: 10pt; }

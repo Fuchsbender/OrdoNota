@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="de">
+<head><meta charset="utf-8"><title>Tests Gruppenbildung</title></head>
+<body>
+<pre id="out"></pre>
+<script src="../js/util.js"></script>
+<script src="../js/grades.js"></script>
+<script src="../js/model.js"></script>
+<script src="../js/groups.js"></script>
+<script>
+  const GR = NM.groups;
+  const lines = [];
+  let fails = 0;
+  const eq = (name, actual, expected) => {
+    const ok = JSON.stringify(actual) === JSON.stringify(expected);
+    if (!ok) fails++;
+    lines.push((ok ? 'OK   ' : 'FAIL ') + name + (ok ? '' : '  → erhalten ' + JSON.stringify(actual) + ', erwartet ' + JSON.stringify(expected)));
+  };
+  // Reproduzierbarer Zufall
+  const seeded = (seed) => () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
+  const ids = Array.from({ length: 15 }, (_, i) => 's' + i);
+  const flat = (groups) => groups.flat().sort();
+
+  // Größen: Rest wird verteilt, keine Mini-Gruppe
+  eq('15 à 4 → 4, 4, 4, 3', GR.sizes(15, { size: 4 }), [4, 4, 4, 3]);
+  eq('13 à 4 → 5, 4, 4', GR.sizes(13, { size: 4 }), [5, 4, 4]);
+  eq('10 à 3 → 4, 3, 3', GR.sizes(10, { size: 3 }), [4, 3, 3]);
+  eq('5 Gruppen aus 23 → 5, 5, 5, 4, 4', GR.sizes(23, { count: 5 }), [5, 5, 5, 4, 4]);
+  eq('mehr Gruppen als Personen → je 1', GR.sizes(3, { count: 5 }), [1, 1, 1]);
+  eq('niemand → keine Gruppen', GR.sizes(0, { size: 4 }), []);
+
+  // Verteilung: alle genau einmal, Größen eingehalten
+  const g1 = GR.build(ids, { sizes: [4, 4, 4, 3], rand: seeded(1) });
+  eq('zufällig: alle genau einmal, Größen wie vorgegeben', [flat(g1).join(), g1.map((g) => g.length)], [ids.slice().sort().join(), [4, 4, 4, 3]]);
+  const g1b = GR.build(ids, { sizes: [4, 4, 4, 3], rand: seeded(2) });
+  eq('anderer Zufall → andere Einteilung', JSON.stringify(g1) !== JSON.stringify(g1b), true);
+
+  // Regeln
+  const rules = { apart: [['s0', 's1'], ['s0', 's2'], ['s1', 's2'], ['s3', 's4']], together: [['s5', 's6'], ['s7', 's8']] };
+  let ok = true;
+  for (let seed = 1; seed <= 20; seed++) {
+    const g = GR.build(ids, { sizes: [4, 4, 4, 3], rules, rand: seeded(seed) });
+    const c = GR.check(g, rules);
+    if (c.apart.length || c.together.length) ok = false;
+  }
+  eq('Regeln „nicht zusammen“ und „zusammen“ in 20 Läufen eingehalten', ok, true);
+  eq('check findet Verstöße', GR.check([['s0', 's1'], ['s5'], ['s6']], rules), { apart: [['s0', 's1']], together: [['s5', 's6']], repeats: 0 });
+  eq('check: Regeln mit nicht eingeteilten Personen zählen nicht', GR.check([['s0'], ['s9']], rules).together, []);
+
+  // Leistung: gemischt → ähnliche Gruppenschnitte; gleich → ähnliche Personen zusammen
+  const scores = Object.fromEntries(ids.map((sid, i) => [sid, i]));
+  const means = (groups) => groups.map((g) => g.reduce((s, sid) => s + scores[sid], 0) / g.length);
+  const spread = (list) => Math.max(...list) - Math.min(...list);
+  const mixed = GR.build(ids, { sizes: [5, 5, 5], mode: 'mixed', scores, rand: seeded(3) });
+  eq('leistungsgemischt: Gruppenschnitte liegen höchstens 1 Punkt auseinander', spread(means(mixed)) <= 1, true);
+  const similar = GR.build(ids, { sizes: [5, 5, 5], mode: 'similar', scores, rand: seeded(3) });
+  eq('leistungsgleich: Gruppen sind die drei Leistungsbänder', similar.map((g) => g.map((sid) => scores[sid]).sort((a, b) => a - b)).sort((a, b) => a[0] - b[0]), [[0, 1, 2, 3, 4], [5, 6, 7, 8, 9], [10, 11, 12, 13, 14]]);
+  const partial = GR.build(['a', 'b', 'c', 'd'], { sizes: [2, 2], mode: 'similar', scores: { a: 15, b: 0 }, rand: seeded(4) });
+  eq('fehlende Noten zählen als Durchschnitt (leistungsgleich: a und b getrennt)', partial.some((g) => g.includes('a') && g.includes('b')), false);
+
+  // Abwechslung
+  const prev = [['s0', 's1', 's2', 's3', 's4'], ['s5', 's6', 's7', 's8', 's9'], ['s10', 's11', 's12', 's13', 's14']];
+  const again = GR.build(ids, { sizes: [3, 3, 3, 3, 3], previous: prev, rand: seeded(5) });
+  eq('Abwechslung: keine Paare aus der letzten Einteilung (wenn möglich)', GR.check(again, {}, prev).repeats, 0);
+  eq('Abwechslung: so wenige Wiederholungen wie möglich (3 × 5 aus 3 × 5 → mindestens 6)', GR.check(GR.build(ids, { sizes: [5, 5, 5], previous: prev, rand: seeded(5) }), {}, prev).repeats, 6);
+  eq('Regeln gehen vor Abwechslung', GR.check(GR.build(['a', 'b', 'c', 'd'], { sizes: [2, 2], previous: [['a', 'b'], ['c', 'd']], rules: { together: [['a', 'b']] }, rand: seeded(6) }), { together: [['a', 'b']] }).together, []);
+
+  // Gruppenpuzzle
+  const home = [{ members: ['a1', 'a2', 'a3'] }, { members: ['b1', 'b2', 'b3'] }, { members: ['c1', 'c2'] }];
+  eq('Expertengruppen: i-te Person jeder Stammgruppe zusammen', GR.experts(home), [['a1', 'b1', 'c1'], ['a2', 'b2', 'c2'], ['a3', 'b3']]);
+  eq('Teilthemen A, B, C', [GR.letter(0), GR.letter(1), GR.letter(2)], ['A', 'B', 'C']);
+
+  // Datenmodell
+  const m = NM.model.migrate({ schema: 4, years: [], courses: [{ id: 'c', students: [], assessments: [] }] });
+  eq('Migration: Kurs bekommt groupSets und groupRules', [m.courses[0].groupSets, m.courses[0].groupRules], [[], { apart: [], together: [] }]);
+  const keep = NM.model.migrate({ schema: 4, years: [], courses: [{ id: 'c', students: [], assessments: [], groupSets: [{ id: 'x', groups: [] }], groupRules: { apart: [['a', 'b']] } }] });
+  eq('Migration: vorhandene Einteilungen und Regeln bleiben', [keep.courses[0].groupSets.length, keep.courses[0].groupRules.apart.length, keep.courses[0].groupRules.together], [1, 1, []]);
+
+  lines.unshift(fails === 0 ? 'ALLE TESTS BESTANDEN' : fails + ' FEHLGESCHLAGEN');
+  document.getElementById('out').textContent = lines.join('\n');
+</script>
+</body>
+</html>

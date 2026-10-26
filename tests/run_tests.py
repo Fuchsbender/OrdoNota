@@ -151,7 +151,7 @@ def report(name, ok, detail=""):
 
 def run_test_pages(br, base):
     print("Testseiten:")
-    for page in ["grades", "model", "moodle", "pomodoro", "crypto", "storage"]:
+    for page in ["grades", "model", "moodle", "pomodoro", "groups", "crypto", "storage"]:
         br.open(f"{base}/tests/{page}.test.html")
         done = br.wait("/^(ALLE TESTS BESTANDEN|\\d+ FEHLGESCHLAGEN|FEHLER)/.test(document.getElementById('out').textContent)")
         text = br.eval("document.getElementById('out').textContent") or ""
@@ -932,7 +932,7 @@ def run_group_check(br, base):
         b.name = 'Zweite Runde'; b.pres.groupMode = 'group'; b.pres.groups = [];
         c.assessments.push(b); NM.app.state.ui.presId[c.id] = b.id; NM.app.commit(); await wait();
         const imp = q('grp-import');
-        imp.value = a.id; imp.dispatchEvent(new Event('change')); await wait();
+        imp.value = 'pres:' + a.id; imp.dispatchEvent(new Event('change')); await wait();
         out.import = [b.pres.groups.length, b.pres.groups.map((g) => g.members.length).join(), b.pres.groups.every((g) => !Object.keys(g.scores).length)];
         // Auflösen: Gruppenwerte werden Einzelbewertung, Noten bleiben gleich
         NM.app.state.ui.presId[c.id] = a.id; NM.app.rerender(); await wait();
@@ -948,6 +948,106 @@ def run_group_check(br, base):
         and res["table"] == [True, True, True, True] and res["tableBack"] is False and res["scope"] == ["person", True] and res["scopeBack"] == [True, 0] \
         and res["edit"] == [4, "Gruppe 4", 1, 0, 3] and res["print"] == [True] * 3 and res["import"] == [3, "3,4,3", True] and res["dissolve"] == [True] * 5
     report("Gruppenpräsentationen: Gruppenwert für alle, Personenkriterien, Abweichung setzen/zurücksetzen, Tabelle, Gruppen bearbeiten/übernehmen, Druck, Auflösen ohne Notenänderung", ok and not br.errors, str(res) + "; ".join(br.errors))
+
+
+def run_groups_tab_check(br, base):
+    print("Reiter Gruppen (Einteilung, Regeln, Abwesende, Fixieren, Verschieben, Puzzle, Beamer, Druck, Präsentation):")
+    br.open(f"{base}/index.html?demo")
+    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.errors = []
+    res = br.eval("""(async () => {
+        const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
+        window.print = () => {};
+        const db = NM.app.db();
+        const c = db.courses[0];
+        const q = (k) => document.querySelector(`[data-focus-key="${k}"]`);
+        const out = {};
+        NM.app.select({ courseId: c.id, tab: 'groups' }); await wait();
+        out.start = [document.querySelector('.picker-item.active .picker-name').textContent, document.querySelectorAll('.grp-box').length, !document.querySelector('.notice.warn'), document.querySelectorAll('.tab').length];
+        // Neue Einteilung: je 4, leistungsgemischt
+        document.querySelector('.picker-add').click(); await wait();
+        q('grp-n').value = '4'; q('grp-n').dispatchEvent(new Event('input'));
+        q('grp-mode').value = 'mixed';
+        const preview = document.querySelector('dialog .small.muted').textContent;
+        document.querySelector('dialog .btn-primary').click(); await wait();
+        const set = c.groupSets[c.groupSets.length - 1];
+        const all = () => set.groups.flatMap((g) => g.members);
+        out.created = [preview.includes('12 Personen') && preview.includes('4 · 4 · 4'), set.groups.map((g) => g.members.length).join(), new Set(all()).size, set.opts.mode, NM.app.state.ui.groupSetId[c.id] === set.id, NM.groups.check(set.groups, c.groupRules).apart.length];
+        // Abwesend: beim Neuwürfeln ausgelassen
+        const away = c.students[2].id;
+        document.querySelector('.grp-away').open = true; await wait();
+        q('away-' + away).click(); await wait();
+        q('gs-roll').click(); await wait();
+        out.away = [all().includes(away), all().length, !!document.querySelector(`.grp-free [data-sid="${away}"]`)];
+        // Fixieren: Gruppe bleibt beim Neuwürfeln
+        const g0 = set.groups[0];
+        q('gb-lock-' + g0.id).click(); await wait();
+        const keep = g0.members.join();
+        for (let i = 0; i < 3; i++) { q('gs-roll').click(); await wait(100); }
+        out.lock = [g0.locked, set.groups[0].members.join() === keep, set.groups.length];
+        // Anklicken: verschieben und tauschen
+        const [ga, gb] = [set.groups[1], set.groups[2]];
+        const x = ga.members[0];
+        q('gp-' + x).click(); await wait();
+        document.querySelector(`.grp-box[data-group="${gb.id}"]`).click(); await wait();
+        const moved = gb.members.includes(x) && !ga.members.includes(x);
+        const [y, z] = [ga.members[0], gb.members[0]];
+        q('gp-' + y).click(); await wait(); q('gp-' + z).click(); await wait();
+        out.click = [moved, ga.members.includes(z) && gb.members.includes(y)];
+        // Ziehen und Ablegen
+        const dt = new DataTransfer(); dt.setData('text/plain', y);
+        document.querySelector(`.grp-box[data-group="${ga.id}"]`).dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true })); await wait();
+        out.drag = ga.members.includes(y) && !gb.members.includes(y);
+        // Name und Auftrag
+        q('gb-task-' + ga.id).value = 'Plakat gestalten'; q('gb-task-' + ga.id).dispatchEvent(new Event('change')); await wait();
+        q('gb-name-' + ga.id).value = 'Team Rot'; q('gb-name-' + ga.id).dispatchEvent(new Event('change')); await wait();
+        out.edit = [ga.task, ga.name];
+        // Regel „nicht zusammen“ für zwei in derselben Gruppe → Warnung
+        document.querySelector('.grp-rules').open = true; await wait();
+        const [p1, p2] = ga.members;
+        q('rule-apart-a').value = p1; q('rule-apart-b').value = p2; q('rule-apart-add').click(); await wait();
+        out.rule = [c.groupRules.apart.length, document.querySelector('.notice.warn') && document.querySelector('.notice.warn').textContent.includes('Nicht zusammen')];
+        q('gb-lock-' + g0.id).click(); await wait();
+        q('gs-roll').click(); await wait();
+        out.ruleRoll = NM.groups.check(set.groups, c.groupRules).apart.length;
+        // Beamer: Gruppen groß, ohne Noten und Regeln
+        q('gs-beamer').click(); await wait();
+        const bm = document.querySelector('.grp-beamer');
+        out.beamer = [!!bm, bm.querySelectorAll('.grp-tile').length === set.groups.length, !bm.textContent.includes('Ø'), !bm.textContent.includes('Nicht zusammen')];
+        bm.querySelector('.beamer-close').click(); await wait();
+        // Druck
+        document.querySelector('[data-print-menu]').click(); await wait();
+        out.menu = [...document.querySelectorAll('dialog .print-option')].map((o) => o.dataset.print);
+        document.querySelector('dialog .print-option[data-print="list"]').click(); await wait();
+        const txt = document.getElementById('print-root').textContent;
+        out.print = [document.title.endsWith('Gruppeneinteilung'), document.querySelectorAll('#print-root .p-grp').length === set.groups.length, !txt.includes('Ø')];
+        document.body.classList.remove('printing');
+        // Gruppenpuzzle
+        q('gs-experts').click(); await wait();
+        const ex = c.groupSets[c.groupSets.length - 1];
+        out.puzzle = [ex.homeId === set.id, ex.groups.length === Math.max(...set.groups.map((g) => g.members.length)), ex.groups[0].members.length === set.groups.length, NM.app.state.ui.groupSetId[c.id] === ex.id];
+        // In eine Präsentation übernehmen (Einzel → Gruppen, Auftrag → Thema)
+        NM.app.state.ui.groupSetId[c.id] = 'gs1'; NM.app.rerender(); await wait();
+        const pres = c.assessments.find((a) => a.name === 'Referat Statistik');
+        q('gs-to-pres').value = pres.id; q('gs-to-pres').dispatchEvent(new Event('change')); await wait();
+        out.toPres = [pres.pres.groupMode, pres.pres.groups.length, pres.pres.groups[0].topic, pres.pres.groups[0].members.length];
+        // Präsentation: Gruppen aus einer Einteilung übernehmen
+        const gp = c.assessments.find((a) => a.name === 'HA vorstellen');
+        gp.pres.groupMode = 'group'; gp.pres.groups = [];
+        NM.app.state.ui.half[c.id] = 'HJ2'; NM.app.state.ui.presId[c.id] = gp.id;
+        NM.app.select({ tab: 'pres' }); await wait();
+        const imp = q('grp-import');
+        out.importOpts = [...imp.querySelectorAll('optgroup')].map((g) => g.label);
+        imp.value = 'set:gs1'; imp.dispatchEvent(new Event('change')); await wait();
+        out.fromSet = [gp.pres.groups.length, gp.pres.groups[1].topic];
+        NM.app.select({ tab: 'groups' }); await wait();
+        return out; })()""")
+    ok = bool(res) and res["start"] == ["Stationenlernen Prozent", 4, True, 9] and res["created"] == [True, "4,4,4", 12, "mixed", True, 0] \
+        and res["away"] == [False, 11, True] and res["lock"] == [True, True, 3] and res["click"] == [True, True] and res["drag"] \
+        and res["edit"] == ["Plakat gestalten", "Team Rot"] and res["rule"] == [2, True] and res["ruleRoll"] == 0 and res["beamer"] == [True] * 4 \
+        and res["menu"] == ["list", "cards"] and res["print"] == [True] * 3 and res["puzzle"] == [True] * 4 \
+        and res["toPres"] == ["mixed", 4, "Station 1: Grundwert", 3] and res["importOpts"][0].startswith("Gruppeneinteilungen") and res["fromSet"] == [4, "Station 2: Prozentwert"]
+    report("Gruppen: Einteilung (Größe, leistungsgemischt), Abwesende, Fixieren, Anklicken/Ziehen, Auftrag, Regel mit Warnung, Beamer ohne Noten, Druck, Gruppenpuzzle, Übernahme in Präsentation", ok and not br.errors, str(res) + "; ".join(br.errors))
 
 
 def run_moodle_check(br, base):
@@ -1088,6 +1188,7 @@ def main():
         run_print_menu_check(br, base)
         run_pres_check(br, base)
         run_group_check(br, base)
+        run_groups_tab_check(br, base)
         run_moodle_check(br, base)
         run_decrypt_tool(br, base)
     finally:

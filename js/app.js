@@ -26,6 +26,7 @@
     { id: 'epo', label: 'Mitarbeit/EPO' },
     { id: 'pres', label: 'Präsentationen' },
     { id: 'draw', label: 'Ziehen' },
+    { id: 'groups', label: 'Gruppen' },
     { id: 'overview', label: 'Notenübersicht' },
     { id: 'seating', label: 'Sitzplan' },
     { id: 'settings', label: 'Einstellungen' },
