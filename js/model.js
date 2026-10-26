@@ -9,7 +9,7 @@
   // 2 (1.18): Arbeiten in Teilen – getrennt benotete Teile würden ältere Versionen falsch rechnen.
   // 3 (1.20): Präsentationen (kind "pres") – ältere Versionen kennen diese Leistungsart nicht.
   const SCHEMA = 3;
-  const APP_VERSION = '1.21.0';
+  const APP_VERSION = '1.22.0';
 
   class NewerSchemaError extends Error {}
 
@@ -28,6 +28,7 @@
     ['Inhalt', 'Vollständigkeit', ['wesentliche Aspekte fehlen', 'einige Aspekte fehlen', 'weitgehend vollständig', 'alle wesentlichen Aspekte']],
     ['Inhalt', 'Tiefe der Auseinandersetzung', ['bloße Aufzählung', 'oberflächlich', 'Zusammenhänge erklärt', 'eigenständig vertieft']],
     ['Inhalt', 'Beispiele und Veranschaulichung', ['keine Beispiele', 'wenige oder unpassende', 'passende Beispiele', 'treffend und anschaulich']],
+    ['Inhalt', 'Lösungsweg erklären', ['kein Lösungsweg', 'lückenhaft oder nur vorgelesen', 'nachvollziehbar erklärt', 'schrittweise und begründet']],
     ['Inhalt', 'Quellenangaben', ['keine Quellen', 'unvollständig', 'vollständig', 'vollständig, seriöse Quellen']],
     ['Aufbau', 'Einleitung', ['fehlt', 'knapp, ohne Überblick', 'führt ins Thema ein', 'weckt Interesse und gibt Überblick']],
     ['Aufbau', 'Gliederung', ['nicht erkennbar', 'sprunghaft', 'erkennbar', 'klar und nachvollziehbar']],
@@ -46,11 +47,13 @@
     ['Medien', 'Bilder und Grafiken', ['keine oder unpassend', 'rein dekorativ', 'passend', 'erklären die Inhalte']],
     ['Medien', 'Rechtschreibung', ['viele Fehler', 'einige Fehler', 'vereinzelte Fehler', 'fehlerfrei']],
     ['Medien', 'Zusammenspiel von Medium und Vortrag', ['Folien werden vorgelesen', 'teilweise abgestimmt', 'passt zum Vortrag', 'ergänzt den Vortrag gezielt']],
+    ['Medien', 'Darstellung der Lösung', ['unleserlich und ungeordnet', 'teils unübersichtlich', 'sauber und geordnet', 'übersichtlich, Wichtiges hervorgehoben']],
     ['Medien', 'Handout', ['fehlt', 'lückenhaft', 'vollständig', 'vollständig, übersichtlich und hilfreich']],
     ['Sprache', 'Fachsprache', ['keine Fachbegriffe', 'Fachbegriffe teils falsch', 'Fachbegriffe richtig', 'sicher und erklärt']],
     ['Sprache', 'Verständlichkeit', ['schwer verständlich', 'teilweise verständlich', 'verständlich', 'anschaulich erklärt']],
     ['Sprache', 'Ausdruck und Satzbau', ['umgangssprachlich, unvollständig', 'holprig', 'angemessen', 'treffend und abwechslungsreich']],
     ['Austausch', 'Fragen beantworten', ['keine Antworten', 'unsicher', 'meist sicher', 'sicher und fundiert']],
+    ['Austausch', 'Umgang mit Fehlern', ['Fehler übergangen', 'nach Hinweis korrigiert', 'selbst erkannt und korrigiert', 'erkannt, erklärt und verbessert']],
     ['Austausch', 'Einbindung des Publikums', ['kein Bezug zum Publikum', 'wenig Bezug', 'Publikum angesprochen', 'Publikum aktiv eingebunden']],
   ];
 
@@ -64,7 +67,30 @@
     return defaultCriteriaPool().filter((c) => !have.has(c.name.toLowerCase()));
   }
 
+  // Standardvorlagen: [Name, [[Kriterium, Gewicht], …]] – Kriterien aus dem Startbestand
+  const PRES_TEMPLATES = [
+    ['Kurzvortrag (ohne Handout)', [['Fachliche Richtigkeit', 2], ['Vollständigkeit', 1], ['Gliederung', 1], ['Freies Sprechen', 1], ['Blickkontakt', 1], ['Verständlichkeit', 1], ['Zeitrahmen', 1]]],
+    ['Vortrag', [['Fachliche Richtigkeit', 2], ['Tiefe der Auseinandersetzung', 1], ['Quellenangaben', 1], ['Einleitung', 1], ['Gliederung', 1], ['Schluss und Fazit', 1], ['Freies Sprechen', 1], ['Blickkontakt', 1], ['Sprechtempo und Pausen', 1], ['Übersichtlichkeit', 1], ['Zusammenspiel von Medium und Vortrag', 1], ['Handout', 1], ['Fachsprache', 1], ['Fragen beantworten', 1]]],
+    ['Hausaufgaben vorstellen', [['Fachliche Richtigkeit', 2], ['Vollständigkeit', 1], ['Lösungsweg erklären', 2], ['Darstellung der Lösung', 1], ['Fachsprache', 1], ['Fragen beantworten', 1], ['Umgang mit Fehlern', 1]]],
+  ];
+
+  /** Standardvorlagen; Kriterien kommen aus dem Pool (gleiche Bezeichnung), sonst aus dem Startbestand. */
+  function defaultPresTemplates(pool) {
+    const byName = (list, n) => (list || []).find((c) => (c.name || '').trim().toLowerCase() === n.toLowerCase());
+    const defaults = defaultCriteriaPool();
+    return PRES_TEMPLATES.map(([name, crit]) =>
+      newPresTemplate(name, crit.map(([n, weight]) => Object.assign({}, byName(pool, n) || byName(defaults, n), { weight })))
+    );
+  }
+
+  /** Standardvorlagen, deren Name unter den Vorlagen fehlt. */
+  function missingDefaultTemplates(templates, pool) {
+    const have = new Set((templates || []).map((t) => (t.name || '').trim().toLowerCase()));
+    return defaultPresTemplates(pool).filter((t) => !have.has(t.name.toLowerCase()));
+  }
+
   function newDb() {
+    const pool = defaultCriteriaPool();
     const year = { id: uid(), name: currentSchoolYearName() };
     return {
       schema: SCHEMA,
@@ -79,8 +105,8 @@
         gradeColors: true,
         pomodoro: Object.assign({}, POMODORO_DEFAULTS),
       },
-      criteriaPool: defaultCriteriaPool(),
-      presTemplates: [],
+      criteriaPool: pool,
+      presTemplates: defaultPresTemplates(pool),
       years: [year],
       courses: [],
     };
@@ -101,8 +127,8 @@
     db.settings.pomodoro = Object.assign({}, POMODORO_DEFAULTS, db.settings.pomodoro || {});
     // 1.20: Kriterienpool für Präsentationen (Startbestand nur, wenn es noch keinen gibt)
     if (!Array.isArray(db.criteriaPool)) db.criteriaPool = defaultCriteriaPool();
-    // 1.21: Vorlagen für Präsentationen (benannte Kriteriensätze)
-    if (!Array.isArray(db.presTemplates)) db.presTemplates = [];
+    // 1.21: Vorlagen für Präsentationen (benannte Kriteriensätze); 1.22: mit Standardvorlagen
+    if (!Array.isArray(db.presTemplates)) db.presTemplates = defaultPresTemplates(db.criteriaPool);
     db.years = db.years || [];
     db.courses = db.courses || [];
     for (const c of db.courses) {
@@ -425,6 +451,8 @@
     presCriterion,
     defaultCriteriaPool,
     missingDefaultCriteria,
+    defaultPresTemplates,
+    missingDefaultTemplates,
     newPresTemplate,
     kindLabel,
     demoDb,

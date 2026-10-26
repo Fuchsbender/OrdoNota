@@ -39,7 +39,12 @@
   const full = M.defaultCriteriaPool();
   ok('Startbestand: fein gegliederte Kriterien (z. B. Medien: Übersichtlichkeit, Lesbarkeit, Gestaltung)', full.length >= 25 && ['Übersichtlichkeit', 'Lesbarkeit', 'Ansprechende Gestaltung'].every((n) => full.some((c) => c.name === n && c.group === 'Medien')) && new Set(full.map((c) => c.name)).size === full.length);
   ok('Startbestand ergänzen: nur fehlende (Bezeichnung, Groß/klein egal)', M.missingDefaultCriteria([]).length === full.length && M.missingDefaultCriteria([{ name: 'lesbarkeit' }, { name: 'Eigenes' }]).length === full.length - 1 && M.missingDefaultCriteria(full).length === 0);
-  ok('Vorlagen: beim Öffnen leere Liste, vorhandene bleiben', Array.isArray(np.presTemplates) && np.presTemplates.length === 0 && M.migrate({ schema: 3, years: [], courses: [], presTemplates: [{ id: 't', name: 'X', criteria: [] }] }).presTemplates.length === 1);
+  ok('Vorlagen: beim Öffnen Standardvorlagen, vorhandene bleiben unverändert', Array.isArray(np.presTemplates) && np.presTemplates.length === 3 && M.migrate({ schema: 3, years: [], courses: [], presTemplates: [{ id: 't', name: 'X', criteria: [] }] }).presTemplates.length === 1 && M.migrate({ schema: 3, years: [], courses: [], presTemplates: [] }).presTemplates.length === 0);
+  const stdT = M.defaultPresTemplates(full);
+  ok('Standardvorlagen: Kurzvortrag, Vortrag, Hausaufgaben; alle Kriterien im Startbestand, Bezug zum Pool', stdT.map((t) => t.name).join('|') === 'Kurzvortrag (ohne Handout)|Vortrag|Hausaufgaben vorstellen' && stdT.every((t) => t.criteria.every((k) => k.desc[3] && full.some((c) => c.id === k.poolId))) && !stdT[0].criteria.some((k) => k.name === 'Handout') && stdT[2].criteria.find((k) => k.name === 'Lösungsweg erklären').weight === 2);
+  const edited = full.map((c) => (c.name === 'Gliederung' ? Object.assign({}, c, { desc: { 0: 'a', 1: 'b', 2: 'c', 3: 'eigene Stufe' } }) : c));
+  ok('Standardvorlagen übernehmen eigene Stufentexte aus dem Pool', M.defaultPresTemplates(edited)[0].criteria.find((k) => k.name === 'Gliederung').desc[3] === 'eigene Stufe');
+  ok('Standardvorlagen ergänzen: nur fehlende (Name, Groß/klein egal)', M.missingDefaultTemplates([], full).length === 3 && M.missingDefaultTemplates([{ name: 'vortrag' }], full).map((t) => t.name).join() === 'Kurzvortrag (ohne Handout),Hausaufgaben vorstellen' && M.missingDefaultTemplates(stdT, full).length === 0);
   const pdb = M.newDb();
   const pc = M.newCourse(pdb.years[0].id, { jahrgang: 12, type: 'gk' });
   const pa = M.newPres(pc, '12/1', pdb.settings, pdb.criteriaPool.slice(0, 3));

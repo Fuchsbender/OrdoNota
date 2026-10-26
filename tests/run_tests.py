@@ -803,9 +803,12 @@ def run_pres_check(br, base):
             document.querySelector('dialog input').value = name; document.querySelector('dialog .btn-primary').click(); await wait();
             if (replace) { document.querySelector('dialog .btn-primary').click(); await wait(); }
         };
+        const t0 = db.presTemplates.length;
+        const tpl = (n) => db.presTemplates.find((t) => t.name === n);
+        out.stdTpl = [t0, ['Kurzvortrag (ohne Handout)', 'Vortrag', 'Hausaufgaben vorstellen'].every((n) => tpl(n) && tpl(n).criteria.every((k) => k.desc[0] && k.desc[3])), tpl('Hausaufgaben vorstellen').criteria.some((k) => k.name === 'Lösungsweg erklären' && k.weight === 2)];
         await saveTpl('Referat', false);
         await saveTpl('referat', true);
-        out.tplSave = [db.presTemplates.length, db.presTemplates[0].name, db.presTemplates[0].criteria.length === p.criteria.length, db.presTemplates[0].criteria[1].weight];
+        out.tplSave = [db.presTemplates.length - t0, tpl('Referat').name, tpl('Referat').criteria.length === p.criteria.length, tpl('Referat').criteria[1].weight];
         document.querySelector('.tpl-card').open = true; await wait();
         [...document.querySelectorAll('.tpl-card .btn-ghost')].find((b) => b.textContent === '+ Vorlage aus dem Pool').click(); await wait();
         document.querySelector('dialog input.input').value = 'Plakat';
@@ -818,7 +821,7 @@ def run_pres_check(br, base):
         out.groups = [...from2.querySelectorAll('optgroup')].map((g) => g.label);
         document.querySelector('dialog .btn-primary').click(); await wait();
         const newest = c.assessments.filter((x) => x.kind === 'pres').pop();
-        out.fromTpl = [db.presTemplates.length, newest.pres.criteria.length, newest.pres.criteria[0].poolId === db.criteriaPool[0].id];
+        out.fromTpl = [db.presTemplates.length - t0, newest.pres.criteria.length, newest.pres.criteria[0].poolId === db.criteriaPool[0].id];
         // Handreichung über die Druckauswahl (mit Notenschlüssel)
         document.querySelector('[data-print-menu]').click(); await wait();
         out.menu2 = [...document.querySelectorAll('dialog .print-option')].map((o) => o.dataset.print);
@@ -829,12 +832,21 @@ def run_pres_check(br, base):
         document.body.classList.remove('printing');
         out.guide = [g1[0].endsWith('– Bewertungskriterien'), g1[1].includes(newest.pres.criteria[0].desc[3]), g1[1].includes('Notenschlüssel'), !g1[1].includes(c.students[0].last)];
         document.querySelector('.tpl-card').open = true; await wait();
-        document.querySelector(`[data-tpl-print="${db.presTemplates[1].id}"]`).click(); await wait();
+        document.querySelector(`[data-tpl-print="${tpl('Plakat').id}"]`).click(); await wait();
         out.tplPrint = document.title === 'Plakat – Bewertungskriterien' && !document.getElementById('print-root').textContent.includes('Notenschlüssel');
         document.body.classList.remove('printing');
         [...document.querySelectorAll('.tpl-card .icon-btn')].find((b) => b.getAttribute('aria-label') === 'Vorlage löschen: Plakat').click(); await wait();
         document.querySelector('dialog .btn-danger').click(); await wait();
-        out.tplDel = [db.presTemplates.length, newest.pres.criteria.length];
+        out.tplDel = [db.presTemplates.length - t0, newest.pres.criteria.length];
+        // Standardvorlagen ergänzen: Knopf nur, wenn eine fehlt
+        const stdBtn = () => [...document.querySelectorAll('.tpl-card .btn-ghost')].find((b) => b.textContent.startsWith('Standardvorlagen ergänzen'));
+        const noStd = !stdBtn();
+        document.querySelector('.tpl-card').open = true; await wait();
+        [...document.querySelectorAll('.tpl-card .icon-btn')].find((b) => b.getAttribute('aria-label') === 'Vorlage löschen: Vortrag').click(); await wait();
+        document.querySelector('dialog .btn-danger').click(); await wait();
+        const stdLabel = stdBtn() && stdBtn().textContent;
+        stdBtn().click(); await wait();
+        out.stdRestore = [noStd, stdLabel, !!tpl('Vortrag'), !stdBtn()];
         return out; })()""")
     ok = bool(res) and res["tab"] and res["picker"] == "Referat Statistik" and res["rows"] == 12 \
         and res["rate"][0] == 12 and res["rate"][1] == 18 and res["rate"][2] == "Wahrscheinlichkeit" and res["rate"][3] == 5 and res["toggle"] \
@@ -842,7 +854,8 @@ def run_pres_check(br, base):
         and res["tpl"] == [2, True, True, True] and res["menu"] == ["list", "key", "blank", "guide", "sheets"] and res["print"] == [True] * 4 \
         and res["sheetsN"] == 7 and res["overview"] and res["jump"] and res["poolDel"] == [True, True] and res["restore"] == [True, "Startbestand ergänzen (1)", True, True] \
         and res["tplSave"] == [1, "Referat", True, 3] and res["groups"] == ["Vorlagen", "Frühere Bewertungen"] and res["fromTpl"] == [2, 2, True] \
-        and res["menu2"] == ["list", "key", "blank", "guide", "sheets"] and res["guide"] == [True] * 4 and res["tplPrint"] and res["tplDel"] == [1, 2]
+        and res["menu2"] == ["list", "key", "blank", "guide", "sheets"] and res["guide"] == [True] * 4 and res["tplPrint"] and res["tplDel"] == [1, 2] \
+        and res["stdTpl"] == [3, True, True] and res["stdRestore"] == [True, "Standardvorlagen ergänzen (1)", True, True]
     report("Präsentationen: bewerten (Knöpfe, Tabelle), Gewicht, Kriterien aus Pool/eigene, Vorlagen, Handreichung, Ausdrucke, Notenübersicht, Pool", ok and not br.errors, str(res) + "; ".join(br.errors))
 
 

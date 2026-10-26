@@ -631,6 +631,7 @@
   function templatesCard(course, db) {
     const ui = NM.app.state.ui;
     const list = db.presTemplates || [];
+    const missing = M.missingDefaultTemplates(list, db.criteriaPool);
     return h(
       'details',
       {
@@ -699,7 +700,22 @@
             )
           )
         : h('p', { class: 'muted' }, 'Noch keine Vorlagen.'),
-      h('button', { class: 'btn btn-ghost', onclick: () => newTemplate(db) }, '+ Vorlage aus dem Pool')
+      h('button', { class: 'btn btn-ghost', onclick: () => newTemplate(db) }, '+ Vorlage aus dem Pool'),
+      missing.length
+        ? h(
+            'button',
+            {
+              class: 'btn btn-ghost',
+              title: 'Fehlende Standardvorlagen von OrdoNota hinzufügen: ' + missing.map((t) => t.name).join(', '),
+              onclick: () => {
+                db.presTemplates.push(...missing);
+                NM.app.commit();
+                toast(`${missing.length} ${missing.length === 1 ? 'Standardvorlage' : 'Standardvorlagen'} ergänzt.`, 'info');
+              },
+            },
+            `Standardvorlagen ergänzen (${missing.length})`
+          )
+        : null
     );
   }
 
