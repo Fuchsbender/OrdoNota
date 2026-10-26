@@ -1077,6 +1077,15 @@ def run_groups_tab_check(br, base):
         const stale = !!document.querySelector('.grp-experts .notice.warn');
         q('ex-rebuild').click(); await wait();
         out.rebuild = [stale, !document.querySelector('.grp-experts .notice.warn'), ex.groups[0].task, c.groupSets.filter((x) => x.homeId === set.id).length];
+        // Anzahl der Teilthemen ändern: bleibt beim Neu verteilen, Namen und Teilthemen bleiben, Buchstaben in den Stammgruppen passen
+        q('gb-name-' + ex.groups[1].id).value = 'Profis B'; q('gb-name-' + ex.groups[1].id).dispatchEvent(new Event('change')); await wait();
+        q('ex-count').value = '4'; q('ex-count').dispatchEvent(new Event('change')); await wait();
+        const n4 = [ex.groups.length, ex.groups.map((g) => g.name).join(), ex.groups.flatMap((g) => g.members).length === set.groups.flatMap((g) => g.members).length];
+        q('ex-rebuild').click(); await wait();
+        const letterOk = [...document.querySelectorAll('.grp-set:not(.grp-experts) .grp-person')].every((el) => { const l = el.querySelector('.grp-letter'); const i = ex.groups.findIndex((g) => g.members.includes(el.dataset.sid)); return !l || l.textContent === NM.groups.letter(i); });
+        q('ex-add').click(); await wait();
+        out.count = [...n4, ex.groups.length, ex.groups[1].name, ex.groups[0].task, letterOk, ex.groups[4].name];
+        ex.groups.pop(); NM.app.commit(); await wait();
         // Beamer: Umschalter Stamm-/Expertengruppen
         q('gs-beamer').click(); await wait();
         const bm2 = document.querySelector('.grp-beamer');
@@ -1107,7 +1116,7 @@ def run_groups_tab_check(br, base):
         and res["away"] == [False, 11, True] and res["lock"] == [True, True, 3] and res["click"] == [True, True] and res["drag"] == [True] * 7 \
         and res["edit"] == ["Plakat gestalten", "Team Rot"] and res["rule"] == [2, True] and res["ruleRoll"] == 0 and res["beamer"] == [True] * 4 and res["beamerFit"] == [True, True] and res["beamerToggle"] == [True, True, True, True, False, True] and res["beamerBack"] == [0, True] \
         and res["menu"] == ["list", "cards"] and res["print"] == [True] * 3 and res["puzzle"] == [True] * 7 and res["view"] == [True, True, True, True, False] and res["viewBack"] == [0, True] \
-        and res["rebuild"] == [True, True, "Text A", 1] and res["beamerExperts"] == [True] * 4 \
+        and res["rebuild"] == [True, True, "Text A", 1] and res["count"] == [4, "Experten A,Profis B,Experten C,Experten D", True, 5, "Profis B", "Text A", True, "Experten E"] and res["beamerExperts"] == [True] * 4 \
         and res["toPres"] == ["mixed", 4, "Station 1: Grundwert", 3] and res["importOpts"][0].startswith("Gruppeneinteilungen") and res["fromSet"] == [4, "Station 2: Prozentwert"]
     br.call("Emulation.clearDeviceMetricsOverride")
     report("Gruppen: Einteilung (Größe, leistungsgemischt), Abwesende, Fixieren, Anklicken/Ziehen, Auftrag, Regel mit Warnung, Beamer ohne Noten, Druck, Gruppenpuzzle, Übernahme in Präsentation", ok and not br.errors, str(res) + "; ".join(br.errors))

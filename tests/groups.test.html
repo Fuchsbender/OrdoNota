@@ -68,6 +68,12 @@
   // Gruppenpuzzle
   const home = [{ members: ['a1', 'a2', 'a3'] }, { members: ['b1', 'b2', 'b3'] }, { members: ['c1', 'c2'] }];
   eq('Expertengruppen: i-te Person jeder Stammgruppe zusammen', GR.experts(home), [['a1', 'b1', 'c1'], ['a2', 'b2', 'c2'], ['a3', 'b3']]);
+  eq('Expertengruppen: Standard = größte Stammgruppe (Rest-Gruppe ohne Lücke)', GR.experts(home).length, 3);
+  const four = [{ members: ['a1', 'a2', 'a3'] }, { members: ['b1', 'b2', 'b3'] }, { members: ['c1', 'c2', 'c3'] }, { members: ['d1', 'd2', 'd3'] }];
+  const k4 = GR.experts(four, 4);
+  eq('4 Teilthemen bei 4 × 3: vier gleich große Expertengruppen', k4.map((g) => g.length), [3, 3, 3, 3]);
+  eq('4 Teilthemen: innerhalb einer Stammgruppe kein Thema doppelt', four.every((g) => new Set(g.members.map((sid) => k4.findIndex((e) => e.includes(sid)))).size === 3), true);
+  eq('2 Teilthemen bei 4 × 3: zwei Gruppen à 6, alle eingeteilt', [GR.experts(four, 2).map((g) => g.length), GR.experts(four, 2).flat().length], [[6, 6], 12]);
   eq('Teilthemen A, B, C', [GR.letter(0), GR.letter(1), GR.letter(2)], ['A', 'B', 'C']);
 
   // Datenmodell

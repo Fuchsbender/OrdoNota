@@ -195,9 +195,9 @@
 
   /**
    * Gruppenkarten einer Einteilung mit Verschieben/Tauschen (Ziehen oder Anklicken) und Ablage „Nicht eingeteilt“.
-   * opts: { sc: Halbjahresnoten (Ø je Gruppe), letters: Teilthema-Buchstaben zeigen, lockable, taskHint }
+   * opts: { sc: Halbjahresnoten (Ø je Gruppe), letters: Map Person → Teilthema-Buchstabe (Gruppenpuzzle), lockable, taskHint }
    */
-  function board(course, set, { sc = null, letters = false, lockable = true, taskHint = 'Auftrag oder Thema (erscheint auf Beamer und Ausdruck)' } = {}) {
+  function board(course, set, { sc = null, letters = null, lockable = true, taskHint = 'Auftrag oder Thema (erscheint auf Beamer und Ausdruck)' } = {}) {
     const students = byId(course);
     const away = NM.views.draw.absent(course);
     const o = viewOpts();
@@ -241,7 +241,7 @@
           },
         },
         o.photos ? h('img', { class: 'grp-photo', src: (s && s.photo) || M.PERSON_ICON, alt: '' }) : null,
-        letters && g ? h('span', { class: 'grp-letter', title: 'Expertin/Experte für Teilthema ' + GR.letter(i) }, GR.letter(i)) : null,
+        letters && g && letters.has(sid) ? h('span', { class: 'grp-letter', title: 'Expertin/Experte für Teilthema ' + letters.get(sid) }, letters.get(sid)) : null,
         s ? name(s) : '?'
       );
     };
@@ -408,7 +408,25 @@
     return [boardEl];
   }
 
-  function addGroupButton(set, key) {
+  /** Teilthema je Person im Gruppenpuzzle: Buchstabe der Expertengruppe, in der sie sitzt. */
+  function topicLetters(ex) {
+    const m = new Map();
+    ex.groups.forEach((g, i) => g.members.forEach((sid) => m.set(sid, GR.letter(i))));
+    return m;
+  }
+
+  const expertName = (n) => 'Experten ' + GR.letter(n - 1);
+
+  /** Stand der Stammgruppen (wer mit wem), um veraltete Expertengruppen zu erkennen. */
+  function homeSig(home) {
+    return home.groups
+      .map((g) => g.members.slice().sort().join(','))
+      .filter(Boolean)
+      .sort()
+      .join('|');
+  }
+
+  function addGroupButton(set, key, nameFor = (n) => 'Gruppe ' + n) {
     return h(
       'button',
       {
@@ -416,8 +434,8 @@
         'data-focus-key': key,
         onclick: () => {
           let n = set.groups.length + 1;
-          while (set.groups.some((g) => g.name === 'Gruppe ' + n)) n++;
-          set.groups.push({ id: uid(), name: 'Gruppe ' + n, members: [] });
+          while (set.groups.some((g) => g.name === nameFor(n))) n++;
+          set.groups.push({ id: uid(), name: nameFor(n), members: [] });
           NM.app.commit();
         },
       },
@@ -499,7 +517,7 @@
       ),
       warn.length ? h('div', { class: 'notice warn' }, warn.map((w) => h('div', null, '⚠ ' + w))) : null,
       issues.repeats && set.opts && set.opts.vary ? h('p', { class: 'small muted' }, `${issues.repeats} Paar${issues.repeats === 1 ? '' : 'e'} wie in „${prev.name}“.`) : null,
-      ...board(course, set, { sc, letters: !!expertSet }),
+      ...board(course, set, { sc, letters: expertSet ? topicLetters(expertSet) : null }),
       h(
         'div',
         { class: 'inline wrap' },
@@ -520,9 +538,24 @@
 
   /** Expertengruppen des Gruppenpuzzles, direkt unter den Stammgruppen. */
   function expertCard(course, home, ex) {
-    const expected = GR.experts(home.groups.filter((g) => g.members.length)).map((m) => m.slice().sort().join());
-    const actual = ex.groups.map((g) => g.members.slice().sort().join());
-    const stale = expected.length !== actual.length || expected.some((m, i) => m !== actual[i]);
+    // Veraltet, wenn sich die Stammgruppen seit dem Bilden geändert haben (oder Personen fehlen bzw. dazugekommen sind)
+    const inHome = new Set(home.groups.flatMap((g) => g.members));
+    const inEx = new Set(ex.groups.flatMap((g) => g.members));
+    const stale = (ex.homeSig && ex.homeSig !== homeSig(home)) || inHome.size !== inEx.size || [...inHome].some((sid) => !inEx.has(sid));
+    const count = h('input', {
+      class: 'input input-sm grp-count',
+      type: 'number',
+      min: 2,
+      max: 26,
+      value: ex.groups.length,
+      'aria-label': 'Anzahl Teilthemen',
+      'data-focus-key': 'ex-count',
+      onchange: (e) => {
+        const k = Math.round(Number(e.target.value));
+        if (!(k >= 2 && k <= 26)) return toast('Bitte 2 bis 26 Teilthemen.', 'error'), NM.app.rerender();
+        makeExperts(course, home, k);
+      },
+    });
     return h(
       'div',
       { class: 'card grp-set grp-experts' },
@@ -533,7 +566,8 @@
         h(
           'div',
           { class: 'inline wrap' },
-          h('button', { class: 'btn btn-ghost', 'data-focus-key': 'ex-rebuild', title: 'Expertengruppen aus den aktuellen Stammgruppen neu bilden (Teilthemen bleiben)', onclick: () => makeExperts(course, home) }, '↻ Neu bilden'),
+          h('label', { class: 'inline small', title: 'Anzahl der Teilthemen = Anzahl der Expertengruppen; Personen werden neu verteilt, Namen und Teilthemen bleiben' }, 'Teilthemen ', count),
+          h('button', { class: 'btn btn-ghost', 'data-focus-key': 'ex-rebuild', title: 'Expertengruppen aus den aktuellen Stammgruppen neu verteilen (Anzahl, Namen und Teilthemen bleiben)', onclick: () => makeExperts(course, home) }, '↻ Neu verteilen'),
           beamerButton(course, home, 'ex-beamer', 'experts'),
           printMenu(course, ex),
           h(
@@ -552,10 +586,10 @@
           )
         )
       ),
-      h('p', { class: 'small muted' }, 'Aus jeder Stammgruppe sitzt die Person mit Teilthema A in Gruppe A usw. Nach der Expertenphase kehren alle in ihre Stammgruppe zurück.'),
-      stale ? h('div', { class: 'notice warn' }, '⚠ Die Stammgruppen wurden seitdem geändert. „↻ Neu bilden“ passt die Expertengruppen an.') : null,
+      h('p', { class: 'small muted' }, 'Die Teilthemen A, B, C … werden reihum in den Stammgruppen verteilt; alle mit A bilden die Expertengruppe A usw. Anzahl der Teilthemen oben einstellen, Personen bei Bedarf von Hand verschieben. Nach der Expertenphase kehren alle in ihre Stammgruppe zurück.'),
+      stale ? h('div', { class: 'notice warn' }, '⚠ Die Stammgruppen wurden seitdem geändert. „↻ Neu verteilen“ passt die Expertengruppen an.') : null,
       ...board(course, ex, { lockable: false, taskHint: 'Teilthema (z. B. Text A, Station B)' }),
-      h('div', { class: 'inline wrap' }, addGroupButton(ex, 'ex-add'))
+      h('div', { class: 'inline wrap' }, addGroupButton(ex, 'ex-add', expertName))
     );
   }
 
@@ -577,17 +611,21 @@
     NM.app.commit();
   }
 
-  /** Expertengruppen zu Stammgruppen bilden oder neu bilden (Namen und Teilthemen vorhandener Gruppen bleiben). */
-  function makeExperts(course, set) {
-    const ex = GR.experts(set.groups.filter((g) => g.members.length));
-    if (ex.length < 2) return toast('Für ein Gruppenpuzzle braucht es Stammgruppen mit mindestens zwei Personen.', 'error');
+  /**
+   * Expertengruppen zu Stammgruppen bilden oder neu verteilen. k = Anzahl der Teilthemen; ohne Angabe bleibt die
+   * bisherige Anzahl (beim ersten Mal: größte Stammgruppe). Namen und Teilthemen vorhandener Gruppen bleiben.
+   */
+  function makeExperts(course, set, k = 0) {
     let e = course.groupSets.find((x) => x.homeId === set.id);
+    const ex = GR.experts(set.groups.filter((g) => g.members.length), k || (e && e.groups.length) || 0);
+    if (ex.length < 2) return toast('Für ein Gruppenpuzzle braucht es Stammgruppen mit mindestens zwei Personen.', 'error');
     if (!e) {
       e = { id: uid(), name: set.name + ' – Expertengruppen', date: set.date || todayISO(), homeId: set.id, groups: [] };
       course.groupSets.push(e);
     }
     e.groups = ex.map((members, i) => Object.assign({ id: uid(), name: 'Experten ' + GR.letter(i) }, e.groups[i] ? { id: e.groups[i].id, name: e.groups[i].name, task: e.groups[i].task } : {}, { members }));
     for (const g of e.groups) if (!g.task) delete g.task;
+    e.homeSig = homeSig(set);
     NM.app.commit();
     toast(`${ex.length} Expertengruppen gebildet (Teilthemen A–${GR.letter(ex.length - 1)}).`, 'info');
   }
@@ -722,6 +760,7 @@
     const all = byId(course);
     const name = displayName(course, last);
     const expertSet = course.groupSets.find((x) => x.homeId === set.id);
+    const letters = expertSet ? topicLetters(expertSet) : null;
     return set.groups
       .filter((g) => g.members.length)
       .map((g) =>
@@ -735,7 +774,7 @@
             null,
             g.members.map((sid, i) => {
               const s = all.get(sid);
-              return h('li', null, photos ? h('img', { class: 'grp-photo', src: (s && s.photo) || M.PERSON_ICON, alt: '' }) : null, expertSet ? h('span', { class: 'grp-letter' }, GR.letter(i)) : null, h('span', null, s ? name(s) : '?'));
+              return h('li', null, photos ? h('img', { class: 'grp-photo', src: (s && s.photo) || M.PERSON_ICON, alt: '' }) : null, letters && letters.has(sid) ? h('span', { class: 'grp-letter' }, letters.get(sid)) : null, h('span', null, s ? name(s) : '?'));
             })
           )
         )

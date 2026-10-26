@@ -120,12 +120,22 @@
   }
 
   /**
-   * Gruppenpuzzle: aus Stammgruppen die Expertengruppen bilden. Die i-te Person jeder Stammgruppe
-   * kommt in Expertengruppe i (Teilthema i); so sitzt aus jeder Stammgruppe genau eine Person in jeder Expertengruppe.
+   * Gruppenpuzzle: aus Stammgruppen k Expertengruppen (Teilthemen) bilden; Standard k = größte Stammgruppe.
+   * Die Teilthemen werden reihum über alle Stammgruppen verteilt (Person p der Stammgruppe i → Thema (p + Versatz) mod k,
+   * Versatz = Personen in den Stammgruppen davor). Bei k = Gruppengröße sitzt so aus jeder Stammgruppe genau eine Person
+   * in jeder Expertengruppe; bei anderem k sind die Expertengruppen möglichst gleich groß und innerhalb einer
+   * Stammgruppe wiederholt sich ein Thema erst, wenn sie mehr Personen als Themen hat.
    */
-  function experts(homeGroups) {
-    const k = Math.max(0, ...homeGroups.map((g) => (g.members || g).length));
-    return Array.from({ length: k }, (_, i) => homeGroups.map((g) => (g.members || g)[i]).filter(Boolean));
+  function experts(homeGroups, k = 0) {
+    const lists = homeGroups.map((g) => g.members || g);
+    const n = k > 0 ? Math.round(k) : Math.max(0, ...lists.map((m) => m.length));
+    const out = Array.from({ length: n }, () => []);
+    let offset = 0;
+    for (const m of lists) {
+      m.forEach((sid, p) => out[(p + offset) % n].push(sid));
+      offset += m.length;
+    }
+    return out;
   }
 
   /** Buchstabe des Teilthemas (A, B, C …) für Position i in der Stammgruppe. */

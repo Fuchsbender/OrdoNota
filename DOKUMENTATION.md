@@ -1,6 +1,6 @@
 # OrdoNota – Dokumentation
 
-Version 1.24.4 · Stand Oktober 2026
+Version 1.24.5 · Stand Oktober 2026
 
 OrdoNota (bis Version 1.11 „Notenmanager“) verwaltet Noten für die Sekundarstufe I (Noten 1–6 mit Tendenz) und die Mainzer Studienstufe (MSS, Punkte 00–15) an Schulen in Rheinland-Pfalz. Die App läuft vollständig lokal im Browser, verschlüsselt alle Daten mit einem Passwort und legt sie in einem Ordner ab, den der Synology Drive Client auf die DiskStation spiegelt.
 
@@ -620,7 +620,7 @@ Gruppen bilden für Gruppenaufträge, Lernaufträge, Stationenlernen, Gruppenpuz
 - **Zusammen:** Diese Paare bleiben zusammen (z. B. Unterstützung).
 - Regeln gehen beim Würfeln vor Leistung und Abwechslung. Sie sind vertraulich: verschlüsselt gespeichert wie alle Daten und nur in dieser Karte zu sehen – nie auf dem Beamer oder im Ausdruck.
 
-**Gruppenpuzzle:** In einer Einteilung (den Stammgruppen) **„🧩 Expertengruppen bilden“** klicken. Jede Person der Stammgruppe bekommt einen Buchstaben (A, B, C … = Teilthema); alle mit A bilden die Expertengruppe A usw. So sitzt aus jeder Stammgruppe genau eine Person in jeder Expertengruppe. Die **Expertengruppen erscheinen direkt unter den Stammgruppen** (gleiche Einteilung, kein eigener Eintrag in der Liste) mit eigenem Teilthema je Gruppe, Beamer, Druck und 🗑. Werden die Stammgruppen danach geändert, erscheint ein Hinweis; **„↻ Neu bilden“** passt die Expertengruppen an (Namen und Teilthemen bleiben). Die Buchstaben stehen auch auf Beamer und Ausdruck der Stammgruppen. Beim Löschen der Stammgruppen werden die Expertengruppen mitgelöscht.
+**Gruppenpuzzle:** In einer Einteilung (den Stammgruppen) **„🧩 Expertengruppen bilden“** klicken. Jede Person der Stammgruppe bekommt einen Buchstaben (A, B, C … = Teilthema); alle mit A bilden die Expertengruppe A usw. So sitzt aus jeder Stammgruppe genau eine Person in jeder Expertengruppe. Die **Expertengruppen erscheinen direkt unter den Stammgruppen** (gleiche Einteilung, kein eigener Eintrag in der Liste) mit eigenem Teilthema je Gruppe, Beamer, Druck und 🗑. Die **Anzahl der Teilthemen** (= Expertengruppen) ist oben in der Karte einstellbar (Standard: Größe der größten Stammgruppe); die Themen werden dann reihum verteilt, sodass die Expertengruppen möglichst gleich groß sind und sich innerhalb einer Stammgruppe kein Thema wiederholt, solange sie nicht mehr Personen als Themen hat. „+ Gruppe“ und ✕ ändern die Anzahl ebenfalls. Werden die Stammgruppen danach geändert (neu gewürfelt, Personen verschoben, hinzugefügt oder entfernt), erscheint ein Hinweis; **„↻ Neu verteilen“** verteilt alle neu und behält Anzahl, Gruppennamen und Teilthemen. Die Buchstaben stehen auch auf Beamer und Ausdruck der Stammgruppen. Beim Löschen der Stammgruppen werden die Expertengruppen mitgelöscht.
 
 **Zeigen, drucken, übernehmen:**
 - **📽 Beamer:** alle Gruppen mit Auftrag und Namen im Vollbild (Esc schließt). Beim Gruppenpuzzle schaltet ein Umschalter oben zwischen **Stammgruppen** und **Expertengruppen** um (der Beamer-Knopf der Expertengruppen öffnet direkt diese). Die Schrift wird automatisch so groß gewählt, dass alle Gruppen ohne Scrollen auf den Bildschirm passen. Umschalter oben rechts: **📷 Fotos** (Foto bzw. Personensymbol vor dem Namen) und **Nachnamen** (aus: nur Vornamen, bei gleichen Vornamen mit Initiale, z. B. „Lea B.“). Beide werden pro Gerät gemerkt.
@@ -1078,7 +1078,7 @@ Berechnete Werte (Schnitte, Testnoten, EPO-Noten) werden **nie gespeichert**, so
   "kdf": "PBKDF2-SHA256",
   "savedAt": "2026-10-14T21:57:03.123Z",
   "device": "Laptop Schule",
-  "app": "1.24.4",
+  "app": "1.24.5",
   "pw":   { "salt": "<b64>", "iter": 600000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "rec":  { "salt": "<b64>", "iter": 100000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "data": { "iv": "<b64>", "ct": "<b64: verschlüsseltes JSON des Datenmodells>" }
@@ -1101,7 +1101,7 @@ Entschlüsselter Inhalt (`schema: 4`):
 ```js
 {
   schema: 4,                             // Datenformat (siehe 26.2)
-  savedWith: "1.24.4",                    // App-Version beim letzten Speichern
+  savedWith: "1.24.5",                    // App-Version beim letzten Speichern
   created: "<ISO>", savedAt: "<ISO>",
   settings: { autoLockMin, limitSek1, limitMss, precision, keepBackups, backupEveryMin, gradeColors,
               pomodoro: { enabled, count, work, short, long, tick: "off" | "work" | "always", alarm: "off" | "bell" | "gong" | "beep", volume } },
@@ -1126,7 +1126,7 @@ Course = {
   draw: { out: { "<studentId>": { how: "drawn" | "manual", date } },   // nicht im Pool (gezogen / herausgenommen)
           history: [ { id, date, half, aid, sids: [ studentId ], prevOut } ] },   // Ziehungen; aid = angelegte Einzelnote
   groupSets: [ { id, name, date, opts?: { by: "size" | "count", n, mode: "random" | "mixed" | "similar", vary },
-                 homeId?,   // Expertengruppen: id der Stammgruppen (Gruppenpuzzle; erscheinen unter diesen, nicht in der Liste)
+                 homeId?, homeSig?,   // Expertengruppen: id der Stammgruppen (erscheinen unter diesen) und deren Stand beim Bilden
                  groups: [ { id, name, members: [ studentId ], task?, locked? } ] } ],   // seit 1.24: Reiter „Gruppen“
   groupRules: { apart: [ [ studentId, studentId ] ], together: [ [ studentId, studentId ] ] }   // vertraulich, nie gedruckt
 }
@@ -1181,7 +1181,7 @@ Das Skript startet einen unsichtbaren Chromium-Browser (Chrome, Edge, Chromium, 
 2. den Start der App im Demo-Modus und alle Reiter für einen Sek-I- und einen MSS-Kurs ohne JavaScript-Fehler,
 3. das Sortieren per Klick auf Spaltenköpfe (Tests, EPO, Notenübersicht; Richtung und leere Werte unten),
 4. den Pomodoro-Timer (Aktivieren, Farben je Zustand, Phasenwechsel, Zurücksetzen, Einstellungsdialog), das Layout des Reiters „Einstellungen“ bei aktivem Timer (keine Lücken zwischen den Karten, Auswahllisten nicht abgeschnitten, bei 1570 und 2560 px) und die Kürzel in der eingeklappten Kursliste, die weichen Übergänge (nur bei Reiter-, Kurs- und Halbjahreswechsel), das Ein-/Ausklappen der Kursliste, den Reiter „Tests“ in voller Breite, Arbeiten in Teilen (einschalten, Aufgaben und Punkte je Teil, Teil ausblenden, getrennt benoten, Status je Teil, Schlüssel je Teil, Ausdrucke inkl. „Ergebnisse nach Teilen“, Beamer, Teile aufheben), die Druckauswahl „🖨 Drucken …“ in Tests, EPO und Notenübersicht (Gruppen, Tooltips, Auswahl druckt, Abbrechen nicht) und den Haken „Unterschrift gesehen“ bei Klassenarbeiten (Zähler, Ausdruck), den Moodle-Import (Dateiauswahl im Dialog, Zuordnung, Status „fehlt“, Ausdruck mit und ohne Note, erneuter Import),
-5. den Excel-Export der Schülerliste (gültiges ZIP/XML, Umlaute und Sonderzeichen), das Kurs-Löschen nur mit „LÖSCHEN“, das Ein-/Ausblenden der Fotos im EPO-Reiter und im Sitzplan (auch im Druck) das Erweitern/Verkleinern des Sitzplan-Rasters an allen vier Seiten sowie das Ziehen (keine Wiederholung bis zum Auffüllen, automatisches Auffüllen, Note, Rückgängig, Abwesende/Herausgenommene) und den Reiter „Präsentationen“ (Bewerten per Knopf und in der Tabelle, Gewicht, Kriterien aus dem Pool und eigene, Vorlage, Ausdrucke, Spalte in der Notenübersicht, Pool bearbeiten, Startbestand ergänzen, Vorlagen speichern/anlegen/verwenden/drucken/löschen, Standardvorlagen vorhanden und ergänzen, Handreichung mit Notenschlüssel) und Gruppenpräsentationen (Gruppenwert für alle Mitglieder, Personenkriterien, Abweichung setzen/zurücksetzen, Tabelle, Gruppen bearbeiten/übernehmen, Druck, Auflösen ohne Notenänderung), den Reiter „Gruppen“ (neue Einteilung, Abwesende, Fixieren, Anklicken/Ziehen, Auftrag, Regel mit Warnung, Beamer ohne Noten mit Schrift passend zum Bildschirm und Umschaltern für Fotos/Nachnamen, Druck, Fotos/Nachnamen in der Einteilung, Gruppenpuzzle mit Expertengruppen unter den Stammgruppen, Hinweis und Neu bilden nach Änderungen, Beamer-Umschalter Stamm-/Expertengruppen, Übernahme in eine Präsentation),
+5. den Excel-Export der Schülerliste (gültiges ZIP/XML, Umlaute und Sonderzeichen), das Kurs-Löschen nur mit „LÖSCHEN“, das Ein-/Ausblenden der Fotos im EPO-Reiter und im Sitzplan (auch im Druck) das Erweitern/Verkleinern des Sitzplan-Rasters an allen vier Seiten sowie das Ziehen (keine Wiederholung bis zum Auffüllen, automatisches Auffüllen, Note, Rückgängig, Abwesende/Herausgenommene) und den Reiter „Präsentationen“ (Bewerten per Knopf und in der Tabelle, Gewicht, Kriterien aus dem Pool und eigene, Vorlage, Ausdrucke, Spalte in der Notenübersicht, Pool bearbeiten, Startbestand ergänzen, Vorlagen speichern/anlegen/verwenden/drucken/löschen, Standardvorlagen vorhanden und ergänzen, Handreichung mit Notenschlüssel) und Gruppenpräsentationen (Gruppenwert für alle Mitglieder, Personenkriterien, Abweichung setzen/zurücksetzen, Tabelle, Gruppen bearbeiten/übernehmen, Druck, Auflösen ohne Notenänderung), den Reiter „Gruppen“ (neue Einteilung, Abwesende, Fixieren, Anklicken/Ziehen, Auftrag, Regel mit Warnung, Beamer ohne Noten mit Schrift passend zum Bildschirm und Umschaltern für Fotos/Nachnamen, Druck, Fotos/Nachnamen in der Einteilung, Gruppenpuzzle mit Expertengruppen unter den Stammgruppen, Anzahl der Teilthemen einstellbar und beim Neu verteilen erhalten, Hinweis nach Änderungen, Beamer-Umschalter Stamm-/Expertengruppen, Übernahme in eine Präsentation),
 6. das Notfallwerkzeug: Eine von der App echt verschlüsselte Datenbank wird mit `tools/entschluesseln.py` per Passwort und per Wiederherstellungsschlüssel entschlüsselt und mit dem Original verglichen. Dazu kommen falsches Passwort, manipulierte Datei und CSV-Ausgabe.
 
 Am Ende steht `ERGEBNIS: x von y bestanden`. Der Exit-Code ist 0, wenn alles bestanden ist.
@@ -1195,7 +1195,7 @@ Am Ende steht `ERGEBNIS: x von y bestanden`. Der Exit-Code ist 0, wenn alles bes
 | `tests/grades.test.html` | Skalen, Eingabe-Parser, Rundung, Notenschlüssel (Vergleich mit Excel-Formeln), Bonus/Kappung, Status, Drittelparagraph, EPO (Werte aus der bisherigen EPO-Liste), Halbjahres-/Jahresnote, GK-Gewichtung, Präsentationen (Gewicht, Status, Schlüssel, Halbjahresnote, Gruppen: Gruppenwert, Abweichung, Personenkriterium, Modus „alles als Gruppe“), Arbeiten in Teilen (gemeinsam/getrennt, Gewichte, fehlender Teil, Status je Teil, ganze Noten je Teil, MSS) | im Browser öffnen |
 | `tests/model.test.html` | Migration älterer Datenbanken (SCHEMA 1 → 4, Kriterienpool, Startbestand ergänzen, Vorlagen, Standardvorlagen), neue Präsentation, Ablehnung neuerer Datenformate, Erhalt unbekannter Felder, Namensliste | im Browser öffnen |
 | `tests/moodle.test.html` | CSV-Zerlegung, Erkennen und Zusammenführen von Antworten-/Bewertungen-CSV, bester Versuch, Textvergleich ohne Bewertungen, Zuordnung (Name, gemerkte E-Mail), Übernahme als Test, „fehlt“, erneuter Import, skalierte Punkte, Import in einen Teil | im Browser öffnen |
-| `tests/groups.test.html` | Gruppengrößen (Rest verteilt), Verteilung (alle genau einmal), Regeln „nicht zusammen“/„zusammen“, leistungsgemischt/-gleich, fehlende Noten, Abwechslung (auch Minimum), Expertengruppen, Migration | im Browser öffnen |
+| `tests/groups.test.html` | Gruppengrößen (Rest verteilt), Verteilung (alle genau einmal), Regeln „nicht zusammen“/„zusammen“, leistungsgemischt/-gleich, fehlende Noten, Abwechslung (auch Minimum), Expertengruppen (Standard und einstellbare Anzahl, gleich große Gruppen, kein Thema doppelt), Migration | im Browser öffnen |
 | `tests/pomodoro.test.html` | Ablauf der Phasen (mit/ohne kurze bzw. lange Pause), Standardwerte, Migration der Einstellungen | im Browser öffnen |
 | `tests/crypto.test.html` | Anlegen, Entsperren, falsches Passwort, Wiederherstellungsschlüssel, Passwortwechsel, alte Sicherungen, Manipulationserkennung | im Browser öffnen (dauert einige Sekunden) |
 | `tests/storage.test.html` | Schreiben/Lesen, rollierende Sicherungen, externe Änderung, erzwungenes Überschreiben, Lock-Datei, Konfliktkopie | **über `http://localhost`**, z. B. `python3 -m http.server` im Programmordner, dann `http://localhost:8000/tests/storage.test.html` |
@@ -1223,7 +1223,7 @@ In `js/model.js` stehen zwei Nummern:
 
 | Konstante | Bedeutung | Wann erhöhen |
 |---|---|---|
-| `APP_VERSION` (z. B. `1.24.4`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.24.4` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
+| `APP_VERSION` (z. B. `1.24.5`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.24.5` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
 | `SCHEMA` (z. B. `4`) | Version des Datenformats (2 seit 1.18: Arbeiten in Teilen; 3 seit 1.20: Präsentationen; 4 seit 1.23: Gruppenpräsentationen) | nur, wenn eine **ältere** App-Version die neuen Daten falsch verstehen würde (z. B. ein Feld ändert seine Bedeutung) |
 
 Öffnet eine App eine Datenbank mit höherem `SCHEMA`, verweigert sie das mit einer Meldung (siehe 21.10). Neue, nur *zusätzliche* Felder brauchen kein neues `SCHEMA`: Ältere Versionen lassen unbekannte Felder unverändert und speichern sie mit.
