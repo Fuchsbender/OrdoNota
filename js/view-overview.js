@@ -9,6 +9,13 @@
   // Kürzel für Sonderfälle bei Einzelnoten
   const CODES = { f: 'fehlt', fehlt: 'fehlt', ns: 'nachschreiben', t: 'taeuschung', tv: 'taeuschung', v: 'taeuschung' };
 
+  // Sprung aus dem Spaltenkopf in den Reiter der Leistung: [Name, gemerkte Auswahl, Reiter, Knopftext]
+  const JUMP = {
+    test: ['Test', 'testId', 'tests', 'Test ›'],
+    epo: ['EPO-Block', 'epoId', 'epo', 'EPO ›'],
+    pres: ['Präsentation', 'presId', 'pres', 'Präs. ›'],
+  };
+
   function render(view, { course }) {
     const level = G.courseLevel(course);
     const half = NM.app.currentHalf(course, true);
@@ -77,15 +84,15 @@
               'button',
               {
                 class: 'link tiny',
-                title: 'Zum ' + (a.kind === 'test' ? 'Test' : 'EPO-Block'),
+                title: 'Zum ' + JUMP[a.kind][0],
                 onclick: () => {
                   const ui = NM.app.state.ui;
-                  if (a.kind === 'test') ui.testId[course.id] = a.id;
-                  else ui.epoId[course.id] = a.id;
-                  NM.app.select({ tab: a.kind === 'test' ? 'tests' : 'epo' });
+                  ui[JUMP[a.kind][1]] = ui[JUMP[a.kind][1]] || {};
+                  ui[JUMP[a.kind][1]][course.id] = a.id;
+                  NM.app.select({ tab: JUMP[a.kind][2] });
                 },
               },
-              a.kind === 'test' ? 'Test ›' : 'EPO ›'
+              JUMP[a.kind][3]
             )
           : null,
         sort.toggle('a:' + a.id)
@@ -114,7 +121,7 @@
     const cell = (a, s, ri) => {
       if (a.kind !== 'manual') {
         const p = G.assessmentPoints(a, s.id, level);
-        const status = a.kind === 'test' ? (a.test.results[s.id] || {}).status : '';
+        const status = G.assessmentStatus(a, s.id);
         const off = G.ungradedFor(a, s.id);
         return h('td', { class: 'center' + (off ? ' ungraded' : ''), title: off && !a.ungraded ? 'Nicht gewertet – zählt nicht zur Note' : null }, p === null ? (status ? h('span', { class: 'muted small' }, UI.STATUS_SHORT[status]) : h('span', { class: 'muted' }, '·')) : UI.gradeBadge(p, level, 'ro'));
       }

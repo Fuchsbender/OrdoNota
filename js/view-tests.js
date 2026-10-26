@@ -729,9 +729,47 @@
     const st = G.testStats(t, ids, level);
     // Getrennt benotete Teile: Schlüssel des gewählten Teils, Notenspiegel und Drittelparagraph der Gesamtnote
     const part = G.separateParts(t) ? t.parts.find((x) => x.id === keyPart[a.id]) || t.parts[0] : null;
-    const holder = part || t;
-    const key = part ? G.keyForPart(t, part, level) : G.keyForTest(t, level);
-    const counts = part ? G.partStats(t, part, ids, level).counts : st.counts;
+    return keyCardFor(course, level, {
+      focusId: a.id + (part ? '-' + part.id : ''),
+      key: part ? G.keyForPart(t, part, level) : G.keyForTest(t, level),
+      counts: part ? G.partStats(t, part, ids, level).counts : st.counts,
+      holder: part || t,
+      st,
+      results: t.results,
+      top: part
+        ? h(
+            'div',
+            { class: 'key-parts' },
+            h(
+              'div',
+              { class: 'segmented', role: 'group', 'aria-label': 'Teil' },
+              t.parts.map((x) =>
+                h(
+                  'button',
+                  {
+                    class: 'seg' + (x === part ? ' active' : ''),
+                    'aria-pressed': String(x === part),
+                    onclick: () => {
+                      keyPart[a.id] = x.id;
+                      NM.app.rerender();
+                    },
+                  },
+                  x.name
+                )
+              )
+            ),
+            h('p', { class: 'muted small' }, `Höchstpunktzahl ${fmtScore(G.testMaxScore(G.partAsTest(t, part)))} · LIMIT ${fmtScore(part.limit)} %` + (G.wholeOnly(part, level) ? ' · nur ganze Noten' : ''))
+          )
+        : null,
+      statsTitle: part ? 'Notenspiegel der Gesamtnote' : null,
+    });
+  }
+
+  /**
+   * Notenschlüssel-Karte (auch für Präsentationen): Schlüssel mit änderbaren Schwellen (holder.custom),
+   * darunter Notenspiegel, Statistik und Drittelparagraph aus st.
+   */
+  function keyCardFor(course, level, { focusId, key, counts, holder, st, results, top = null, statsTitle = null }) {
     const anyCustom = key.some((k) => k.custom);
     const rows = key
       .slice()
@@ -751,7 +789,7 @@
                   class: 'cell-input num-input' + (k.custom ? ' custom' : ''),
                   value: fmtScore(k.min),
                   title: k.custom ? 'Von Hand gesetzt' : 'Berechnet – zum Anpassen überschreiben',
-                  'data-focus-key': `key-${a.id}-${part ? part.id + '-' : ''}${k.p}`,
+                  'data-focus-key': `key-${focusId}-${k.p}`,
                   'data-select-all': '',
                   inputmode: 'decimal',
                   onfocus: (e) => e.target.select(),
@@ -790,38 +828,14 @@
             )
           : null
       ),
-      part
-        ? h(
-            'div',
-            { class: 'key-parts' },
-            h(
-              'div',
-              { class: 'segmented', role: 'group', 'aria-label': 'Teil' },
-              t.parts.map((x) =>
-                h(
-                  'button',
-                  {
-                    class: 'seg' + (x === part ? ' active' : ''),
-                    'aria-pressed': String(x === part),
-                    onclick: () => {
-                      keyPart[a.id] = x.id;
-                      NM.app.rerender();
-                    },
-                  },
-                  x.name
-                )
-              )
-            ),
-            h('p', { class: 'muted small' }, `Höchstpunktzahl ${fmtScore(G.testMaxScore(G.partAsTest(t, part)))} · LIMIT ${fmtScore(part.limit)} %` + (G.wholeOnly(part, level) ? ' · nur ganze Noten' : ''))
-          )
-        : null,
+      top,
       h(
         'table',
         { class: 'table compact key-table' },
         h('thead', null, h('tr', null, h('th', null, level === 'mss' ? 'Punkte' : 'Note'), level === 'mss' ? h('th', null, 'Note') : null, h('th', { class: 'num' }, 'ab Pkt.'), h('th', { class: 'num' }, 'ab %'), h('th', { class: 'num' }, 'Anz.'))),
         h('tbody', null, rows)
       ),
-      part ? h('h3', { class: 'key-sub' }, 'Notenspiegel der Gesamtnote') : null,
+      statsTitle ? h('h3', { class: 'key-sub' }, statsTitle) : null,
       distribution(st, level),
       h(
         'div',
@@ -833,7 +847,7 @@
         h('div', null, h('span', { class: 'muted' }, '5 und 6'), h('strong', null, st.weak)),
         weakTile(st)
       ),
-      iHint(course, t),
+      iHint(course, { results }),
       st.drittel
         ? h('div', { class: 'alert alert-danger' }, h('strong', null, 'Drittelparagraph greift! '), 'Mehr als ein Drittel der Arbeiten ist mangelhaft oder ungenügend (Täuschung/Verweigerung nicht mitgezählt). Die Arbeit muss von der Schulleitung genehmigt werden.')
         : st.n
@@ -1140,5 +1154,5 @@
     NM.print.moodle(course, a, { sid: who.value || null, withGrade: grade.checked });
   }
 
-  NM.views.tests = { render, moodleImport };
+  NM.views.tests = { render, moodleImport, keyCardFor, gradeStepsSelect, limitInput };
 })((globalThis.NM = globalThis.NM || {}));

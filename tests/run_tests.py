@@ -165,7 +165,7 @@ def run_app_smoke(br, base):
     print("App (Demo-Modus):")
     br.open(f"{base}/index.html?demo")
     report("App startet", br.wait("!!document.querySelector('.overview-table')", 30), "; ".join(br.errors))
-    for tab in ["course", "tests", "epo", "draw", "overview", "settings"]:
+    for tab in ["course", "tests", "epo", "pres", "draw", "overview", "settings"]:
         for course in [0, 1]:
             br.eval(f"NM.app.select({{courseId: NM.app.db().courses[{course}].id, tab: '{tab}'}}); 1")
             time.sleep(0.15)
@@ -707,6 +707,97 @@ def run_print_menu_check(br, base):
     report("Druckauswahl: ein Knopf je Reiter, Druckarten mit Tooltip nach Lehrkraft/Austeilen, Auswahl druckt, Abbrechen nicht", ok and not br.errors, str(res) + "; ".join(br.errors))
 
 
+def run_pres_check(br, base):
+    print("Präsentationen (Kriterienpool, Bewerten, Ausdrucke):")
+    br.open(f"{base}/index.html?demo")
+    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.errors = []
+    res = br.eval("""(async () => {
+        const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
+        window.print = () => {};
+        const db = NM.app.db();
+        const c = db.courses[0];
+        NM.app.state.ui.half[c.id] = 'HJ2';
+        NM.app.select({ courseId: c.id, tab: 'pres' }); await wait();
+        const a = c.assessments.find((x) => x.kind === 'pres');
+        const p = a.pres;
+        const out = { tab: !!document.querySelector('.rate-card'), picker: document.querySelector('.picker-item.active .picker-name').textContent, rows: document.querySelectorAll('[data-scroll-key="pres-results"] tbody tr').length };
+        // Live bewerten: Person ohne Bewertung wählen, je Kriterium „2“
+        const s = c.students[7];
+        const sel = document.querySelector('[data-focus-key="rate-person"]');
+        sel.value = s.id; sel.dispatchEvent(new Event('change')); await wait();
+        for (const cr of p.criteria) { document.querySelector(`[data-focus-key="rate-${cr.id}-2"]`).click(); await wait(80); }
+        const topic = document.querySelector(`[data-focus-key="rate-topic-${s.id}"]`);
+        topic.value = 'Wahrscheinlichkeit'; topic.dispatchEvent(new Event('change')); await wait();
+        const r = NM.grades.presResult(p, s.id, 'sek1');
+        out.rate = [r.score, r.max, p.results[s.id].topic, document.querySelectorAll('.rate-btn.active').length];
+        // nochmal klicken hebt auf
+        document.querySelector(`[data-focus-key="rate-${p.criteria[0].id}-2"]`).click(); await wait();
+        out.toggle = p.results[s.id].scores[p.criteria[0].id] === undefined;
+        // Tabelle: 3 eintragen, 5 abgelehnt
+        const cell = () => document.querySelector(`[data-focus-key="ps-${s.id}-${p.criteria[0].id}"]`);
+        cell().value = '3'; cell().dispatchEvent(new Event('change')); await wait();
+        out.cell = p.results[s.id].scores[p.criteria[0].id];
+        cell().value = '5'; cell().dispatchEvent(new Event('change')); await wait();
+        out.invalid = p.results[s.id].scores[p.criteria[0].id];
+        // Gewicht ×3
+        const w = document.querySelector(`[data-focus-key="crit-w-${p.criteria[1].id}"]`);
+        w.value = '3'; w.dispatchEvent(new Event('change')); await wait();
+        out.max = NM.grades.presResult(p, s.id, 'sek1').max;
+        // Kriterium aus dem Pool hinzufügen
+        const n0 = p.criteria.length;
+        [...document.querySelectorAll('.btn-ghost')].find((b) => b.textContent === '+ aus dem Pool').click(); await wait();
+        document.querySelector('dialog .pool-check input:not([disabled])').checked = true;
+        document.querySelector('dialog .btn-primary').click(); await wait();
+        out.fromPool = p.criteria.length - n0;
+        // Eigenes Kriterium, auch in den Pool
+        const pool0 = db.criteriaPool.length;
+        [...document.querySelectorAll('.btn-ghost')].find((b) => b.textContent === '+ eigenes Kriterium').click(); await wait();
+        const inputs = document.querySelectorAll('dialog input.input');
+        inputs[0].value = 'Kreativität'; inputs[1].value = 'Inhalt'; inputs[2].value = 'keine eigenen Ideen'; inputs[5].value = 'originell';
+        document.querySelector('dialog .btn-primary').click(); await wait();
+        out.own = [p.criteria[p.criteria.length - 1].name, p.criteria[p.criteria.length - 1].desc[3], db.criteriaPool.length - pool0];
+        // Neue Bewertung mit Kriterien einer früheren Bewertung
+        document.querySelector('.picker-add').click(); await wait();
+        const from = document.querySelectorAll('dialog select')[0];
+        from.value = '0'; from.dispatchEvent(new Event('change'));
+        document.querySelector('dialog .btn-primary').click(); await wait();
+        const list = c.assessments.filter((x) => x.kind === 'pres');
+        out.tpl = [list.length, list[1].pres.criteria.length === p.criteria.length, list[1].pres.criteria[0].id !== p.criteria[0].id, NM.app.state.ui.presId[c.id] === list[1].id];
+        // Druckauswahl und Ausdrucke
+        document.querySelector('[data-print-menu]').click(); await wait();
+        out.menu = [...document.querySelectorAll('dialog .print-option')].map((o) => o.dataset.print);
+        document.querySelector('dialog .modal-actions .btn').click(); await wait();
+        const printed = (mode, o) => { NM.print.pres(c, a, mode, o); const txt = document.getElementById('print-root').textContent; const t = document.title; const grade = !!document.querySelector('#print-root .p-mr-grade'); document.body.classList.remove('printing'); return [t, txt, grade]; };
+        const [t1, x1] = printed('list');
+        const [t2, x2] = printed('blank');
+        const [t3, x3, g3] = printed('sheets', { withGrade: false });
+        const [, , g3b] = printed('sheets', { withGrade: true });
+        const [t4] = printed('key');
+        out.print = [t1.endsWith('Bewertungsliste') && x1.includes('Wahrscheinlichkeit'), t2.endsWith('Leere Bewertungsbögen') && x2.includes('Kreativität'), t3.endsWith('Bewertungsbögen') && x3.includes('Kreativität') && x3.includes('Wahrscheinlichkeit') && !g3 && g3b, t4.endsWith('Notenschlüssel')];
+        out.sheetsN = (() => { NM.print.pres(c, a, 'sheets', {}); const n = document.querySelectorAll('#print-root .p-pres').length; document.body.classList.remove('printing'); return n; })();
+        // Notenübersicht HJ2: Spalte mit Sprung zur Präsentation
+        NM.app.select({ tab: 'overview' }); await wait();
+        const jump = [...document.querySelectorAll('.link.tiny')].find((b) => b.textContent === 'Präs. ›');
+        out.overview = !!jump && !!document.querySelector('.kind-pres');
+        jump.click(); await wait();
+        out.jump = NM.app.state.ui.tab === 'pres';
+        // Pool-Eintrag löschen: bestehende Bewertung behält das Kriterium
+        NM.app.state.ui.presId[c.id] = a.id; NM.app.rerender(); await wait();
+        document.querySelector('.pool-card').open = true; await wait();
+        const del = [...document.querySelectorAll('.pool-item .icon-btn')].find((b) => b.getAttribute('aria-label') === 'Aus dem Pool löschen: Kreativität');
+        del.click(); await wait();
+        document.querySelector('dialog .btn-danger').click(); await wait();
+        out.poolDel = [!db.criteriaPool.some((x) => x.name === 'Kreativität'), p.criteria.some((x) => x.name === 'Kreativität')];
+        return out; })()""")
+    ok = bool(res) and res["tab"] and res["picker"] == "Referat Statistik" and res["rows"] == 12 \
+        and res["rate"][0] == 12 and res["rate"][1] == 18 and res["rate"][2] == "Wahrscheinlichkeit" and res["rate"][3] == 5 and res["toggle"] \
+        and res["cell"] == 3 and res["invalid"] == 3 and res["max"] == 24 and res["fromPool"] == 1 and res["own"] == ["Kreativität", "originell", 1] \
+        and res["tpl"] == [2, True, True, True] and res["menu"] == ["list", "key", "blank", "sheets"] and res["print"] == [True] * 4 \
+        and res["sheetsN"] == 7 and res["overview"] and res["jump"] and res["poolDel"] == [True, True]
+    report("Präsentationen: bewerten (Knöpfe, Tabelle), Gewicht, Kriterien aus Pool/eigene, Vorlage, Ausdrucke, Notenübersicht, Pool", ok and not br.errors, str(res) + "; ".join(br.errors))
+
+
 def run_moodle_check(br, base):
     print("Moodle-Import (Dialog, Übernahme, Ausdruck):")
     br.open(f"{base}/index.html?demo")
@@ -836,6 +927,7 @@ def main():
         run_settings_layout_check(br, base)
         run_parts_check(br, base)
         run_print_menu_check(br, base)
+        run_pres_check(br, base)
         run_moodle_check(br, base)
         run_decrypt_tool(br, base)
     finally:

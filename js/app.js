@@ -24,6 +24,7 @@
     { id: 'course', label: 'Kurs & Schüler' },
     { id: 'tests', label: 'Tests' },
     { id: 'epo', label: 'Mitarbeit/EPO' },
+    { id: 'pres', label: 'Präsentationen' },
     { id: 'draw', label: 'Ziehen' },
     { id: 'overview', label: 'Notenübersicht' },
     { id: 'seating', label: 'Sitzplan' },
@@ -32,9 +33,9 @@
 
   function loadUi() {
     try {
-      return Object.assign({ tab: 'overview', courseId: null, yearId: null, half: {}, testId: {}, epoId: {}, seatingId: {}, sort: {}, theme: 'auto' }, JSON.parse(localStorage.getItem('nm.ui') || '{}'));
+      return Object.assign({ tab: 'overview', courseId: null, yearId: null, half: {}, testId: {}, epoId: {}, presId: {}, seatingId: {}, sort: {}, theme: 'auto' }, JSON.parse(localStorage.getItem('nm.ui') || '{}'));
     } catch (e) {
-      return { tab: 'overview', courseId: null, yearId: null, half: {}, testId: {}, epoId: {}, seatingId: {}, sort: {}, theme: 'auto' };
+      return { tab: 'overview', courseId: null, yearId: null, half: {}, testId: {}, epoId: {}, presId: {}, seatingId: {}, sort: {}, theme: 'auto' };
     }
   }
   function saveUi() {

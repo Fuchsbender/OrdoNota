@@ -221,6 +221,30 @@
     eq('Teile: drei Teile möglich', G.partTasks({ parts: [...parts(), { id: 'H', name: 'Hören' }], tasks: [{ id: 'h', partId: 'H' }] }, { id: 'H' }).length, 1);
   }
 
+  // Präsentationen: je Kriterium 0–3 Punkte × Gewicht, Note mit dem Testschlüssel
+  {
+    const L = (p) => G.label(p, 'sek1');
+    const pres = { limit: 50, custom: {}, criteria: [{ id: 'A', name: 'Inhalt' }, { id: 'B', name: 'Vortrag', weight: 2 }, { id: 'C', name: 'Medien', weight: 1 }],
+      results: { x: { scores: { A: 3, B: 3, C: 3 } }, y: { scores: { A: 1, B: 1, C: 1 } }, z: { scores: { A: 2 } }, f: { scores: { A: 3 }, status: 'fehlt' }, u: { scores: { A: 3, B: 3, C: 3 }, status: 'ungewertet' }, t: { status: 'taeuschung' } } };
+    eq('Präsentation: Höchstpunktzahl Σ 3 × Gewicht', G.presResult(pres, 'x', 'sek1').max, 12);
+    eq('Präsentation: alles 3 → 1', [G.presResult(pres, 'x', 'sek1').score, L(G.presResult(pres, 'x', 'sek1').p)], [12, '1']);
+    eq('Präsentation: Gewicht ×2 zählt doppelt (1+2+1 = 4 von 12 → 5)', [G.presResult(pres, 'y', 'sek1').score, L(G.presResult(pres, 'y', 'sek1').p)], [4, '5']);
+    eq('Präsentation: teilweise bewertet zählt mit', G.presResult(pres, 'z', 'sek1').score, 2);
+    eq('Präsentation: fehlt → keine Note, Täuschung → 6', [G.presResult(pres, 'f', 'sek1').p, G.presResult(pres, 't', 'sek1').p], [null, 0]);
+    eq('Präsentation: Statistik ohne „nicht gewertet“', G.presStats(pres, ['x', 'y', 'z', 'f', 'u', 't'], 'sek1').n, 4);
+    pres.custom = { 14: 11 };
+    eq('Präsentation: eigene Schwelle', L(G.presResult(pres, 'x', 'sek1').p), '1');
+    pres.custom = {};
+    pres.wholeGrades = true;
+    eq('Präsentation: nur ganze Noten', L(G.presResult(pres, 'y', 'sek1').p), '5');
+    delete pres.wholeGrades;
+    eq('Präsentation MSS: 12/12 → 15', G.presResult(pres, 'x', 'mss').p, 15);
+    const a = { id: 'p', kind: 'pres', half: 'HJ1', cat: 'other', weight: 1, pres };
+    eq('Präsentation: assessmentPoints und Status', [G.assessmentPoints(a, 'x', 'sek1'), G.assessmentStatus(a, 'f'), G.ungradedFor(a, 'u'), G.ungradedFor(a, 'x')], [14, 'fehlt', true, false]);
+    const course = { jahrgang: 8, type: 'sek1', wKa: 50, wOther: 50, assessments: [a, { id: 'm', kind: 'manual', half: 'HJ1', cat: 'other', weight: 1, manual: { grades: { x: { p: 8 } } } }] };
+    eq('Präsentation zählt zu den sonstigen Leistungen', G.halfResult(course, 'HJ1', 'x').other, (1 + 3) / 2);
+  }
+
   lines.unshift(fails === 0 ? 'ALLE TESTS BESTANDEN' : fails + ' FEHLGESCHLAGEN');
   
   document.getElementById('out').textContent = lines.join('\n');

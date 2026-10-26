@@ -7,8 +7,9 @@
   // SCHEMA erhöhen, sobald sich das Datenmodell so ändert, dass ältere App-Versionen
   // die Daten falsch verstehen würden. Ältere Versionen öffnen solche Datenbanken dann nicht.
   // 2 (1.18): Arbeiten in Teilen – getrennt benotete Teile würden ältere Versionen falsch rechnen.
-  const SCHEMA = 2;
-  const APP_VERSION = '1.19.0';
+  // 3 (1.20): Präsentationen (kind "pres") – ältere Versionen kennen diese Leistungsart nicht.
+  const SCHEMA = 3;
+  const APP_VERSION = '1.20.0';
 
   class NewerSchemaError extends Error {}
 
@@ -19,6 +20,28 @@
     const d = new Date();
     const y = d.getMonth() >= 7 ? d.getFullYear() : d.getFullYear() - 1; // ab August neues Schuljahr
     return `${y}/${String(y + 1).slice(2)}`;
+  }
+
+  // Startbestand des Kriterienpools für Präsentationen (je Kriterium 0–3 Punkte mit Beschreibung je Stufe)
+  const PRES_POOL = [
+    ['Inhalt', 'Fachliche Richtigkeit', ['viele fachliche Fehler', 'einige Fehler', 'weitgehend richtig', 'durchgehend richtig und präzise']],
+    ['Inhalt', 'Gliederung und roter Faden', ['keine erkennbare Gliederung', 'Gliederung lückenhaft', 'klar gegliedert', 'klar gegliedert, schlüssige Übergänge']],
+    ['Inhalt', 'Umfang und Tiefe', ['Thema kaum erfasst', 'oberflächlich', 'Thema angemessen erfasst', 'Thema vertieft und eigenständig erschlossen']],
+    ['Inhalt', 'Quellen', ['keine Quellen', 'Quellen unvollständig', 'Quellen angegeben', 'Quellen vollständig und kritisch ausgewählt']],
+    ['Vortrag', 'Freies Sprechen', ['abgelesen', 'überwiegend abgelesen', 'weitgehend frei', 'frei mit Stichwörtern']],
+    ['Vortrag', 'Sprechweise (Lautstärke, Tempo)', ['kaum verständlich', 'zu leise oder zu schnell', 'gut verständlich', 'lebendig und gut verständlich']],
+    ['Vortrag', 'Blickkontakt und Körpersprache', ['kein Blickkontakt', 'wenig Blickkontakt', 'Blickkontakt meist vorhanden', 'souverän und zugewandt']],
+    ['Vortrag', 'Zeitrahmen', ['deutlich über-/unterschritten', 'merklich abweichend', 'knapp eingehalten', 'genau eingehalten']],
+    ['Medien', 'Gestaltung der Folien/Medien', ['unübersichtlich', 'überladen oder knapp', 'übersichtlich', 'übersichtlich und ansprechend']],
+    ['Medien', 'Einsatz der Medien', ['nicht passend', 'wenig unterstützend', 'unterstützt den Vortrag', 'gezielt und wirkungsvoll eingesetzt']],
+    ['Sprache', 'Fachsprache', ['keine Fachbegriffe', 'Fachbegriffe teils falsch', 'Fachbegriffe richtig', 'sicher und erklärt']],
+    ['Sprache', 'Verständlichkeit', ['schwer verständlich', 'teilweise verständlich', 'verständlich', 'anschaulich mit Beispielen']],
+    ['Austausch', 'Fragen beantworten', ['keine Antworten', 'unsicher', 'meist sicher', 'sicher und fundiert']],
+    ['Austausch', 'Einbindung des Publikums', ['kein Bezug zum Publikum', 'wenig Bezug', 'Publikum angesprochen', 'Publikum aktiv eingebunden']],
+  ];
+
+  function defaultCriteriaPool() {
+    return PRES_POOL.map(([group, name, d]) => ({ id: uid(), group, name, desc: { 0: d[0], 1: d[1], 2: d[2], 3: d[3] } }));
   }
 
   function newDb() {
@@ -36,6 +59,7 @@
         gradeColors: true,
         pomodoro: Object.assign({}, POMODORO_DEFAULTS),
       },
+      criteriaPool: defaultCriteriaPool(),
       years: [year],
       courses: [],
     };
@@ -54,6 +78,8 @@
     db.settings = Object.assign(newDb().settings, db.settings || {});
     // 1.17: Pomodoro-Timer
     db.settings.pomodoro = Object.assign({}, POMODORO_DEFAULTS, db.settings.pomodoro || {});
+    // 1.20: Kriterienpool für Präsentationen (Startbestand nur, wenn es noch keinen gibt)
+    if (!Array.isArray(db.criteriaPool)) db.criteriaPool = defaultCriteriaPool();
     db.years = db.years || [];
     db.courses = db.courses || [];
     for (const c of db.courses) {
@@ -244,8 +270,33 @@
     };
   }
 
+  /** Neue Präsentationsbewertung; criteria: Kriterien (Kopie aus dem Pool, mit eigener id). */
+  function newPres(course, half, settings, criteria = []) {
+    const level = G.courseLevel(course);
+    return {
+      id: uid(),
+      kind: 'pres',
+      half,
+      cat: 'other',
+      name: 'Präsentation',
+      date: todayISO(),
+      weight: 1,
+      pres: {
+        limit: level === 'mss' ? settings.limitMss : settings.limitSek1,
+        custom: {},
+        criteria: criteria.map((c) => presCriterion(c)),
+        results: {},
+      },
+    };
+  }
+
+  /** Kriterium für eine Bewertung aus einem Pool-Eintrag (oder einem Kriterium einer früheren Bewertung). */
+  function presCriterion(c) {
+    return { id: uid(), poolId: c.poolId || c.id, group: c.group || '', name: c.name, desc: Object.assign({}, c.desc || {}), weight: Number(c.weight) > 0 ? Number(c.weight) : 1 };
+  }
+
   function kindLabel(a) {
-    return a.kind === 'test' ? 'Test' : a.kind === 'epo' ? 'EPO' : 'Note';
+    return a.kind === 'test' ? 'Test' : a.kind === 'epo' ? 'EPO' : a.kind === 'pres' ? 'Präsentation' : 'Note';
   }
 
   // ---------- Demo-Daten (nur index.html?demo) ----------
@@ -296,6 +347,15 @@
       e.epo.lessons.forEach((l, j) => (e.epo.entries[s.id][l.id] = { r: syms[(i + j) % syms.length], hw: (i + j) % 9 === 0 ? 'h' : '' }));
     });
     c8.assessments.push(e);
+    // Präsentationen im 2. Halbjahr (Kriterien aus dem Startbestand)
+    const pr = newPres(c8, 'HJ2', db.settings, db.criteriaPool.filter((x) => ['Fachliche Richtigkeit', 'Gliederung und roter Faden', 'Freies Sprechen', 'Gestaltung der Folien/Medien', 'Fragen beantworten'].includes(x.name)));
+    pr.name = 'Referat Statistik';
+    pr.pres.criteria[0].weight = 2;
+    const topics = ['Mittelwert', 'Median', 'Boxplot', 'Streuung', 'Diagramme', 'Umfragen'];
+    c8.students.slice(0, 6).forEach((s, i) => {
+      pr.pres.results[s.id] = { topic: topics[i], date: `2026-11-${String(10 + i).padStart(2, '0')}`, scores: Object.fromEntries(pr.pres.criteria.map((c, j) => [c.id, Math.max(0, 3 - ((i + j) % 4))])) };
+    });
+    c8.assessments.push(pr);
 
     const c12 = newCourse(year.id, { klasse: 'MSS 12', fach: 'M LK', jahrgang: 12, type: 'lk' });
     c12.students = parseNames(names.slice(0, 9).join('\n'));
@@ -333,6 +393,9 @@
     newManual,
     newTest,
     newEpo,
+    newPres,
+    presCriterion,
+    defaultCriteriaPool,
     kindLabel,
     demoDb,
   };

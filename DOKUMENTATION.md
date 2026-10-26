@@ -1,6 +1,6 @@
 # OrdoNota – Dokumentation
 
-Version 1.19.0 · Stand Oktober 2026
+Version 1.20.0 · Stand Oktober 2026
 
 OrdoNota (bis Version 1.11 „Notenmanager“) verwaltet Noten für die Sekundarstufe I (Noten 1–6 mit Tendenz) und die Mainzer Studienstufe (MSS, Punkte 00–15) an Schulen in Rheinland-Pfalz. Die App läuft vollständig lokal im Browser, verschlüsselt alle Daten mit einem Passwort und legt sie in einem Ordner ab, den der Synology Drive Client auf die DiskStation spiegelt.
 
@@ -18,6 +18,7 @@ OrdoNota (bis Version 1.11 „Notenmanager“) verwaltet Noten für die Sekundar
 6. [Reiter „Kurs & Schüler“](#6-reiter-kurs--schüler)
 7. [Reiter „Tests“](#7-reiter-tests)
 8. [Reiter „Mitarbeit/EPO“](#8-reiter-mitarbeitepo)
+    - [8a. Reiter „Präsentationen“](#8a-reiter-präsentationen)
 9. [Reiter „Notenübersicht“](#9-reiter-notenübersicht)
 10. [Reiter „Sitzplan“](#10-reiter-sitzplan)
     - [10a. Reiter „Ziehen“](#10a-reiter-ziehen)
@@ -60,6 +61,7 @@ OrdoNota deckt vier Anwendungsfälle ab:
 | Tests mit Rohpunkten auswerten | **Tests** | Note je Person, Notenschlüssel, Notenspiegel, Drittelparagraph |
 | Mitarbeit über eine feste Zahl von Stunden bewerten | **Mitarbeit/EPO** | Note je Person aus den Stundenbewertungen |
 | Alle Noten gewichtet zur Zeugnisnote zusammenführen | **Notenübersicht** | Halbjahresnote, Jahresnote, gesetzte Noten |
+| Präsentationen nach Kriterien bewerten | **Präsentationen** | Note je Person aus 0–3 Punkten je Kriterium, Bewertungsbögen |
 | Sitzordnung für einen oder mehrere Räume planen | **Sitzplan** | Sitzplan mit Vornamen (und Fotos) zum Ziehen und Drucken |
 
 Ergebnisse aus Tests und EPO-Blöcken erscheinen **automatisch** in der Notenübersicht. Dort lassen sich zusätzlich Einzelnoten direkt eintragen (z. B. Heft, Referat, Hausaufgabenüberprüfung).
@@ -173,7 +175,7 @@ Technisch schreibt die App dazu die Datei `notenmanager.lock.json` in den Dateno
 | **Speicherstatus** | „Speichert …“, „Gespeichert 10:14“, „Ungespeicherte Änderungen“ oder rot „Nicht gespeichert!“ |
 | **☾** | Hell/Dunkel umschalten |
 | **🔒 Sperren** | Speichert, entfernt den Geräte-Hinweis und sperrt die Datenbank |
-| **Reiter** | Kurs & Schüler, Tests, Mitarbeit/EPO, Ziehen, Notenübersicht, Sitzplan, Einstellungen (in der Skizze aus Platzgründen gekürzt). Beim Wechsel von Reiter, Kurs oder Halbjahr blendet der Inhalt weich ein und der Unterstrich gleitet zum neuen Reiter; beim Eintragen von Werten gibt es keine Animation. Bei „Bewegung reduzieren“ im Betriebssystem entfällt beides. |
+| **Reiter** | Kurs & Schüler, Tests, Mitarbeit/EPO, Präsentationen, Ziehen, Notenübersicht, Sitzplan, Einstellungen (in der Skizze aus Platzgründen gekürzt). Beim Wechsel von Reiter, Kurs oder Halbjahr blendet der Inhalt weich ein und der Unterstrich gleitet zum neuen Reiter; beim Eintragen von Werten gibt es keine Animation. Bei „Bewegung reduzieren“ im Betriebssystem entfällt beides. |
 | **Kursliste** | Kurse des gewählten Schuljahres, sortiert nach Jahrgang. Zeigt Stufe (Sek I/MSS) und Zahl der aktiven Schüler/innen. **«** neben „Kurse“ klappt die Liste gleitend nach links ein (ohne Animation, wenn im Betriebssystem „Bewegung reduzieren“ eingestellt ist): Es bleibt eine schmale Leiste mit Kürzeln (Klasse und Fach, voller Name beim Darüberfahren), über die sich weiter Kurse wechseln lassen; **»** klappt sie wieder aus. Der Zustand wird auf diesem Gerät gemerkt. |
 | **Halbjahres-Umschalter** | In Tests, EPO und Notenübersicht: HJ1/HJ2 bzw. 11/1, 11/2, 12/1, 12/2, 13; in der Notenübersicht zusätzlich „Jahresnote“ |
 
@@ -418,6 +420,45 @@ Unter **„Einstellungen dieses EPO-Blocks“** (aufklappen):
 - Sek I: **LIMIT 4-** setzen. Die Tabelle wird dann aus dem Sek-I-Schlüssel neu berechnet.
 - **Standard wiederherstellen** setzt Punkte und Tabelle zurück.
 
+## 8a. Reiter „Präsentationen“
+
+Präsentationen (Referate, Vorträge) werden nach **Kriterien** bewertet: je Kriterium **0, 1, 2 oder 3 Punkte**. Die Summe wird wie bei Tests über den Notenschlüssel in eine Note umgerechnet (LIMIT, eigene Schwellen, nur ganze Noten; siehe 15.6).
+
+### 8a.1 Kriterienpool
+
+Der **Kriterienpool** (aufklappbare Karte unten im Reiter) gilt für **alle Kurse und Schuljahre**. Jedes Kriterium hat eine Gruppe (z. B. Inhalt, Vortrag, Medien, Sprache, Austausch), eine Bezeichnung und für jede Stufe 0–3 eine kurze Beschreibung, z. B. „Freies Sprechen“: 0 = abgelesen, 1 = überwiegend abgelesen, 2 = weitgehend frei, 3 = frei mit Stichwörtern. Ein Startbestand mit 14 typischen Kriterien ist vorhanden. Mit **✎** bearbeiten, mit **✕** löschen, mit **„+ Kriterium“** ergänzen. Änderungen am Pool wirken nur auf neue Bewertungen; bestehende Bewertungen behalten ihre Kriterien.
+
+### 8a.2 Bewertung anlegen
+
+1. Halbjahr wählen → **„+ Neue Bewertung“**.
+2. Bezeichnung eingeben und Kriterien aus dem Pool per Haken wählen (die Stufenbeschreibungen erscheinen beim Darüberfahren) – oder unter **„Kriterien übernehmen von“** eine frühere Bewertung (auch aus einem anderen Kurs) als Vorlage nehmen.
+3. In der Karte **„Kriterien“** lassen sich die Kriterien **gewichten** (×1, ×2, ×3: ein Kriterium ×2 zählt 0–6 Punkte), mit ↑/↓ sortieren, mit ✎ für diese Bewertung anpassen (wahlweise auch im Pool) und mit ✕ entfernen. **„+ aus dem Pool“** fügt weitere hinzu, **„+ eigenes Kriterium“** legt ein neues an (wahlweise auch im Pool).
+
+Eckdaten wie bei Tests: Bezeichnung, Datum, **Bereich** (Sonstige oder Klassen-/Kursarbeit als Ersatzleistung), „nicht gewertet“, Gewicht, Notenstufen (Sek I) und LIMIT.
+
+### 8a.3 Bewerten
+
+- **Karte „Bewerten“** (für die Bewertung während oder direkt nach der Präsentation): Person wählen (Auswahlliste oder ‹ ›; ✓ = schon bewertet), **Thema** und Datum eintragen, je Kriterium auf **0, 1, 2 oder 3** klicken. Unter dem Kriterium steht die Beschreibung der gewählten Stufe; ein zweiter Klick hebt die Auswahl auf. Darunter eine **Bemerkung** (erscheint auf dem Bewertungsbogen) sowie Summe, Prozent und Note.
+- **Karte „Übersicht“:** alle Personen mit Thema, Punkten je Kriterium (direkt eintragbar, nur 0–3), Σ, %, Note und Status (fehlt, Nachschreiben, Täuschung, nicht gewertet – wie bei Tests). **✎** am Zeilenende öffnet die Person oben in „Bewerten“. Spalten sind sortierbar.
+- Rechts stehen Notenschlüssel (Schwellen änderbar), Notenspiegel und Drittelparagraph wie bei Tests.
+
+Die Note erscheint in der Notenübersicht als eigene Spalte (◉, Sprung über „Präs. ›“) und zählt mit ihrem Gewicht im gewählten Bereich.
+
+### 8a.4 Ausdrucke
+
+**„🖨 Drucken …“** bietet:
+
+| Druckart | Inhalt |
+|---|---|
+| **Für die Lehrkraft** | |
+| 📄 Bewertungsliste | alle Personen mit Thema, Punkten je Kriterium, Σ, %, Note; darunter Notenspiegel und Schlüssel |
+| 📊 Notenschlüssel und Notenspiegel | Schwellen je Note und Notenspiegel, ohne Namen |
+| 📝 Leere Bewertungsbögen | je aktive Person ein Bogen mit Name, Feld für Thema und Datum, je Kriterium Kästchen 0–3 mit Stufenbeschreibung, Summe, Note, Bemerkungszeilen – zum Ankreuzen während der Präsentation |
+| **Zum Austeilen** | |
+| 🗒️ Bewertungsbogen je Person | je Person eine Seite: Thema, je Kriterium alle Stufen mit angekreuzter Stufe und Punkten, Summe, Prozent, Bemerkung; Note wahlweise, Linien für Datum und Unterschrift (alle oder eine Person) |
+
+> Präsentationen brauchen OrdoNota ab Version 1.20 auf allen Geräten (Datenformat 3, siehe 21.10).
+
 ## 9. Reiter „Notenübersicht“
 
 ### 9.1 Halbjahresansicht
@@ -434,6 +475,7 @@ Name │ Klassen-/Kursarbeiten │ Ø │ Sonstige Leistungen          │ Ø �
 | Spalten mit ✎ bzw. ◷ | Ergebnisse aus Tests bzw. EPO-Blöcken; nur anzeigen, bearbeitet wird im jeweiligen Reiter („Test ›“ / „EPO ›“ springt dorthin) |
 | Spalten ohne Symbol | direkt eingetragene Einzelnoten (bearbeitbar) |
 | ausgegraute Spalte | Test mit Haken „nicht gewertet“ (siehe 7.1); wird angezeigt, zählt aber nicht |
+| Spalten mit ◉ | Ergebnisse aus dem Reiter „Präsentationen“ (Sprung über „Präs. ›“) |
 | blasses, gestricheltes Feld | Spalte aus dem Reiter „Ziehen“: diese Person wurde nicht gezogen (siehe 10a); eintragen ist trotzdem möglich |
 | ausgegraute einzelne Note | Testarbeit dieser Person mit Status „nicht gewertet“ (siehe 7.3); wird angezeigt, zählt aber nicht |
 | Ø | gewichteter Schnitt des Bereichs (Sek I: Dezimalnote, MSS: Punkte) |
@@ -529,6 +571,7 @@ In Tests, Mitarbeit/EPO und Notenübersicht fasst je ein Knopf **„🖨 Drucken
 | Tests | 📄 Ergebnisliste · 🧩 Ergebnisse nach Teilen · 📊 Notenschlüssel und Notenspiegel · ✂️ Ergebniszettel · 💬 Moodle-Rückmeldung | siehe 7.6, 7.7 und 7.8 |
 | Tests | ⛶ Beamer (eigener Knopf) | Vollbild ohne Namen: Notenspiegel, Punkteverteilung, Ø je Aufgabe (siehe 7.5) |
 | Sitzplan | 🖨 Drucken | Sitzplan des gewählten Raums mit Vornamen, Fotos und Lehrerpult, A4 (quer, wenn mehr Spalten als Reihen) |
+| Präsentationen | 📄 Bewertungsliste · 📊 Notenschlüssel · 📝 Leere Bewertungsbögen · 🗒️ Bewertungsbogen je Person | siehe 8a.4 |
 | Mitarbeit/EPO | 📄 Bewertungsliste | Bewertungsraster aller Stunden mit Ergebnis und Note je Person |
 | Mitarbeit/EPO | ✂️ Mitarbeitszettel zum Ausschneiden | ein Zettel pro Person (mehrere pro Blatt, gestrichelte Schnittlinie): Name, Kurs, Blockname und Zeitraum, Punktelegende, Bewertungen mit Datum im Tabellenkopf, Ergebnis mit Note sowie Linien für Datum und Unterschrift |
 
@@ -538,6 +581,7 @@ In Tests, Mitarbeit/EPO und Notenübersicht fasst je ein Knopf **„🖨 Drucken
 - Schnitte (Klassenarbeiten / Sonstige)
 - Halbjahres- und Jahresnote (gerechnet und gesetzt, mit Begründung)
 - Test-Details je Aufgabe
+- Präsentationen je Kriterium (mit Thema und Bemerkung)
 - EPO-Zusammenfassung (Anzahl ++/+/0/-/--, Fehlstunden, Hausaufgaben-Vermerke)
 - Bemerkung
 
@@ -693,6 +737,12 @@ Note   = Gesamt auf eine Notenstufe gerundet (18)
 
 Fehlt eine Teilnote, gibt es keine Gesamtnote. Der Drittelparagraph (15.4) wird auf die Gesamtnoten angewendet.
 
+### 15.6 Präsentationen
+
+Je Kriterium 0–3 Punkte, multipliziert mit dem Gewicht des Kriteriums (×1, ×2, ×3). Höchstpunktzahl = Σ 3 × Gewicht. Die Summe wird wie eine Testpunktzahl mit ganzer Punkte-Genauigkeit über den Schlüssel aus 15.1 bzw. 15.2 in eine Note umgerechnet (LIMIT und eigene Schwellen je Bewertung; Sek I wahlweise nur ganze Noten). Nicht bewertete Kriterien zählen nicht als 0, sondern fehlen in der Summe.
+
+**Beispiel (Sek I, LIMIT 50 %):** fünf Kriterien, eines ×2 → Höchstpunktzahl 18. Bewertung 2 (×2), 1, 0, 3, 2 → 4 + 1 + 0 + 3 + 2 = 10 Punkte = 55,6 % → **4**.
+
 ## 16. Mitarbeit/EPO-Berechnung
 
 Für jede Person und jeden EPO-Block:
@@ -846,7 +896,7 @@ uv run --with cryptography tools/entschluesseln.py /pfad/zu/notenmanager.nmdb
 | (keine) | fragt nach dem Passwort und schreibt `<datei>_klartext.json` |
 | `-w`, `--wiederherstellung` | fragt nach dem Wiederherstellungsschlüssel statt dem Passwort |
 | `-o DATEI` | Name der Ausgabedatei |
-| `--csv ORDNER` | zusätzlich eine CSV-Datei je Kurs (Excel-kompatibel) mit Einzelnoten, Test-Rohpunkten (bei Arbeiten in Teilen je Teil), EPO-Kürzeln, gesetzten Noten und Bemerkungen |
+| `--csv ORDNER` | zusätzlich eine CSV-Datei je Kurs (Excel-kompatibel) mit Einzelnoten, Test-Rohpunkten (bei Arbeiten in Teilen je Teil), Präsentationspunkten, EPO-Kürzeln, gesetzten Noten und Bemerkungen |
 | `-f` | vorhandene Ausgabedatei überschreiben |
 
 Das Passwort wird verdeckt abgefragt und nirgends gespeichert. Die CSV-Dateien enthalten **Rohdaten**. Berechnete Schnitte und Testnoten erzeugt nur die App.
@@ -920,7 +970,7 @@ Reines HTML/CSS/JavaScript ohne Build-Schritt und ohne externe Bibliotheken. Die
 | `js/moodle.js` | `NM.moodle` | Moodle-Import (rein, ohne DOM): CSV zerlegen, Antworten-/Bewertungen-CSV erkennen und zusammenführen, Personen zuordnen, als Test übernehmen |
 | `js/ui.js` | `NM.ui` | Wiederverwendbare Bausteine: Halbjahres-Umschalter, Noten-Eingabezellen, Badges, Leistungs-Dialog |
 | `js/app.js` | `NM.app` | Anwendungskern: Anmeldung, Sitzung, Autosave, Sperre, Layout, Navigation, Neuzeichnen mit Fokus-Erhalt, Tabellen-Tastatur |
-| `js/view-*.js` | `NM.views.*` | Je ein Reiter: `course`, `tests`, `epo`, `draw`, `overview`, `seating`, `settings` |
+| `js/view-*.js` | `NM.views.*` | Je ein Reiter: `course`, `tests`, `epo`, `pres` (Präsentationen), `draw`, `overview`, `seating`, `settings` |
 | `js/print.js` | `NM.print` | Druckansichten |
 | `css/app.css` | – | Gestaltung inkl. Hell/Dunkel (Farb-Tokens auf `:root`) und Druck-CSS |
 
@@ -951,7 +1001,7 @@ Berechnete Werte (Schnitte, Testnoten, EPO-Noten) werden **nie gespeichert**, so
   "kdf": "PBKDF2-SHA256",
   "savedAt": "2026-10-14T21:57:03.123Z",
   "device": "Laptop Schule",
-  "app": "1.19.0",
+  "app": "1.20.0",
   "pw":   { "salt": "<b64>", "iter": 600000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "rec":  { "salt": "<b64>", "iter": 100000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "data": { "iv": "<b64>", "ct": "<b64: verschlüsseltes JSON des Datenmodells>" }
@@ -969,15 +1019,16 @@ Berechnete Werte (Schnitte, Testnoten, EPO-Noten) werden **nie gespeichert**, so
 
 ## 24. Datenmodell
 
-Entschlüsselter Inhalt (`schema: 2`):
+Entschlüsselter Inhalt (`schema: 3`):
 
 ```js
 {
-  schema: 2,                             // Datenformat (siehe 26.2)
-  savedWith: "1.19.0",                    // App-Version beim letzten Speichern
+  schema: 3,                             // Datenformat (siehe 26.2)
+  savedWith: "1.20.0",                    // App-Version beim letzten Speichern
   created: "<ISO>", savedAt: "<ISO>",
   settings: { autoLockMin, limitSek1, limitMss, precision, keepBackups, backupEveryMin, gradeColors,
               pomodoro: { enabled, count, work, short, long, tick: "off" | "work" | "always", alarm: "off" | "bell" | "gong" | "beep", volume } },
+  criteriaPool: [ { id, group, name, desc: { 0, 1, 2, 3 } } ],   // Kriterien für Präsentationen (alle Kurse, seit 1.20)
   years:   [ { id, name: "2026/27" } ],
   courses: [ Course ]
 }
@@ -999,7 +1050,7 @@ Course = {
 }
 
 Assessment = {
-  id, kind: "manual" | "test" | "epo",
+  id, kind: "manual" | "test" | "epo" | "pres",
   half: "HJ1" | "HJ2" | "11/1" | … | "13",
   cat: "ka" | "other",
   name, date: "YYYY-MM-DD", weight, ungraded?,   // ungraded: zählt nicht zur Note
@@ -1016,11 +1067,14 @@ Assessment = {
   epo?:    { limit, points: { "++","+","0","-","--","u","h" },
              table: { strict: bool, mins: [ % je Punktstufe ] },
              lessons: [ { id, date } ],
-             entries: { "<sid>": { "<lessonId>": { r: "++"|"+"|"0"|"-"|"--"|"k"|"", hw: "u"|"h"|"" } } } }
+             entries: { "<sid>": { "<lessonId>": { r: "++"|"+"|"0"|"-"|"--"|"k"|"", hw: "u"|"h"|"" } } } },
+  pres?:   { limit, custom: { "<p>": Mindestpunktzahl }, wholeGrades?,
+             criteria: [ { id, poolId, group, name, desc: { 0, 1, 2, 3 }, weight } ],   // Kopie aus dem Pool
+             results: { "<sid>": { scores: { "<criterionId>": 0..3 }, topic?, date?, note?, status? } } }
 }
 ```
 
-`p` ist immer eine Punktzahl 0–15. `status` ∈ `fehlt`, `nachschreiben`, `taeuschung`; bei Testergebnissen zusätzlich `ungewertet` (Note wird berechnet, zählt aber nicht; Abfrage über `NM.grades.ungradedFor(a, sid)`).
+`p` ist immer eine Punktzahl 0–15. `status` ∈ `fehlt`, `nachschreiben`, `taeuschung`; bei Test- und Präsentationsergebnissen zusätzlich `ungewertet` (Note wird berechnet, zählt aber nicht; Abfrage über `NM.grades.ungradedFor(a, sid)`).
 
 Bei Arbeiten in Teilen gehören Aufgaben ohne gültige `partId` zum ersten Teil. Schlüsselfelder (`limit`, `precision`, `custom`, `wholeGrades`) und `weight` der Teile gelten nur bei `partMode: "separate"`; ein Moodle-Import in einen Teil speichert seine Daten in `parts[].moodle` (gleiche Struktur wie `test.moodle`).
 
@@ -1042,7 +1096,7 @@ Das Skript startet einen unsichtbaren Chromium-Browser (Chrome, Edge, Chromium, 
 2. den Start der App im Demo-Modus und alle Reiter für einen Sek-I- und einen MSS-Kurs ohne JavaScript-Fehler,
 3. das Sortieren per Klick auf Spaltenköpfe (Tests, EPO, Notenübersicht; Richtung und leere Werte unten),
 4. den Pomodoro-Timer (Aktivieren, Farben je Zustand, Phasenwechsel, Zurücksetzen, Einstellungsdialog), das Layout des Reiters „Einstellungen“ bei aktivem Timer (keine Lücken zwischen den Karten, Auswahllisten nicht abgeschnitten, bei 1570 und 2560 px) und die Kürzel in der eingeklappten Kursliste, die weichen Übergänge (nur bei Reiter-, Kurs- und Halbjahreswechsel), das Ein-/Ausklappen der Kursliste, den Reiter „Tests“ in voller Breite, Arbeiten in Teilen (einschalten, Aufgaben und Punkte je Teil, Teil ausblenden, getrennt benoten, Status je Teil, Schlüssel je Teil, Ausdrucke inkl. „Ergebnisse nach Teilen“, Beamer, Teile aufheben), die Druckauswahl „🖨 Drucken …“ in Tests, EPO und Notenübersicht (Gruppen, Tooltips, Auswahl druckt, Abbrechen nicht) und den Haken „Unterschrift gesehen“ bei Klassenarbeiten (Zähler, Ausdruck), den Moodle-Import (Dateiauswahl im Dialog, Zuordnung, Status „fehlt“, Ausdruck mit und ohne Note, erneuter Import),
-5. den Excel-Export der Schülerliste (gültiges ZIP/XML, Umlaute und Sonderzeichen), das Kurs-Löschen nur mit „LÖSCHEN“, das Ein-/Ausblenden der Fotos im EPO-Reiter und im Sitzplan (auch im Druck) das Erweitern/Verkleinern des Sitzplan-Rasters an allen vier Seiten sowie das Ziehen (keine Wiederholung bis zum Auffüllen, automatisches Auffüllen, Note, Rückgängig, Abwesende/Herausgenommene),
+5. den Excel-Export der Schülerliste (gültiges ZIP/XML, Umlaute und Sonderzeichen), das Kurs-Löschen nur mit „LÖSCHEN“, das Ein-/Ausblenden der Fotos im EPO-Reiter und im Sitzplan (auch im Druck) das Erweitern/Verkleinern des Sitzplan-Rasters an allen vier Seiten sowie das Ziehen (keine Wiederholung bis zum Auffüllen, automatisches Auffüllen, Note, Rückgängig, Abwesende/Herausgenommene) und den Reiter „Präsentationen“ (Bewerten per Knopf und in der Tabelle, Gewicht, Kriterien aus dem Pool und eigene, Vorlage, Ausdrucke, Spalte in der Notenübersicht, Pool bearbeiten),
 6. das Notfallwerkzeug: Eine von der App echt verschlüsselte Datenbank wird mit `tools/entschluesseln.py` per Passwort und per Wiederherstellungsschlüssel entschlüsselt und mit dem Original verglichen. Dazu kommen falsches Passwort, manipulierte Datei und CSV-Ausgabe.
 
 Am Ende steht `ERGEBNIS: x von y bestanden`. Der Exit-Code ist 0, wenn alles bestanden ist.
@@ -1053,8 +1107,8 @@ Am Ende steht `ERGEBNIS: x von y bestanden`. Der Exit-Code ist 0, wenn alles bes
 
 | Datei | Prüft | Ausführen |
 |---|---|---|
-| `tests/grades.test.html` | Skalen, Eingabe-Parser, Rundung, Notenschlüssel (Vergleich mit Excel-Formeln), Bonus/Kappung, Status, Drittelparagraph, EPO (Werte aus der bisherigen EPO-Liste), Halbjahres-/Jahresnote, GK-Gewichtung, Arbeiten in Teilen (gemeinsam/getrennt, Gewichte, fehlender Teil, Status je Teil, ganze Noten je Teil, MSS) | im Browser öffnen |
-| `tests/model.test.html` | Migration älterer Datenbanken (SCHEMA 1 → 2), Ablehnung neuerer Datenformate, Erhalt unbekannter Felder, Namensliste | im Browser öffnen |
+| `tests/grades.test.html` | Skalen, Eingabe-Parser, Rundung, Notenschlüssel (Vergleich mit Excel-Formeln), Bonus/Kappung, Status, Drittelparagraph, EPO (Werte aus der bisherigen EPO-Liste), Halbjahres-/Jahresnote, GK-Gewichtung, Präsentationen (Gewicht, Status, Schlüssel, Halbjahresnote), Arbeiten in Teilen (gemeinsam/getrennt, Gewichte, fehlender Teil, Status je Teil, ganze Noten je Teil, MSS) | im Browser öffnen |
+| `tests/model.test.html` | Migration älterer Datenbanken (SCHEMA 1 → 3, Kriterienpool), neue Präsentation, Ablehnung neuerer Datenformate, Erhalt unbekannter Felder, Namensliste | im Browser öffnen |
 | `tests/moodle.test.html` | CSV-Zerlegung, Erkennen und Zusammenführen von Antworten-/Bewertungen-CSV, bester Versuch, Textvergleich ohne Bewertungen, Zuordnung (Name, gemerkte E-Mail), Übernahme als Test, „fehlt“, erneuter Import, skalierte Punkte, Import in einen Teil | im Browser öffnen |
 | `tests/pomodoro.test.html` | Ablauf der Phasen (mit/ohne kurze bzw. lange Pause), Standardwerte, Migration der Einstellungen | im Browser öffnen |
 | `tests/crypto.test.html` | Anlegen, Entsperren, falsches Passwort, Wiederherstellungsschlüssel, Passwortwechsel, alte Sicherungen, Manipulationserkennung | im Browser öffnen (dauert einige Sekunden) |
@@ -1083,8 +1137,8 @@ In `js/model.js` stehen zwei Nummern:
 
 | Konstante | Bedeutung | Wann erhöhen |
 |---|---|---|
-| `APP_VERSION` (z. B. `1.19.0`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.19.0` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
-| `SCHEMA` (z. B. `2`) | Version des Datenformats (2 seit 1.18: Arbeiten in Teilen) | nur, wenn eine **ältere** App-Version die neuen Daten falsch verstehen würde (z. B. ein Feld ändert seine Bedeutung) |
+| `APP_VERSION` (z. B. `1.20.0`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.20.0` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
+| `SCHEMA` (z. B. `3`) | Version des Datenformats (2 seit 1.18: Arbeiten in Teilen; 3 seit 1.20: Präsentationen) | nur, wenn eine **ältere** App-Version die neuen Daten falsch verstehen würde (z. B. ein Feld ändert seine Bedeutung) |
 
 Öffnet eine App eine Datenbank mit höherem `SCHEMA`, verweigert sie das mit einer Meldung (siehe 21.10). Neue, nur *zusätzliche* Felder brauchen kein neues `SCHEMA`: Ältere Versionen lassen unbekannte Felder unverändert und speichern sie mit.
 

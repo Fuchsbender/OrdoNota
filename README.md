@@ -40,6 +40,8 @@ Ausprobieren ohne echte Daten: `index.html?demo` (nichts wird gespeichert). Beis
 - Statistik je Test: Notenspiegel, Ø, Standardabweichung (Teiler n), Anteil unter 4. Personen mit I-Status zählen in der Statistik nicht mit.
 - Tests lassen sich als „nicht gewertet“ markieren: Sie bleiben sichtbar (ausgegraut), zählen aber nicht zur Note. Das geht auch für einzelne Personen über den Status „nicht gewertet“; die Arbeit zählt dann auch nicht in Notenspiegel, Ø und Drittelparagraph.
 
+**Präsentationen** – je Kriterium 0–3 Punkte × Gewicht; Summe über den Testschlüssel (LIMIT, eigene Schwellen) in eine Note.
+
 **Mitarbeit/EPO** – je Stunde `++ + 0 - --` (4…0 Punkte), `k` = abwesend (zählt nicht), Zusatz `u` (HA unvollständig, −1) bzw. `h` (HA vergessen, −2), z. B. `+h`. Prozent = Punkte / (anwesende Stunden × 4). MSS: 5-%-Stufen wie bisher; Sek I: Sek-I-Schlüssel. Alles je Block einstellbar.
 
 **Zeugnisnote**
@@ -55,6 +57,7 @@ Ausprobieren ohne echte Daten: `index.html?demo` (nichts wird gespeichert). Beis
 - **Arbeit in Teilen** (Haken in den Eckdaten): Teile umbenennen, „+ Teil“, Gewicht und Schlüssel je Teil, Status „fehlt“/„NS“ je Teil, Teil in der Ergebnistabelle per **▾ Teilname** ausblenden, Moodle-Import in einen Teil, Ausdruck **Ergebnisse nach Teilen**.
 - **Moodle-Import** (im Reiter Tests): Antworten- und Bewertungen-CSV aus Moodle wählen, Personen zuordnen (Name bzw. gemerkte E-Mail); jede Frage wird eine Aufgabe, die Note rechnet OrdoNota. Die CSV-Dateien werden verschlüsselt im Test gespeichert. Nicht beendete/fehlende Versuche → „fehlt“. Ausdruck **Moodle-Rückmeldung je Person** (unter 🖨 Drucken …): je Person Frage, Antwort, Lösung, Punkte; unten Note als Zahl und ausgeschrieben (wahlweise) sowie Datum/Unterschrift der Lehrkraft.
 - **Mitarbeit/EPO**: „+ Stunde“, dann pro Person das Kürzel tippen oder per **Schnellwahl** klicken; **Fotos** lassen sich per Umschalter vor den Namen einblenden; „füllen“ setzt alle leeren Zellen einer Stunde. Ausdrucke über **🖨 Drucken …**: Bewertungsliste und Mitarbeitszettel zum Ausschneiden (mit Datum/Unterschrift).
+- **Präsentationen**: Kriterien aus einem Kriterienpool (für alle Kurse, mit Beschreibung je Stufe) zusammenstellen und gewichten (×1–×3), je Person 0–3 Punkte pro Kriterium per Knopf oder in der Tabelle, Thema und Bemerkung; Note wie bei Tests über den Notenschlüssel. Ausdrucke: Bewertungsliste, leere Bewertungsbögen zum Ankreuzen, Bewertungsbogen je Person.
 - **Ziehen**: gewählte Anzahl zufällig ziehen (z. B. Hausaufgaben einsammeln); Gezogene fallen aus dem Pool, bis er aufgefüllt wird (automatisch, wenn er zu klein ist, oder per Knopf). Jede Ziehung legt eine Spalte „HA-Kontrolle“ bei den sonstigen Leistungen an, Noten direkt eintragen. Übersicht über den Pool, Haken zum Herausnehmen und für „heute abwesend“.
 - **Notenübersicht**: alle Noten des Halbjahres; direkte Noten eintragen (`2-`, `11`, oder `f` = fehlt, `ns` = Nachschreiben, `t` = Täuschung/Verweigerung). Ausdrucke über **🖨 Drucken …** (Notenliste, Leistungsbögen je Person), CSV-Export für Excel.
 - **Sitzplan**: mehrere Räume pro Kurs; Raster per „Raster bearbeiten“ an allen vier Seiten mit +/− erweitern oder verkleinern; Vornamen-Karten per Ziehen auf ein Raster setzen, tauschen, zufällig füllen, Stände speichern/laden, Fotos (Strg+V oder Bild auf die Karte ziehen, per Knopf ausblendbar), Druck.

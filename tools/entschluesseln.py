@@ -149,6 +149,12 @@ def schreibe_csv(daten, ordner):
                         z.append(f"{text} (nicht gewertet)".strip())
                     else:
                         z.append(r.get("status") or text)
+                elif a.get("kind") == "pres":
+                    r = a.get("pres", {}).get("results", {}).get(sid, {})
+                    gewicht = {c["id"]: float(c.get("weight") or 1) for c in a.get("pres", {}).get("criteria", [])}
+                    punkte = sum(float(v) * gewicht.get(k, 1) for k, v in r.get("scores", {}).items() if v not in (None, ""))
+                    text = f"{punkte:g} Pkt." if r.get("scores") else ""
+                    z.append(r.get("status") or (f'{text} ({r["topic"]})' if text and r.get("topic") else text))
                 else:
                     e = a.get("epo", {}).get("entries", {}).get(sid, {})
                     z.append(" ".join((c.get("r", "") + c.get("hw", "")) for c in e.values()))

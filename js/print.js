@@ -57,6 +57,10 @@
     const ids = M.statStudents(course).map((s) => s.id);
     const key = part ? G.keyForPart(t, part, level) : G.keyForTest(t, level);
     const st = part ? G.partStats(t, part, ids, level) : G.testStats(t, ids, level);
+    return keyTableFor(key, st, level, counts);
+  }
+
+  function keyTableFor(key, st, level, counts = true) {
     return h(
       'table',
       { class: 'p-table p-key' },
@@ -90,7 +94,10 @@
   }
 
   function statsBlock(course, a, level) {
-    const st = G.testStats(a.test, M.statStudents(course).map((s) => s.id), level);
+    return statsBlockFor(course, G.testStats(a.test, M.statStudents(course).map((s) => s.id), level), level);
+  }
+
+  function statsBlockFor(course, st, level) {
     return h(
       'div',
       { class: 'p-stats' },
@@ -371,6 +378,117 @@
     doPrint(`${a.name} – Moodle-Rückmeldung`, h('div', null, pages));
   }
 
+  // ---------- Präsentationen ----------
+
+  const LEVELS = [0, 1, 2, 3];
+
+  function presMeta(course, a) {
+    const p = a.pres;
+    const max = G.presResult(p, '', G.courseLevel(course)).max;
+    return [fmtDate(a.date), UI.catLabel(a.cat), `${p.criteria.length} Kriterien je 0–3 Punkte`, `Höchstpunktzahl ${fmtScore(max)}`, `LIMIT ${fmtScore(p.limit)} %`, G.wholeOnly(p, G.courseLevel(course)) ? 'nur ganze Noten' : null].filter(Boolean).join(' · ');
+  }
+
+  /** mode: 'list' | 'key' | 'blank' | 'sheets' ({ sid, withGrade }) */
+  function pres(course, a, mode, { sid = null, withGrade = true } = {}) {
+    const level = G.courseLevel(course);
+    const p = a.pres;
+    const students = M.activeStudents(course);
+    const st = G.presStats(p, M.statStudents(course).map((s) => s.id), level);
+    const key = G.keyForPres(p, level);
+    if (mode === 'key') {
+      return doPrint(`${a.name} – Notenschlüssel`, h('div', { class: 'p-page' }, header(course, a.name, presMeta(course, a)), h('div', { class: 'p-cols' }, h('div', null, h('h2', null, 'Notenschlüssel'), keyTableFor(key, st, level)), h('div', null, h('h2', null, 'Notenspiegel'), statsBlockFor(course, st, level)))));
+    }
+    if (mode === 'list') {
+      const rows = students.map((s, i) => {
+        const r = p.results[s.id] || {};
+        const res = G.presResult(p, s.id, level);
+        return h(
+          'tr',
+          null,
+          h('td', { class: 'n' }, i + 1),
+          h('td', null, pname(s)),
+          h('td', null, r.topic || ''),
+          p.criteria.map((c) => h('td', { class: 'n' }, fmtScore((r.scores || {})[c.id]))),
+          h('td', { class: 'n' }, res.score === null ? '' : fmtScore(res.score)),
+          h('td', { class: 'n' }, res.score === null || !res.max ? '' : fmtNum((res.score / res.max) * 100, 0)),
+          h('td', { class: 'c' + (r.status === 'ungewertet' ? ' p-ungraded' : '') }, res.p === null ? UI.STATUS_SHORT[r.status] || '' : badge(res.p, level))
+        );
+      });
+      return doPrint(
+        `${a.name} – Bewertungsliste`,
+        h(
+          'div',
+          { class: 'p-page' },
+          header(course, a.name, presMeta(course, a)),
+          h(
+            'table',
+            { class: 'p-table p-full' },
+            h('thead', null, h('tr', null, h('th', null, 'Nr.'), h('th', null, 'Name'), h('th', null, 'Thema'), p.criteria.map((c) => h('th', null, c.name, h('br'), h('small', null, '0–3' + (G.critWeight(c) !== 1 ? ' ×' + G.critWeight(c) : '')))), h('th', null, 'Σ'), h('th', null, '%'), h('th', null, 'Note'))),
+            h('tbody', null, rows)
+          ),
+          h('div', { class: 'p-cols' }, h('div', null, statsBlockFor(course, st, level)), h('div', null, keyTableFor(key, st, level, false)))
+        ),
+        { landscape: p.criteria.length > 6 }
+      );
+    }
+    // Bewertungsbogen: leer zum Ankreuzen oder ausgefüllt je Person
+    const blank = mode === 'blank';
+    const list = blank ? students : students.filter((s) => (!sid || s.id === sid) && G.presResult(p, s.id, level).score !== null);
+    const pages = list.map((s) => {
+      const r = blank ? {} : p.results[s.id] || {};
+      const res = blank ? null : G.presResult(p, s.id, level);
+      const rows = p.criteria.map((c) => {
+        const v = (r.scores || {})[c.id];
+        const has = v !== undefined && v !== null && v !== '';
+        return h(
+          'tr',
+          null,
+          h('td', { class: 'p-pres-crit' }, h('strong', null, c.name), G.critWeight(c) !== 1 ? h('small', null, ` (×${G.critWeight(c)})`) : null, c.group ? h('div', { class: 'p-pres-group' }, c.group) : null),
+          LEVELS.map((n) => h('td', { class: 'p-pres-lvl' + (has && Number(v) === n ? ' on' : '') }, h('span', { class: 'p-pres-box' }, has && Number(v) === n ? '✕' : ''), h('span', { class: 'p-pres-n' }, n), h('div', { class: 'p-pres-desc' }, (c.desc || {})[n] || ''))),
+          h('td', { class: 'p-pres-pts' }, has ? `${fmtScore(v * G.critWeight(c))} / ${fmtScore(3 * G.critWeight(c))}` : `__ / ${fmtScore(3 * G.critWeight(c))}`)
+        );
+      });
+      const pct = res && res.score !== null && res.max ? (res.score / res.max) * 100 : null;
+      return h(
+        'div',
+        { class: 'p-page p-break p-mr p-pres' },
+        h(
+          'div',
+          { class: 'p-mr-head' },
+          h('div', null, h('div', { class: 'p-mr-kicker' }, 'Bewertung der Präsentation'), h('h1', null, a.name), h('div', { class: 'p-mr-name' }, [s.first, s.last].filter(Boolean).join(' '))),
+          h('div', { class: 'p-mr-meta' }, h('strong', null, M.courseTitle(course)), h('div', null, 'Datum ', r.date ? fmtDate(r.date) : blank ? '__________' : fmtDate(a.date)))
+        ),
+        h('div', { class: 'p-pres-topic' }, 'Thema: ', blank ? h('span', { class: 'p-mr-line p-inline-line' }) : h('strong', null, r.topic || '–')),
+        h(
+          'table',
+          { class: 'p-pres-table' },
+          h('colgroup', null, h('col', { style: 'width:22%' }), LEVELS.map(() => h('col', { style: 'width:17%' })), h('col', { style: 'width:10%' })),
+          h('thead', null, h('tr', null, h('th', null, 'Kriterium'), LEVELS.map((n) => h('th', null, `${n} ${n === 1 ? 'Punkt' : 'Punkte'}`)), h('th', null, 'Punkte'))),
+          h('tbody', null, rows)
+        ),
+        blank
+          ? h('div', { class: 'p-mr-summary' }, h('div', { class: 'p-mr-tile' }, h('span', null, 'Summe'), h('strong', null, `____ / ${fmtScore(G.presResult(p, '', level).max)}`)), h('div', { class: 'p-mr-tile' }, h('span', null, 'Note'), h('strong', null, '____')))
+          : h(
+              'div',
+              { class: 'p-mr-summary' },
+              h('div', { class: 'p-mr-tile' }, h('span', null, 'Punkte'), h('strong', null, `${fmtScore(res.score)} / ${fmtScore(res.max)}`)),
+              pct === null ? null : h('div', { class: 'p-mr-tile' }, h('span', null, 'Prozent'), h('strong', null, fmtNum(pct, 1) + ' %')),
+              pct === null ? null : h('div', { class: 'p-mr-bar' }, h('div', { style: `width:${Math.max(0, Math.min(100, pct))}%` }))
+            ),
+        h('div', { class: 'p-pres-note' }, h('span', null, 'Bemerkung'), blank ? h('div', { class: 'p-pres-lines' }) : h('p', null, r.note || '–')),
+        h(
+          'div',
+          { class: 'p-mr-foot' },
+          !blank && withGrade && res.p !== null
+            ? h('div', { class: 'p-mr-grade' }, h('span', null, 'Note'), h('strong', null, level === 'mss' ? `${G.label(res.p, level)} Punkte` : G.label(res.p, level)), h('em', null, G.gradeWord(res.p) + (level === 'mss' ? ` (${G.wholeGrade(res.p)}${G.tendency(res.p)})` : '')))
+            : null,
+          h('div', { class: 'p-mr-sign' }, h('div', null, h('div', { class: 'p-mr-line' }), 'Datum'), h('div', null, h('div', { class: 'p-mr-line' }), 'Unterschrift Lehrkraft'))
+        )
+      );
+    });
+    doPrint(`${a.name} – ${blank ? 'Leere Bewertungsbögen' : 'Bewertungsbögen'}`, h('div', null, pages));
+  }
+
   // ---------- EPO ----------
 
   function epo(course, a) {
@@ -553,6 +671,7 @@
     ['averages', 'Schnitte (Klassenarbeiten / Sonstige)', true],
     ['final', 'Halbjahres- und Jahresnote (gerechnet und gesetzt)', true],
     ['tests', 'Test-Details je Aufgabe', true],
+    ['pres', 'Präsentationen je Kriterium (mit Bemerkung)', true],
     ['epo', 'EPO-Zusammenfassung (Bewertungen, Hausaufgaben, Fehlstunden)', true],
     ['comment', 'Bemerkung', true],
   ];
@@ -602,7 +721,7 @@
                   null,
                   list.map((a) => {
                     const p = G.assessmentPoints(a, s.id, level);
-                    const status = a.kind === 'test' ? (a.test.results[s.id] || {}).status : a.kind === 'manual' ? (a.manual.grades[s.id] || {}).status : '';
+                    const status = G.assessmentStatus(a, s.id);
                     return h('tr', null, h('td', null, fmtDate(a.date)), h('td', null, a.name, a.kind !== 'manual' ? h('small', null, ' (' + M.kindLabel(a) + ')') : null, G.ungradedFor(a, s.id) ? h('small', null, ' – nicht gewertet') : null), h('td', null, UI.catLabel(a.cat)), h('td', { class: 'n' }, fmtScore(a.weight)), h('td', { class: 'c' }, p === null ? UI.STATUS_SHORT[status] || '–' : badge(p, level)));
                   })
                 )
@@ -623,6 +742,31 @@
               h('h3', null, a.name, ' – Punkte je Aufgabe'),
               taskTable(t, res, tr, ''),
               partGrades(t, tr, level) ? h('p', { class: 'p-note' }, 'Teilnoten: ', partGrades(t, tr, level)) : null
+            )
+          );
+        }
+      }
+      if (o.pres) {
+        for (const a of list.filter((x) => x.kind === 'pres')) {
+          const r = a.pres.results[s.id] || {};
+          const pr = G.presResult(a.pres, s.id, level);
+          if (pr.score === null) continue;
+          parts.push(
+            h(
+              'div',
+              { class: 'p-detail' },
+              h('h3', null, a.name, r.topic ? ` – „${r.topic}“` : '', ' – Punkte je Kriterium'),
+              h(
+                'table',
+                { class: 'p-table' },
+                a.pres.criteria.map((c) => {
+                  const v = (r.scores || {})[c.id];
+                  const has = v !== undefined && v !== null && v !== '';
+                  return h('tr', null, h('td', null, c.name), h('td', { class: 'n' }, has ? `${fmtScore(v * G.critWeight(c))} / ${fmtScore(3 * G.critWeight(c))}` : '–'), h('td', null, has ? (c.desc || {})[v] || '' : ''));
+                }),
+                h('tr', null, h('th', null, 'Summe'), h('td', { class: 'n' }, `${fmtScore(pr.score)} / ${fmtScore(pr.max)}`), h('td', null, badge(pr.p, level)))
+              ),
+              r.note ? h('p', { class: 'p-note' }, 'Bemerkung: ', r.note) : null
             )
           );
         }
@@ -687,5 +831,5 @@
     );
   }
 
-  NM.print = { test, moodle, epo, epoSlips, seating, course, studentsDialog };
+  NM.print = { test, moodle, pres, epo, epoSlips, seating, course, studentsDialog };
 })((globalThis.NM = globalThis.NM || {}));

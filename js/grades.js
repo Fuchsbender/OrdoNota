@@ -342,9 +342,56 @@
     return w > 0 ? w : 1;
   }
 
+  // ---------- Präsentationen ----------
+  // pres.criteria = [{ id, name, group, desc, weight }], je Kriterium 0–3 Punkte (× Gewicht);
+  // Umrechnung in Noten mit dem Testschlüssel (LIMIT, eigene Schwellen, ganze Noten), Genauigkeit ganze Punkte.
+
+  const PRES_MAX = 3;
+
+  function critWeight(c) {
+    const w = Number(c.weight);
+    return w > 0 ? w : 1;
+  }
+
+  /** Präsentation als Test: Kriterium = Aufgabe mit 3 × Gewicht Punkten, Punkte × Gewicht. */
+  function presAsTest(pres) {
+    const crit = pres.criteria || [];
+    const results = {};
+    for (const [sid, r] of Object.entries(pres.results || {})) {
+      const scores = {};
+      for (const c of crit) {
+        const v = (r.scores || {})[c.id];
+        if (v !== null && v !== undefined && v !== '') scores[c.id] = Number(v) * critWeight(c);
+      }
+      results[sid] = { scores, status: r.status };
+    }
+    return {
+      limit: pres.limit,
+      precision: 1,
+      custom: pres.custom || {},
+      wholeGrades: !!pres.wholeGrades,
+      tasks: crit.map((c) => ({ id: c.id, name: c.name, max: PRES_MAX * critWeight(c) })),
+      results,
+    };
+  }
+
+  function presResult(pres, sid, level) {
+    const pt = presAsTest(pres);
+    return Object.assign(testResult(pt, sid, level), { max: testMaxScore(pt) });
+  }
+
+  function presStats(pres, studentIds, level) {
+    return testStats(presAsTest(pres), studentIds, level);
+  }
+
+  function keyForPres(pres, level) {
+    return keyForTest(presAsTest(pres), level);
+  }
+
   /** Zählt diese Leistung für diese Person nicht? (ganze Leistung oder einzelne Testarbeit „nicht gewertet“) */
   function ungradedFor(a, sid) {
-    return !!a.ungraded || (a.kind === 'test' && ((a.test.results || {})[sid] || {}).status === 'ungewertet');
+    const results = a.kind === 'test' ? a.test.results : a.kind === 'pres' ? a.pres.results : null;
+    return !!a.ungraded || (!!results && ((results || {})[sid] || {}).status === 'ungewertet');
   }
 
   /** Notenspiegel und Drittelparagraph (einzeln nicht gewertete Arbeiten zählen nicht mit). */
@@ -478,11 +525,18 @@
   function assessmentPoints(a, sid, level) {
     if (a.kind === 'test') return testResult(a.test, sid, level).p;
     if (a.kind === 'epo') return epoResult(a.epo, sid, level).p;
+    if (a.kind === 'pres') return presResult(a.pres, sid, level).p;
     const g = ((a.manual && a.manual.grades) || {})[sid];
     if (!g) return null;
     if (g.status === 'taeuschung') return 0;
     if (g.status === 'fehlt' || g.status === 'nachschreiben') return null;
     return g.p === undefined ? null : g.p;
+  }
+
+  /** Status einer Person bei einer Leistung (fehlt, nachschreiben, taeuschung, ungewertet) oder ''. */
+  function assessmentStatus(a, sid) {
+    const src = a.kind === 'test' ? a.test.results : a.kind === 'pres' ? a.pres.results : a.kind === 'manual' ? a.manual.grades : null;
+    return ((src || {})[sid] || {}).status || '';
   }
 
   /**
@@ -566,6 +620,12 @@
     keyForPart,
     partStats,
     partWeight,
+    PRES_MAX,
+    critWeight,
+    presAsTest,
+    presResult,
+    presStats,
+    keyForPres,
     EPO_RATINGS,
     EPO_DEFAULT_POINTS,
     epoDefaultTable,
@@ -577,6 +637,7 @@
     halvesFor,
     hasYearGrade,
     assessmentPoints,
+    assessmentStatus,
     ungradedFor,
     halfResult,
     yearResult,
