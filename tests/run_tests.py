@@ -718,8 +718,9 @@ def run_pres_check(br, base):
         const db = NM.app.db();
         const c = db.courses[0];
         NM.app.state.ui.half[c.id] = 'HJ2';
-        NM.app.select({ courseId: c.id, tab: 'pres' }); await wait();
         const a = c.assessments.find((x) => x.kind === 'pres');
+        NM.app.state.ui.presId[c.id] = a.id;
+        NM.app.select({ courseId: c.id, tab: 'pres' }); await wait();
         const p = a.pres;
         const out = { tab: !!document.querySelector('.rate-card'), picker: document.querySelector('.picker-item.active .picker-name').textContent, rows: document.querySelectorAll('[data-scroll-key="pres-results"] tbody tr').length };
         // Live bewerten: Person ohne Bewertung wählen, je Kriterium „2“
@@ -760,10 +761,11 @@ def run_pres_check(br, base):
         // Neue Bewertung mit Kriterien einer früheren Bewertung
         document.querySelector('.picker-add').click(); await wait();
         const from = document.querySelectorAll('dialog select')[0];
-        from.value = '0'; from.dispatchEvent(new Event('change'));
+        from.value = [...from.querySelectorAll('optgroup[label="Frühere Bewertungen"] option')].find((o) => o.textContent.includes('Referat Statistik')).value; from.dispatchEvent(new Event('change'));
         document.querySelector('dialog .btn-primary').click(); await wait();
         const list = c.assessments.filter((x) => x.kind === 'pres');
-        out.tpl = [list.length, list[1].pres.criteria.length === p.criteria.length, list[1].pres.criteria[0].id !== p.criteria[0].id, NM.app.state.ui.presId[c.id] === list[1].id];
+        const added = list[list.length - 1];
+        out.tpl = [list.length, added.pres.criteria.length === p.criteria.length, added.pres.criteria[0].id !== p.criteria[0].id, NM.app.state.ui.presId[c.id] === added.id];
         // Druckauswahl und Ausdrucke
         document.querySelector('[data-print-menu]').click(); await wait();
         out.menu = [...document.querySelectorAll('dialog .print-option')].map((o) => o.dataset.print);
@@ -851,7 +853,7 @@ def run_pres_check(br, base):
     ok = bool(res) and res["tab"] and res["picker"] == "Referat Statistik" and res["rows"] == 12 \
         and res["rate"][0] == 12 and res["rate"][1] == 18 and res["rate"][2] == "Wahrscheinlichkeit" and res["rate"][3] == 5 and res["toggle"] \
         and res["cell"] == 3 and res["invalid"] == 3 and res["max"] == 24 and res["fromPool"] == 1 and res["own"] == ["Kreativität", "originell", 1] \
-        and res["tpl"] == [2, True, True, True] and res["menu"] == ["list", "key", "blank", "guide", "sheets"] and res["print"] == [True] * 4 \
+        and res["tpl"] == [3, True, True, True] and res["menu"] == ["list", "key", "blank", "guide", "sheets"] and res["print"] == [True] * 4 \
         and res["sheetsN"] == 7 and res["overview"] and res["jump"] and res["poolDel"] == [True, True] and res["restore"] == [True, "Startbestand ergänzen (1)", True, True] \
         and res["tplSave"] == [1, "Referat", True, 3] and res["groups"] == ["Vorlagen", "Frühere Bewertungen"] and res["fromTpl"] == [2, 2, True] \
         and res["menu2"] == ["list", "key", "blank", "guide", "sheets"] and res["guide"] == [True] * 4 and res["tplPrint"] and res["tplDel"] == [1, 2] \

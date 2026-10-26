@@ -9,7 +9,7 @@
   // 2 (1.18): Arbeiten in Teilen – getrennt benotete Teile würden ältere Versionen falsch rechnen.
   // 3 (1.20): Präsentationen (kind "pres") – ältere Versionen kennen diese Leistungsart nicht.
   const SCHEMA = 3;
-  const APP_VERSION = '1.22.0';
+  const APP_VERSION = '1.22.1';
 
   class NewerSchemaError extends Error {}
 
@@ -410,6 +410,34 @@
       pr.pres.results[s.id] = { topic: topics[i], date: `2026-11-${String(10 + i).padStart(2, '0')}`, scores: Object.fromEntries(pr.pres.criteria.map((c, j) => [c.id, Math.max(0, 3 - ((i + j) % 4))])) };
     });
     c8.assessments.push(pr);
+    // Präsentation aus einer Standardvorlage
+    const hw = newPres(c8, 'HJ2', db.settings, db.presTemplates.find((x) => x.name === 'Hausaufgaben vorstellen').criteria);
+    hw.name = 'HA vorstellen';
+    c8.students.slice(4, 10).forEach((s, i) => {
+      hw.pres.results[s.id] = { date: `2026-11-${String(17 + i).padStart(2, '0')}`, scores: Object.fromEntries(hw.pres.criteria.map((c, j) => [c.id, [3, 2, 3, 1, 2, 3][(i + j) % 6]])) };
+    });
+    c8.assessments.push(hw);
+    // Klassenarbeit in zwei Teilen, gemeinsam bepunktet (ein Schlüssel über alle Punkte)
+    const t2 = newTest(c8, 'HJ2', db.settings);
+    t2.name = 'KA 2 – Geometrie';
+    t2.test.precision = 0.5;
+    t2.test.partMode = 'sum';
+    t2.test.parts = [
+      { id: 'pt1', name: 'Ohne Hilfsmittel', weight: 1 },
+      { id: 'pt2', name: 'Mit Hilfsmitteln', weight: 1 },
+    ];
+    t2.test.tasks = [
+      { id: 'g1', name: 'A1', max: 4, partId: 'pt1' },
+      { id: 'g2', name: 'A2', max: 6, partId: 'pt1' },
+      { id: 'g3', name: 'A3', max: 8, partId: 'pt2' },
+      { id: 'g4', name: 'A4', max: 10, partId: 'pt2' },
+      { id: 'g5', name: 'Bonus', max: 2, bonus: true, partId: 'pt2' },
+    ];
+    c8.students.forEach((s, i) => {
+      const f = 1 - ((i * 5) % 12) / 15;
+      t2.test.results[s.id] = { scores: { g1: Math.round(4 * f), g2: Math.round(6 * f * 2) / 2, g3: Math.round(8 * (f - 0.05) * 2) / 2, g4: Math.round(10 * f), g5: i % 3 === 0 ? 1 : '' } };
+    });
+    c8.assessments.push(t2);
 
     const c12 = newCourse(year.id, { klasse: 'MSS 12', fach: 'M LK', jahrgang: 12, type: 'lk' });
     c12.students = parseNames(names.slice(0, 9).join('\n'));
@@ -422,6 +450,39 @@
     ];
     c12.students.forEach((s, i) => (k.test.results[s.id] = { scores: { b1: 12 - i, b2: 18 - i * 1.5, b3: 15 - i * 2 } }));
     c12.assessments.push(k);
+    // Kursarbeit in drei Teilen, getrennt benotet (Gesamtnote = gewichteter Schnitt der Teilnoten)
+    const k2 = newTest(c12, '12/1', db.settings);
+    k2.name = 'Kursarbeit 2 – Analysis';
+    k2.test.partMode = 'separate';
+    k2.test.parts = [
+      { id: 'q1', name: 'Hilfsmittelfrei', weight: 1 },
+      { id: 'q2', name: 'Mit GTR', weight: 2 },
+      { id: 'q3', name: 'Modellierung', weight: 1 },
+    ].map((x) => Object.assign(x, { limit: k2.test.limit, precision: 1, custom: {} }));
+    k2.test.tasks = [
+      { id: 'c1', name: 'A1', max: 8, partId: 'q1' },
+      { id: 'c2', name: 'A2', max: 7, partId: 'q1' },
+      { id: 'c3', name: 'A3', max: 15, partId: 'q2' },
+      { id: 'c4', name: 'A4', max: 15, partId: 'q2' },
+      { id: 'c5', name: 'A5', max: 12, partId: 'q3' },
+    ];
+    c12.students.forEach((s, i) => {
+      const f = 1 - ((i * 4) % 9) / 13;
+      k2.test.results[s.id] = { scores: { c1: Math.round(8 * f), c2: Math.round(7 * (f - 0.1)), c3: Math.round(15 * f), c4: Math.round(15 * (f - 0.08)), c5: Math.round(12 * (1.05 - f / 2)) } };
+    });
+    // Eine Person hat den Modellierungsteil versäumt: Gesamtnote bleibt offen
+    const miss = k2.test.results[c12.students[3].id];
+    delete miss.scores.c5;
+    miss.partStatus = { q3: 'fehlt' };
+    c12.assessments.push(k2);
+    // Präsentation aus der Standardvorlage „Kurzvortrag (ohne Handout)“
+    const kv = newPres(c12, '12/1', db.settings, db.presTemplates.find((x) => x.name === 'Kurzvortrag (ohne Handout)').criteria);
+    kv.name = 'Kurzvortrag Extremwerte';
+    const kvTopics = ['Hochpunkt', 'Wendepunkt', 'Optimierung', 'Sattelpunkt', 'Randextrema'];
+    c12.students.slice(0, 5).forEach((s, i) => {
+      kv.pres.results[s.id] = { topic: kvTopics[i], scores: Object.fromEntries(kv.pres.criteria.map((c, j) => [c.id, Math.max(0, 3 - ((i * 2 + j) % 4))])) };
+    });
+    c12.assessments.push(kv);
     for (const s of [...c8.students, ...c12.students]) s.photo = PERSON_ICON;
     db.courses.push(c8, c12);
     return db;
