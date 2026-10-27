@@ -1007,7 +1007,16 @@
   function keyCard(course, a, level) {
     const p = a.pres;
     const st = G.presStats(p, M.statStudents(course).map((s) => s.id), level);
-    return NM.views.tests.keyCardFor(course, level, { focusId: a.id, key: G.keyForPres(p, level), counts: st.counts, holder: p, st, results: p.results });
+    return NM.views.tests.keyCardFor(course, level, {
+      focusId: a.id,
+      key: G.keyForPres(p, level),
+      counts: st.counts,
+      holder: p,
+      st,
+      results: p.results,
+      alt: (patch) => G.keyForPres(Object.assign({}, p, patch), level),
+      hint: 'Abhilfe: weitere Kriterien aufnehmen oder Kriterien höher gewichten.',
+    });
   }
 
   // ---------- Vorlagen (für alle Kurse) ----------

@@ -553,6 +553,37 @@ def run_tests_view_check(br, base):
     report("Tests: volle Breite, Unterschrift abhaken/zählen/drucken, nur bei Klassenarbeiten", ok and not br.errors, str(res) + "; ".join(br.errors))
 
 
+def run_unreachable_check(br, base):
+    print("Notenschlüssel: Warnung bei zu wenig Punkten:")
+    br.open(f"{base}/index.html?demo")
+    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.errors = []
+    res = br.eval("""(async () => {
+        const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
+        const db = NM.app.db(), c = db.courses[0];
+        NM.app.select({ courseId: c.id, tab: 'tests' }); await wait();
+        const half = NM.app.currentHalf(c);
+        const a = NM.model.newTest(c, half, db.settings);
+        a.test.tasks = [{ id: 'a1', name: 'A1', max: 18 }]; a.test.precision = 1; a.test.limit = 50;
+        c.assessments.push(a); NM.app.state.ui.testId[c.id] = a.id; NM.app.commit(); await wait();
+        const warn = () => document.querySelector('.key-warn');
+        const btn = (t) => [...document.querySelectorAll('.key-warn button')].find((b) => b.textContent === t);
+        const out = { text: warn() && warn().textContent, rows: document.querySelectorAll('.key-table tr.unreachable').length,
+                      buttons: [...document.querySelectorAll('.key-warn button')].map((b) => b.textContent) };
+        btn('½ Halbe Punkte').click(); await wait();
+        out.half = [a.test.precision, !!warn()];
+        a.test.precision = 1; NM.app.rerender(); await wait();
+        btn('Nur ganze Noten').click(); await wait();
+        out.whole = [!!a.test.wholeGrades, !!warn()];
+        a.test.tasks[0].max = 40; delete a.test.wholeGrades; NM.app.rerender(); await wait();
+        out.enough = !!warn();
+        return out; })()""")
+    ok = bool(res) and "2 und 3- sind nicht erreichbar" in (res["text"] or "") and res["rows"] == 2 \
+        and res["buttons"] == ["½ Halbe Punkte", "Nur ganze Noten"] and res["half"] == [0.5, False] \
+        and res["whole"] == [True, False] and res["enough"] is False
+    report("Schlüssel: Warnung bei doppelten Schwellen, halbe Punkte/ganze Noten lösen sie", ok and not br.errors, str(res) + "; ".join(br.errors))
+
+
 def run_settings_layout_check(br, base):
     print("Layout Einstellungen (Pomodoro aktiv) und eingeklappte Kursliste:")
     out = {}
@@ -1255,6 +1286,7 @@ def main():
         run_transition_check(br, base)
         run_sidebar_check(br, base)
         run_tests_view_check(br, base)
+        run_unreachable_check(br, base)
         run_settings_layout_check(br, base)
         run_parts_check(br, base)
         run_print_menu_check(br, base)

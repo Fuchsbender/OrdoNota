@@ -205,6 +205,22 @@
     return testKey(level, test.limit, testMaxScore(test), test.precision, test.custom, wholeOnly(test, level));
   }
 
+  /**
+   * Nicht erreichbare Stufen eines Schlüssels: Eine Stufe ist nicht erreichbar, wenn eine bessere Stufe dieselbe
+   * oder eine niedrigere Schwelle hat (z. B. bei wenigen Punkten 2+ und 2 beide ab 15 Pkt.).
+   * @returns Array von { p, by } (by = bessere Stufe, die die Schwelle teilt bzw. unterbietet), absteigend nach p
+   */
+  function unreachableSteps(key) {
+    const out = [];
+    const sorted = key.slice().sort((a, b) => b.p - a.p);
+    for (let i = 0; i < sorted.length; i++) {
+      const k = sorted[i];
+      const by = sorted.slice(0, i).find((q) => q.min <= k.min + 1e-9);
+      if (by) out.push({ p: k.p, by: by.p });
+    }
+    return out;
+  }
+
   /** Punktstufe für eine erreichte Punktzahl (höchste Stufe, deren Schwelle erreicht ist). */
   function scoreToPoints(score, key) {
     if (score === null || score === undefined) return null;
@@ -648,6 +664,7 @@
     testKey,
     keyForTest,
     wholeOnly,
+    unreachableSteps,
     scoreToPoints,
     testMaxScore,
     testResult,

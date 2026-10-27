@@ -168,6 +168,20 @@
     eq('Ganze Noten: Wort ohne Tendenz', G.gradeWord(G.testResult(wt, 'x', 'sek1').p), 'sehr gut');
   }
 
+  // Nicht erreichbare Stufen (zu wenig Punkte: Schwellen doppelt belegt)
+  {
+    const k18 = G.testKey('sek1', 50, 18, 1, {});
+    eq('Unerreichbar: 18 Pkt. ganze Punkte → 2 und 3-', G.unreachableSteps(k18).map((x) => G.label(x.p, 'sek1') + '<' + G.label(x.by, 'sek1')), ['2<2+', '3-<3']);
+    eq('Unerreichbar: Note 2 wird nie vergeben', [15, 14.9].map((s) => G.label(G.scoreToPoints(s, k18), 'sek1')), ['2+', '2-']);
+    eq('Unerreichbar: halbe Punkte lösen es (18 Pkt.)', G.unreachableSteps(G.testKey('sek1', 50, 18, 0.5, {})), []);
+    eq('Unerreichbar: ganze Noten lösen es (18 Pkt.)', G.unreachableSteps(G.testKey('sek1', 50, 18, 1, {}, true)), []);
+    eq('Unerreichbar: 40 Pkt. ganze Punkte ohne Warnung', G.unreachableSteps(G.testKey('sek1', 50, 40, 1, {})), []);
+    eq('Unerreichbar: MSS 20 Pkt. ganze Punkte', G.unreachableSteps(G.testKey('mss', 45, 20, 1, {})).length > 0, true);
+    eq('Unerreichbar: eigene Schwelle unter der Nachbarstufe', G.unreachableSteps(G.testKey('sek1', 50, 40, 1, { 11: 30 })).map((x) => x.p), [10]);
+    const pr = { limit: 50, custom: {}, criteria: [{ id: 'a', weight: 1 }, { id: 'b', weight: 1 }], results: {} };
+    eq('Unerreichbar: Präsentation mit 6 Punkten', G.unreachableSteps(G.keyForPres(pr, 'sek1')).length > 0, true);
+  }
+
   // Arbeiten in Teilen (Theorie/Praxis)
   {
     const L = (p) => G.label(p, 'sek1');

@@ -513,6 +513,11 @@ body.grp-dragging, body.grp-dragging * { cursor: grabbing !important; }
 .key-card { position: sticky; top: 56px; }
 .key-table td, .key-table th { padding: 1px 6px; }
 .key-table tr.custom td { background: var(--warn-soft); }
+.key-table tr.unreachable td { color: var(--muted); }
+.key-table tr.unreachable td:first-child { color: var(--warn); white-space: nowrap; }
+.key-table tr.unreachable .grade-badge { opacity: .55; }
+.key-warn { font-size: 13px; display: grid; gap: 6px; }
+.key-warn-fixes { display: flex; flex-wrap: wrap; gap: 6px; }
 .dist { display: flex; align-items: stretch; gap: 6px; height: 130px; margin: 16px 0 10px; padding: 0 4px; }
 .dist-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
 .dist-bar { width: 100%; max-width: 34px; min-height: 2px; border-radius: 4px 4px 0 0; background: hsl(var(--g-hue, 200) var(--g-s) var(--bar-l)); }

@@ -732,6 +732,7 @@
     return keyCardFor(course, level, {
       focusId: a.id + (part ? '-' + part.id : ''),
       key: part ? G.keyForPart(t, part, level) : G.keyForTest(t, level),
+      alt: (patch) => (part ? G.keyForPart(t, Object.assign({}, part, patch), level) : G.keyForTest(Object.assign({}, t, patch), level)),
       counts: part ? G.partStats(t, part, ids, level).counts : st.counts,
       holder: part || t,
       st,
@@ -766,19 +767,63 @@
   }
 
   /**
+   * Warnung bei nicht erreichbaren Notenstufen (zu wenig Punkte für alle Stufen) mit Schnellknöpfen.
+   * alt(patch) liefert den Schlüssel mit geänderten Einstellungen; angeboten wird nur, was das Problem löst.
+   */
+  function unreachableNotice(level, lost, holder, alt, hint) {
+    const L = (p) => G.label(p, level);
+    const lostText = lost.map((x) => L(x.p)).join(', ').replace(/, ([^,]*)$/, ' und $1');
+    const byText = lost.map((x) => L(x.by)).join(', ').replace(/, ([^,]*)$/, ' bzw. $1');
+    const solves = (patch) => alt && !G.unreachableSteps(alt(patch)).length;
+    const fixes = [];
+    if (holder.precision !== undefined) {
+      const finer = [0.5, 0.1].filter((v) => v < (Number(holder.precision) || 1));
+      const v = finer.find((x) => solves({ precision: x }));
+      if (v)
+        fixes.push(
+          h('button', { class: 'btn btn-sm', title: 'Punkte-Genauigkeit umstellen – Schwellen und Summen werden genauer gerundet', onclick: () => {
+            holder.precision = v;
+            NM.app.commit();
+          } }, v === 0.5 ? '½ Halbe Punkte' : 'Zehntel-Punkte')
+        );
+    }
+    if (level !== 'mss' && !holder.wholeGrades && solves({ wholeGrades: true, custom: {} }))
+      fixes.push(
+        h('button', { class: 'btn btn-sm', title: 'Nur ganze Noten 1–6 vergeben', onclick: async () => {
+          if (holder.custom && Object.keys(holder.custom).length) {
+            if (!(await confirmDialog('Notenstufen umstellen?', 'Von Hand geänderte Schwellen im Notenschlüssel passen nicht mehr und werden zurückgesetzt.', { okLabel: 'Umstellen' }))) return;
+            holder.custom = {};
+          }
+          holder.wholeGrades = true;
+          NM.app.commit();
+        } }, 'Nur ganze Noten')
+      );
+    const ownCustom = lost.some((x) => (holder.custom || {})[x.p] !== undefined || (holder.custom || {})[x.by] !== undefined);
+    return h(
+      'div',
+      { class: 'notice warn key-warn' },
+      h('div', null, `⚠ ${ownCustom ? 'Schwellen prüfen' : 'Zu wenig Punkte'}: ${lostText} ${lost.length > 1 ? 'sind' : 'ist'} nicht erreichbar (${ownCustom ? 'Schwelle nicht höher als bei' : 'gleiche Schwelle wie'} ${byText}).`),
+      hint ? h('div', { class: 'muted small' }, hint) : null,
+      fixes.length ? h('div', { class: 'key-warn-fixes' }, fixes) : null
+    );
+  }
+
+  /**
    * Notenschlüssel-Karte (auch für Präsentationen): Schlüssel mit änderbaren Schwellen (holder.custom),
    * darunter Notenspiegel, Statistik und Drittelparagraph aus st.
    */
-  function keyCardFor(course, level, { focusId, key, counts, holder, st, results, top = null, statsTitle = null }) {
+  function keyCardFor(course, level, { focusId, key, counts, holder, st, results, top = null, statsTitle = null, alt = null, hint = '' }) {
     const anyCustom = key.some((k) => k.custom);
+    const lost = key.some((k) => k.min > 0) ? G.unreachableSteps(key) : [];
+    const lostP = new Set(lost.map((x) => x.p));
     const rows = key
       .slice()
       .reverse()
       .map((k) =>
         h(
           'tr',
-          { class: k.custom ? 'custom' : '' },
-          h('td', null, UI.gradeBadge(k.p, level)),
+          { class: [k.custom ? 'custom' : '', lostP.has(k.p) ? 'unreachable' : ''].filter(Boolean).join(' ') },
+          h('td', { title: lostP.has(k.p) ? 'Nicht erreichbar: gleiche Schwelle wie eine bessere Note' : null }, UI.gradeBadge(k.p, level), lostP.has(k.p) ? ' ⚠' : null),
           level === 'mss' ? h('td', { class: 'muted small' }, G.wholeGrade(k.p) + G.tendency(k.p)) : null,
           h(
             'td',
@@ -829,6 +874,7 @@
           : null
       ),
       top,
+      lost.length ? unreachableNotice(level, lost, holder, alt, hint) : null,
       h(
         'table',
         { class: 'table compact key-table' },

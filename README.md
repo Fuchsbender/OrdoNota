@@ -35,6 +35,7 @@ Ausprobieren ohne echte Daten: `index.html?demo` (nichts wird gespeichert). Beis
 - Sek I: 4- ab LIMIT (z. B. 40–50 %), darüber 11 gleiche Schritte bis 100 %; 5- bei ½·LIMIT, 5+/5/5- gleichmäßig dazwischen; Schwellen auf ganze Prozent.
 - Sek I wahlweise **nur ganze Noten** (1–6) je Test, z. B. bei wenigen Punkten: jede ganze Note beginnt an der Schwelle ihrer Minus-Note (4 ab LIMIT).
 - **Arbeit in Teilen** (z. B. Theorie/Praxis): gemeinsam bepunktet (ein Schlüssel über alle Punkte) oder getrennt benotet (Schlüssel und Note je Teil; Gesamtnote = gewichteter Schnitt der Teilnoten, auf eine Stufe gerundet, erst wenn alle Teile bewertet sind; Drittelparagraph auf die Gesamtnote).
+- Bei zu wenig Punkten (gleiche Schwelle für zwei Stufen, z. B. 2+ und 2) warnt der Schlüssel und bietet halbe Punkte bzw. nur ganze Noten an.
 - Schwellen lassen sich je Test von Hand überschreiben. Bonusaufgaben zählen zur erreichten, nicht zur Höchstpunktzahl (Ergebnis wird bei der Bestnote gekappt).
 - Drittelparagraph: Warnung, wenn mehr als ⅓ der Arbeiten 5 oder 6 sind (Täuschung/Verweigerung nicht mitgezählt).
 - Statistik je Test: Notenspiegel, Ø, Standardabweichung (Teiler n), Anteil unter 4. Personen mit I-Status zählen in der Statistik nicht mit.
