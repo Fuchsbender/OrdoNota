@@ -1040,6 +1040,12 @@ Auf einem anderen Gerät läuft eine neuere Version von OrdoNota, die das Datenf
 
 Die Version der App steht unter Einstellungen → Hinweise.
 
+### 21.11 Eine Note kommt im Notenschlüssel nie vor (⚠ „nicht erreichbar“)
+Der Test hat zu wenige Punkte für alle Notenstufen: Zwei Stufen fallen auf dieselbe Mindestpunktzahl, und die schwächere kann nie vergeben werden (z. B. 2 bei 18 Punkten mit ganzen Punkten). Abhilfe über die Knöpfe im Hinweis: **halbe Punkte** (bzw. Zehntel) oder **nur ganze Noten**; bei Präsentationen weitere Kriterien aufnehmen oder höher gewichten. Details in 7.4 und 15.3.
+
+### 21.12 Ein Reiter ist verschwunden
+Er ist ausgeschaltet – für diesen Kurs (Kurs & Schüler → „Reiter in diesem Kurs“) oder als Standard (Einstellungen → Reiter). Dort wieder anhaken; alle Daten sind noch da (siehe 6.4).
+
 ---
 
 # Teil D – Technische Dokumentation
@@ -1053,15 +1059,15 @@ Reines HTML/CSS/JavaScript ohne Build-Schritt und ohne externe Bibliotheken. Die
 | `js/logo.js` | `NM.logo` | Logo als SVG: `full(h)` (Monogramm + Schriftzug), `mark(px)` (nur Monogramm), `favicon()`; Farbe folgt der Textfarbe. Quelle: `logo/ordonota-logo*.svg` |
 | `js/util.js` | `NM.util` | DOM-Helfer `h()`, Formatierung (deutsch), Dialoge, Toasts, Download, CSV |
 | `js/xlsx.js` | `NM.xlsx` | Excel-Dateien ohne Bibliothek: `workbook({ sheet, rows, widths })` → Blob (ZIP ohne Kompression, ein Blatt, Kopfzeile fett) |
-| `js/grades.js` | `NM.grades` | **Gesamte Notenlogik** (rein, ohne DOM): Skalen, Eingabe-Parser, Rundung, Notenschlüssel, Test-/EPO-Auswertung, Halbjahres-/Jahresnote |
+| `js/grades.js` | `NM.grades` | **Gesamte Notenlogik** (rein, ohne DOM): Skalen, Eingabe-Parser, Rundung, Notenschlüssel (mit Prüfung auf nicht erreichbare Stufen, `unreachableSteps`), Test-/EPO-Auswertung, Arbeiten in Teilen, Präsentationen (auch in Gruppen), Halbjahres-/Jahresnote |
 | `js/crypto.js` | `NM.crypto` | `Vault`: Erzeugen, Entsperren (Passwort/Wiederherstellung), Ver-/Entschlüsseln, Passwortwechsel |
 | `js/storage.js` | `NM.storage` | `FolderStore` (File System Access API): Lesen/Schreiben, Sicherungen, Lock, Konflikterkennung; `MemoryStore` für den Demo-Modus |
 | `js/pomodoro.js` | `NM.pomodoro` | Pomodoro-Timer: Ablauf (`next`), Anzeige in der Kopfzeile, Töne per Web Audio, Einstellungsformular |
 | `js/model.js` | `NM.model` | Datenmodell: neue Datenbank/Kurse/Leistungen, Migration, Namensliste parsen, Demo-Daten |
 | `js/groups.js` | `NM.groups` | Gruppenbildung (rein, ohne DOM): Gruppengrößen, Verteilung nach Regeln/Leistung/Abwechslung (Kostenfunktion + Tauschsuche), Regelprüfung, Expertengruppen |
-| `js/moodle.js` | `NM.moodle` | Moodle-Import (rein, ohne DOM): CSV zerlegen, Antworten-/Bewertungen-CSV erkennen und zusammenführen, Personen zuordnen, als Test übernehmen |
-| `js/ui.js` | `NM.ui` | Wiederverwendbare Bausteine: Halbjahres-Umschalter, Noten-Eingabezellen, Badges, Leistungs-Dialog |
-| `js/app.js` | `NM.app` | Anwendungskern: Anmeldung, Sitzung, Autosave, Sperre, Layout, Navigation, Neuzeichnen mit Fokus-Erhalt, Tabellen-Tastatur |
+| `js/moodle.js` | `NM.moodle` | Moodle-Import (rein, ohne DOM): CSV zerlegen, Antworten-/Bewertungen-CSV erkennen und zusammenführen, Personen zuordnen, in einen Test oder Teil übernehmen (`applyImport` mit `replace`: bisherige Aufgaben ersetzen, `adopt`: Bezeichnung/Datum übernehmen) |
+| `js/ui.js` | `NM.ui` | Wiederverwendbare Bausteine: Halbjahres-Umschalter, Noten-Eingabezellen, Badges, Leistungs-Dialog, Sortieren (`sorter`, `nameCells`), Druckauswahl (`printButton`), Reiter-Haken (`tabChecks`) |
+| `js/app.js` | `NM.app` | Anwendungskern: Anmeldung, Sitzung, Autosave, Sperre, Layout, Navigation (`TABS`; ausschaltbare Reiter `OPTIONAL_TABS`, `tabOn`, `shownTab`), Neuzeichnen mit Fokus-Erhalt, Tabellen-Tastatur |
 | `js/view-*.js` | `NM.views.*` | Je ein Reiter: `course`, `tests`, `epo`, `pres` (Präsentationen), `draw`, `groups` (Gruppen), `overview`, `seating`, `settings` |
 | `js/print.js` | `NM.print` | Druckansichten |
 | `css/app.css` | – | Gestaltung inkl. Hell/Dunkel (Farb-Tokens auf `:root`) und Druck-CSS |
