@@ -10,7 +10,7 @@
   // 3 (1.20): Präsentationen (kind "pres") – ältere Versionen kennen diese Leistungsart nicht.
   // 4 (1.23): Gruppenpräsentationen – ältere Versionen würden Gruppenwerte ignorieren und falsche Noten zeigen.
   const SCHEMA = 4;
-  const APP_VERSION = '1.24.6';
+  const APP_VERSION = '1.25.0';
 
   class NewerSchemaError extends Error {}
 
@@ -104,6 +104,7 @@
         keepBackups: 10,
         backupEveryMin: 10,
         gradeColors: true,
+        tabs: {}, // ausgeschaltete Reiter als Standard für alle Kurse: { "<Reiter>": false }; course.tabs weicht je Kurs ab
         pomodoro: Object.assign({}, POMODORO_DEFAULTS),
       },
       criteriaPool: pool,
@@ -126,6 +127,8 @@
     db.settings = Object.assign(newDb().settings, db.settings || {});
     // 1.17: Pomodoro-Timer
     db.settings.pomodoro = Object.assign({}, POMODORO_DEFAULTS, db.settings.pomodoro || {});
+    // 1.25: Reiter ein-/ausschalten (Standard für alle Kurse; course.tabs optional je Kurs)
+    if (!db.settings.tabs || typeof db.settings.tabs !== 'object') db.settings.tabs = {};
     // 1.20: Kriterienpool für Präsentationen (Startbestand nur, wenn es noch keinen gibt)
     if (!Array.isArray(db.criteriaPool)) db.criteriaPool = defaultCriteriaPool();
     // 1.21: Vorlagen für Präsentationen (benannte Kriteriensätze); 1.22: mit Standardvorlagen

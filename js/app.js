@@ -31,6 +31,24 @@
     { id: 'seating', label: 'Sitzplan' },
     { id: 'settings', label: 'Einstellungen' },
   ];
+  // Reiter, die sich ausschalten lassen (Kurs & Schüler und Einstellungen bleiben immer)
+  const OPTIONAL_TABS = ['tests', 'epo', 'pres', 'draw', 'groups', 'overview', 'seating'];
+
+  /** Ist der Reiter im Kurs eingeschaltet? Eigene Einstellung des Kurses (course.tabs) vor dem Standard (settings.tabs). */
+  function tabOn(course, id) {
+    if (!OPTIONAL_TABS.includes(id)) return true;
+    const own = course && course.tabs;
+    if (own && typeof own[id] === 'boolean') return own[id];
+    const def = (state.db && state.db.settings.tabs) || {};
+    return def[id] !== false;
+  }
+
+  /** Angezeigter Reiter: der gewählte, sonst (ausgeschaltet) die Notenübersicht bzw. „Kurs & Schüler“. */
+  function shownTab(course) {
+    const t = state.ui.tab;
+    if (tabOn(course, t)) return t;
+    return tabOn(course, 'overview') ? 'overview' : 'course';
+  }
 
   function loadUi() {
     try {
@@ -730,21 +748,22 @@
     if (!main) return;
     clear(main);
     const course = currentCourse();
-    const viewKey = [state.ui.tab, course ? course.id : '', course ? currentHalf(course, true) : ''].join('|');
+    const tab = shownTab(course);
+    const viewKey = [tab, course ? course.id : '', course ? currentHalf(course, true) : ''].join('|');
     const viewChanged = lastViewKey !== null && viewKey !== lastViewKey;
-    const tabChanged = lastTab !== null && lastTab !== state.ui.tab;
+    const tabChanged = lastTab !== null && lastTab !== tab;
     lastViewKey = viewKey;
-    lastTab = state.ui.tab;
+    lastTab = tab;
     const tabs = h(
       'div',
       { class: 'tabs', role: 'tablist' },
-      TABS.map((t) =>
+      TABS.filter((t) => tabOn(course, t.id)).map((t) =>
         h(
           'button',
           {
             role: 'tab',
-            class: 'tab' + (state.ui.tab === t.id ? ' active' : ''),
-            'aria-selected': state.ui.tab === t.id ? 'true' : 'false',
+            class: 'tab' + (tab === t.id ? ' active' : ''),
+            'aria-selected': tab === t.id ? 'true' : 'false',
             disabled: !course && t.id !== 'settings',
             onclick: () => select({ tab: t.id }),
           },
@@ -754,9 +773,9 @@
     );
     main.appendChild(tabs);
     placeTabInk(tabs, tabChanged);
-    const view = h('section', { class: 'view view-' + state.ui.tab + (viewChanged ? ' view-enter' : ''), id: 'view' });
+    const view = h('section', { class: 'view view-' + tab + (viewChanged ? ' view-enter' : ''), id: 'view' });
     main.appendChild(view);
-    if (!course && state.ui.tab !== 'settings') {
+    if (!course && tab !== 'settings') {
       view.appendChild(
         h(
           'div',
@@ -768,7 +787,7 @@
       );
       return;
     }
-    const v = NM.views[state.ui.tab];
+    const v = NM.views[tab];
     if (v) v.render(view, { course, db: state.db });
   }
 
@@ -875,6 +894,10 @@
     renderShell,
     db,
     currentCourse,
+    TABS,
+    OPTIONAL_TABS,
+    tabOn,
+    shownTab,
     currentHalf,
     setHalf,
     select,

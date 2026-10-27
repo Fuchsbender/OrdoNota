@@ -23,6 +23,8 @@
   ok('Datenbank ohne schema-Feld wird geöffnet', !!M.migrate({ years: [], courses: [] }));
 
   // Schutz vor älterer App-Version
+  const tb = M.migrate({ schema: 4, years: [], courses: [{ id: 'c', jahrgang: 8, students: [], assessments: [], tabs: { seating: false, xyz: true } }], settings: { tabs: { pres: false } } });
+  ok('Reiter: Standard {} ergänzt, vorhandene Auswahl und Kursauswahl bleiben', M.migrate({ years: [], courses: [] }).settings.tabs && Object.keys(M.migrate({ years: [], courses: [] }).settings.tabs).length === 0 && tb.settings.tabs.pres === false && tb.courses[0].tabs.seating === false && tb.courses[0].tabs.xyz === true);
   throws('Neueres Datenformat wird abgelehnt', () => M.migrate({ schema: M.SCHEMA + 1, savedWith: '9.0.0', years: [], courses: [] }), M.NewerSchemaError);
   try { M.migrate({ schema: M.SCHEMA + 1, savedWith: '9.0.0' }); } catch (e) { ok('Meldung nennt beide Versionen', e.message.includes('9.0.0') && e.message.includes(M.APP_VERSION)); }
   const newer = { schema: M.SCHEMA + 1, years: [], courses: [], neuesFeld: 1 };

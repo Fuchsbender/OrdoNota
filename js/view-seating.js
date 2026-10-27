@@ -370,7 +370,7 @@
 
   // Strg+V: kopiertes Bild auf die ausgewählte Karte
   document.addEventListener('paste', (e) => {
-    if (NM.app.state.ui.tab !== 'seating' || !selectedSid) return;
+    if (NM.app.shownTab(NM.app.currentCourse()) !== 'seating' || !selectedSid) return;
     const course = NM.app.currentCourse();
     if (!course || !course.students.some((s) => s.id === selectedSid)) return;
     const item = [...(e.clipboardData ? e.clipboardData.items : [])].find((i) => i.type.startsWith('image/'));

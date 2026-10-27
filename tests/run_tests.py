@@ -584,6 +584,47 @@ def run_unreachable_check(br, base):
     report("Schlüssel: Warnung bei doppelten Schwellen, halbe Punkte/ganze Noten lösen sie", ok and not br.errors, str(res) + "; ".join(br.errors))
 
 
+def run_tabs_check(br, base):
+    print("Reiter ein-/ausschalten (Standard und je Kurs):")
+    br.open(f"{base}/index.html?demo")
+    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.errors = []
+    res = br.eval("""(async () => {
+        const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
+        const db = NM.app.db(), [c1, c2] = db.courses;
+        const tabs = () => [...document.querySelectorAll('.tabs .tab')].map((b) => b.textContent);
+        const active = () => document.querySelector('.tabs .tab.active').textContent;
+        const toggle = (id, on) => { const x = document.querySelector(`[data-tab-check="${id}"]`); x.checked = on; x.dispatchEvent(new Event('change')); };
+        const out = { all: tabs().length };
+        // Standard: Sitzplan aus (Einstellungen)
+        NM.app.select({ courseId: c1.id, tab: 'settings' }); await wait();
+        toggle('seating', false); await wait();
+        out.def = [db.settings.tabs.seating, tabs().includes('Sitzplan'), document.querySelectorAll('[data-tab-check]').length];
+        // Kurs 1: Sitzplan wieder an, Präsentationen aus (Kurs & Schüler)
+        NM.app.select({ tab: 'course' }); await wait();
+        toggle('seating', true); await wait();
+        toggle('pres', false); await wait();
+        out.own = [JSON.stringify(c1.tabs), tabs().includes('Sitzplan'), tabs().includes('Präsentationen'), document.querySelectorAll('.tab-checks .muted').length];
+        // ausgeschalteter Reiter → Notenübersicht; Sprunglink „Präs. ›“ fehlt
+        NM.app.select({ tab: 'pres' }); await wait();
+        out.fallback = [active(), !!document.querySelector('.overview-table'), [...document.querySelectorAll('.assess-head .link.tiny')].some((b) => b.textContent === 'Präs. ›')];
+        // Kurs 2 folgt dem Standard
+        NM.app.select({ courseId: c2.id, tab: 'course' }); await wait();
+        out.other = [tabs().includes('Sitzplan'), tabs().includes('Präsentationen')];
+        // Notenübersicht aus → „Kurs & Schüler“
+        toggle('overview', false); await wait();
+        NM.app.select({ tab: 'overview' }); await wait();
+        out.noOverview = active();
+        // Wie Standard
+        NM.app.select({ tab: 'course' }); await wait();
+        [...document.querySelectorAll('button')].find((b) => b.textContent === 'Wie Standard').click(); await wait();
+        out.reset = [c2.tabs === undefined, tabs().includes('Notenübersicht')];
+        return out; })()""")
+    ok = bool(res) and res["all"] == 9 and res["def"] == [False, False, 7] and res["own"] == ['{"seating":true,"pres":false}', True, False, 2] \
+        and res["fallback"] == ["Notenübersicht", True, False] and res["other"] == [False, True] and res["noOverview"] == "Kurs & Schüler" and res["reset"] == [True, True]
+    report("Reiter: Standard in Einstellungen, Abweichung je Kurs, Ersatzreiter, Sprunglinks, „Wie Standard“", ok and not br.errors, str(res) + "; ".join(br.errors))
+
+
 def run_settings_layout_check(br, base):
     print("Layout Einstellungen (Pomodoro aktiv) und eingeklappte Kursliste:")
     out = {}
@@ -618,7 +659,7 @@ def run_settings_layout_check(br, base):
             return r; })()""")
         out[width] = res
     br.call("Emulation.clearDeviceMetricsOverride")
-    ok = all(r and r["cards"] == 7 and r["gap"] <= 20 and r["selOk"] and r["chipOk"] for r in out.values())
+    ok = all(r and r["cards"] == 8 and r["gap"] <= 20 and r["selOk"] and r["chipOk"] for r in out.values())
     report("Einstellungen ohne Lücken bei 1570/2560 px, Auswahllisten nicht abgeschnitten, Kürzel „MSS12“ passt", ok and not br.errors, str(out) + "; ".join(br.errors))
 
 
@@ -1287,6 +1328,7 @@ def main():
         run_sidebar_check(br, base)
         run_tests_view_check(br, base)
         run_unreachable_check(br, base)
+        run_tabs_check(br, base)
         run_settings_layout_check(br, base)
         run_parts_check(br, base)
         run_print_menu_check(br, base)

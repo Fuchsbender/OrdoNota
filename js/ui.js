@@ -332,7 +332,25 @@
     return cat === 'ka' ? 'Klassen-/Kursarbeit' : 'Sonstige';
   }
 
+  /** Haken je abschaltbarem Reiter (Einstellungen und „Kurs & Schüler“). isOn(id) → bool, onSet(id, an). */
+  function tabChecks(isOn, onSet, mark = () => null) {
+    return h(
+      'div',
+      { class: 'tab-checks' },
+      NM.app.TABS.filter((t) => NM.app.OPTIONAL_TABS.includes(t.id)).map((t) =>
+        h(
+          'label',
+          { class: 'check' },
+          h('input', { type: 'checkbox', checked: isOn(t.id), 'data-tab-check': t.id, onchange: (e) => onSet(t.id, e.target.checked) }),
+          ' ' + t.label,
+          mark(t.id)
+        )
+      )
+    );
+  }
+
   NM.ui = {
+    tabChecks,
     halfSwitch,
     gradeBadge,
     valueText,

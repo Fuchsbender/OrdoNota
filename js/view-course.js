@@ -10,6 +10,7 @@
     view.append(
       h('div', { class: 'view-head' }, h('h1', null, M.courseTitle(course)), h('span', { class: 'pill' }, G.courseLevel(course) === 'mss' ? 'MSS · Punkte 00–15' : 'Sek I · Noten 1–6')),
       h('div', { class: 'grid-2' }, courseCard(course), studentsCard(course)),
+      tabsCard(course, db),
       dangerCard(course, db)
     );
   }
@@ -318,6 +319,49 @@
     NM.app.commit();
   }
 
+  /** Reiter dieses Kurses: Abweichungen vom Standard (Einstellungen) in course.tabs. */
+  function tabsCard(course, db) {
+    const def = db.settings.tabs;
+    const own = course.tabs && Object.keys(course.tabs).length;
+    return h(
+      'div',
+      { class: 'card card-subtle' },
+      h(
+        'div',
+        { class: 'card-head' },
+        h('h2', null, 'Reiter in diesem Kurs'),
+        own
+          ? h(
+              'button',
+              {
+                class: 'btn btn-sm',
+                title: 'Eigene Auswahl verwerfen und den Standard aus den Einstellungen verwenden',
+                onclick: () => {
+                  delete course.tabs;
+                  NM.app.commit({ render: false });
+                  NM.app.renderShell();
+                },
+              },
+              'Wie Standard'
+            )
+          : null
+      ),
+      NM.ui.tabChecks(
+        (id) => NM.app.tabOn(course, id),
+        (id, on) => {
+          course.tabs = course.tabs || {};
+          if (on === (def[id] !== false)) delete course.tabs[id];
+          else course.tabs[id] = on;
+          if (!Object.keys(course.tabs).length) delete course.tabs;
+          NM.app.commit({ render: false });
+          NM.app.renderShell();
+        },
+        (id) => (course.tabs && typeof course.tabs[id] === 'boolean' ? h('span', { class: 'muted small', title: 'Weicht vom Standard in den Einstellungen ab' }, ' ◆') : null)
+      ),
+      h('p', { class: 'muted small' }, 'Ausgeschaltete Reiter verschwinden nur aus der Reiterleiste; Noten daraus bleiben gespeichert und zählen weiter. Standard für alle Kurse: Einstellungen → Reiter.')
+    );
+  }
+
   function dangerCard(course, db) {
     return h(
       'div',
@@ -411,6 +455,7 @@
     copy.wOther = course.wOther;
     copy.wHalf1 = course.wHalf1;
     copy.wHalf2 = course.wHalf2;
+    if (course.tabs) copy.tabs = Object.assign({}, course.tabs);
     if (withStudents.checked) copy.students = M.activeStudents(course).map((s) => ({ id: uid(), last: s.last, first: s.first, active: true }));
     db.courses.push(copy);
     NM.app.commit({ render: false });

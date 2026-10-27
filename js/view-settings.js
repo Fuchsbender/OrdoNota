@@ -7,7 +7,7 @@
   function render(view, { db }) {
     view.append(
       h('div', { class: 'view-head' }, h('h1', null, 'Einstellungen')),
-      h('div', { class: 'masonry' }, securityCard(db), defaultsCard(db), storageCard(db), yearsCard(db), displayCard(db), pomodoroCard(db), infoCard())
+      h('div', { class: 'masonry' }, securityCard(db), defaultsCard(db), storageCard(db), yearsCard(db), tabsCard(db), displayCard(db), pomodoroCard(db), infoCard())
     );
   }
 
@@ -324,6 +324,27 @@
       ),
       h('p', { class: 'muted small' }, 'Arbeitsphasen (rot) und Pausen (grün) im Wechsel; pausiert ist der Timer gelb. Bedienung in der Kopfzeile neben dem Schuljahr: ▶ Start, ⏸ Pause, ↺ Zurücksetzen, ⚙ Einstellungen. Der Timer läuft auch weiter, wenn die App gesperrt wird.'),
       p.enabled ? NM.pomodoro.settingsForm(db.settings) : null
+    );
+  }
+
+  function tabsCard(db) {
+    const def = db.settings.tabs;
+    const own = db.courses.filter((c) => c.tabs && Object.keys(c.tabs).length).length;
+    return h(
+      'div',
+      { class: 'card' },
+      h('h2', null, 'Reiter'),
+      h('p', { class: 'muted small' }, 'Standard für alle Kurse: Ausgeschaltete Reiter verschwinden aus der Reiterleiste. Vorhandene Noten bleiben gespeichert und zählen weiter. „Kurs & Schüler“ und „Einstellungen“ sind immer da.'),
+      NM.ui.tabChecks(
+        (id) => def[id] !== false,
+        (id, on) => {
+          if (on) delete def[id];
+          else def[id] = false;
+          NM.app.commit({ render: false });
+          NM.app.renderShell();
+        }
+      ),
+      h('p', { class: 'muted small' }, own ? `${own} ${own === 1 ? 'Kurs weicht' : 'Kurse weichen'} davon ab (einstellbar im Reiter „Kurs & Schüler“).` : 'Einzelne Kurse können abweichen (Reiter „Kurs & Schüler“).')
     );
   }
 

@@ -516,6 +516,7 @@ body.grp-dragging, body.grp-dragging * { cursor: grabbing !important; }
 .key-table tr.unreachable td { color: var(--muted); }
 .key-table tr.unreachable td:first-child { color: var(--warn); white-space: nowrap; }
 .key-table tr.unreachable .grade-badge { opacity: .55; }
+.tab-checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 4px 16px; margin: 8px 0; }
 .key-warn { font-size: 13px; display: grid; gap: 6px; }
 .key-warn-fixes { display: flex; flex-wrap: wrap; gap: 6px; }
 .dist { display: flex; align-items: stretch; gap: 6px; height: 130px; margin: 16px 0 10px; padding: 0 4px; }

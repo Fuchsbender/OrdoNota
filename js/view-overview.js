@@ -79,7 +79,7 @@
           { class: 'link head-btn', title: 'Bearbeiten (Name, Datum, Gewicht, Bereich)', onclick: () => UI.editAssessmentMeta(course, a) },
           UI.assessmentHeader(a)
         ),
-        a.kind !== 'manual'
+        a.kind !== 'manual' && NM.app.tabOn(course, JUMP[a.kind][2])
           ? h(
               'button',
               {

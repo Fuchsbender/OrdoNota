@@ -523,7 +523,7 @@
         { class: 'inline wrap' },
         addGroupButton(set, 'gs-add'),
         expertSet ? null : h('button', { class: 'btn btn-ghost', 'data-focus-key': 'gs-experts', title: 'Gruppenpuzzle: Diese Gruppen sind die Stammgruppen. Daraus werden darunter Expertengruppen (je Teilthema eine) gebildet.', onclick: () => makeExperts(course, set) }, '🧩 Expertengruppen bilden'),
-        pres.length
+        pres.length && NM.app.tabOn(course, 'pres')
           ? h(
               'select',
               { class: 'input input-sm', 'aria-label': 'In Präsentation übernehmen', 'data-focus-key': 'gs-to-pres', onchange: (e) => toPres(course, set, e.target.value) },
