@@ -31,7 +31,6 @@
           NM.app.commit();
         },
         addLabel: '+ Neuer Test',
-        extra: h('button', { class: 'picker-item picker-add', title: 'Moodle-Test aus der Antworten- und Bewertungen-CSV übernehmen', onclick: () => moodleImport(course, db, half, null) }, '⬆ Moodle-Import'),
         sub: (a) => {
           const st = G.testStats(a.test, M.statStudents(course).map((s) => s.id), level);
           return [fmtDate(a.date), UI.catLabel(a.cat), a.ungraded ? 'nicht gewertet' : null, st.n ? 'Ø ' + fmtNum(level === 'mss' ? st.avgPoints : st.avgDec, 2) : null].filter(Boolean).join(' · ');
@@ -44,7 +43,7 @@
     }
     const t = cur.test;
     const moodleCards = [t.moodle ? moodleCard(course, db, cur, null) : null, ...(G.hasParts(t) ? t.parts.filter((x) => x.moodle).map((x) => moodleCard(course, db, cur, x)) : [])];
-    view.append(...[metaCard(course, cur, level), ...moodleCards, G.hasParts(t) ? partsCard(course, db, cur, level) : null, tasksCard(cur), h('div', { class: 'test-layout' }, resultsCard(course, cur, level), keyCard(course, cur, level))].filter(Boolean));
+    view.append(...[metaCard(course, cur, level), ...moodleCards, G.hasParts(t) ? partsCard(course, db, cur, level) : null, tasksCard(course, db, cur), h('div', { class: 'test-layout' }, resultsCard(course, cur, level), keyCard(course, cur, level))].filter(Boolean));
   }
 
   function metaCard(course, a, level) {
@@ -418,7 +417,7 @@
     );
   }
 
-  function tasksCard(a) {
+  function tasksCard(course, db, a) {
     const t = a.test;
     const max = G.testMaxScore(t);
     const bonusMax = t.tasks.filter((x) => x.bonus).reduce((s, x) => s + (Number(x.max) || 0), 0);
@@ -439,7 +438,16 @@
     return h(
       'div',
       { class: 'card' },
-      h('div', { class: 'card-head' }, h('h2', null, 'Aufgaben'), h('span', { class: 'muted' }, `Höchstpunktzahl ${fmtScore(max)}`, bonusMax ? ` + ${fmtScore(bonusMax)} Bonus` : '')),
+      h(
+        'div',
+        { class: 'card-head' },
+        h('h2', null, 'Aufgaben'),
+        h('span', { class: 'muted' }, `Höchstpunktzahl ${fmtScore(max)}`, bonusMax ? ` + ${fmtScore(bonusMax)} Bonus` : ''),
+        // Moodle-Import in den Test (bei Teilen je Teil in der Karte „Teile“, erneut über die Karte „Moodle“)
+        G.hasParts(t) || t.moodle
+          ? null
+          : h('button', { class: 'btn btn-sm', 'data-focus-key': 'moodle-import', title: 'Moodle-Test aus der Antworten- und Bewertungen-CSV in diesen Test übernehmen: jede Frage wird eine Aufgabe', onclick: () => moodleImport(course, db, a.half, a) }, '⬆ Moodle-CSV')
+      ),
       G.taskGroups(t).map(({ part, tasks }) =>
         h(
           'div',
@@ -1079,6 +1087,15 @@
     let map = new Map();
     const box = h('div');
     const name = h('input', { class: 'input' });
+    // Bisherige eigene Aufgaben (ohne Moodle-Frage) des Tests bzw. Teils: ersetzen? Vorausgewählt, solange keine Punkte eingetragen sind
+    const filled = (v) => v !== null && v !== undefined && v !== '';
+    const own = target ? (part ? G.partTasks(target.test, part) : target.test.tasks).filter((x) => x.moodleNr === undefined) : [];
+    const scored = own.filter((x) => Object.values(target.test.results || {}).some((r) => filled((r.scores || {})[x.id])));
+    const anyScore = target && Object.values(target.test.results || {}).some((r) => Object.values(r.scores || {}).some(filled));
+    // Frisch angelegter Test: Bezeichnung und Datum aus Moodle übernehmen
+    const adopt = !!target && !part && !again && !anyScore && target.name === 'Neuer Test';
+    const replace = h('input', { type: 'checkbox', checked: !again && !scored.length, 'data-moodle-replace': '', onchange: () => (replaceWarn.hidden = !(replace.checked && scored.length)) });
+    const replaceWarn = h('div', { class: 'alert alert-danger', hidden: !(replace.checked && scored.length) }, `Eingetragene Punkte in ${scored.map((x) => x.name).join(', ')} werden gelöscht.`);
     const fileInput = h('input', {
       class: 'input',
       type: 'file',
@@ -1088,7 +1105,7 @@
         const files = await Promise.all([...e.target.files].map(async (f) => ({ name: f.name, text: await f.text() })));
         parsed = MO.parseExport(files);
         map = MO.matchStudents(parsed.persons, students);
-        if (!target) name.value = parsed.title;
+        if (!target || adopt) name.value = parsed.title;
         renderMap();
       },
     });
@@ -1146,7 +1163,7 @@
     }
 
     const v = await modal({
-      title: !target ? 'Moodle-Import' : part ? `Moodle-Import in „${part.name}“: ${target.name}` : `Moodle-Import erneut: ${target.name}`,
+      title: !target ? 'Moodle-Import' : part ? `Moodle-Import in „${part.name}“: ${target.name}` : again ? `Moodle-Import erneut: ${target.name}` : `Moodle-Import: ${target.name}`,
       wide: true,
       body: h(
         'div',
@@ -1154,8 +1171,18 @@
         h('p', { class: 'small' }, 'Aus Moodle (Test → Ergebnisse) die Antworten-CSV und die Bewertungen-CSV herunterladen und hier beide auswählen. Die Note berechnet OrdoNota mit dem eigenen Notenschlüssel. Beide Dateien werden verschlüsselt im Test gespeichert.'),
         again ? h('p', { class: 'small' }, 'Die Punkte der Moodle-Fragen werden ersetzt. Eigene Aufgaben, Notenschlüssel und Einstellungen bleiben erhalten.') : null,
         part && !again ? h('p', { class: 'small' }, `Jede Moodle-Frage wird eine Aufgabe (F1, F2, …) im Teil „${part.name}“. Die anderen Teile bleiben unverändert.`) : null,
+        target && !part && !again ? h('p', { class: 'small' }, 'Jede Moodle-Frage wird eine Aufgabe (F1, F2, …) dieses Tests.' + (adopt ? ' Bezeichnung und Datum kommen aus Moodle.' : '')) : null,
         h('label', { class: 'field' }, h('span', null, 'CSV-Dateien (eine oder beide)'), fileInput),
-        target ? null : h('label', { class: 'field' }, h('span', null, 'Bezeichnung'), name),
+        !target || adopt ? h('label', { class: 'field' }, h('span', null, 'Bezeichnung'), name) : null,
+        own.length
+          ? h(
+              'div',
+              null,
+              h('label', { class: 'check' }, replace, ` Bisherige Aufgaben ersetzen (${own.map((x) => x.name).join(', ')})`),
+              h('p', { class: 'muted small' }, 'Mit Haken werden diese Aufgaben samt Punkten entfernt, ohne Haken kommen die Moodle-Fragen zusätzlich dazu.'),
+              replaceWarn
+            )
+          : null,
         box
       ),
       buttons: [
@@ -1173,7 +1200,7 @@
       ],
     });
     if (v !== 'ok') return;
-    const sum = MO.applyImport(course, target, parsed, map, { half, settings: db.settings, name: name.value.trim(), partId });
+    const sum = MO.applyImport(course, target, parsed, map, { half, settings: db.settings, name: name.value.trim(), partId, replace: own.length > 0 && replace.checked, adopt });
     NM.app.state.ui.testId[course.id] = sum.assessment.id;
     NM.app.saveUi();
     NM.app.commit();

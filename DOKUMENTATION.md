@@ -1,6 +1,6 @@
 # OrdoNota – Dokumentation
 
-Version 1.25.0 · Stand Oktober 2026
+Version 1.26.0 · Stand Oktober 2026
 
 OrdoNota (bis Version 1.11 „Notenmanager“) verwaltet Noten für die Sekundarstufe I (Noten 1–6 mit Tendenz) und die Mainzer Studienstufe (MSS, Punkte 00–15) an Schulen in Rheinland-Pfalz. Die App läuft vollständig lokal im Browser, verschlüsselt alle Daten mit einem Passwort und legt sie in einem Ordner ab, den der Synology Drive Client auf die DiskStation spiegelt.
 
@@ -341,12 +341,13 @@ Tests aus Moodle lassen sich direkt übernehmen. Die Note berechnet OrdoNota mit
 1. In Moodle beim Test unter **Ergebnisse** zwei Dateien als CSV herunterladen:
    - **Antworten** („Antworten“-Bericht): Fragetext, gegebene und richtige Antwort je Frage.
    - **Bewertungen** („Bewertungen“-Bericht, Spalten `F 1 /1,00`, `F 2 /1,00` …): Punkte je Frage. Nur diese Datei enthält Korrekturen, die Sie in Moodle von Hand vorgenommen haben (z. B. Tippfehler als richtig gewertet).
-2. Im Reiter „Tests“ das Halbjahr wählen und **„⬆ Moodle-Import“** klicken.
+2. Im Reiter „Tests“ einen Test öffnen oder mit **„+ Neuer Test“** anlegen und in der Karte „Aufgaben“ auf **„⬆ Moodle-CSV“** klicken. Bei einer Arbeit in Teilen steht der Knopf **„⬆ Moodle“** je Teil in der Karte „Teile“ (siehe 7.8).
 3. Beide Dateien auswählen (mehrere auf einmal markieren). OrdoNota erkennt selbst, welche welche ist. Eine allein geht auch:
    - nur Antworten: Punkte per Textvergleich (Antwort = richtige Antwort, je Frage 1 Punkt); Korrekturen aus Moodle fehlen,
    - nur Bewertungen: Punkte vollständig, der Ausdruck enthält aber keine Fragen und Antworten.
 4. **Zuordnung prüfen:** Jede Person aus Moodle wird einem Kursmitglied zugeordnet: zuerst über die beim letzten Import gemerkte Moodle-E-Mail-Adresse, sonst über Nach- und Vorname. Nicht erkannte Personen per Auswahlliste zuordnen oder „— nicht übernehmen —“ lassen.
-5. **Importieren.** Es entsteht ein Test (Bereich „Sonstige“, Datum des Moodle-Versuchs, Bezeichnung aus dem Dateinamen; alles änderbar) mit einer Aufgabe **F1, F2, …** je Moodle-Frage.
+5. **Bisherige Aufgaben ersetzen?** Hat der Test schon Aufgaben (bei einem neuen Test A1 und A2), entfernt der Haken **„Bisherige Aufgaben ersetzen“** sie samt ihren Punkten; ohne Haken kommen die Moodle-Fragen zusätzlich dazu. Der Haken ist vorausgewählt, solange in diesen Aufgaben noch keine Punkte stehen. Sind schon Punkte eingetragen, ist er aus, und beim Setzen erscheint eine Warnung, welche Punkte gelöscht werden.
+6. **Importieren.** Jede Moodle-Frage wird eine Aufgabe **F1, F2, …** des Tests. Bei einem frisch angelegten Test (Bezeichnung „Neuer Test“, noch keine Punkte) kommen Bezeichnung (aus dem Dateinamen, im Dialog änderbar), Datum des Moodle-Versuchs und Punkte-Genauigkeit aus Moodle; Bereich, Gewicht und LIMIT bleiben wie beim Anlegen.
 
 Regeln beim Import:
 
@@ -356,7 +357,7 @@ Regeln beim Import:
 - Die Punkte-Genauigkeit wird passend gesetzt (ganze, halbe oder Zehntel-Punkte). Rechnet Moodle mit skalierten Punkten (z. B. `F 1 /0,71`), kann die Summe der gerundeten Fragenpunkte minimal von der Moodle-Bewertung abweichen; OrdoNota weist dann darauf hin.
 - **Beide CSV-Dateien werden verschlüsselt im Test gespeichert**, ebenso Fragen und Antworten je Person. Die Karte **„Moodle“** im Test zeigt das Importdatum und bietet die Originaldateien zum Herunterladen an (⬇; die heruntergeladene Datei ist unverschlüsselt).
 
-**Erneut importieren** (Knopf in der Karte „Moodle“), z. B. nach Korrekturen in Moodle: Die Punkte der Moodle-Fragen werden ersetzt, eigene zusätzliche Aufgaben, Notenschlüssel, Gewicht und Status „nicht gewertet“/„Täuschung“ bleiben erhalten. Lädt man dabei nur die Bewertungen-CSV, bleiben die gespeicherten Antworttexte erhalten.
+**Erneut importieren** (Knopf in der Karte „Moodle“; nach dem ersten Import verschwindet „⬆ Moodle-CSV“ aus der Karte „Aufgaben“), z. B. nach Korrekturen in Moodle: Die Punkte der Moodle-Fragen werden ersetzt, eigene zusätzliche Aufgaben (der Haken „ersetzen“ ist hier nicht vorausgewählt), Notenschlüssel, Gewicht und Status „nicht gewertet“/„Täuschung“ bleiben erhalten. Lädt man dabei nur die Bewertungen-CSV, bleiben die gespeicherten Antworttexte erhalten.
 
 **Ausdruck „💬 Moodle-Rückmeldung je Person“** (unter „🖨 Drucken …“): Im Dialog wählen Sie **alle** (je eine Seite) oder **eine Person** und ob die **Note** mitgedruckt wird. Oben steht das Ergebnis (Punkte, Prozent mit Balken), darunter je Frage Frage, „Deine Antwort“, Lösung und Punkte. Jede Zeile trägt ein Zeichen und einen farbigen Rand: ✓ richtig (grün), ◐ teilweise (orange hinterlegt), ✗ falsch (rot hinterlegt, Lösung fett), – keine Antwort. Durch die Zeichen bleibt der Ausdruck auch in Schwarzweiß lesbar; Zeilen werden nicht über Seiten getrennt. Unten steht – wenn gewählt – die **Note als Zahl und ausgeschrieben** (z. B. „2+ voll gut“, „2- noch gut“; MSS: „11 Punkte gut (2)“), darunter Linien für **Datum** und **Unterschrift der Lehrkraft** (auch ohne Note).
 
@@ -379,7 +380,7 @@ Bei getrennter Benotung gilt außerdem:
 
 **Teil ausblenden:** Neben der Überschrift „Ergebnisse“ steht je Teil ein Knopf (z. B. **▾ Theorie**). Ein Klick blendet die Aufgabenspalten dieses Teils aus (**▸ Theorie**); Σ und (bei getrennter Benotung) die Teilnote bleiben sichtbar. So passt z. B. beim Eintragen des Praxisteils alles auf den Bildschirm. Der Zustand wird je Test auf diesem Gerät gemerkt; Ausdrucke zeigen immer alle Teile.
 
-**Moodle-Import in einen Teil:** Knopf **„⬆ Moodle“** in der Zeile des Teils. Die Fragen werden Aufgaben F1, F2, … dieses Teils, die anderen Teile bleiben unverändert. Die CSV-Dateien werden beim Teil gespeichert (eigene Karte „Moodle – Teilname“ mit „Erneut importieren“). Personen ohne beendeten Moodle-Versuch bekommen „fehlt“ für die ganze Arbeit, wenn sie noch gar keine Punkte haben; haben sie in einem anderen Teil schon Punkte, wird bei getrennter Benotung nur dieser Teil auf „fehlt“ gesetzt.
+**Moodle-Import in einen Teil:** Knopf **„⬆ Moodle“** in der Zeile des Teils. Die Fragen werden Aufgaben F1, F2, … dieses Teils, die anderen Teile bleiben unverändert; „Bisherige Aufgaben ersetzen“ (siehe 7.7) betrifft nur die Aufgaben dieses Teils. Die CSV-Dateien werden beim Teil gespeichert (eigene Karte „Moodle – Teilname“ mit „Erneut importieren“). Personen ohne beendeten Moodle-Versuch bekommen „fehlt“ für die ganze Arbeit, wenn sie noch gar keine Punkte haben; haben sie in einem anderen Teil schon Punkte, wird bei getrennter Benotung nur dieser Teil auf „fehlt“ gesetzt.
 
 **Teile aufheben:** Haken „Arbeit in Teilen“ entfernen. Alle Aufgaben und Punkte bleiben erhalten und werden wieder mit einem Schlüssel bewertet; Schlüssel, Gewichte und Status der einzelnen Teile gehen verloren (mit Rückfrage).
 
@@ -1092,7 +1093,7 @@ Berechnete Werte (Schnitte, Testnoten, EPO-Noten) werden **nie gespeichert**, so
   "kdf": "PBKDF2-SHA256",
   "savedAt": "2026-10-14T21:57:03.123Z",
   "device": "Laptop Schule",
-  "app": "1.25.0",
+  "app": "1.26.0",
   "pw":   { "salt": "<b64>", "iter": 600000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "rec":  { "salt": "<b64>", "iter": 100000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "data": { "iv": "<b64>", "ct": "<b64: verschlüsseltes JSON des Datenmodells>" }
@@ -1115,7 +1116,7 @@ Entschlüsselter Inhalt (`schema: 4`):
 ```js
 {
   schema: 4,                             // Datenformat (siehe 26.2)
-  savedWith: "1.25.0",                    // App-Version beim letzten Speichern
+  savedWith: "1.26.0",                    // App-Version beim letzten Speichern
   created: "<ISO>", savedAt: "<ISO>",
   settings: { autoLockMin, limitSek1, limitMss, precision, keepBackups, backupEveryMin, gradeColors,
               tabs: { "<Reiter>": false },   // seit 1.25: ausgeschaltete Reiter (Standard für alle Kurse)
@@ -1196,7 +1197,7 @@ Das Skript startet einen unsichtbaren Chromium-Browser (Chrome, Edge, Chromium, 
 1. alle Testseiten (siehe 25.2),
 2. den Start der App im Demo-Modus und alle Reiter für einen Sek-I- und einen MSS-Kurs ohne JavaScript-Fehler,
 3. das Sortieren per Klick auf Spaltenköpfe (Tests, EPO, Notenübersicht; Richtung und leere Werte unten),
-4. den Pomodoro-Timer (Aktivieren, Farben je Zustand, Phasenwechsel, Zurücksetzen, Einstellungsdialog), das Layout des Reiters „Einstellungen“ bei aktivem Timer (keine Lücken zwischen den Karten, Auswahllisten nicht abgeschnitten, bei 1570 und 2560 px) und die Kürzel in der eingeklappten Kursliste, die weichen Übergänge (nur bei Reiter-, Kurs- und Halbjahreswechsel), das Ein-/Ausklappen der Kursliste, das Ein-/Ausschalten von Reitern (Standard in den Einstellungen, Abweichung je Kurs, Ersatzreiter, Sprunglinks, „Wie Standard“), den Reiter „Tests“ in voller Breite, die Warnung bei zu wenig Punkten im Notenschlüssel (doppelte Schwellen markiert, Knöpfe „Halbe Punkte“/„Nur ganze Noten“ beheben sie), Arbeiten in Teilen (einschalten, Aufgaben und Punkte je Teil, Teil ausblenden, getrennt benoten, Status je Teil, Schlüssel je Teil, Ausdrucke inkl. „Ergebnisse nach Teilen“, Beamer, Teile aufheben), die Druckauswahl „🖨 Drucken …“ in Tests, EPO und Notenübersicht (Gruppen, Tooltips, Auswahl druckt, Abbrechen nicht) und den Haken „Unterschrift gesehen“ bei Klassenarbeiten (Zähler, Ausdruck), den Moodle-Import (Dateiauswahl im Dialog, Zuordnung, Status „fehlt“, Ausdruck mit und ohne Note, erneuter Import),
+4. den Pomodoro-Timer (Aktivieren, Farben je Zustand, Phasenwechsel, Zurücksetzen, Einstellungsdialog), das Layout des Reiters „Einstellungen“ bei aktivem Timer (keine Lücken zwischen den Karten, Auswahllisten nicht abgeschnitten, bei 1570 und 2560 px) und die Kürzel in der eingeklappten Kursliste, die weichen Übergänge (nur bei Reiter-, Kurs- und Halbjahreswechsel), das Ein-/Ausklappen der Kursliste, das Ein-/Ausschalten von Reitern (Standard in den Einstellungen, Abweichung je Kurs, Ersatzreiter, Sprunglinks, „Wie Standard“), den Reiter „Tests“ in voller Breite, die Warnung bei zu wenig Punkten im Notenschlüssel (doppelte Schwellen markiert, Knöpfe „Halbe Punkte“/„Nur ganze Noten“ beheben sie), Arbeiten in Teilen (einschalten, Aufgaben und Punkte je Teil, Teil ausblenden, getrennt benoten, Status je Teil, Schlüssel je Teil, Ausdrucke inkl. „Ergebnisse nach Teilen“, Beamer, Teile aufheben), die Druckauswahl „🖨 Drucken …“ in Tests, EPO und Notenübersicht (Gruppen, Tooltips, Auswahl druckt, Abbrechen nicht) und den Haken „Unterschrift gesehen“ bei Klassenarbeiten (Zähler, Ausdruck), den Moodle-Import (Knopf im Test statt neben „+ Neuer Test“, bisherige Aufgaben ersetzen oder behalten, Dateiauswahl im Dialog, Zuordnung, Status „fehlt“, Ausdruck mit und ohne Note, erneuter Import),
 5. den Excel-Export der Schülerliste (gültiges ZIP/XML, Umlaute und Sonderzeichen), das Kurs-Löschen nur mit „LÖSCHEN“, das Ein-/Ausblenden der Fotos im EPO-Reiter und im Sitzplan (auch im Druck) das Erweitern/Verkleinern des Sitzplan-Rasters an allen vier Seiten sowie das Ziehen (keine Wiederholung bis zum Auffüllen, automatisches Auffüllen, Note, Rückgängig, Abwesende/Herausgenommene) und den Reiter „Präsentationen“ (Bewerten per Knopf und in der Tabelle, Gewicht, Kriterien aus dem Pool und eigene, Vorlage, Ausdrucke, Spalte in der Notenübersicht, Pool bearbeiten, Startbestand ergänzen, Vorlagen speichern/anlegen/verwenden/drucken/löschen, Standardvorlagen vorhanden und ergänzen, Handreichung mit Notenschlüssel) und Gruppenpräsentationen (Gruppenwert für alle Mitglieder, Personenkriterien, Abweichung setzen/zurücksetzen, Tabelle, Gruppen bearbeiten/übernehmen, Druck, Auflösen ohne Notenänderung), den Reiter „Gruppen“ (neue Einteilung, Abwesende, Fixieren, Anklicken/Ziehen, Auftrag, Regel mit Warnung, Beamer ohne Noten mit Schrift passend zum Bildschirm und Umschaltern für Fotos/Nachnamen, Druck, Fotos/Nachnamen in der Einteilung, Gruppenpuzzle mit Expertengruppen unter den Stammgruppen, Anzahl der Teilthemen einstellbar und beim Neu verteilen erhalten, Hinweis nach Änderungen, Beamer-Umschalter Stamm-/Expertengruppen, Übernahme in eine Präsentation),
 6. das Notfallwerkzeug: Eine von der App echt verschlüsselte Datenbank wird mit `tools/entschluesseln.py` per Passwort und per Wiederherstellungsschlüssel entschlüsselt und mit dem Original verglichen. Dazu kommen falsches Passwort, manipulierte Datei und CSV-Ausgabe.
 
@@ -1210,7 +1211,7 @@ Am Ende steht `ERGEBNIS: x von y bestanden`. Der Exit-Code ist 0, wenn alles bes
 |---|---|---|
 | `tests/grades.test.html` | Skalen, Eingabe-Parser, Rundung, Notenschlüssel (Vergleich mit Excel-Formeln), Bonus/Kappung, Status, Drittelparagraph, EPO (Werte aus der bisherigen EPO-Liste), Halbjahres-/Jahresnote, GK-Gewichtung, nicht erreichbare Stufen (zu wenig Punkte, eigene Schwellen, Präsentationen), Präsentationen (Gewicht, Status, Schlüssel, Halbjahresnote, Gruppen: Gruppenwert, Abweichung, Personenkriterium, Modus „alles als Gruppe“), Arbeiten in Teilen (gemeinsam/getrennt, Gewichte, fehlender Teil, Status je Teil, ganze Noten je Teil, MSS) | im Browser öffnen |
 | `tests/model.test.html` | Migration älterer Datenbanken (SCHEMA 1 → 4, Kriterienpool, Startbestand ergänzen, Vorlagen, Standardvorlagen), neue Präsentation, Ablehnung neuerer Datenformate, Erhalt unbekannter Felder, Reiterauswahl (`settings.tabs`, `course.tabs`), Namensliste | im Browser öffnen |
-| `tests/moodle.test.html` | CSV-Zerlegung, Erkennen und Zusammenführen von Antworten-/Bewertungen-CSV, bester Versuch, Textvergleich ohne Bewertungen, Zuordnung (Name, gemerkte E-Mail), Übernahme als Test, „fehlt“, erneuter Import, skalierte Punkte, Import in einen Teil | im Browser öffnen |
+| `tests/moodle.test.html` | CSV-Zerlegung, Erkennen und Zusammenführen von Antworten-/Bewertungen-CSV, bester Versuch, Textvergleich ohne Bewertungen, Zuordnung (Name, gemerkte E-Mail), Übernahme als Test, Import in einen bestehenden Test (Aufgaben ersetzen/behalten, Bezeichnung und Datum übernehmen), „fehlt“, erneuter Import, skalierte Punkte, Import in einen Teil (auch mit Ersetzen) | im Browser öffnen |
 | `tests/groups.test.html` | Gruppengrößen (Rest verteilt), Verteilung (alle genau einmal), Regeln „nicht zusammen“/„zusammen“, leistungsgemischt/-gleich, fehlende Noten, Abwechslung (auch Minimum), Expertengruppen (Standard und einstellbare Anzahl, gleich große Gruppen, kein Thema doppelt), Migration | im Browser öffnen |
 | `tests/pomodoro.test.html` | Ablauf der Phasen (mit/ohne kurze bzw. lange Pause), Standardwerte, Migration der Einstellungen | im Browser öffnen |
 | `tests/crypto.test.html` | Anlegen, Entsperren, falsches Passwort, Wiederherstellungsschlüssel, Passwortwechsel, alte Sicherungen, Manipulationserkennung | im Browser öffnen (dauert einige Sekunden) |
@@ -1239,7 +1240,7 @@ In `js/model.js` stehen zwei Nummern:
 
 | Konstante | Bedeutung | Wann erhöhen |
 |---|---|---|
-| `APP_VERSION` (z. B. `1.25.0`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.25.0` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
+| `APP_VERSION` (z. B. `1.26.0`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.26.0` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
 | `SCHEMA` (z. B. `4`) | Version des Datenformats (2 seit 1.18: Arbeiten in Teilen; 3 seit 1.20: Präsentationen; 4 seit 1.23: Gruppenpräsentationen) | nur, wenn eine **ältere** App-Version die neuen Daten falsch verstehen würde (z. B. ein Feld ändert seine Bedeutung) |
 
 Öffnet eine App eine Datenbank mit höherem `SCHEMA`, verweigert sie das mit einer Meldung (siehe 21.10). Neue, nur *zusätzliche* Felder brauchen kein neues `SCHEMA`: Ältere Versionen lassen unbekannte Felder unverändert und speichern sie mit.

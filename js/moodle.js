@@ -245,14 +245,18 @@
    * Import in einen Test übernehmen (a = null → neuen Test anlegen).
    * map: Moodle-Person → studentId (fehlend = nicht übernehmen).
    * Kursmitglieder ohne beendeten Versuch bekommen „fehlt“, sofern noch keine Punkte eingetragen sind.
+   * replace: bisherige Aufgaben (des Tests bzw. des Teils), die nicht zu einer Moodle-Frage gehören, samt Punkten entfernen.
+   * adopt (bestehender Test): Bezeichnung (name) und Datum des Moodle-Versuchs übernehmen, z. B. bei einem frisch angelegten Test.
    */
-  function applyImport(course, a, parsed, map, { half, settings, name, date, cat, partId = null } = {}) {
+  function applyImport(course, a, parsed, map, { half, settings, name, date, cat, partId = null, replace = false, adopt = false } = {}) {
     const isNew = !a;
     if (isNew) {
       a = M.newTest(course, half, settings);
       a.test.tasks = [];
-      a.name = name || parsed.title || 'Moodle-Test';
       a.cat = cat || 'other';
+    }
+    if (isNew || adopt) {
+      a.name = name || parsed.title || 'Moodle-Test';
       const dates = parsed.persons.map((p) => p.date).filter(Boolean);
       if (date) a.date = date;
       else if (dates.length) a.date = dates.sort()[Math.floor(dates.length / 2)];
@@ -261,6 +265,14 @@
     // Import in einen Teil der Arbeit (Aufgaben, Dateien und Genauigkeit gehören dann zum Teil)
     const part = partId && G.hasParts(t) ? t.parts.find((x) => x.id === partId) || null : null;
     const inPart = (x) => !part || x.partId === part.id || (part === t.parts[0] && !t.parts.some((y) => y.id === x.partId));
+    if (replace) {
+      const nrs = new Set(parsed.questions.map((q) => q.nr));
+      const gone = new Set(t.tasks.filter((x) => inPart(x) && !(x.moodleNr !== undefined && nrs.has(x.moodleNr))).map((x) => x.id));
+      t.tasks = t.tasks.filter((x) => !gone.has(x.id));
+      for (const r of Object.values(t.results || {})) for (const id of gone) if (r.scores) delete r.scores[id];
+      const mo = (part || t).moodle;
+      if (mo) for (const x of Object.values(mo.answers || {})) for (const id of gone) delete x[id];
+    }
     const taskOf = {};
     for (const { nr, max } of parsed.questions) {
       let task = t.tasks.find((x) => x.moodleNr === nr && inPart(x));
@@ -329,7 +341,8 @@
     const prec = precisionFor(values);
     const precOwner = part && G.separateParts(t) ? part : t;
     const curPrec = precOwner.precision !== undefined ? precOwner.precision : t.precision;
-    if (isNew || prec < Number(curPrec)) precOwner.precision = prec;
+    // Genauigkeit aus Moodle übernehmen (neuer Test bzw. alle eigenen Aufgaben ersetzt), sonst nur feiner stellen
+    if (isNew || (replace && (!part || G.separateParts(t))) || prec < Number(curPrec)) precOwner.precision = prec;
     if (isNew) course.assessments.push(a);
     summary.assessment = a;
     return summary;

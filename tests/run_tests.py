@@ -1212,12 +1212,31 @@ def run_moodle_check(br, base):
             inp.files = dt.files; inp.dispatchEvent(new Event('change')); await wait(400);
         };
         const out = {};
+        out.noPickerButton = ![...document.querySelectorAll('.picker-item')].some((b) => b.textContent.includes('Moodle'));
+        // In einen bestehenden Test mit Punkten: Ersetzen nicht vorausgewählt, Warnung erst mit Haken
+        const half = NM.app.currentHalf(c);
+        const old = c.assessments.find((x) => x.kind === 'test' && x.half === half && !NM.grades.hasParts(x.test) && Object.keys(x.test.results).length);
+        NM.app.state.ui.testId[c.id] = old.id; NM.app.rerender(); await wait();
+        const oldTasks = old.test.tasks.length;
+        click('Moodle-CSV'); await wait();
+        const rep = () => document.querySelector('dialog [data-moodle-replace]');
+        const warn = () => !document.querySelector('dialog .alert-danger').hidden;
+        out.keep = [rep().checked, warn()];
+        rep().checked = true; rep().dispatchEvent(new Event('change')); out.keep.push(warn());
+        rep().checked = false; rep().dispatchEvent(new Event('change'));
+        await pick([['10a-HÜ Test-Antworten.csv', answers], ['10a-HÜ Test-Bewertungen.csv', grades]]);
+        document.querySelector('dialog .btn-primary').click(); await wait();
+        out.keep.push(old.test.tasks.length - oldTasks, old.name !== 'HÜ Test');
+        // Neuer Test: A1/A2 werden ersetzt, Bezeichnung und Datum aus Moodle
         const n = c.assessments.length;
-        click('Moodle-Import'); await wait();
+        click('+ Neuer Test'); await wait();
+        click('Moodle-CSV'); await wait();
+        out.replaceDefault = rep().checked;
         await pick([['10a-HÜ Test-Antworten.csv', answers], ['10a-HÜ Test-Bewertungen.csv', grades]]);
         out.rows = document.querySelectorAll('dialog tbody tr').length;
-        out.name = document.querySelector('dialog input:not([type=file])').value;
+        out.name = document.querySelector('dialog input.input:not([type=file])').value;
         document.querySelector('dialog .btn-primary').click(); await wait();
+        out.newButton = [...document.querySelectorAll('.card-head button')].some((b) => b.textContent.includes('Moodle-CSV'));
         const a = c.assessments[c.assessments.length - 1];
         const sid = (last) => c.students.find((s) => s.last === last).id;
         const r = (last) => NM.grades.testResult(a.test, sid(last), 'sek1');
@@ -1237,9 +1256,10 @@ def run_moodle_check(br, base):
         document.querySelector('dialog .btn-primary').click(); await wait();
         out.reimport = [c.assessments.length - n, r('Demir').score, a.test.moodle.answers[sid('Demir')][a.test.tasks[0].id].a];
         return out; })(%s, %s)""" % (json.dumps(MOODLE_ANSWERS), json.dumps(MOODLE_GRADES)))
-    ok = bool(res) and res["rows"] == 3 and res["name"] == "HÜ Test" and res["test"] == [1, "HÜ Test", "F1,F2", 0.5, 2, 1.5, "fehlt", 2] \
+    ok = bool(res) and res["noPickerButton"] and res["keep"] == [False, False, True, 2, True] and res["replaceDefault"] is True and res["newButton"] is False \
+        and res["rows"] == 3 and res["name"] == "HÜ Test" and res["test"] == [1, "HÜ Test", "F1,F2", 0.5, 2, 1.5, "fehlt", 2] \
         and res["card"] and res["printGrade"] == [2, True, True, 1, True, 2] and res["printNoGrade"] == [1, False, True, True] and res["reimport"] == [1, 2, "5"]
-    report("Moodle: Import mit Zuordnung, „fehlt“, Ausdruck mit/ohne Note, erneuter Import", ok and not br.errors, str(res) + "; ".join(br.errors))
+    report("Moodle: Import im Test (Aufgaben ersetzen/behalten), Zuordnung, „fehlt“, Ausdruck mit/ohne Note, erneuter Import", ok and not br.errors, str(res) + "; ".join(br.errors))
 
 
 def run_decrypt_tool(br, base):

@@ -128,6 +128,33 @@
     MO.applyImport(c3, a3, p2, MO.matchStudents(p2.persons, c3.students), { partId: 'P' });
     ok('Teil-Import erneut: gleiche Aufgaben, Theorie unberührt', t3.tasks.filter((x) => x.partId === 'P').map((x) => x.id).join() === pIds && t3.tasks.length === 4 && t3.results[an].scores.th === 4);
     ok('Teil-Import erneut: neue Punkte im Teil', G.testResult(t3, an, 'sek1').parts[1].score === 3);
+    // Teil-Import mit Ersetzen: nur Aufgaben des Teils ohne passende Moodle-Frage fallen weg
+    t3.tasks.push({ id: 'pa', name: 'A9', max: 4, partId: 'P' });
+    t3.results[an].scores.pa = 2;
+    MO.applyImport(c3, a3, p2, MO.matchStudents(p2.persons, c3.students), { partId: 'P', replace: true });
+    ok('Teil-Import ersetzen: A9 weg, Moodle-Aufgaben und Theorie bleiben', t3.tasks.map((x) => x.id).join() === 'th,' + pIds && t3.results[an].scores.pa === undefined && t3.results[an].scores.th === 4);
+  }
+
+  // Import in einen bestehenden Test: bisherige Aufgaben ersetzen oder behalten, Eckdaten übernehmen
+  {
+    const c4 = M.newCourse(db.years[0].id, { klasse: '10a', fach: 'Info', jahrgang: 10, type: 'sek1' });
+    c4.students = M.parseNames('Müller, Anna\nSchmidt, Jonas\nWeber, Lena\nZiegler, Tom');
+    const fresh = M.newTest(c4, 'HJ1', db.settings);
+    c4.assessments.push(fresh);
+    const m4 = MO.matchStudents(p.persons, c4.students);
+    const s4 = MO.applyImport(c4, fresh, p, m4, { replace: true, adopt: true });
+    ok('Ersetzen: A1/A2 weg, F1–F3 da, kein zweiter Test', fresh.test.tasks.map((x) => x.name).join() === 'F1,F2,F3' && c4.assessments.length === 1 && s4.assessment === fresh);
+    ok('Übernehmen: Bezeichnung und Datum aus Moodle, Genauigkeit aus Moodle', fresh.name === 'HÜ 1 - Grundlagen' && fresh.date === '2026-09-01' && fresh.test.precision === 0.5 && fresh.cat === 'ka');
+    const kept = M.newTest(c4, 'HJ1', db.settings);
+    kept.name = 'KA 1';
+    kept.test.results = { [c4.students[0].id]: { scores: { [kept.test.tasks[0].id]: 4 } } };
+    c4.assessments.push(kept);
+    MO.applyImport(c4, kept, p, MO.matchStudents(p.persons, c4.students), {});
+    ok('Ohne Ersetzen: A1/A2 bleiben samt Punkten, Fragen kommen dazu, Name bleibt', kept.test.tasks.map((x) => x.name).join() === 'A1,A2,F1,F2,F3' && kept.test.results[c4.students[0].id].scores[kept.test.tasks[0].id] === 4 && kept.name === 'KA 1');
+    const again = M.newTest(c4, 'HJ1', db.settings);
+    again.test.results = { [c4.students[0].id]: { scores: { [again.test.tasks[1].id]: 3 } } };
+    MO.applyImport(c4, again, p, MO.matchStudents(p.persons, c4.students), { replace: true });
+    ok('Ersetzen löscht die Punkte der entfernten Aufgaben', again.test.tasks.length === 3 && Object.keys(again.test.results[c4.students[0].id].scores).every((id) => again.test.tasks.some((x) => x.id === id)));
   }
 
   document.getElementById('out').textContent = (fails ? `${fails} FEHLGESCHLAGEN` : 'ALLE TESTS BESTANDEN') + '\n\n' + lines.join('\n');
