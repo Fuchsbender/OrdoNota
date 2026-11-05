@@ -4,7 +4,7 @@
 #   launcher/build.sh            → dist/OrdoNota-<Version>/ und dist/OrdoNota-<Version>.zip (für Kollegen)
 #                                  und ./OrdoNota im Programmordner (für dieses Gerät)
 #
-# Die App-Dateien (index.html, css/, js/, logo/, demo/) werden ins Programm eingebaut. Liegt neben dem
+# Die App-Dateien (index.html, css/, js/, logo/, demo/, cards/) werden ins Programm eingebaut. Liegt neben dem
 # Programm eine index.html (wie im Programmordner), nimmt das Programm stattdessen diese Dateien.
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -17,7 +17,7 @@ go test ./...
 
 rm -rf webapp "$ROOT"/dist/OrdoNota-*
 mkdir -p webapp "$OUT"
-cp -r "$ROOT/index.html" "$ROOT/css" "$ROOT/js" "$ROOT/logo" "$ROOT/demo" webapp/
+cp -r "$ROOT/index.html" "$ROOT/css" "$ROOT/js" "$ROOT/logo" "$ROOT/demo" "$ROOT/cards" webapp/
 trap 'rm -rf webapp' EXIT
 
 build() { # GOOS GOARCH Ziel [ldflags]

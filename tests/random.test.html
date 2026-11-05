@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="de">
+<head><meta charset="utf-8"><title>Tests Zufall</title></head>
+<body>
+<pre id="out"></pre>
+<script src="../js/util.js"></script>
+<script src="../js/grades.js"></script>
+<script src="../js/model.js"></script>
+<script src="../js/random.js"></script>
+<script>
+  const R = NM.random;
+  const lines = [];
+  let fails = 0;
+  const eq = (name, actual, expected) => {
+    const ok = JSON.stringify(actual) === JSON.stringify(expected);
+    if (!ok) fails++;
+    lines.push((ok ? 'OK   ' : 'FAIL ') + name + (ok ? '' : '  → erhalten ' + JSON.stringify(actual) + ', erwartet ' + JSON.stringify(expected)));
+  };
+  const seeded = (seed) => () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
+
+  // Zufallszahl
+  const nums = Array.from({ length: 2000 }, () => R.randInt(3, 8));
+  eq('Zufallszahl 3–8: nur Werte im Bereich, alle kommen vor', [Math.min(...nums), Math.max(...nums), new Set(nums).size], [3, 8, 6]);
+  eq('vertauschte Grenzen', [R.randInt(5, 1, () => 0), R.randInt(5, 1, () => 0.9999)], [1, 5]);
+  eq('gleiche Grenzen', R.randInt(4, 4), 4);
+  eq('negative Zahlen', R.randInt(-3, -1, () => 0), -3);
+  eq('crypto-Zufall in [0, 1)', Array.from({ length: 500 }, R.cryptoRand).every((x) => x >= 0 && x < 1), true);
+
+  // Personen
+  const ids = Array.from({ length: 10 }, (_, i) => 's' + i);
+  const one = R.pickPeople(ids, 4, { rand: seeded(1) });
+  eq('4 aus 10: verschiedene, alle aus der Liste', [one.ids.length, new Set(one.ids).size, one.ids.every((x) => ids.includes(x))], [4, 4, true]);
+  eq('mehr verlangt als vorhanden → alle', R.pickPeople(ids, 15).ids.length, 10);
+  const used = new Set();
+  const a = R.pickPeople(ids, 4, { noRepeat: true, used, rand: seeded(2) });
+  const b = R.pickPeople(ids, 4, { noRepeat: true, used, rand: seeded(3) });
+  eq('keine Wiederholung: zweite Auswahl ohne die erste', [b.ids.some((x) => a.ids.includes(x)), used.size, b.reset], [false, 8, false]);
+  const rest = ids.filter((x) => !used.has(x));
+  const c = R.pickPeople(ids, 4, { noRepeat: true, used, rand: seeded(4) });
+  eq('Rest reicht nicht: Übrige zuerst, dann neu von vorn', [rest.every((x) => c.ids.includes(x)), new Set(c.ids).size, c.reset, used.size], [true, 4, true, 4]);
+  const used2 = new Set(['s0']);
+  eq('ohne Haken wird used nicht beachtet', R.pickPeople(['s0'], 1, { used: used2 }).ids, ['s0']);
+
+  // Karten
+  const d52 = R.deck('52'), d32 = R.deck('32');
+  eq('52 Karten, alle verschieden, 26 rot', [d52.length, new Set(d52.map((x) => x.id)).size, d52.filter((x) => x.red).length], [52, 52, 26]);
+  eq('32 Karten (Skat): 7 bis Ass', [d32.length, new Set(d32.map((x) => x.id)).size, [...new Set(d32.map((x) => x.rank))].join(' ')], [32, 32, '7 8 9 10 B D K A']);
+  eq('Kartenname', d52.find((x) => x.id === 'HD').name, 'Herz Dame');
+  eq('eigene Karten: leere Zeilen weg, getrimmt', R.parseCards('  Thema A \n\nThema B\r\n  \nC'), ['Thema A', 'Thema B', 'C']);
+  eq('eigener Stapel', R.deck('custom', ['x', ' ', 'y']).map((x) => x.text), ['x', 'y']);
+  const sh = R.shuffle(d52, seeded(7));
+  eq('Mischen: gleiche Karten, andere Reihenfolge', [sh.map((x) => x.id).sort().join(), sh.map((x) => x.id).join() !== d52.map((x) => x.id).join()], [d52.map((x) => x.id).sort().join(), true]);
+
+  // Würfel
+  for (const n of R.DICE) {
+    const s = R.solid(n);
+    const labels = s.faces.map((f) => f.label).sort((x, y) => x - y);
+    let planar = true;
+    for (const f of s.faces) for (const i of f.idx) if (Math.abs(R.dot(s.verts[i].map((x, j) => x - f.center[j]), f.normal)) > 1e-6) planar = false;
+    const outward = s.faces.every((f) => R.dot(f.normal, f.center) > 0);
+    eq(`W${n}: ${n} Flächen, beschriftet 1–${n}, eben, nach außen`, [s.faces.length, labels.join(), planar, outward], [n, Array.from({ length: n }, (_, i) => i + 1).join(), true, true]);
+    if (n !== 4) eq(`W${n}: gegenüberliegende Seiten ergeben ${n + 1}`, s.faces.every((f) => s.faces.some((g) => g.label === n + 1 - f.label && R.dot(g.normal, f.normal) < -0.999)), true);
+    let rest = true, roll = true;
+    for (const f of s.faces) {
+      const m = R.restQuat(n, f.label, 0.2);
+      if (R.frontLabel(n, R.qMatrix(m)) !== f.label || R.apply(R.qMatrix(m), f.normal)[2] < 0.999) rest = false;
+      const p = R.rollPlan(n, f.label, seeded(f.label));
+      if (R.frontLabel(n, p.pose(1)) !== f.label) roll = false;
+    }
+    eq(`W${n}: gewürfelte Seite liegt am Ende oben (genau zum Betrachter)`, [rest, roll], [true, true]);
+  }
+  const rd = R.rollDice(20, 3);
+  eq('3 × W20: drei Werte, Summe stimmt', [rd.values.length, rd.values.every((v) => v >= 1 && v <= 20), rd.sum === rd.values.reduce((x, y) => x + y)], [3, true, true]);
+  eq('Würfelanzahl auf 1–6 begrenzt', [R.rollDice(6, 9).values.length, R.rollDice(6, 0).values.length], [6, 1]);
+
+  // Datenmodell
+  const m = NM.model.migrate({ schema: 4, years: [], courses: [{ id: 'c', students: [], assessments: [] }] });
+  eq('Migration: Kurs bekommt randomCards', m.courses[0].randomCards, []);
+  const keep = NM.model.migrate({ schema: 4, years: [], courses: [{ id: 'c', students: [], assessments: [], randomCards: ['A', 'B'] }] });
+  eq('Migration: eigene Karten bleiben', keep.courses[0].randomCards, ['A', 'B']);
+
+  lines.unshift(fails === 0 ? 'ALLE TESTS BESTANDEN' : fails + ' FEHLGESCHLAGEN');
+  document.getElementById('out').textContent = lines.join('\n');
+</script>
+</body>
+</html>

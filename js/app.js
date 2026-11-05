@@ -27,13 +27,14 @@
     { id: 'epo', label: 'Mitarbeit/EPO' },
     { id: 'pres', label: 'Präsentationen' },
     { id: 'draw', label: 'Ziehen' },
+    { id: 'random', label: 'Zufall' },
     { id: 'groups', label: 'Gruppen' },
     { id: 'overview', label: 'Notenübersicht' },
     { id: 'seating', label: 'Sitzplan' },
     { id: 'settings', label: 'Einstellungen' },
   ];
   // Reiter, die sich ausschalten lassen (Kurs & Schüler und Einstellungen bleiben immer)
-  const OPTIONAL_TABS = ['tests', 'epo', 'pres', 'draw', 'groups', 'overview', 'seating'];
+  const OPTIONAL_TABS = ['tests', 'epo', 'pres', 'draw', 'random', 'groups', 'overview', 'seating'];
 
   /** Ist der Reiter im Kurs eingeschaltet? Eigene Einstellung des Kurses (course.tabs) vor dem Standard (settings.tabs). */
   function tabOn(course, id) {

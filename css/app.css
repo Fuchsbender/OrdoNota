@@ -640,6 +640,73 @@ dialog.modal h2 { font-size: 17px; margin-bottom: 14px; }
 .draw-photo { width: 96px; height: 96px; border-radius: var(--radius-sm); object-fit: cover; }
 .draw-name { font-size: 20px; font-weight: 700; text-align: center; overflow-wrap: anywhere; }
 .draw-card .grade-input { margin-top: 4px; width: 64px; }
+
+/* Reiter „Zufall“ */
+.rnd-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(440px, 1fr)); gap: 16px; align-items: start; }
+.rnd-grid .card { margin-bottom: 0; }
+.rnd-tool .card-head { display: flex; align-items: center; gap: 10px; }
+.rnd-tool .card-head h2 { margin-right: auto; }
+.rnd-controls { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin-bottom: 8px; }
+.rnd-controls .field { margin-bottom: 0; }
+.rnd-controls > .btn { margin-bottom: 1px; }
+.rnd-controls .check { align-self: center; }
+.rnd-stage { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 190px; text-align: center; }
+.rnd-number { font-size: 96px; font-weight: 750; line-height: 1; color: var(--accent-strong); font-variant-numeric: tabular-nums; }
+.rnd-people { justify-content: center; }
+.rnd-flash { opacity: 0.55; }
+.rnd-dice { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; }
+.rnd-sum { font-size: 22px; font-weight: 700; }
+.rnd-card-stage { --w: 130px; gap: 10px; }
+.rnd-table { display: flex; align-items: center; gap: calc(var(--w) * 0.25); width: 100%; justify-content: center; }
+.rnd-pile { font: inherit; position: relative; flex-shrink: 0; width: var(--w); height: calc(var(--w) * 1.4); padding: 0; border: 0; background: none; cursor: pointer; border-radius: calc(var(--w) / 14); }
+.rnd-pile:disabled { cursor: default; }
+.rnd-pile:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.rnd-pile.empty { border: 2px dashed var(--border-strong); }
+.rnd-pile-card { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: calc(var(--w) / 14); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3); }
+.rnd-pile-count { position: absolute; left: 50%; bottom: -1.6em; transform: translateX(-50%); font-size: 0.75em; color: var(--muted); white-space: nowrap; }
+.rnd-pile.empty .rnd-pile-count { bottom: auto; top: 50%; transform: translate(-50%, -50%); }
+.rnd-hand { display: flex; flex-wrap: wrap; gap: calc(var(--w) * 0.08); justify-content: center; align-items: center; min-height: calc(var(--w) * 1.4); flex: 1; }
+.rnd-hand-empty { max-width: 12em; }
+.rnd-card-info { margin-top: 10px; }
+.rnd-card { width: var(--w); height: calc(var(--w) * 1.4); perspective: 900px; font-size: calc(var(--w) / 6); flex-shrink: 0; }
+.rnd-card-inner { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; }
+.rnd-card-front, .rnd-card-back { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: calc(var(--w) / 14); backface-visibility: hidden; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28); }
+.rnd-card-back { transform: rotateY(180deg); }
+.rnd-card-text { background: #fff; color: #1a1a1a; border: 1px solid #ccc; display: flex; align-items: center; justify-content: center; padding: 10%; text-align: center; font-weight: 650; overflow-wrap: anywhere; line-height: 1.2; }
+.rnd-drawn { display: flex; flex-wrap: wrap; gap: 4px; }
+.rnd-mini { padding: 1px 6px; border: 1px solid var(--border-strong); border-radius: 4px; background: var(--surface); font-size: 13px; max-width: 14em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rnd-mini.red { color: #c62828; }
+.rnd-edit { margin-top: 10px; }
+.rnd-edit summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+.rnd-edit textarea { width: 100%; margin: 6px 0; }
+.rnd-pop { animation: rnd-pop 0.35s ease-out; }
+@keyframes rnd-pop { from { transform: scale(0.8); opacity: 0.4; } 60% { transform: scale(1.08); } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .rnd-pop { animation: none; }
+}
+/* Vollbild (Beamer) */
+.rnd-tool:fullscreen { display: flex; flex-direction: column; overflow: auto; margin: 0; border-radius: 0; background: var(--bg); padding: 3vh 4vw; font-size: clamp(16px, 1.6vw, 28px); }
+.rnd-tool:fullscreen .card-head h2 { font-size: 1.6em; }
+.rnd-tool:fullscreen .rnd-stage { flex: 1; }
+.rnd-tool:fullscreen .rnd-number { font-size: min(45vh, 30vw); }
+.rnd-tool:fullscreen .draw-card { width: min(22vw, 300px); }
+.rnd-tool:fullscreen .draw-photo { width: min(16vw, 220px); height: min(16vw, 220px); }
+.rnd-tool:fullscreen .draw-name { font-size: min(5vw, 54px); }
+.rnd-tool:fullscreen .rnd-sum { font-size: 2.2em; }
+.rnd-tool:fullscreen .rnd-mini { font-size: 0.9em; }
+.rnd-tool:fullscreen .rnd-card-info { font-size: 0.8em; }
+.rnd-tool:fullscreen .rnd-edit { display: none; }
+.rnd-tool:fullscreen .rnd-controls { gap: 0.8em; margin-bottom: 1em; }
+.rnd-tool:fullscreen .input { height: 2.2em; font-size: 1em; padding: 0 0.5em; }
+.rnd-tool:fullscreen select.input { padding-right: 0.3em; min-width: 6em; }
+.rnd-tool:fullscreen .field.narrow { width: auto; min-width: 6em; }
+.rnd-tool:fullscreen .field > span { font-size: 0.75em; }
+.rnd-tool:fullscreen .rnd-controls .btn { height: 2.2em; font-size: 1em; padding: 0 0.8em; }
+.rnd-tool:fullscreen .btn-sm { height: 2em; font-size: 0.8em; }
+.rnd-tool:fullscreen .check { font-size: 0.9em; }
+.rnd-tool:fullscreen .check input { width: 1.1em; height: 1.1em; vertical-align: -0.15em; }
+.rnd-tool:fullscreen .draw-card .small { font-size: 0.75em; }
+@media (max-width: 520px) { .rnd-grid { grid-template-columns: 1fr; } }
 .draw-status { font-size: 12px; padding: 1px 8px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--border); }
 .draw-status-0 { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
 .table td.not-drawn .cell-input { opacity: 0.35; border-style: dashed; background: transparent; }

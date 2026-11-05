@@ -153,7 +153,7 @@ def report(name, ok, detail=""):
 
 def run_test_pages(br, base):
     print("Testseiten:")
-    for page in ["grades", "model", "moodle", "pomodoro", "groups", "crypto", "storage"]:
+    for page in ["grades", "model", "moodle", "pomodoro", "groups", "random", "crypto", "storage"]:
         br.open(f"{base}/tests/{page}.test.html")
         done = br.wait("/^(ALLE TESTS BESTANDEN|\\d+ FEHLGESCHLAGEN|FEHLER)/.test(document.getElementById('out').textContent)")
         text = br.eval("document.getElementById('out').textContent") or ""
@@ -167,7 +167,7 @@ def run_app_smoke(br, base):
     print("App (Demo-Modus):")
     br.open(f"{base}/index.html?demo")
     report("App startet", br.wait("!!document.querySelector('.overview-table')", 30), "; ".join(br.errors))
-    for tab in ["course", "tests", "epo", "pres", "draw", "overview", "settings"]:
+    for tab in ["course", "tests", "epo", "pres", "draw", "random", "overview", "settings"]:
         for course in [0, 1]:
             br.eval(f"NM.app.select({{courseId: NM.app.db().courses[{course}].id, tab: '{tab}'}}); 1")
             time.sleep(0.15)
@@ -408,6 +408,99 @@ def run_draw_check(br, base):
     report("Ziehen: ohne Wiederholung, Auffüllen, Note (auch nachträglich), Rückgängig, Abwesende/Herausgenommene", ok and not br.errors, str(res) + "; ".join(br.errors))
 
 
+def run_random_check(br, base):
+    print("Zufall (Zahl, Personen, Würfel, Karten):")
+    br.open(f"{base}/index.html?demo")
+    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.errors = []
+    js = """(async () => {
+        const wait = (ms = 150) => new Promise((r) => setTimeout(r, ms));
+        const c = NM.app.db().courses[0];                     // 12 Personen
+        const nA = c.assessments.length, drawBefore = JSON.stringify(c.draw || {});
+        NM.app.state.ui.random = { min: 1, max: 100, count: 1, noRepeat: false, die: 6, dice: 1, deck: '52' };
+        NM.app.select({ courseId: c.id, tab: 'random' }); await wait(300);
+        const S = NM.views.random.session(c), out = {};
+        const q = (sel) => document.querySelector(sel);
+        const set = (sel, v) => { const x = q(sel); if (x.type === 'checkbox') x.checked = v; else x.value = v; x.dispatchEvent(new Event('change')); };
+        const go = async (k) => { const b = q(`[data-rnd-go="${k}"]`); b.click(); for (let i = 0; i < 60 && b.disabled; i++) await wait(100); };
+        out.tools = document.querySelectorAll('.rnd-tool .rnd-full').length;
+        // Zufallszahl (mit Animation), danach ohne Animation viele Male
+        set('[data-rnd-min]', '5'); set('[data-rnd-max]', '7');
+        await go('number');
+        out.number = [Number(q('.rnd-number').textContent) === S.numbers[0], S.numbers[0] >= 5 && S.numbers[0] <= 7];
+        out.nA = nA; out.drawBefore = drawBefore;
+        return out; })()"""
+    res = br.eval(js)
+    br.call("Emulation.setEmulatedMedia", features=[{"name": "prefers-reduced-motion", "value": "reduce"}])
+    res2 = br.eval("""(async () => {
+        const wait = (ms = 60) => new Promise((r) => setTimeout(r, ms));
+        const c = NM.app.db().courses[0];
+        const S = NM.views.random.session(c), out = {};
+        const q = (sel) => document.querySelector(sel);
+        const set = (sel, v) => { const x = q(sel); if (x.type === 'checkbox') x.checked = v; else x.value = v; x.dispatchEvent(new Event('change')); };
+        const go = async (k) => { const b = q(`[data-rnd-go="${k}"]`); b.click(); for (let i = 0; i < 60 && b.disabled; i++) await wait(100); await wait(); };
+        for (let i = 0; i < 30; i++) await go('number');
+        out.range = [Math.min(...S.numbers), Math.max(...S.numbers), S.numbers.length];
+        // Personen: keine Wiederholung, Auffüllen, Abwesende
+        set('[data-rnd-count]', '5'); set('[data-rnd-norepeat]', true);
+        await go('people'); const a = S.people.slice();
+        await go('people'); const b = S.people.slice();
+        out.people = [a.length, b.length, b.some((x) => a.includes(x)), document.querySelectorAll('.rnd-people .draw-card').length, /object/.test(q('.rnd-people').textContent)];
+        const rest = NM.model.activeStudents(c).map((s) => s.id).filter((id) => !a.includes(id) && !b.includes(id));
+        await go('people');
+        out.refill = [rest.every((id) => S.people.includes(id)), new Set(S.people).size];
+        const away = NM.views.draw.absent(c); away.add(NM.model.activeStudents(c)[0].id);
+        set('[data-rnd-norepeat]', false); set('[data-rnd-count]', '12');
+        await go('people');
+        out.absent = [S.people.length, S.people.includes([...away][0])];
+        away.clear();
+        // Würfel: 3 × W20, Ergebnis vorn
+        set('[data-rnd-die]', '20'); set('[data-rnd-dice]', '3');
+        await go('dice');
+        const cv = [...document.querySelectorAll('.rnd-dice canvas')];
+        out.dice = [cv.length, cv.map((x) => Number(x.dataset.value)).join() === S.dice.values.join(), q('.rnd-sum').textContent === S.dice.values.join(' + ') + ' = ' + S.dice.sum,
+                    S.dice.rest.every((r, i) => NM.random.frontLabel(20, NM.random.qMatrix(r)) === S.dice.values[i]), S.dice.values.every((v) => v >= 1 && v <= 20)];
+        // Karten: 52, Skat, eigene
+        out.pile = [!!q('.rnd-pile .rnd-pile-card'), q('.rnd-pile').textContent];
+        for (let i = 0; i < 3; i++) await go('card');
+        const d52 = S.decks['52'];
+        const img = q('.rnd-hand .rnd-card img.rnd-card-front');
+        out.cards = [d52.left.length, new Set(d52.drawn.map((x) => x.id)).size, document.querySelectorAll('.rnd-mini').length, img.getAttribute('src') === `cards/${d52.last[0].suit}${d52.last[0].rank}.svg`, /49 von 52/.test(q('[data-rnd="cards"]').textContent)];
+        await new Promise((r) => { if (img.complete) r(); else img.onload = img.onerror = r; });
+        out.svg = img.naturalWidth > 0;
+        // mehrere Karten auf einmal, auch per Klick auf den Stapel
+        set('[data-rnd-ncards]', '5'); await go('card');
+        out.multi = [d52.last.length, document.querySelectorAll('.rnd-hand .rnd-card').length, d52.left.length, new Set(d52.drawn.map((x) => x.id)).size, d52.drawn.slice(0, 5).map((x) => x.id).join() === d52.last.map((x) => x.id).join()];
+        q('.rnd-pile').click(); await wait();
+        out.pileClick = [d52.left.length, document.querySelectorAll('.rnd-hand .rnd-card').length];
+        set('[data-rnd-ncards]', '50'); await go('card');
+        out.rest = [d52.left.length, d52.last.length, q('.rnd-pile').classList.contains('empty'), q('[data-rnd-go="card"]').disabled, !!q('.rnd-pile')];
+        set('[data-rnd-ncards]', '1');
+        q('[data-rnd-shuffle]').click(); await wait();
+        out.shuffle = S.decks['52'].left.length;
+        set('[data-rnd-deck]', '32'); await go('card');
+        out.skat = [S.decks['32'].total, S.decks['32'].left.length, ['7', '8', '9', '10', 'B', 'D', 'K', 'A'].includes(S.decks['32'].drawn[0].rank)];
+        set('[data-rnd-deck]', 'custom');
+        out.customHidden = q('.rnd-edit').hidden;
+        set('[data-rnd-cards]', ['Thema A', '', '  Thema B ', 'Rolle C'].join(String.fromCharCode(10)));
+        q('[data-rnd-cards-save]').click(); await wait(300);
+        for (let i = 0; i < 4; i++) await go('card');
+        const dc = S.decks.custom;
+        out.custom = [JSON.stringify(c.randomCards), dc.drawn.length, dc.drawn.map((x) => x.text).sort().join('|'), q('[data-rnd-go="card"]').disabled, q('.rnd-hand .rnd-card-text').textContent.length > 0];
+        // nichts in der Notenliste, Ziehen-Pool unverändert
+        out.untouched = [c.assessments.length === %d, JSON.stringify(c.draw || {}) === %s];
+        return out; })()""".replace('%d', str(res and res.get('nA'))).replace('%s', json.dumps(res and res.get('drawBefore'))))
+    br.call("Emulation.setEmulatedMedia", features=[])
+    ok = bool(res) and bool(res2) and res["tools"] == 4 and res["number"] == [True, True] \
+        and res2["range"][0] >= 5 and res2["range"][1] <= 7 and res2["range"][0] < res2["range"][1] \
+        and res2["people"] == [5, 5, False, 5, False] and res2["refill"] == [True, 5] and res2["absent"] == [11, False] \
+        and res2["dice"] == [3, True, True, True, True] and res2["pile"] == [True, "52"] and res2["cards"] == [49, 3, 2, True, True] and res2["svg"] and res2["multi"] == [5, 5, 44, 8, True] \
+        and res2["pileClick"] == [39, 5] and res2["rest"] == [0, 39, True, True, True] and res2["shuffle"] == 52 \
+        and res2["skat"] == [32, 31, True] and res2["customHidden"] is False \
+        and res2["custom"] == ['["Thema A","Thema B","Rolle C"]', 3, "Rolle C|Thema A|Thema B", True, True] and res2["untouched"] == [True, True]
+    report("Zufall: Zahl im Bereich, Personen ohne Wiederholung/Abwesende, 3D-Würfel mit Summe, Karten (Bilder, Stapel, mehrere, 52/32/eigene), keine Noten", ok and not br.errors, str(res) + str(res2) + "; ".join(br.errors))
+
+
 MOODLE_HEAD = 'Nachname,Vorname,E-Mail-Adresse,Status,Begonnen,Beendet,Dauer,"Bewertung/2,00"'
 MOODLE_ANSWERS = "\n".join([
     MOODLE_HEAD + ",Frage 1,Antwort 1,Richtige Antwort 1,Frage 2,Antwort 2,Richtige Antwort 2",
@@ -622,7 +715,7 @@ def run_tabs_check(br, base):
         [...document.querySelectorAll('button')].find((b) => b.textContent === 'Wie Standard').click(); await wait();
         out.reset = [c2.tabs === undefined, tabs().includes('Notenübersicht')];
         return out; })()""")
-    ok = bool(res) and res["all"] == 9 and res["def"] == [False, False, 7] and res["own"] == ['{"seating":true,"pres":false}', True, False, 2] \
+    ok = bool(res) and res["all"] == 10 and res["def"] == [False, False, 8] and res["own"] == ['{"seating":true,"pres":false}', True, False, 2] \
         and res["fallback"] == ["Notenübersicht", True, False] and res["other"] == [False, True] and res["noOverview"] == "Kurs & Schüler" and res["reset"] == [True, True]
     report("Reiter: Standard in Einstellungen, Abweichung je Kurs, Ersatzreiter, Sprunglinks, „Wie Standard“", ok and not br.errors, str(res) + "; ".join(br.errors))
 
@@ -1103,7 +1196,10 @@ def run_groups_tab_check(br, base):
         out.edit = [ga.task, ga.name];
         // Regel „nicht zusammen“ für zwei in derselben Gruppe → Warnung
         document.querySelector('.grp-rules').open = true; await wait();
-        const [p1, p2] = ga.members;
+        // Paar ohne bestehende Regel (nach dem Ziehen kann zufällig das Regelpaar der Demo in Gruppe A stehen)
+        const known = (x, y) => c.groupRules.apart.concat(c.groupRules.together).some((r) => r.includes(x) && r.includes(y));
+        const pairs = ga.members.flatMap((x, i) => ga.members.slice(i + 1).map((y) => [x, y]));
+        const [p1, p2] = pairs.find(([x, y]) => !known(x, y));
         q('rule-apart-a').value = p1; q('rule-apart-b').value = p2; q('rule-apart-add').click(); await wait();
         out.rule = [c.groupRules.apart.length, document.querySelector('.notice.warn') && document.querySelector('.notice.warn').textContent.includes('Nicht zusammen')];
         q('gb-lock-' + g0.id).click(); await wait();
@@ -1186,7 +1282,7 @@ def run_groups_tab_check(br, base):
         out.fromSet = [gp.pres.groups.length, gp.pres.groups[1].topic];
         NM.app.select({ tab: 'groups' }); await wait();
         return out; })()""")
-    ok = bool(res) and res["start"] == ["Stationenlernen Prozent", 4, True, 9] and res["created"] == [True, "4,4,4", 12, "mixed", True, 0] \
+    ok = bool(res) and res["start"] == ["Stationenlernen Prozent", 4, True, 10] and res["created"] == [True, "4,4,4", 12, "mixed", True, 0] \
         and res["away"] == [False, 11, True] and res["lock"] == [True, True, 3] and res["click"] == [True, True] and res["drag"] == [True] * 7 \
         and res["edit"] == ["Plakat gestalten", "Team Rot"] and res["rule"] == [2, True] and res["ruleRoll"] == 0 and res["beamer"] == [True] * 4 and res["beamerFit"] == [True, True] and res["beamerToggle"] == [True, True, True, True, False, True] and res["beamerBack"] == [0, True] \
         and res["menu"] == ["list", "cards"] and res["print"] == [True] * 3 and res["puzzle"] == [True] * 7 and res["view"] == [True, True, True, True, False] and res["viewBack"] == [0, True] \
@@ -1516,6 +1612,7 @@ def main():
         run_sort_check(br, base)
         run_course_check(br, base)
         run_draw_check(br, base)
+        run_random_check(br, base)
         run_pomodoro_check(br, base)
         run_transition_check(br, base)
         run_sidebar_check(br, base)

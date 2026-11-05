@@ -10,7 +10,7 @@
   // 3 (1.20): Präsentationen (kind "pres") – ältere Versionen kennen diese Leistungsart nicht.
   // 4 (1.23): Gruppenpräsentationen – ältere Versionen würden Gruppenwerte ignorieren und falsche Noten zeigen.
   const SCHEMA = 4;
-  const APP_VERSION = '1.28.0';
+  const APP_VERSION = '1.29.0';
 
   class NewerSchemaError extends Error {}
 
@@ -141,6 +141,8 @@
       // 1.24: Gruppeneinteilungen und Regeln (Reiter „Gruppen“)
       c.groupSets = Array.isArray(c.groupSets) ? c.groupSets : [];
       c.groupRules = Object.assign({ apart: [], together: [] }, c.groupRules || {});
+      // 1.29: eigene Karten im Reiter „Zufall“ (je Eintrag eine Karte)
+      c.randomCards = Array.isArray(c.randomCards) ? c.randomCards : [];
       c.overrides = c.overrides || {};
       c.comments = c.comments || {};
       if (c.wHalf1 === undefined) c.wHalf1 = 1;

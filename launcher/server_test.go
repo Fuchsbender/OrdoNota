@@ -22,6 +22,7 @@ func testServer(t *testing.T) (*server, string, string) {
 		"js/app.js":     "// app",
 		"js/model.js":   "const APP_VERSION = '9.9.9';",
 		"css/app.css":   "body{}",
+		"cards/HD.svg":  "<svg/>",
 		"ref/noten.csv": "Echte Namen",
 		"secret.nmdb":   "x",
 	} {
@@ -99,6 +100,7 @@ func TestStatischeDateien(t *testing.T) {
 		"/index.html":      200,
 		"/js/app.js":       200,
 		"/css/app.css?v=1": 200,
+		"/cards/HD.svg":    200,
 		"/ref/noten.csv":   404,
 		"/secret.nmdb":     404,
 		"/js/":             404,
@@ -111,6 +113,9 @@ func TestStatischeDateien(t *testing.T) {
 	// Pfade mit .. werden nie ausgeliefert (nur Umleitung auf den bereinigten Pfad)
 	if w := do(t, s, call{method: "GET", path: "/js/../ref/noten.csv"}); w.Code == 200 || strings.Contains(w.Body.String(), "Echte") {
 		t.Errorf("..-Pfad ausgeliefert: %d", w.Code)
+	}
+	if w := do(t, s, call{method: "GET", path: "/cards/HD.svg"}); w.Header().Get("Content-Type") != "image/svg+xml" {
+		t.Errorf("Kartenbild: Typ %q", w.Header().Get("Content-Type"))
 	}
 	if w := do(t, s, call{method: "GET", path: "/index.html"}); w.Body.String() != "<!doctype html>" {
 		t.Errorf("index.html: %q", w.Body)
