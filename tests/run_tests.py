@@ -1291,6 +1291,20 @@ def run_launcher_check(br, base):
     tool = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(tool)
     dbf, lockf = os.path.join(data, "notenmanager.nmdb"), os.path.join(data, "notenmanager.lock.json")
+
+    def setting(path, password):
+        """keepBackups aus der Datei (None, wenn nicht lesbar)."""
+        try:
+            with open(path, encoding="utf-8") as f:
+                return tool.entschluesseln(json.load(f), password)["settings"]["keepBackups"]
+        except Exception:
+            return None
+
+    def modal_with(title):
+        return f"[...document.querySelectorAll('dialog.modal h2')].some((x) => x.textContent.includes({json.dumps(title)}))"
+
+    def click_modal(label):
+        br.eval(f"(() => {{ const d = [...document.querySelectorAll('dialog.modal')].pop(); [...d.querySelectorAll('button')].find((b) => b.textContent === {json.dumps(label)}).click(); return 1; }})()")
     try:
         url = proc.stdout.readline().strip()
         report("Server startet", url.startswith(f"http://127.0.0.1:{port}/start?t="), url)
@@ -1323,8 +1337,7 @@ def run_launcher_check(br, base):
         report("Datei mit Notfallwerkzeug lesbar", outer.get("format") == "notenmanager-db" and "schema" in tool.entschluesseln(outer, pw))
         br.eval("NM.app.state.db.settings.keepBackups = 7; NM.app.commit(); 1")
         def saved():
-            with open(dbf, encoding="utf-8") as f:
-                return tool.entschluesseln(json.load(f), pw)["settings"]["keepBackups"] == 7
+            return setting(dbf, pw) == 7
         for _ in range(40):
             time.sleep(0.25)
             if saved():
@@ -1336,9 +1349,78 @@ def run_launcher_check(br, base):
         br.eval("NM.app.state.db.settings.keepBackups = 8; NM.app.commit(); 1")
         ok = br.wait("[...document.querySelectorAll('dialog.modal h2')].some((x) => x.textContent.includes('extern geändert'))", 15)
         report("Externe Änderung erkannt (Konflikt-Dialog)", ok and saved() and not br.errors, "; ".join(br.errors))
-        br.eval("(() => { const d = document.querySelector('dialog.modal'); [...d.querySelectorAll('button')].find((b) => b.textContent === 'Später').click(); return 1; })()")
+        click_modal("Überschreiben")
+        ok = False
+        for _ in range(40):
+            time.sleep(0.25)
+            if setting(dbf, pw) == 8:
+                ok = True
+                break
         names = br.eval("NM.app.state.store.listBackups()")
-        report("Sicherungen über das Startprogramm", isinstance(names, list), str(names))
+        report("Überschreiben speichert, alter Stand als Sicherung", ok and isinstance(names, list) and len(names) >= 1, str(names))
+
+        # Aus Datei wiederherstellen: Kopie mit anderem Passwort, das eigene Passwort bleibt
+        other = "Anderes Passwort 123"
+        br.eval(f"""(async () => {{ const db = JSON.parse(JSON.stringify(NM.app.state.db)); db.settings.keepBackups = 3;
+            const r = await NM.crypto.Vault.create({json.dumps(other)}); const obj = await r.vault.seal(db, {{ savedAt: 'kopie' }});
+            window.__kopie = JSON.stringify(obj);
+            NM.util.pickFile = async () => new File([window.__kopie], 'kopie.nmdb'); return 1; }})()""")
+        br.eval("NM.app.select({ tab: 'settings' }); 1")
+        br.wait("[...document.querySelectorAll('button')].some((b) => b.textContent === 'Aus Datei wiederherstellen …')", 10)
+        br.eval("[...document.querySelectorAll('button')].find((b) => b.textContent === 'Aus Datei wiederherstellen …').click(); 1")
+        br.wait(modal_with("Aus Datei wiederherstellen"), 10)
+        click_modal("Wiederherstellen")
+        br.wait("!!document.querySelector('dialog.modal input[type=password]')", 30)
+        br.eval(f"(() => {{ const d = document.querySelector('dialog.modal'); d.querySelector('input').value = {json.dumps(other)}; d.querySelector('.btn-primary').click(); return 1; }})()")
+        ok = False
+        for _ in range(80):
+            time.sleep(0.25)
+            if setting(dbf, pw) == 3:
+                ok = True
+                break
+        report("Aus Datei wiederherstellen (fremdes Passwort, eigenes bleibt)", ok and not br.errors, "; ".join(br.errors))
+
+        # Datenordner wechseln mit Sicherungen; alter Ordner bleibt
+        neu = os.path.join(tmp, "Neuer Ordner")
+        os.makedirs(neu)
+        br.eval("NM.app.rerender(); 1")
+        br.wait("[...document.querySelectorAll('button')].some((b) => b.textContent === 'Datenordner wechseln …')", 10)
+        br.eval("[...document.querySelectorAll('button')].find((b) => b.textContent === 'Datenordner wechseln …').click(); 1")
+        br.wait("!!document.querySelector('dialog.modal input')", 10)
+        br.eval(f"(() => {{ const d = document.querySelector('dialog.modal'); d.querySelector('input').value = {json.dumps(neu)}; d.querySelector('.btn-primary').click(); return 1; }})()")
+        br.wait(modal_with("Datenordner wechseln"), 10)
+        click_modal("Mit Sicherungen")
+        ok = br.wait("NM.app.state.store.name === 'Neuer Ordner'", 20)
+        ndb = os.path.join(neu, "notenmanager.nmdb")
+        with open(os.path.join(cfg, "config.json"), encoding="utf-8") as f:
+            conf = json.load(f)
+        report("Datenordner wechseln (Datenbank, Sicherungen, gemerkt)",
+               ok and setting(ndb, pw) == 3 and sorted(os.listdir(os.path.join(neu, "Sicherungen"))) == sorted(os.listdir(os.path.join(data, "Sicherungen")))
+               and conf["dataDir"] == neu and os.path.exists(dbf) and not os.path.exists(lockf), "; ".join(br.errors))
+        br.eval("NM.app.state.db.settings.keepBackups = 4; NM.app.commit(); 1")
+        for _ in range(40):
+            time.sleep(0.25)
+            if setting(ndb, pw) == 4:
+                break
+        report("Nach dem Wechsel wird im neuen Ordner gespeichert", setting(ndb, pw) == 4 and setting(dbf, pw) == 3)
+
+        # Leerer Ordner: vorhandene Datenbank aus Datei übernehmen
+        leer = os.path.join(tmp, "Leer")
+        os.makedirs(leer)
+        br.eval(f"(async () => {{ await NM.app.switchStore(await NM.storage.ServerStore.useTarget({{ path: {json.dumps(leer)} }})); return 1; }})()")
+        br.wait("!!document.querySelector('.auth-card input[type=password]')", 20)
+        br.eval(f"(() => {{ const i = document.querySelector('.auth-card input[type=password]'); i.value = 'egal egal'; i.form.requestSubmit(); return 1; }})()")
+        br.wait("[...document.querySelectorAll('.auth-links button')].some((b) => b.textContent.startsWith('Vorhandene Datenbank'))", 20)
+        br.eval("[...document.querySelectorAll('.auth-links button')].find((b) => b.textContent.startsWith('Vorhandene Datenbank')).click(); 1")
+        br.wait("!!document.querySelector('dialog.modal input[type=password]')", 10)
+        br.eval(f"(() => {{ const d = document.querySelector('dialog.modal'); d.querySelector('input').value = {json.dumps(other)}; d.querySelector('.btn-primary').click(); return 1; }})()")
+        ok = br.wait("!!document.getElementById('save-status')", 60)
+        ldb = os.path.join(leer, "notenmanager.nmdb")
+        for _ in range(40):
+            if os.path.exists(ldb):
+                break
+            time.sleep(0.25)
+        report("Leerer Ordner: Datenbank aus Datei übernehmen (mit deren Passwort)", ok and setting(ldb, other) == 3, "; ".join(br.errors))
     except Exception as e:
         report("Startprogramm im Browser", False, str(e))
     finally:

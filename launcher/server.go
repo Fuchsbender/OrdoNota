@@ -9,6 +9,7 @@ import (
 	"io"
 	"io/fs"
 	"net/http"
+	"os"
 	"path"
 	"path/filepath"
 	"strconv"
@@ -220,6 +221,44 @@ func (s *server) handleAPI(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	switch {
+	case (route == "probe" || route == "move") && r.Method == http.MethodPost:
+		var body struct {
+			Path    string
+			Backups bool
+		}
+		if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&body); err != nil {
+			fail(w, 400, "ungültige Anfrage")
+			return
+		}
+		p, err := checkDir(body.Path)
+		if err != nil {
+			fail(w, 400, err.Error())
+			return
+		}
+		t := folder{dir: p}
+		same := sameDir(f.dir, p)
+		if route == "probe" {
+			writeJSON(w, 200, map[string]any{"path": p, "name": filepath.Base(p), "hasDb": modified(t.dbPath()) != "", "same": same})
+			return
+		}
+		if same {
+			fail(w, 400, "Das ist bereits der aktuelle Datenordner.")
+			return
+		}
+		if err := f.copyTo(t, body.Backups); err != nil {
+			code := 500
+			if errors.Is(err, errExists) {
+				code = 409
+			}
+			fail(w, code, err.Error())
+			return
+		}
+		if err := s.cfg.setDataDir(p); err != nil {
+			fail(w, 500, err.Error())
+			return
+		}
+		logf("Datenordner gewechselt: %s → %s", f.dir, p)
+		writeJSON(w, 200, map[string]any{"dataDir": p, "name": filepath.Base(p), "modified": modified(t.dbPath())})
 	case route == "db" && r.Method == http.MethodGet:
 		b, mod, err := f.readDB()
 		if errors.Is(err, errMissing) {
@@ -340,6 +379,16 @@ func (s *server) handleAPI(w http.ResponseWriter, r *http.Request) {
 	default:
 		fail(w, 404, "unbekannt")
 	}
+}
+
+// sameDir: zeigen beide Pfade auf denselben Ordner (auch über Verknüpfungen)?
+func sameDir(a, b string) bool {
+	fa, err1 := os.Stat(a)
+	fb, err2 := os.Stat(b)
+	if err1 != nil || err2 != nil {
+		return filepath.Clean(a) == filepath.Clean(b)
+	}
+	return os.SameFile(fa, fb)
 }
 
 func readBody(r *http.Request) ([]byte, error) {

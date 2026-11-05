@@ -58,6 +58,26 @@
     await lw2.write(JSON.stringify({ deviceId: 'anderes', device: 'Alt', since: '2020-01-01T00:00:00Z', heartbeat: '2020-01-01T00:00:00Z' }));
     await lw2.close();
     ok('Veralteter Lock wird ignoriert', (await store.foreignLock()) === null);
+
+    // Datenordner wechseln: Datenbank und auf Wunsch Sicherungen kopieren, alter Ordner unverändert
+    const neu = await root.getDirectoryHandle('Neuer Ordner', { create: true });
+    const leer = await root.getDirectoryHandle('Ohne Sicherungen', { create: true });
+    const vorher = (await store.read()).v;
+    const nb = (await store.listBackups()).length;
+    const s2 = new S.FolderStore(dir);
+    await s2.read();
+    await s2.moveTo({ dir: leer, name: leer.name });
+    ok('Wechsel: Datenbank kopiert', (await s2.read()).v === vorher && s2.name === 'Ohne Sicherungen');
+    ok('Wechsel ohne Sicherungen', (await s2.listBackups()).length === 0);
+    const s3 = new S.FolderStore(dir);
+    await s3.moveTo({ dir: neu, name: neu.name }, { backups: true });
+    ok('Wechsel mit Sicherungen (' + nb + ')', nb > 0 && (await s3.listBackups()).length === nb);
+    ok('Alter Ordner unverändert', (await store.read()).v === vorher && (await store.listBackups()).length === nb);
+    let refused = false;
+    try { await new S.FolderStore(dir).moveTo({ dir: neu, name: neu.name }); } catch (e) { refused = /bereits eine Datenbank/.test(e.message); }
+    ok('Vorhandene Datenbank im Ziel wird nicht überschrieben', refused);
+    await s2.write({ format: 'notenmanager-db', v: 42 });
+    ok('Nach dem Wechsel wird im neuen Ordner gespeichert', (await store.read()).v === vorher && (await s2.read()).v === 42);
     await store.releaseLock();
     ok('Fremden Lock nicht gelöscht', !!(await store.readLock()));
 

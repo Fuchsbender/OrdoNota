@@ -113,6 +113,9 @@ func run() error {
 		installDesktopEntry(exe, writeIcon(files, dir))
 	}
 	s := &server{files: files, token: token, port: *port, version: version, cfg: cfg, pickFolder: pickFolderNative}
+	if *noBrowser {
+		s.pickFolder = nil // ohne Fenster (Tests): kein Ordner-Dialog auf dem Bildschirm, Pfad wird in der App eingegeben
+	}
 	srv := &http.Server{Handler: s.handler(), ReadHeaderTimeout: 10 * time.Second}
 	go func() {
 		if err := srv.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {

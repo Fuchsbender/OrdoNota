@@ -185,6 +185,21 @@
     return v === 'ok' ? input.value : null;
   }
 
+  /** Datei wählen (ohne Ordnerzugriff). Liefert die Datei oder null bei Abbruch. */
+  function pickFile(accept) {
+    return new Promise((resolve) => {
+      const input = h('input', { type: 'file', accept, hidden: true });
+      const done = (f) => {
+        input.remove();
+        resolve(f);
+      };
+      input.addEventListener('change', () => done(input.files[0] || null));
+      input.addEventListener('cancel', () => done(null));
+      document.body.appendChild(input);
+      input.click();
+    });
+  }
+
   // ---------- Download ----------
 
   function download(filename, content, mime = 'text/plain;charset=utf-8') {
@@ -227,6 +242,7 @@
     modal,
     confirmDialog,
     promptDialog,
+    pickFile,
     download,
     csv,
     safeFilename,

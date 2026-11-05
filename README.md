@@ -13,6 +13,8 @@ Notenverwaltung für Sek I und MSS (Rheinland-Pfalz) mit Sitzplänen. Läuft lok
 
 **Ohne Rückfrage „Zugriff erlauben“:** über das Startprogramm starten (`OrdoNota` unter Linux, `OrdoNota.exe` unter Windows, `OrdoNota.app` unter macOS). Es öffnet die App als eigenes Fenster und schreibt die Dateien selbst; Installation ist nicht nötig, und es geht dann auch mit Firefox/Safari. Bauen und Weitergabe als ZIP an Kolleginnen und Kollegen: `launcher/build.sh` (braucht Go). Details: DOKUMENTATION.md 3.6.
 
+**Programm und Daten trennen:** Programmordner nur lokal (z. B. per `git clone`, Update mit `git pull && launcher/build.sh`), Datenordner im Synology-Drive-Ordner. Die Datenbank ist eine einzige Datei: Einstellungen → **Datenordner wechseln …** kopiert sie (auf Wunsch mit Sicherungen) in einen neuen Ordner, **Aus Datei wiederherstellen …** spielt eine Kopie ein (das eigene Passwort bleibt), und ein leerer Ordner bietet **„Vorhandene Datenbank aus Datei übernehmen …“** an. Details: DOKUMENTATION.md 3.7 und 20.
+
 Ausprobieren ohne echte Daten: `index.html?demo` (nichts wird gespeichert). Beispiel-CSVs für den Moodle-Import (Kurs 8b Mathe) liegen in `demo/`.
 
 ## Was liegt wo

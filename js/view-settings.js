@@ -217,7 +217,9 @@
             },
           },
           'Verschlüsselte Kopie herunterladen'
-        )
+        ),
+        NM.app.DEMO ? null : h('button', { class: 'btn', onclick: restoreFromFile, title: 'Eine heruntergeladene Kopie oder Sicherung (.nmdb) einspielen' }, 'Aus Datei wiederherstellen …'),
+        NM.app.DEMO ? null : h('button', { class: 'btn', onclick: changeFolder, title: 'Datenbank in einen anderen Ordner kopieren und ab dann dort speichern' }, 'Datenordner wechseln …')
       ),
       h('h3', null, 'Sicherungen im Ordner „', S.BACKUP_DIR, '“'),
       listHost
@@ -228,26 +230,105 @@
     const st = NM.app.state;
     if (!(await confirmDialog('Sicherung wiederherstellen?', `Der aktuelle Stand wird durch die Sicherung „${name}“ ersetzt. Der aktuelle Stand wird vorher selbst gesichert.`, { okLabel: 'Wiederherstellen', danger: true }))) return;
     try {
-      const fileObj = await st.store.readBackup(name);
-      let data;
-      try {
-        data = await st.vault.open(fileObj);
-      } catch (e) {
-        // Sicherung mit anderem Schlüssel (z. B. alte Datenbank): mit Passwort versuchen
-        const pw = await promptDialog('Passwort der Sicherung', 'Diese Sicherung wurde mit einem anderen Schlüssel verschlüsselt. Passwort der Sicherung:', '', { type: 'password' });
-        if (pw === null) return;
-        const v = await NM.crypto.Vault.unlock(fileObj, pw);
-        data = await v.open(fileObj);
-        v.wipe();
-      }
-      const cur = await st.vault.seal(st.db, { savedAt: new Date().toISOString(), device: S.deviceName() });
-      await st.store.backupNow(cur, st.db.settings.keepBackups + 1);
-      st.db = NM.model.migrate(data);
-      await NM.app.saveNow();
-      NM.app.renderShell();
-      toast('Sicherung wiederhergestellt.', 'success');
+      await restoreFrom(await st.store.readBackup(name), 'Sicherung wiederhergestellt.');
     } catch (e) {
       toast('Wiederherstellen fehlgeschlagen: ' + e.message, 'error');
+    }
+  }
+
+  /** Eine Datenbank-Datei (z. B. „Verschlüsselte Kopie herunterladen“) einspielen. */
+  async function restoreFromFile() {
+    const file = await NM.util.pickFile('.nmdb,application/json');
+    if (!file) return;
+    let fileObj;
+    try {
+      fileObj = JSON.parse(await file.text());
+    } catch (e) {
+      fileObj = null;
+    }
+    if (!fileObj || fileObj.format !== 'notenmanager-db') return toast(`„${file.name}“ ist keine OrdoNota-Datenbank.`, 'error', 6000);
+    if (!(await confirmDialog('Aus Datei wiederherstellen?', `Der aktuelle Stand wird durch „${file.name}“ ersetzt und vorher selbst gesichert. Ihr Passwort bleibt gleich, auch wenn die Datei ein anderes hat.`, { okLabel: 'Wiederherstellen', danger: true }))) return;
+    try {
+      await restoreFrom(fileObj, `„${file.name}“ wiederhergestellt.`);
+    } catch (e) {
+      toast('Wiederherstellen fehlgeschlagen: ' + e.message, 'error');
+    }
+  }
+
+  /** Stand übernehmen; mit dem aktuellen Schlüssel neu verschlüsselt (das Passwort bleibt). */
+  async function restoreFrom(fileObj, doneText) {
+    const st = NM.app.state;
+    let data;
+    try {
+      data = await st.vault.open(fileObj);
+    } catch (e) {
+      // Sicherung mit anderem Schlüssel (z. B. alte Datenbank): mit Passwort versuchen
+      const pw = await promptDialog('Passwort der Sicherung', 'Diese Datei wurde mit einem anderen Schlüssel verschlüsselt. Passwort dieser Datei:', '', { type: 'password' });
+      if (pw === null) return;
+      const v = await NM.crypto.Vault.unlock(fileObj, pw);
+      data = await v.open(fileObj);
+      v.wipe();
+    }
+    const cur = await st.vault.seal(st.db, { savedAt: new Date().toISOString(), device: S.deviceName() });
+    await st.store.backupNow(cur, st.db.settings.keepBackups + 1);
+    st.db = NM.model.migrate(data);
+    await NM.app.saveNow();
+    NM.app.renderShell();
+    toast(doneText, 'success');
+  }
+
+  /** Datenordner wechseln: Datenbank (und auf Wunsch Sicherungen) kopieren; der alte Ordner bleibt unverändert. */
+  async function changeFolder() {
+    const st = NM.app.state;
+    let t;
+    try {
+      t = await st.store.pickTarget();
+    } catch (e) {
+      if (e.name !== 'AbortError') toast('Ordner konnte nicht geöffnet werden: ' + e.message, 'error');
+      return;
+    }
+    if (t.same) return toast('Das ist bereits der aktuelle Datenordner.');
+    await NM.app.saveNow();
+    if (st.dirty || st.saveError) return toast('Wechsel abgebrochen: Der aktuelle Stand ist nicht gespeichert.', 'error');
+    if (t.hasDb) {
+      const ok = await confirmDialog(
+        'Dort liegt schon eine Datenbank',
+        `Im Ordner „${t.name}“ liegt bereits eine OrdoNota-Datenbank. Sie wird nicht überschrieben. Soll die App stattdessen diese Datenbank öffnen? Die aktuelle ist gespeichert und bleibt im bisherigen Ordner.`,
+        { okLabel: 'Diese Datenbank öffnen' }
+      );
+      if (ok) await NM.app.switchStore(await st.store.constructor.useTarget(t), `Ordner „${t.name}“: Bitte mit dem Passwort dieser Datenbank entsperren.`);
+      return;
+    }
+    const nBackups = (await st.store.listBackups()).length;
+    const v = await modal({
+      title: 'Datenordner wechseln',
+      body: h(
+        'div',
+        null,
+        h('p', null, 'Die Datenbank wird nach „', h('strong', null, t.name), '“ kopiert und ab jetzt dort gespeichert. Der bisherige Ordner „', st.store.name, '“ bleibt unverändert; Sie können ihn danach löschen.'),
+        nBackups ? h('p', null, `Im bisherigen Ordner liegen ${nBackups} Sicherungen. Sollen sie mitkopiert werden?`) : null
+      ),
+      buttons: nBackups
+        ? [
+            { label: 'Abbrechen', value: null },
+            { label: 'Nur Datenbank', value: 'db' },
+            { label: 'Mit Sicherungen', value: 'all', kind: 'primary' },
+          ]
+        : [
+            { label: 'Abbrechen', value: null },
+            { label: 'Wechseln', value: 'db', kind: 'primary' },
+          ],
+    });
+    if (!v) return;
+    try {
+      await st.store.releaseLock().catch(() => {});
+      await st.store.moveTo(t, { backups: v === 'all' });
+      await st.store.writeLock(st.since).catch(() => {});
+      toast(`Datenordner gewechselt: „${t.name}“. Der bisherige Ordner ist unverändert.`, 'success', 6000);
+      NM.app.rerender();
+    } catch (e) {
+      await st.store.writeLock(st.since).catch(() => {});
+      toast('Wechsel fehlgeschlagen: ' + e.message, 'error', 8000);
     }
   }
 

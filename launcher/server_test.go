@@ -290,3 +290,71 @@ func TestAppOrdnerFinden(t *testing.T) {
 }
 
 func jsonStr(s string) string { b, _ := json.Marshal(s); return string(b) }
+
+func TestDatenordnerWechseln(t *testing.T) {
+	s, _, data := testServer(t)
+	api(t, s, "PUT", "/api/db", `{"v":1}`, nil)
+	os.MkdirAll(filepath.Join(data, backupDir), 0o700)
+	os.WriteFile(filepath.Join(data, backupDir, "notenmanager_2020-01-01_000001.nmdb"), []byte(`{"alt":1}`), 0o600)
+	os.WriteFile(filepath.Join(data, backupDir, "fremd.txt"), []byte("x"), 0o600)
+
+	var probe struct {
+		Name        string
+		HasDb, Same bool
+	}
+	json.Unmarshal(api(t, s, "POST", "/api/probe", `{"path":`+jsonStr(data)+`}`, nil).Body.Bytes(), &probe)
+	if !probe.Same || !probe.HasDb {
+		t.Errorf("aktueller Ordner: %+v", probe)
+	}
+	if w := api(t, s, "POST", "/api/move", `{"path":`+jsonStr(data)+`}`, nil); w.Code != 400 {
+		t.Errorf("in denselben Ordner: %d", w.Code)
+	}
+
+	// Ziel mit vorhandener Datenbank: nichts überschreiben
+	besetzt := t.TempDir()
+	os.WriteFile(filepath.Join(besetzt, dbFile), []byte(`{"anders":1}`), 0o600)
+	json.Unmarshal(api(t, s, "POST", "/api/probe", `{"path":`+jsonStr(besetzt)+`}`, nil).Body.Bytes(), &probe)
+	if probe.Same || !probe.HasDb {
+		t.Errorf("besetzter Ordner: %+v", probe)
+	}
+	if w := api(t, s, "POST", "/api/move", `{"path":`+jsonStr(besetzt)+`}`, nil); w.Code != 409 {
+		t.Errorf("besetzter Ordner: %d", w.Code)
+	}
+	if b, _ := os.ReadFile(filepath.Join(besetzt, dbFile)); string(b) != `{"anders":1}` {
+		t.Errorf("überschrieben: %s", b)
+	}
+
+	// Ohne Sicherungen
+	ohne := t.TempDir()
+	if w := api(t, s, "POST", "/api/move", `{"path":`+jsonStr(ohne)+`,"backups":false}`, nil); w.Code != 200 {
+		t.Fatalf("Wechsel: %d %s", w.Code, w.Body)
+	}
+	if b, _ := os.ReadFile(filepath.Join(ohne, dbFile)); string(b) != `{"v":1}` {
+		t.Errorf("Datenbank nicht kopiert: %s", b)
+	}
+	if _, err := os.Stat(filepath.Join(ohne, backupDir)); err == nil {
+		t.Errorf("Sicherungen ungefragt kopiert")
+	}
+	if s.cfg.get().DataDir != ohne {
+		t.Errorf("neuer Ordner nicht gemerkt")
+	}
+	if b, _ := os.ReadFile(filepath.Join(data, dbFile)); string(b) != `{"v":1}` {
+		t.Errorf("alter Ordner verändert")
+	}
+
+	// Mit Sicherungen (vom neuen Ordner weiter)
+	os.MkdirAll(filepath.Join(ohne, backupDir), 0o700)
+	os.WriteFile(filepath.Join(ohne, backupDir, "notenmanager_2020-01-01_000002.nmdb"), []byte(`{"alt":2}`), 0o600)
+	os.WriteFile(filepath.Join(ohne, backupDir, "fremd.txt"), []byte("x"), 0o600)
+	mit := filepath.Join(t.TempDir(), "Neu ä")
+	os.MkdirAll(mit, 0o700)
+	if w := api(t, s, "POST", "/api/move", `{"path":`+jsonStr(mit)+`,"backups":true}`, nil); w.Code != 200 {
+		t.Fatalf("Wechsel mit Sicherungen: %d %s", w.Code, w.Body)
+	}
+	if b, _ := os.ReadFile(filepath.Join(mit, backupDir, "notenmanager_2020-01-01_000002.nmdb")); string(b) != `{"alt":2}` {
+		t.Errorf("Sicherung nicht kopiert: %s", b)
+	}
+	if _, err := os.Stat(filepath.Join(mit, backupDir, "fremd.txt")); err == nil {
+		t.Errorf("fremde Datei mitkopiert")
+	}
+}

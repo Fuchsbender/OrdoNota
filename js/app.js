@@ -242,10 +242,53 @@
         h('p', { class: 'muted' }, 'Ordner: ', h('strong', null, state.store.name)),
         h('p', null, 'Die Daten werden mit diesem Passwort verschlüsselt. Ohne Passwort oder Wiederherstellungsschlüssel sind sie nicht mehr lesbar.'),
         form,
-        h('div', { class: 'auth-links' }, h('button', { class: 'link', onclick: pickFolder }, 'Anderen Ordner wählen'))
+        h(
+          'div',
+          { class: 'auth-links' },
+          h('button', { class: 'link', onclick: importFromFile, title: 'z. B. eine „Verschlüsselte Kopie“ oder Sicherung (.nmdb)' }, 'Vorhandene Datenbank aus Datei übernehmen …'),
+          h('button', { class: 'link', onclick: pickFolder }, 'Anderen Ordner wählen')
+        )
       )
     );
     pw1.focus();
+  }
+
+  /** Leerer Ordner: eine vorhandene Datenbank-Datei hineinkopieren und mit ihrem Passwort entsperren. */
+  async function importFromFile() {
+    if (!(await state.store.ensurePermission())) return toast('Kein Schreibzugriff auf den Ordner.', 'error');
+    const file = await NM.util.pickFile('.nmdb,application/json');
+    if (!file) return;
+    let fileObj;
+    try {
+      fileObj = JSON.parse(await file.text());
+    } catch (e) {
+      fileObj = null;
+    }
+    if (!fileObj || fileObj.format !== 'notenmanager-db') return toast(`„${file.name}“ ist keine OrdoNota-Datenbank.`, 'error', 6000);
+    const pw = await NM.util.promptDialog('Datenbank übernehmen', `Passwort von „${file.name}“:`, '', { type: 'password' });
+    if (pw === null) return;
+    try {
+      const vault = await Vault.unlock(fileObj, pw);
+      const db = M.migrate(await vault.open(fileObj));
+      if (await state.store.exists()) throw new Error('Im Ordner liegt inzwischen schon eine Datenbank.');
+      state.vault = vault;
+      state.db = db;
+      state.store.knownModified = null;
+      await saveNow(true);
+      toast(`„${file.name}“ übernommen. Passwort und Wiederherstellungsschlüssel sind die dieser Datei.`, 'success', 6000);
+      startSession();
+    } catch (e) {
+      state.vault = null;
+      state.db = null;
+      toast(e.message || String(e), 'error', 6000);
+    }
+  }
+
+  /** Auf einen anderen Datenordner umstellen: sperren und dort entsperren lassen. */
+  async function switchStore(store, message) {
+    await lockApp();
+    state.store = store;
+    renderStart(message);
   }
 
   /** Wiederherstellungsschlüssel anzeigen; bei `mandatory` muss das Notieren bestätigt werden. */
@@ -916,6 +959,7 @@
     setHalf,
     select,
     lockApp,
+    switchStore,
     showRecoveryKey,
     saveUi,
     applyTheme,

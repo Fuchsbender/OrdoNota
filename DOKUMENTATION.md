@@ -1,6 +1,6 @@
 # OrdoNota – Dokumentation
 
-Version 1.27.0 · Stand November 2026
+Version 1.28.0 · Stand November 2026
 
 OrdoNota (bis Version 1.11 „Notenmanager“) verwaltet Noten für die Sekundarstufe I (Noten 1–6 mit Tendenz) und die Mainzer Studienstufe (MSS, Punkte 00–15) an Schulen in Rheinland-Pfalz. Die App läuft vollständig lokal im Browser, verschlüsselt alle Daten mit einem Passwort und legt sie in einem Ordner ab, den der Synology Drive Client auf die DiskStation spiegelt.
 
@@ -164,6 +164,16 @@ launcher.log    Protokoll des letzten Starts
 **Weitergabe an Kolleginnen und Kollegen:** `launcher/build.sh` (braucht Go) baut alle Fassungen nach `dist/OrdoNota-<Version>/` und packt sie als ZIP mit Anleitung (`LIESMICH.txt`) und Notfallwerkzeug. Die App-Dateien sind dort ins Programm eingebaut; es genügt also die eine Datei für das jeweilige System. Liegt neben dem Programm eine `index.html` (wie im Programmordner), nimmt es stattdessen diese Dateien.
 
 Der Start per Doppelklick auf `index.html` funktioniert weiterhin. Beide Wege nutzen dieselbe Datenbank, aber getrennte Browser-Einstellungen (Gerätename, Ansicht).
+
+### 3.7 Programm- und Datenordner trennen
+
+Empfehlung: Den **Datenordner** im Synology-Drive-Ordner lassen, den **Programmordner** dagegen nur lokal auf jedem Gerät, z. B. `~/Programme/OrdoNota`. Dann kann jedes Gerät seine Version gezielt aktualisieren, und Synology muss keine Programmdateien abgleichen.
+
+- **Mit Git** (eigene Geräte): einmal `git clone <Repository> ~/Programme/OrdoNota`, dann `cd ~/Programme/OrdoNota && launcher/build.sh` (baut `./OrdoNota` und legt den Startmenü-Eintrag an). Update: `git pull && launcher/build.sh`. Eine bestimmte Version: `git checkout <Commit>`.
+- **Ohne Git** (z. B. Kolleginnen und Kollegen): die Datei aus dem ZIP (3.6) an einen beliebigen Ort legen; Update = Datei ersetzen.
+- **Umzug eines bestehenden Datenordners:** Einstellungen → **Datenordner wechseln …** (siehe 20).
+
+Unterschiedliche Versionen auf den Geräten sind ungefährlich: Eine zu alte Version öffnet eine Datenbank in neuerem Format nicht (21.10).
 
 ## 4. Arbeiten mit mehreren Geräten
 
@@ -716,7 +726,7 @@ So eignet sich derselbe Bogen für Elterngespräche (z. B. ohne Bemerkung) und f
 | Speicherort & Sicherungen | Name dieses Geräts | – |
 | | Anzahl aufbewahrter Sicherungen | 10 |
 | | Sicherung höchstens alle … Minuten | 10 |
-| | Jetzt sichern / Verschlüsselte Kopie herunterladen / Sicherung wiederherstellen | – |
+| | Jetzt sichern / Verschlüsselte Kopie herunterladen / Aus Datei wiederherstellen / Datenordner wechseln / Sicherung wiederherstellen (siehe 20) | – |
 | Schuljahre | Umbenennen, leere Schuljahre löschen | – |
 | Reiter | Reiter ein-/ausschalten als Standard für alle Kurse (Tests, Mitarbeit/EPO, Präsentationen, Ziehen, Gruppen, Notenübersicht, Sitzplan); einzelne Kurse können abweichen (6.4) | alle an |
 | Darstellung | Noten farbig hinterlegen | an |
@@ -990,7 +1000,13 @@ OrdoNota-Daten/
 
 **Wiederherstellen:** Einstellungen → Liste der Sicherungen → **Wiederherstellen**. Der aktuelle Stand wird vorher selbst gesichert. Stammt die Sicherung aus einer Zeit mit anderem Passwort, fragt die App nach diesem.
 
-**Eine heruntergeladene Kopie zurückspielen:** Datei in den Ordner `Sicherungen/` kopieren und dann über die Liste wiederherstellen.
+**Aus Datei wiederherstellen:** Einstellungen → **Aus Datei wiederherstellen …** spielt eine `.nmdb`-Datei ein, z. B. eine heruntergeladene Kopie oder eine Sicherung von einem anderen Ort. Der aktuelle Stand wird vorher gesichert. Hat die Datei ein anderes Passwort, fragt die App danach. **Ihr Passwort bleibt gleich**: Die Daten werden mit Ihrem aktuellen Schlüssel neu verschlüsselt.
+
+**In einem leeren Datenordner** (beim ersten Start oder auf einem neuen Gerät) bietet „Neue Datenbank anlegen“ zusätzlich **„Vorhandene Datenbank aus Datei übernehmen …“** an. Die App kopiert die Datei in den Ordner und entsperrt sie mit ihrem Passwort. Passwort und Wiederherstellungsschlüssel sind dann die dieser Datei.
+
+**Datenordner wechseln:** Einstellungen → **Datenordner wechseln …** und den neuen Ordner wählen. Die App kopiert die Datenbank dorthin, auf Wunsch auch die Sicherungen (sie fragt, wenn es welche gibt), und speichert ab dann dort. Der bisherige Ordner bleibt unverändert und kann danach gelöscht werden; nur der Hinweis „geöffnet auf …“ wird dort entfernt. Liegt im neuen Ordner schon eine Datenbank, wird sie nie überschrieben. Die App bietet dann an, stattdessen diese zu öffnen (mit deren Passwort). Auf anderen Geräten wählen Sie danach ebenfalls den neuen Ordner („Anderen Ordner wählen“).
+
+Die Datenbank ist **eine einzige Datei** (`notenmanager.nmdb`). Für einen Umzug von Hand genügt es, nur diese Datei in den neuen Ordner zu kopieren und ihn in der App zu wählen. Lock-Datei und Sicherungen sind nicht nötig.
 
 > Zusätzlich empfiehlt sich die Versionierung von Synology Drive (auf der DiskStation einstellbar) als zweite Sicherungsebene.
 
@@ -1135,7 +1151,9 @@ Das Startprogramm ist das einzige Teil mit Build-Schritt; die App selbst bleibt 
 | Anfrage | Bedeutung |
 |---|---|
 | `GET /api/alive` | Lebenszeichen (alle 5 s von `ServerStore`) |
-| `GET /api/info`, `POST /api/folder {path}`, `POST /api/pick` | Datenordner abfragen, setzen, mit dem Dialog des Systems wählen |
+| `GET /api/info`, `POST /api/folder {path}`, `POST /api/pick` | Datenordner abfragen, setzen, mit dem Dialog des Systems wählen (ohne Fenster, `--no-browser`, kein Dialog) |
+| `POST /api/probe {path}` | Ordner prüfen: `{ name, hasDb, same }` |
+| `POST /api/move {path, backups}` | Datenordner wechseln: Datenbank (und Sicherungen) kopieren, nie überschreiben (`409`), neuen Ordner merken |
 | `GET /api/db` (Kopf `X-Modified`), `GET /api/db/stat` | Datenbank lesen, Änderungszeit |
 | `PUT /api/db` (Köpfe `X-Expect`, `X-Force`, `X-Backup-Keep`) | speichern; `409 conflict`, wenn sich die Datei seit `X-Expect` geändert hat; vorher sichern, wenn `X-Backup-Keep` > 0 |
 | `GET/POST /api/backups`, `GET /api/backups/<Name>` | Sicherungen auflisten, anlegen, lesen |
@@ -1158,7 +1176,7 @@ Das Startprogramm ist das einzige Teil mit Build-Schritt; die App selbst bleibt 
   "kdf": "PBKDF2-SHA256",
   "savedAt": "2026-10-14T21:57:03.123Z",
   "device": "Laptop Schule",
-  "app": "1.27.0",
+  "app": "1.28.0",
   "pw":   { "salt": "<b64>", "iter": 600000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "rec":  { "salt": "<b64>", "iter": 100000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "data": { "iv": "<b64>", "ct": "<b64: verschlüsseltes JSON des Datenmodells>" }
@@ -1181,7 +1199,7 @@ Entschlüsselter Inhalt (`schema: 4`):
 ```js
 {
   schema: 4,                             // Datenformat (siehe 26.2)
-  savedWith: "1.27.0",                    // App-Version beim letzten Speichern
+  savedWith: "1.28.0",                    // App-Version beim letzten Speichern
   created: "<ISO>", savedAt: "<ISO>",
   settings: { autoLockMin, limitSek1, limitMss, precision, keepBackups, backupEveryMin, gradeColors,
               tabs: { "<Reiter>": false },   // seit 1.25: ausgeschaltete Reiter (Standard für alle Kurse)
@@ -1265,7 +1283,7 @@ Das Skript startet einen unsichtbaren Chromium-Browser (Chrome, Edge, Chromium, 
 4. den Pomodoro-Timer (Aktivieren, Farben je Zustand, Phasenwechsel, Zurücksetzen, Einstellungsdialog), das Layout des Reiters „Einstellungen“ bei aktivem Timer (keine Lücken zwischen den Karten, Auswahllisten nicht abgeschnitten, bei 1570 und 2560 px) und die Kürzel in der eingeklappten Kursliste, die weichen Übergänge (nur bei Reiter-, Kurs- und Halbjahreswechsel), das Ein-/Ausklappen der Kursliste, das Ein-/Ausschalten von Reitern (Standard in den Einstellungen, Abweichung je Kurs, Ersatzreiter, Sprunglinks, „Wie Standard“), den Reiter „Tests“ in voller Breite, die Warnung bei zu wenig Punkten im Notenschlüssel (doppelte Schwellen markiert, Knöpfe „Halbe Punkte“/„Nur ganze Noten“ beheben sie), Arbeiten in Teilen (einschalten, Aufgaben und Punkte je Teil, Teil ausblenden, getrennt benoten, Status je Teil, Schlüssel je Teil, Ausdrucke inkl. „Ergebnisse nach Teilen“, Beamer, Teile aufheben), die Druckauswahl „🖨 Drucken …“ in Tests, EPO und Notenübersicht (Gruppen, Tooltips, Auswahl druckt, Abbrechen nicht) und den Haken „Unterschrift gesehen“ bei Klassenarbeiten (Zähler, Ausdruck), den Moodle-Import (Knopf im Test statt neben „+ Neuer Test“, bisherige Aufgaben ersetzen oder behalten, Dateiauswahl im Dialog, Zuordnung, Status „fehlt“, Ausdruck mit und ohne Note, erneuter Import),
 5. den Excel-Export der Schülerliste (gültiges ZIP/XML, Umlaute und Sonderzeichen), das Kurs-Löschen nur mit „LÖSCHEN“, das Ein-/Ausblenden der Fotos im EPO-Reiter und im Sitzplan (auch im Druck) das Erweitern/Verkleinern des Sitzplan-Rasters an allen vier Seiten sowie das Ziehen (keine Wiederholung bis zum Auffüllen, automatisches Auffüllen, Note, Rückgängig, Abwesende/Herausgenommene) und den Reiter „Präsentationen“ (Bewerten per Knopf und in der Tabelle, Gewicht, Kriterien aus dem Pool und eigene, Vorlage, Ausdrucke, Spalte in der Notenübersicht, Pool bearbeiten, Startbestand ergänzen, Vorlagen speichern/anlegen/verwenden/drucken/löschen, Standardvorlagen vorhanden und ergänzen, Handreichung mit Notenschlüssel) und Gruppenpräsentationen (Gruppenwert für alle Mitglieder, Personenkriterien, Abweichung setzen/zurücksetzen, Tabelle, Gruppen bearbeiten/übernehmen, Druck, Auflösen ohne Notenänderung), den Reiter „Gruppen“ (neue Einteilung, Abwesende, Fixieren, Anklicken/Ziehen, Auftrag, Regel mit Warnung, Beamer ohne Noten mit Schrift passend zum Bildschirm und Umschaltern für Fotos/Nachnamen, Druck, Fotos/Nachnamen in der Einteilung, Gruppenpuzzle mit Expertengruppen unter den Stammgruppen, Anzahl der Teilthemen einstellbar und beim Neu verteilen erhalten, Hinweis nach Änderungen, Beamer-Umschalter Stamm-/Expertengruppen, Übernahme in eine Präsentation),
 6. das Notfallwerkzeug: Eine von der App echt verschlüsselte Datenbank wird mit `tools/entschluesseln.py` per Passwort und per Wiederherstellungsschlüssel entschlüsselt und mit dem Original verglichen. Dazu kommen falsches Passwort, manipulierte Datei und CSV-Ausgabe,
-7. das Startprogramm (nur wenn Go installiert ist, sonst übersprungen): `go test` in `launcher/` (Zugriffsschutz, nur erlaubte Dateien, Speichern und Konflikt, Sicherungen, Konfliktkopien, Lock, Datenordner wählen, Kennwort, Programmordner finden), dann ein echter Start mit Testordner: Zugriff ohne Kennwort abgelehnt, zweiter Start erkennt das laufende Programm, die App erkennt das Startprogramm, legt eine Datenbank an (ohne Rückfrage), speichert Änderungen in den Ordner (mit dem Notfallwerkzeug geprüft), erkennt eine externe Änderung und gibt den Lock beim Beenden frei.
+7. das Startprogramm (nur wenn Go installiert ist, sonst übersprungen): `go test` in `launcher/` (Zugriffsschutz, nur erlaubte Dateien, Speichern und Konflikt, Sicherungen, Konfliktkopien, Lock, Datenordner wählen, Kennwort, Programmordner finden), dann ein echter Start mit Testordner: Zugriff ohne Kennwort abgelehnt, zweiter Start erkennt das laufende Programm, die App erkennt das Startprogramm, legt eine Datenbank an (ohne Rückfrage), speichert Änderungen in den Ordner (mit dem Notfallwerkzeug geprüft), erkennt eine externe Änderung, überschreibt auf Wunsch, stellt aus einer Datei mit fremdem Passwort wieder her (eigenes Passwort bleibt), wechselt den Datenordner mit Sicherungen (alter Ordner bleibt, neuer gemerkt, danach wird dort gespeichert), übernimmt in einem leeren Ordner eine Datenbank aus einer Datei und gibt den Lock beim Beenden frei.
 
 Am Ende steht `ERGEBNIS: x von y bestanden`. Der Exit-Code ist 0, wenn alles bestanden ist.
 
@@ -1281,7 +1299,7 @@ Am Ende steht `ERGEBNIS: x von y bestanden`. Der Exit-Code ist 0, wenn alles bes
 | `tests/groups.test.html` | Gruppengrößen (Rest verteilt), Verteilung (alle genau einmal), Regeln „nicht zusammen“/„zusammen“, leistungsgemischt/-gleich, fehlende Noten, Abwechslung (auch Minimum), Expertengruppen (Standard und einstellbare Anzahl, gleich große Gruppen, kein Thema doppelt), Migration | im Browser öffnen |
 | `tests/pomodoro.test.html` | Ablauf der Phasen (mit/ohne kurze bzw. lange Pause), Standardwerte, Migration der Einstellungen | im Browser öffnen |
 | `tests/crypto.test.html` | Anlegen, Entsperren, falsches Passwort, Wiederherstellungsschlüssel, Passwortwechsel, alte Sicherungen, Manipulationserkennung | im Browser öffnen (dauert einige Sekunden) |
-| `tests/storage.test.html` | Schreiben/Lesen, rollierende Sicherungen, externe Änderung, erzwungenes Überschreiben, Lock-Datei, Konfliktkopie | **über `http://localhost`**, z. B. `python3 -m http.server` im Programmordner, dann `http://localhost:8000/tests/storage.test.html` |
+| `tests/storage.test.html` | Schreiben/Lesen, rollierende Sicherungen, externe Änderung, erzwungenes Überschreiben, Lock-Datei, Konfliktkopie, Datenordner wechseln (mit/ohne Sicherungen, Ziel nie überschreiben) | **über `http://localhost`**, z. B. `python3 -m http.server` im Programmordner, dann `http://localhost:8000/tests/storage.test.html` |
 
 Die erste Zeile zeigt **„ALLE TESTS BESTANDEN“** oder die Zahl der Fehlschläge. Fehlgeschlagene Prüfungen sind mit `FAIL` markiert.
 
@@ -1306,7 +1324,7 @@ In `js/model.js` stehen zwei Nummern:
 
 | Konstante | Bedeutung | Wann erhöhen |
 |---|---|---|
-| `APP_VERSION` (z. B. `1.27.0`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.27.0` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
+| `APP_VERSION` (z. B. `1.28.0`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.28.0` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
 | `SCHEMA` (z. B. `4`) | Version des Datenformats (2 seit 1.18: Arbeiten in Teilen; 3 seit 1.20: Präsentationen; 4 seit 1.23: Gruppenpräsentationen) | nur, wenn eine **ältere** App-Version die neuen Daten falsch verstehen würde (z. B. ein Feld ändert seine Bedeutung) |
 
 Öffnet eine App eine Datenbank mit höherem `SCHEMA`, verweigert sie das mit einer Meldung (siehe 21.10). Neue, nur *zusätzliche* Felder brauchen kein neues `SCHEMA`: Ältere Versionen lassen unbekannte Felder unverändert und speichern sie mit.
@@ -1337,5 +1355,5 @@ In `js/model.js` stehen zwei Nummern:
 - **Neue Kursart:** Eintrag in `COURSE_TYPES` in `js/grades.js`.
 - **Farben:** Tokens oben in `css/app.css` (`:root` hell, darunter dunkel).
 - **Änderungen am Datenmodell:** Standardwerte in `NM.model.migrate()` ergänzen, damit bestehende Datenbanken weiter funktionieren. Bei inkompatiblen Änderungen `SCHEMA` erhöhen.
-- **Startprogramm:** Quelltext in `launcher/` (Go, nur Standardbibliothek), Tests `launcher/server_test.go` (laufen in `run_tests.py` mit, E2E `run_launcher_check`). Neue Schnittstellen immer in `server.go` und `ServerStore` (`js/storage.js`) zugleich, mit derselben Bedeutung wie in `FolderStore`. Neue Ordner mit App-Dateien in `staticAllowed` (`server.go`) und in `build.sh` eintragen. Bauen: `launcher/build.sh`.
+- **Startprogramm:** Quelltext in `launcher/` (Go, nur Standardbibliothek), Tests `launcher/server_test.go` (laufen in `run_tests.py` mit, E2E `run_launcher_check`). Neue Schnittstellen immer in `server.go` und `ServerStore` (`js/storage.js`) zugleich, mit derselben Bedeutung wie in `FolderStore`. Ordnerwechsel: `store.pickTarget()` → `{ name, hasDb, same }`, `store.moveTo(ziel, { backups })`, `Store.useTarget(ziel)` (ohne Kopieren); Oberfläche `changeFolder`, `restoreFromFile` in `js/view-settings.js`, `importFromFile`/`NM.app.switchStore` in `js/app.js`, Dateiauswahl `NM.util.pickFile`. Neue Ordner mit App-Dateien in `staticAllowed` (`server.go`) und in `build.sh` eintragen. Bauen: `launcher/build.sh`.
 - **Neue Version einspielen:** Programmordner (`index.html`, `css/`, `js/`) ersetzen; für das Startprogramm mit eingebauten Dateien vorher `launcher/build.sh` laufen lassen. Der Datenordner bleibt unberührt. Vorher eine Sicherung anlegen.

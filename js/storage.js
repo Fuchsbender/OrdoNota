@@ -108,6 +108,46 @@
       return new FolderStore(dir);
     }
 
+    /** Neuen Datenordner wählen (noch nicht übernehmen): { dir, name, hasDb, same } */
+    async pickTarget() {
+      const dir = await window.showDirectoryPicker({ id: 'notenmanager', mode: 'readwrite' });
+      const t = new FolderStore(dir);
+      return { dir, name: dir.name, hasDb: await t.exists(), same: await this.dir.isSameEntry(dir) };
+    }
+
+    /** Gewählten Ordner übernehmen, ohne etwas zu kopieren (dort liegt schon eine Datenbank). */
+    static async useTarget(t) {
+      await idbSet('dir', t.dir);
+      return new FolderStore(t.dir);
+    }
+
+    /** Datenbank (und auf Wunsch die Sicherungen) in den neuen Ordner kopieren und ihn übernehmen. Der alte bleibt unverändert. */
+    async moveTo(t, { backups = false } = {}) {
+      const target = new FolderStore(t.dir);
+      if (await target.exists()) throw new Error('Im neuen Ordner liegt bereits eine Datenbank.');
+      const text = await (await (await this.dir.getFileHandle(DB_FILE)).getFile()).text();
+      const fh = await t.dir.getFileHandle(DB_FILE, { create: true });
+      const w = await fh.createWritable();
+      await w.write(text);
+      await w.close();
+      if (backups) {
+        const names = await this.listBackups();
+        if (names.length) {
+          const src = await this.dir.getDirectoryHandle(BACKUP_DIR);
+          const dst = await t.dir.getDirectoryHandle(BACKUP_DIR, { create: true });
+          for (const n of names) {
+            const data = await (await (await src.getFileHandle(n)).getFile()).text();
+            const out = await (await dst.getFileHandle(n, { create: true })).createWritable();
+            await out.write(data);
+            await out.close();
+          }
+        }
+      }
+      this.dir = t.dir;
+      this.knownModified = (await fh.getFile()).lastModified;
+      await idbSet('dir', t.dir);
+    }
+
     /** Muss aus einer Benutzeraktion (Klick) heraus aufgerufen werden. */
     async ensurePermission() {
       const opts = { mode: 'readwrite' };
@@ -289,8 +329,14 @@
       return info.dataDir ? new ServerStore(info) : null;
     }
 
-    /** Ordner-Dialog des Systems; ohne Dialog (z. B. Linux ohne zenity) Pfad eingeben. */
     static async pick() {
+      const path = await ServerStore.pickPath();
+      const info = await (await api('folder', { method: 'POST', body: JSON.stringify({ path }) })).json();
+      return new ServerStore(info);
+    }
+
+    /** Ordner-Dialog des Systems; ohne Dialog (z. B. Linux ohne zenity) Pfad eingeben. */
+    static async pickPath() {
       const r = await (await api('pick', { method: 'POST' })).json();
       let path = r.path;
       if (r.cancel) throw Object.assign(new Error('abgebrochen'), { name: 'AbortError' });
@@ -298,8 +344,24 @@
         path = await NM.util.promptDialog('Datenordner', 'Vollständiger Pfad des Datenordners (z. B. im Synology-Drive-Ordner):', '');
         if (!path) throw Object.assign(new Error('abgebrochen'), { name: 'AbortError' });
       }
-      const info = await (await api('folder', { method: 'POST', body: JSON.stringify({ path }) })).json();
-      return new ServerStore(info);
+      return path;
+    }
+
+    /** Neuen Datenordner wählen (noch nicht übernehmen): { path, name, hasDb, same } */
+    async pickTarget() {
+      const path = await ServerStore.pickPath();
+      return (await api('probe', { method: 'POST', body: JSON.stringify({ path }) })).json();
+    }
+
+    static async useTarget(t) {
+      return new ServerStore(await (await api('folder', { method: 'POST', body: JSON.stringify({ path: t.path }) })).json());
+    }
+
+    async moveTo(t, { backups = false } = {}) {
+      const r = await (await api('move', { method: 'POST', body: JSON.stringify({ path: t.path, backups }) })).json();
+      this.name = r.name;
+      this.path = r.dataDir;
+      this.knownModified = r.modified;
     }
 
     async ensurePermission() {

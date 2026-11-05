@@ -31,6 +31,7 @@ var (
 	errConflict  = errors.New("Die Datenbank wurde inzwischen von einem anderen Gerät geändert.")
 	errMissing   = errors.New("Datei nicht vorhanden")
 	errBadName   = errors.New("ungültiger Dateiname")
+	errExists    = errors.New("Im neuen Ordner liegt bereits eine Datenbank.")
 )
 
 type folder struct{ dir string }
@@ -186,6 +187,40 @@ func atomicWrite(path string, data []byte) error {
 		return fmt.Errorf("Speichern von %s fehlgeschlagen: %w", filepath.Base(path), err)
 	}
 	return nil
+}
+
+// copyTo kopiert die Datenbank (und auf Wunsch die Sicherungen) in einen anderen Ordner.
+// Liegt dort schon eine Datenbank, wird nichts überschrieben. Der alte Ordner bleibt unverändert.
+func (f folder) copyTo(t folder, backups bool) error {
+	if modified(t.dbPath()) != "" {
+		return errExists
+	}
+	b, _, err := f.readDB()
+	if err != nil {
+		return err
+	}
+	if backups {
+		names, err := f.listBackups()
+		if err != nil {
+			return err
+		}
+		if len(names) > 0 {
+			if err := os.MkdirAll(filepath.Join(t.dir, backupDir), 0o700); err != nil {
+				return err
+			}
+		}
+		for _, n := range names {
+			data, err := f.readBackup(n)
+			if err == nil {
+				err = atomicWrite(filepath.Join(t.dir, backupDir, n), data)
+			}
+			if err != nil {
+				return err
+			}
+		}
+	}
+	// Datenbank zuletzt: Bricht etwas ab, bleibt der neue Ordner ohne Datenbank und kann erneut gewählt werden
+	return atomicWrite(t.dbPath(), b)
 }
 
 // checkDir prüft einen gewählten Datenordner.
