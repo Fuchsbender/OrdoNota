@@ -176,7 +176,8 @@
       'div',
       { class: 'card' },
       h('h2', null, 'Speicherort & Sicherungen'),
-      h('p', null, 'Datenordner: ', h('strong', null, st.store.name), ' · Datei ', h('code', null, S.DB_FILE)),
+      h('p', null, 'Datenordner: ', h('strong', { title: st.store.path || '' }, st.store.name), ' · Datei ', h('code', null, S.DB_FILE)),
+      !st.server ? null : h('p', { class: 'muted small' }, 'Gestartet über das Startprogramm: ', h('code', null, st.store.path)),
       h('p', { class: 'muted small' }, 'Der Synology Drive Client spiegelt diesen Ordner auf die DiskStation. Bitte die App immer nur auf einem Gerät gleichzeitig öffnen.'),
       h(
         'div',

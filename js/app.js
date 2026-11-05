@@ -17,6 +17,7 @@
     lastSaved: null,
     saveError: null,
     since: null,
+    server: false, // über das Startprogramm gestartet
     ui: loadUi(),
   };
 
@@ -84,6 +85,19 @@
       startSession();
       return;
     }
+    // Über das Startprogramm (launcher/) gestartet: Dateien schreibt das Programm, keine Rückfrage des Browsers
+    if (await S.detectServer()) {
+      state.server = true;
+      try {
+        state.store = await S.ServerStore.remembered();
+      } catch (e) {
+        state.store = null;
+        renderStart('Startprogramm antwortet nicht: ' + e.message);
+        return;
+      }
+      renderStart();
+      return;
+    }
     if (!S.supported()) {
       renderUnsupported();
       return;
@@ -97,7 +111,7 @@
       authCard(
         'Browser wird nicht unterstützt',
         h('p', null, 'OrdoNota speichert die Datenbank direkt in Ihrem Synology-Drive-Ordner. Das ist nur in Chromium-Browsern möglich (Google Chrome, Microsoft Edge, Brave, Thorium).'),
-        h('p', { class: 'muted' }, 'Bitte öffnen Sie index.html in einem dieser Browser.')
+        h('p', { class: 'muted' }, 'Bitte öffnen Sie index.html in einem dieser Browser oder starten Sie OrdoNota über das Startprogramm (OrdoNota, OrdoNota.exe bzw. OrdoNota.app), das mit jedem Browser funktioniert.')
       )
     );
   }
@@ -170,7 +184,7 @@
 
   async function pickFolder() {
     try {
-      state.store = await S.FolderStore.pick();
+      state.store = await (state.server ? S.ServerStore.pick() : S.FolderStore.pick());
     } catch (e) {
       if (e.name !== 'AbortError') toast('Ordner konnte nicht geöffnet werden: ' + e.message, 'error');
       return;

@@ -11,6 +11,8 @@ Notenverwaltung für Sek I und MSS (Rheinland-Pfalz) mit Sitzplänen. Läuft lok
 3. Passwort festlegen und den **Wiederherstellungsschlüssel ausdrucken** (getrennt vom Rechner aufbewahren).
 4. Auf dem zweiten Gerät denselben (synchronisierten) Ordner wählen und mit demselben Passwort entsperren.
 
+**Ohne Rückfrage „Zugriff erlauben“:** über das Startprogramm starten (`OrdoNota` unter Linux, `OrdoNota.exe` unter Windows, `OrdoNota.app` unter macOS). Es öffnet die App als eigenes Fenster und schreibt die Dateien selbst; Installation ist nicht nötig, und es geht dann auch mit Firefox/Safari. Bauen und Weitergabe als ZIP an Kolleginnen und Kollegen: `launcher/build.sh` (braucht Go). Details: DOKUMENTATION.md 3.6.
+
 Ausprobieren ohne echte Daten: `index.html?demo` (nichts wird gespeichert). Beispiel-CSVs für den Moodle-Import (Kurs 8b Mathe) liegen in `demo/`.
 
 ## Was liegt wo
@@ -21,6 +23,7 @@ Ausprobieren ohne echte Daten: `index.html?demo` (nichts wird gespeichert). Beis
 | `notenmanager.lock.json` | zeigt, auf welchem Gerät die App gerade offen ist |
 | `Sicherungen/` | rollierende Sicherungskopien (Standard: 10, höchstens alle 10 Min.) |
 | `index.html`, `css/`, `js/` | die App selbst – kann überall liegen, auch im Synology-Ordner |
+| `launcher/` | Startprogramm (Go); Einstellungen in `~/.config/OrdoNota/` bzw. `%AppData%\OrdoNota\` |
 
 ## Regeln, die die App umsetzt
 

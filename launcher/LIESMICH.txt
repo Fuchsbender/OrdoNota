@@ -1,0 +1,50 @@
+OrdoNota – Notenverwaltung
+==========================
+
+OrdoNota läuft auf Ihrem Rechner. Ihre Daten liegen verschlüsselt in einem Ordner
+Ihrer Wahl (z. B. in Ihrem Synology-Drive- oder OneDrive-Ordner) und werden nirgends
+hochgeladen. Sie brauchen Google Chrome oder Microsoft Edge (unter Windows immer
+vorhanden). Andere Browser gehen auch, dann aber ohne eigenes Programmfenster.
+
+
+Starten
+-------
+
+Windows:  OrdoNota.exe doppelklicken.
+          Beim ersten Mal warnt Windows („Der Computer wurde durch Windows geschützt“):
+          „Weitere Informationen“ → „Trotzdem ausführen“.
+          Für eine Verknüpfung: Rechtsklick auf OrdoNota.exe → „Senden an“ → „Desktop“.
+
+Mac:      OrdoNota.app in den Ordner „Programme“ ziehen und von dort starten.
+          Beim ersten Mal: Rechtsklick (oder ctrl-Klick) auf OrdoNota → „Öffnen“ → „Öffnen“.
+          Klappt das nicht: Systemeinstellungen → Datenschutz & Sicherheit → „Dennoch öffnen“.
+
+Linux:    OrdoNota-Linux ausführbar machen und starten:
+            chmod +x OrdoNota-Linux && ./OrdoNota-Linux
+          Danach steht OrdoNota auch im Startmenü.
+
+Es öffnet sich ein eigenes Fenster. Beim ersten Start wählen Sie den Datenordner und
+legen ein Passwort fest. Den Wiederherstellungsschlüssel unbedingt ausdrucken oder
+notieren – ohne Passwort oder Schlüssel sind die Daten nicht mehr lesbar.
+
+Schließen Sie einfach das Fenster. Das Programm beendet sich dann von selbst.
+
+
+Mehrere Geräte
+--------------
+
+Wählen Sie auf jedem Gerät denselben (synchronisierten) Ordner. Bitte die App immer
+nur auf einem Gerät gleichzeitig öffnen.
+
+
+Gut zu wissen
+-------------
+
+- Einstellungen des Programms (gewählter Ordner, Port) liegen unter
+    Windows: %AppData%\OrdoNota\config.json
+    Mac:     ~/Library/Application Support/OrdoNota/config.json
+    Linux:   ~/.config/OrdoNota/config.json
+  Dort steht auch launcher.log, falls etwas nicht funktioniert.
+- Das Programm ist nur auf diesem Rechner erreichbar (127.0.0.1), nicht im Netz.
+- Neue Version: die alte Datei durch die neue ersetzen. Die Daten bleiben unberührt.
+- Notfall ohne App: entschluesseln.py (braucht Python, siehe Kopf der Datei).

@@ -1,6 +1,6 @@
 # OrdoNota – Dokumentation
 
-Version 1.26.0 · Stand Oktober 2026
+Version 1.27.0 · Stand November 2026
 
 OrdoNota (bis Version 1.11 „Notenmanager“) verwaltet Noten für die Sekundarstufe I (Noten 1–6 mit Tendenz) und die Mainzer Studienstufe (MSS, Punkte 00–15) an Schulen in Rheinland-Pfalz. Die App läuft vollständig lokal im Browser, verschlüsselt alle Daten mit einem Passwort und legt sie in einem Ordner ab, den der Synology Drive Client auf die DiskStation spiegelt.
 
@@ -79,7 +79,7 @@ Ergebnisse aus Tests und EPO-Blöcken erscheinen **automatisch** in der Notenüb
 | Bereich | Anforderung |
 |---|---|
 | Browser | Google Chrome, Microsoft Edge, Brave, Thorium oder ein anderer Chromium-Browser (aktuelle Version) |
-| Nicht unterstützt | Firefox und Safari: Sie können nicht direkt in einen Ordner schreiben. Die App zeigt dann einen Hinweis. |
+| Firefox und Safari | Nur mit dem Startprogramm (3.6). Per Doppelklick auf `index.html` können sie nicht direkt in einen Ordner schreiben; die App zeigt dann einen Hinweis. |
 | Betriebssystem | Windows, Linux oder macOS (Desktop/Laptop) |
 | Synchronisation | Synology Drive Client, der einen lokalen Ordner mit der DiskStation synchronisiert |
 | Internet | Nicht nötig. Die App läuft komplett offline. |
@@ -92,8 +92,10 @@ Der Programmordner enthält:
 
 ```
 index.html        ← die App (per Doppelklick öffnen)
+OrdoNota          ← Startprogramm für Linux (nach dem Bauen, siehe 3.6)
 css/              ← Gestaltung
 js/               ← Programmlogik
+launcher/         ← Quelltext des Startprogramms (Go)
 tests/            ← automatische Tests (nur für Entwicklung)
 tools/            ← Notfall-Entschlüsselung ohne App (siehe 20.1)
 README.md         ← Kurzfassung
@@ -130,11 +132,38 @@ SynologyDrive/
 
 ### 3.4 Späterer Start
 
-Der Browser merkt sich den Datenordner. Beim nächsten Start erscheint direkt **„Datenbank entsperren“**. Passwort eingeben und **Entsperren** klicken. Fragt der Browser erneut nach dem Ordnerzugriff, bitte erlauben. Das ist pro Browsersitzung einmal nötig.
+Der Browser merkt sich den Datenordner. Beim nächsten Start erscheint direkt **„Datenbank entsperren“**. Passwort eingeben und **Entsperren** klicken. Fragt der Browser erneut nach dem Ordnerzugriff, bitte erlauben. Das ist pro Browsersitzung einmal nötig. Mit dem Startprogramm (3.6) entfällt diese Rückfrage.
 
 ### 3.5 Demo-Modus
 
 `index.html?demo` öffnet die App mit Beispieldaten (Kurs 8b Mathe, Sek I, und MSS 12 M LK). Enthalten sind u. a. Arbeiten in Teilen (8b, 2. HJ: „KA 2 – Geometrie“, zwei Teile gemeinsam bepunktet; MSS 12: „Kursarbeit 2 – Analysis“, drei Teile getrennt benotet mit Gewicht 1 : 2 : 1, eine Person mit fehlendem Teil) und Präsentationen (8b, 2. HJ: „Referat Statistik“ und „HA vorstellen“ nach der Standardvorlage, „Gruppenpräsentation Zufall“ mit drei Gruppen, Personenkriterien und einer Abweichung; Reiter „Gruppen“: „Stationenlernen Prozent“ mit Aufträgen und einer Regel; MSS 12: „Kurzvortrag Extremwerte“). Statt echter Fotos hat jede Person ein Personensymbol, damit sich Sitzplan und Fotoanzeige im EPO ausprobieren lassen. **Nichts wird gespeichert.** Der Demo-Modus eignet sich zum Ausprobieren und Kennenlernen. Zum Ausprobieren des Moodle-Imports (Abschnitt 7.7) liegen im Ordner `demo/` eine Antworten- und eine Bewertungen-CSV, deren Namen zum Kurs 8b Mathe passen.
+
+### 3.6 Start mit dem Startprogramm (ohne Rückfrage)
+
+Statt `index.html` per Doppelklick zu öffnen, können Sie OrdoNota über das **Startprogramm** starten. Es öffnet die App als eigenes Fenster, und der Browser fragt nie nach dem Ordnerzugriff, weil das Startprogramm die Dateien selbst schreibt. Es braucht keine Installation (kein Python o. Ä.) und funktioniert unter Linux, Windows und macOS.
+
+| System | Datei | Start |
+|---|---|---|
+| Linux | `OrdoNota` (im Programmordner) bzw. `OrdoNota-Linux` | Doppelklick oder `./OrdoNota`. Beim ersten Start legt das Programm den Eintrag „OrdoNota“ im Startmenü an. |
+| Windows | `OrdoNota.exe` | Doppelklick; Verknüpfung über Rechtsklick → *Senden an* → *Desktop*. Beim ersten Mal: „Weitere Informationen“ → „Trotzdem ausführen“. |
+| macOS | `OrdoNota.app` | in „Programme“ ziehen; beim ersten Mal Rechtsklick → *Öffnen* → *Öffnen*. |
+
+**Ablauf:** Das Programm startet einen kleinen Server, der nur auf diesem Rechner erreichbar ist (`127.0.0.1`, Port 47110), und öffnet Chrome, Edge, Chromium, Thorium oder Brave als App-Fenster mit eigenem Profil. Fehlt ein solcher Browser, öffnet es den Standardbrowser (auch Firefox/Safari). Beim ersten Start wählen Sie den Datenordner im Ordner-Dialog des Systems; gibt es keinen (z. B. Linux ohne `zenity`/`kdialog`), geben Sie den Pfad ein. Das Programm merkt sich den Ordner. Wird das Fenster geschlossen, beendet sich das Programm nach etwa 15 Sekunden und gibt den Hinweis „geöffnet auf …“ frei. Ein zweiter Start öffnet nur ein weiteres Fenster.
+
+**Einstellungen des Startprogramms** (nicht in der Datenbank) liegen in `~/.config/OrdoNota/` (Linux), `%AppData%\OrdoNota\` (Windows) bzw. `~/Library/Application Support/OrdoNota/` (macOS):
+
+```
+config.json     { "dataDir": "/home/…/SynologyDrive/OrdoNota-Daten", "port": 47110, "browser": "" }
+token           Zugriffskennwort für den Server (nur für Ihr Benutzerkonto lesbar)
+browser/        Browser-Profil des App-Fensters (Gerätename, Ansicht, gewählter Kurs)
+launcher.log    Protokoll des letzten Starts
+```
+
+`port` lässt sich ändern, falls 47110 belegt ist. Dann gehen die Einstellungen des Browser-Profils (Gerätename, gewählter Kurs) einmal verloren, weil sie an die Adresse gebunden sind. Mit `browser` kann ein bestimmter Browser (vollständiger Pfad) vorgegeben werden.
+
+**Weitergabe an Kolleginnen und Kollegen:** `launcher/build.sh` (braucht Go) baut alle Fassungen nach `dist/OrdoNota-<Version>/` und packt sie als ZIP mit Anleitung (`LIESMICH.txt`) und Notfallwerkzeug. Die App-Dateien sind dort ins Programm eingebaut; es genügt also die eine Datei für das jeweilige System. Liegt neben dem Programm eine `index.html` (wie im Programmordner), nimmt es stattdessen diese Dateien.
+
+Der Start per Doppelklick auf `index.html` funktioniert weiterhin. Beide Wege nutzen dieselbe Datenbank, aber getrennte Browser-Einstellungen (Gerätename, Ansicht).
 
 ## 4. Arbeiten mit mehreren Geräten
 
@@ -997,7 +1026,7 @@ Das Passwort wird verdeckt abgefragt und nirgends gespeichert. Die CSV-Dateien e
 ## 21. Fehlerbehebung und häufige Fragen
 
 ### 21.1 „Browser wird nicht unterstützt“
-Die App wurde in Firefox oder Safari geöffnet. `index.html` mit Chrome, Edge, Brave oder Thorium öffnen.
+Die App wurde in Firefox oder Safari geöffnet. `index.html` mit Chrome, Edge, Brave oder Thorium öffnen oder das Startprogramm verwenden (3.6), das auch mit Firefox und Safari funktioniert.
 
 ### 21.2 „Kein Zugriff auf den Ordner“
 Der Browser hat den Ordnerzugriff nicht erlaubt. Erneut auf **Entsperren** klicken und die Rückfrage mit *Erlauben* bestätigen. Hilft das nicht: **„Anderen Ordner wählen“** und den Datenordner neu auswählen.
@@ -1036,7 +1065,7 @@ Mögliche Gründe:
 Nein. Mobile Browser können nicht direkt in Ordner schreiben. Die App ist für Desktop und Laptop gedacht.
 
 ### 21.10 „Diese Datenbank wurde mit einer neueren Version gespeichert“
-Auf einem anderen Gerät läuft eine neuere Version von OrdoNota, die das Datenformat erweitert hat. Die ältere Version öffnet die Datenbank absichtlich nicht, damit sie keine Daten falsch versteht oder beim Speichern verliert. Lösung: Die Programmdateien (`index.html`, `css/`, `js/`) auf diesem Gerät durch die neue Version ersetzen. Liegt der Programmordner im Synology-Drive-Ordner, passiert das automatisch.
+Auf einem anderen Gerät läuft eine neuere Version von OrdoNota, die das Datenformat erweitert hat. Die ältere Version öffnet die Datenbank absichtlich nicht, damit sie keine Daten falsch versteht oder beim Speichern verliert. Lösung: Die Programmdateien (`index.html`, `css/`, `js/`) auf diesem Gerät durch die neue Version ersetzen. Liegt der Programmordner im Synology-Drive-Ordner, passiert das automatisch. Wer das Startprogramm mit eingebauten App-Dateien nutzt (3.6), ersetzt das Programm durch die neue Fassung.
 
 Die Version der App steht unter Einstellungen → Hinweise.
 
@@ -1047,6 +1076,9 @@ Der Test hat zu wenige Punkte für alle Notenstufen: Zwei Stufen fallen auf dies
 Er ist ausgeschaltet – für diesen Kurs (Kurs & Schüler → „Reiter in diesem Kurs“) oder als Standard (Einstellungen → Reiter). Dort wieder anhaken; alle Daten sind noch da (siehe 6.4).
 
 ---
+
+### 21.13 Das Startprogramm startet nicht oder meldet „Port belegt“
+Die Meldung nennt die Ursache, Einzelheiten stehen in `launcher.log` (Ordner siehe 3.6). „Port 47110 ist belegt“: Ein anderes Programm nutzt den Port. In `config.json` einen anderen `port` eintragen (z. B. 47111). „App-Dateien nicht gefunden“: Ein selbst gebautes Programm ohne eingebaute App-Dateien muss im Programmordner neben `index.html` liegen. Öffnet sich kein eigenes Fenster, sondern ein Browser-Tab, wurde kein Chromium-Browser gefunden; dann Chrome oder Edge installieren oder in `config.json` unter `browser` den Pfad eintragen.
 
 # Teil D – Technische Dokumentation
 
@@ -1061,7 +1093,7 @@ Reines HTML/CSS/JavaScript ohne Build-Schritt und ohne externe Bibliotheken. Die
 | `js/xlsx.js` | `NM.xlsx` | Excel-Dateien ohne Bibliothek: `workbook({ sheet, rows, widths })` → Blob (ZIP ohne Kompression, ein Blatt, Kopfzeile fett) |
 | `js/grades.js` | `NM.grades` | **Gesamte Notenlogik** (rein, ohne DOM): Skalen, Eingabe-Parser, Rundung, Notenschlüssel (mit Prüfung auf nicht erreichbare Stufen, `unreachableSteps`), Test-/EPO-Auswertung, Arbeiten in Teilen, Präsentationen (auch in Gruppen), Halbjahres-/Jahresnote |
 | `js/crypto.js` | `NM.crypto` | `Vault`: Erzeugen, Entsperren (Passwort/Wiederherstellung), Ver-/Entschlüsseln, Passwortwechsel |
-| `js/storage.js` | `NM.storage` | `FolderStore` (File System Access API): Lesen/Schreiben, Sicherungen, Lock, Konflikterkennung; `MemoryStore` für den Demo-Modus |
+| `js/storage.js` | `NM.storage` | `FolderStore` (File System Access API): Lesen/Schreiben, Sicherungen, Lock, Konflikterkennung; `ServerStore` (gleiche Schnittstelle über das Startprogramm, `detectServer()`); `MemoryStore` für den Demo-Modus |
 | `js/pomodoro.js` | `NM.pomodoro` | Pomodoro-Timer: Ablauf (`next`), Anzeige in der Kopfzeile, Töne per Web Audio, Einstellungsformular |
 | `js/model.js` | `NM.model` | Datenmodell: neue Datenbank/Kurse/Leistungen, Migration, Namensliste parsen, Demo-Daten |
 | `js/groups.js` | `NM.groups` | Gruppenbildung (rein, ohne DOM): Gruppengrößen, Verteilung nach Regeln/Leistung/Abwechslung (Kostenfunktion + Tauschsuche), Regelprüfung, Expertengruppen |
@@ -1071,6 +1103,7 @@ Reines HTML/CSS/JavaScript ohne Build-Schritt und ohne externe Bibliotheken. Die
 | `js/view-*.js` | `NM.views.*` | Je ein Reiter: `course`, `tests`, `epo`, `pres` (Präsentationen), `draw`, `groups` (Gruppen), `overview`, `seating`, `settings` |
 | `js/print.js` | `NM.print` | Druckansichten |
 | `css/app.css` | – | Gestaltung inkl. Hell/Dunkel (Farb-Tokens auf `:root`) und Druck-CSS |
+| `launcher/*.go` | – | Startprogramm (Go, nur Standardbibliothek, siehe 22.1): Server, Dateizugriff, Browserstart, Ordner-Dialog; `build.sh` baut alle Fassungen |
 
 **Ablauf einer Änderung**
 
@@ -1084,6 +1117,32 @@ Eingabe (change) → Daten im Objekt ändern → NM.app.commit()
 Berechnete Werte (Schnitte, Testnoten, EPO-Noten) werden **nie gespeichert**, sondern bei jedem Zeichnen aus den Rohdaten berechnet.
 
 **Pro Gerät im Browser gespeichert** (`localStorage`/IndexedDB, nicht in der Datenbank): Ordner-Handle, Geräte-ID und -name, gewählter Kurs/Reiter/Halbjahr, Farbschema, ein-/ausgeklappte Kursliste, ausgeblendete Teile in der Ergebnistabelle, Umschalter Fotos/Nachnamen im Reiter „Gruppen“ und in dessen Beameransicht, Stand des Pomodoro-Timers.
+
+### 22.1 Startprogramm (`launcher/`)
+
+Das Startprogramm ist das einzige Teil mit Build-Schritt; die App selbst bleibt ohne. Es liefert die App aus und erledigt den Dateizugriff, sodass der Browser nicht nach dem Ordner fragen muss.
+
+| Datei | Aufgabe |
+|---|---|
+| `main.go` | Ablauf: Einstellungen laden, App-Dateien finden (`--app-dir`, sonst `index.html` neben dem Programm oder bis zu 4 Ordner darüber, sonst eingebaut), Server starten, Fenster öffnen, beenden, wenn das Fenster zu ist (Browserprozess beendet und 15 s ohne Lebenszeichen; beim Standardbrowser 5 min ohne Lebenszeichen) |
+| `server.go` | HTTP: `/start?t=…` setzt das Zugriffs-Cookie, statische Dateien nur aus `index.html`, `css/`, `js/`, `logo/`, `demo/` (nie `ref/` o. Ä.), Schnittstelle `/api/…` |
+| `store.go` | Datenordner: nur `notenmanager.nmdb`, `notenmanager.lock.json`, `Sicherungen/notenmanager_*.nmdb`; Schreiben über Hilfsdatei und Umbenennen; Konfliktprüfung über die Änderungszeit |
+| `config.go`, `browser.go`, `dialog.go` | Einstellungen und Kennwort, Browsersuche (`--app`, eigenes Profil), Ordner-Dialog und Fehlermeldungen mit Bordmitteln (zenity/kdialog, osascript, PowerShell) |
+| `embed_on.go`, `build.sh` | eingebaute App-Dateien (`-tags embedapp`, `build.sh` kopiert sie nach `launcher/webapp/`) |
+
+**Schnittstelle** (alle Antworten JSON, außer Datenbank/Sicherung: Dateiinhalt):
+
+| Anfrage | Bedeutung |
+|---|---|
+| `GET /api/alive` | Lebenszeichen (alle 5 s von `ServerStore`) |
+| `GET /api/info`, `POST /api/folder {path}`, `POST /api/pick` | Datenordner abfragen, setzen, mit dem Dialog des Systems wählen |
+| `GET /api/db` (Kopf `X-Modified`), `GET /api/db/stat` | Datenbank lesen, Änderungszeit |
+| `PUT /api/db` (Köpfe `X-Expect`, `X-Force`, `X-Backup-Keep`) | speichern; `409 conflict`, wenn sich die Datei seit `X-Expect` geändert hat; vorher sichern, wenn `X-Backup-Keep` > 0 |
+| `GET/POST /api/backups`, `GET /api/backups/<Name>` | Sicherungen auflisten, anlegen, lesen |
+| `GET /api/conflicts` | Synology-Konfliktkopien |
+| `GET/PUT/DELETE /api/lock` | Lock-Datei |
+
+**Schutz:** Der Server lauscht nur auf `127.0.0.1`. Jede Anfrage braucht den passenden `Host` (`127.0.0.1`/`localhost` mit dem Port, gegen DNS-Rebinding), `/api` zusätzlich das Cookie mit dem Kennwort aus der Datei `token` (`HttpOnly`, `SameSite=Strict`); schreibende Anfragen außerdem den Kopf `X-OrdoNota: 1`, den fremde Webseiten ohne CORS-Freigabe nicht setzen können. Der Server sieht nur die verschlüsselte Datenbank. Beim Beenden entfernt er den Lock, wenn er noch von seiner Sitzung stammt.
 
 ## 23. Dateiformat der Datenbank
 
@@ -1099,7 +1158,7 @@ Berechnete Werte (Schnitte, Testnoten, EPO-Noten) werden **nie gespeichert**, so
   "kdf": "PBKDF2-SHA256",
   "savedAt": "2026-10-14T21:57:03.123Z",
   "device": "Laptop Schule",
-  "app": "1.26.0",
+  "app": "1.27.0",
   "pw":   { "salt": "<b64>", "iter": 600000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "rec":  { "salt": "<b64>", "iter": 100000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "data": { "iv": "<b64>", "ct": "<b64: verschlüsseltes JSON des Datenmodells>" }
@@ -1122,7 +1181,7 @@ Entschlüsselter Inhalt (`schema: 4`):
 ```js
 {
   schema: 4,                             // Datenformat (siehe 26.2)
-  savedWith: "1.26.0",                    // App-Version beim letzten Speichern
+  savedWith: "1.27.0",                    // App-Version beim letzten Speichern
   created: "<ISO>", savedAt: "<ISO>",
   settings: { autoLockMin, limitSek1, limitMss, precision, keepBackups, backupEveryMin, gradeColors,
               tabs: { "<Reiter>": false },   // seit 1.25: ausgeschaltete Reiter (Standard für alle Kurse)
@@ -1205,7 +1264,8 @@ Das Skript startet einen unsichtbaren Chromium-Browser (Chrome, Edge, Chromium, 
 3. das Sortieren per Klick auf Spaltenköpfe (Tests, EPO, Notenübersicht; Richtung und leere Werte unten),
 4. den Pomodoro-Timer (Aktivieren, Farben je Zustand, Phasenwechsel, Zurücksetzen, Einstellungsdialog), das Layout des Reiters „Einstellungen“ bei aktivem Timer (keine Lücken zwischen den Karten, Auswahllisten nicht abgeschnitten, bei 1570 und 2560 px) und die Kürzel in der eingeklappten Kursliste, die weichen Übergänge (nur bei Reiter-, Kurs- und Halbjahreswechsel), das Ein-/Ausklappen der Kursliste, das Ein-/Ausschalten von Reitern (Standard in den Einstellungen, Abweichung je Kurs, Ersatzreiter, Sprunglinks, „Wie Standard“), den Reiter „Tests“ in voller Breite, die Warnung bei zu wenig Punkten im Notenschlüssel (doppelte Schwellen markiert, Knöpfe „Halbe Punkte“/„Nur ganze Noten“ beheben sie), Arbeiten in Teilen (einschalten, Aufgaben und Punkte je Teil, Teil ausblenden, getrennt benoten, Status je Teil, Schlüssel je Teil, Ausdrucke inkl. „Ergebnisse nach Teilen“, Beamer, Teile aufheben), die Druckauswahl „🖨 Drucken …“ in Tests, EPO und Notenübersicht (Gruppen, Tooltips, Auswahl druckt, Abbrechen nicht) und den Haken „Unterschrift gesehen“ bei Klassenarbeiten (Zähler, Ausdruck), den Moodle-Import (Knopf im Test statt neben „+ Neuer Test“, bisherige Aufgaben ersetzen oder behalten, Dateiauswahl im Dialog, Zuordnung, Status „fehlt“, Ausdruck mit und ohne Note, erneuter Import),
 5. den Excel-Export der Schülerliste (gültiges ZIP/XML, Umlaute und Sonderzeichen), das Kurs-Löschen nur mit „LÖSCHEN“, das Ein-/Ausblenden der Fotos im EPO-Reiter und im Sitzplan (auch im Druck) das Erweitern/Verkleinern des Sitzplan-Rasters an allen vier Seiten sowie das Ziehen (keine Wiederholung bis zum Auffüllen, automatisches Auffüllen, Note, Rückgängig, Abwesende/Herausgenommene) und den Reiter „Präsentationen“ (Bewerten per Knopf und in der Tabelle, Gewicht, Kriterien aus dem Pool und eigene, Vorlage, Ausdrucke, Spalte in der Notenübersicht, Pool bearbeiten, Startbestand ergänzen, Vorlagen speichern/anlegen/verwenden/drucken/löschen, Standardvorlagen vorhanden und ergänzen, Handreichung mit Notenschlüssel) und Gruppenpräsentationen (Gruppenwert für alle Mitglieder, Personenkriterien, Abweichung setzen/zurücksetzen, Tabelle, Gruppen bearbeiten/übernehmen, Druck, Auflösen ohne Notenänderung), den Reiter „Gruppen“ (neue Einteilung, Abwesende, Fixieren, Anklicken/Ziehen, Auftrag, Regel mit Warnung, Beamer ohne Noten mit Schrift passend zum Bildschirm und Umschaltern für Fotos/Nachnamen, Druck, Fotos/Nachnamen in der Einteilung, Gruppenpuzzle mit Expertengruppen unter den Stammgruppen, Anzahl der Teilthemen einstellbar und beim Neu verteilen erhalten, Hinweis nach Änderungen, Beamer-Umschalter Stamm-/Expertengruppen, Übernahme in eine Präsentation),
-6. das Notfallwerkzeug: Eine von der App echt verschlüsselte Datenbank wird mit `tools/entschluesseln.py` per Passwort und per Wiederherstellungsschlüssel entschlüsselt und mit dem Original verglichen. Dazu kommen falsches Passwort, manipulierte Datei und CSV-Ausgabe.
+6. das Notfallwerkzeug: Eine von der App echt verschlüsselte Datenbank wird mit `tools/entschluesseln.py` per Passwort und per Wiederherstellungsschlüssel entschlüsselt und mit dem Original verglichen. Dazu kommen falsches Passwort, manipulierte Datei und CSV-Ausgabe,
+7. das Startprogramm (nur wenn Go installiert ist, sonst übersprungen): `go test` in `launcher/` (Zugriffsschutz, nur erlaubte Dateien, Speichern und Konflikt, Sicherungen, Konfliktkopien, Lock, Datenordner wählen, Kennwort, Programmordner finden), dann ein echter Start mit Testordner: Zugriff ohne Kennwort abgelehnt, zweiter Start erkennt das laufende Programm, die App erkennt das Startprogramm, legt eine Datenbank an (ohne Rückfrage), speichert Änderungen in den Ordner (mit dem Notfallwerkzeug geprüft), erkennt eine externe Änderung und gibt den Lock beim Beenden frei.
 
 Am Ende steht `ERGEBNIS: x von y bestanden`. Der Exit-Code ist 0, wenn alles bestanden ist.
 
@@ -1246,7 +1306,7 @@ In `js/model.js` stehen zwei Nummern:
 
 | Konstante | Bedeutung | Wann erhöhen |
 |---|---|---|
-| `APP_VERSION` (z. B. `1.26.0`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.26.0` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
+| `APP_VERSION` (z. B. `1.27.0`) | Programmversion. Wird beim Speichern in der Datenbank vermerkt und unter Einstellungen angezeigt. Dieselbe Nummer steht als `?v=1.27.0` hinter jeder CSS-/JS-Datei in `index.html`, damit der Browser keine veraltete Fassung aus dem Zwischenspeicher lädt. | bei jeder veröffentlichten Änderung (beide Stellen) |
 | `SCHEMA` (z. B. `4`) | Version des Datenformats (2 seit 1.18: Arbeiten in Teilen; 3 seit 1.20: Präsentationen; 4 seit 1.23: Gruppenpräsentationen) | nur, wenn eine **ältere** App-Version die neuen Daten falsch verstehen würde (z. B. ein Feld ändert seine Bedeutung) |
 
 Öffnet eine App eine Datenbank mit höherem `SCHEMA`, verweigert sie das mit einer Meldung (siehe 21.10). Neue, nur *zusätzliche* Felder brauchen kein neues `SCHEMA`: Ältere Versionen lassen unbekannte Felder unverändert und speichern sie mit.
@@ -1277,4 +1337,5 @@ In `js/model.js` stehen zwei Nummern:
 - **Neue Kursart:** Eintrag in `COURSE_TYPES` in `js/grades.js`.
 - **Farben:** Tokens oben in `css/app.css` (`:root` hell, darunter dunkel).
 - **Änderungen am Datenmodell:** Standardwerte in `NM.model.migrate()` ergänzen, damit bestehende Datenbanken weiter funktionieren. Bei inkompatiblen Änderungen `SCHEMA` erhöhen.
-- **Neue Version einspielen:** Programmordner (`index.html`, `css/`, `js/`) ersetzen. Der Datenordner bleibt unberührt. Vorher eine Sicherung anlegen.
+- **Startprogramm:** Quelltext in `launcher/` (Go, nur Standardbibliothek), Tests `launcher/server_test.go` (laufen in `run_tests.py` mit, E2E `run_launcher_check`). Neue Schnittstellen immer in `server.go` und `ServerStore` (`js/storage.js`) zugleich, mit derselben Bedeutung wie in `FolderStore`. Neue Ordner mit App-Dateien in `staticAllowed` (`server.go`) und in `build.sh` eintragen. Bauen: `launcher/build.sh`.
+- **Neue Version einspielen:** Programmordner (`index.html`, `css/`, `js/`) ersetzen; für das Startprogramm mit eingebauten Dateien vorher `launcher/build.sh` laufen lassen. Der Datenordner bleibt unberührt. Vorher eine Sicherung anlegen.

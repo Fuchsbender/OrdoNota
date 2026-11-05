@@ -10,6 +10,7 @@ Geprüft werden:
   1. Notenlogik, Datenmodell, Verschlüsselung, Speicher (die tests/*.test.html-Seiten)
   2. Start der App im Demo-Modus und alle Reiter ohne JavaScript-Fehler
   3. Das Notfallwerkzeug tools/entschluesseln.py gegen eine von der App verschlüsselte Datenbank
+  4. Das Startprogramm launcher/ (Go-Tests und echter Server; übersprungen, wenn Go fehlt)
 
 Ergebnis: Exit-Code 0, wenn alles bestanden ist.
 """
@@ -25,6 +26,7 @@ import sys
 import tempfile
 import threading
 import time
+import urllib.error
 import urllib.request
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -1262,6 +1264,95 @@ def run_moodle_check(br, base):
     report("Moodle: Import im Test (Aufgaben ersetzen/behalten), Zuordnung, „fehlt“, Ausdruck mit/ohne Note, erneuter Import", ok and not br.errors, str(res) + "; ".join(br.errors))
 
 
+def run_launcher_check(br, base):
+    """Startprogramm (launcher/): Go-Tests, echter Server, App legt Datenbank an und speichert in den Ordner."""
+    print("Startprogramm (launcher/):")
+    go = shutil.which("go")
+    if not go:
+        print("  –     übersprungen: Go ist nicht installiert")
+        return
+    lroot = os.path.join(ROOT, "launcher")
+    r = subprocess.run([go, "test", "./..."], cwd=lroot, capture_output=True, text=True)
+    report("go test", r.returncode == 0, (r.stdout + r.stderr)[-500:])
+    tmp = tempfile.mkdtemp(prefix="nm-launcher-")
+    exe = os.path.join(tmp, "ordonota" + (".exe" if os.name == "nt" else ""))
+    r = subprocess.run([go, "build", "-o", exe, "."], cwd=lroot, capture_output=True, text=True)
+    report("Programm baut", r.returncode == 0, r.stderr[-500:])
+    if r.returncode:
+        shutil.rmtree(tmp, ignore_errors=True)
+        return
+    data, cfg = os.path.join(tmp, "Daten ä"), os.path.join(tmp, "cfg")
+    os.makedirs(data)
+    port = free_port()
+    args = [exe, "--no-browser", "--port", str(port), "--config-dir", cfg, "--data", data, "--app-dir", ROOT]
+    env = dict(os.environ, ORDONOTA_NO_DESKTOP="1")
+    proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, env=env)
+    spec = importlib.util.spec_from_file_location("entschluesseln", os.path.join(ROOT, "tools", "entschluesseln.py"))
+    tool = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(tool)
+    dbf, lockf = os.path.join(data, "notenmanager.nmdb"), os.path.join(data, "notenmanager.lock.json")
+    try:
+        url = proc.stdout.readline().strip()
+        report("Server startet", url.startswith(f"http://127.0.0.1:{port}/start?t="), url)
+        try:
+            urllib.request.urlopen(f"http://127.0.0.1:{port}/api/info")
+            report("Ohne Kennwort kein Zugriff", False, "Antwort 200")
+        except urllib.error.HTTPError as e:
+            report("Ohne Kennwort kein Zugriff", e.code == 401, str(e.code))
+        second = subprocess.run(args, capture_output=True, text=True, env=env, timeout=10)
+        report("Zweiter Start erkennt laufendes Programm", second.returncode == 0 and second.stdout.strip() == url, second.stdout + second.stderr)
+
+        br.open(url)
+        ok = br.wait("!!(window.NM && NM.app && NM.app.state.server && NM.app.state.store && document.querySelector('.auth-card input[type=password]'))", 30)
+        report("App erkennt das Startprogramm", ok and br.eval("NM.app.state.store.name") == "Daten ä", "; ".join(br.errors))
+        pw = "Prüf-Passwort 2026"
+        # Entsperren ohne Datenbank → „Neue Datenbank anlegen“
+        br.eval(f"(() => {{ const i = document.querySelector('.auth-card input[type=password]'); i.value = {json.dumps(pw)}; i.form.requestSubmit(); return 1; }})()")
+        br.wait("document.querySelectorAll('.auth-card input[type=password]').length === 2", 20)
+        br.eval(f"(() => {{ const [a, b] = document.querySelectorAll('.auth-card input[type=password]'); a.value = b.value = {json.dumps(pw)}; a.form.requestSubmit(); return 1; }})()")
+        br.wait("!!document.querySelector('dialog.modal input[type=checkbox]')", 60)
+        br.eval("(() => { const d = document.querySelector('dialog.modal'); d.querySelector('input[type=checkbox]').checked = true; d.querySelector('.btn-primary').click(); return 1; })()")
+        ok = br.wait("!!document.getElementById('save-status')", 60)
+        for _ in range(50):
+            if os.path.exists(dbf) and os.path.exists(lockf):
+                break
+            time.sleep(0.2)
+        report("Datenbank und Lock im Ordner angelegt (ohne Rückfrage)", ok and os.path.exists(dbf) and os.path.exists(lockf), "; ".join(br.errors))
+        with open(dbf, encoding="utf-8") as f:
+            outer = json.load(f)
+        report("Datei mit Notfallwerkzeug lesbar", outer.get("format") == "notenmanager-db" and "schema" in tool.entschluesseln(outer, pw))
+        br.eval("NM.app.state.db.settings.keepBackups = 7; NM.app.commit(); 1")
+        def saved():
+            with open(dbf, encoding="utf-8") as f:
+                return tool.entschluesseln(json.load(f), pw)["settings"]["keepBackups"] == 7
+        for _ in range(40):
+            time.sleep(0.25)
+            if saved():
+                break
+        report("Änderung wird in den Ordner gespeichert", saved())
+        # Anderes Gerät ändert die Datei → Konflikt-Dialog statt Überschreiben
+        time.sleep(0.05)
+        os.utime(dbf, None)
+        br.eval("NM.app.state.db.settings.keepBackups = 8; NM.app.commit(); 1")
+        ok = br.wait("[...document.querySelectorAll('dialog.modal h2')].some((x) => x.textContent.includes('extern geändert'))", 15)
+        report("Externe Änderung erkannt (Konflikt-Dialog)", ok and saved() and not br.errors, "; ".join(br.errors))
+        br.eval("(() => { const d = document.querySelector('dialog.modal'); [...d.querySelectorAll('button')].find((b) => b.textContent === 'Später').click(); return 1; })()")
+        names = br.eval("NM.app.state.store.listBackups()")
+        report("Sicherungen über das Startprogramm", isinstance(names, list), str(names))
+    except Exception as e:
+        report("Startprogramm im Browser", False, str(e))
+    finally:
+        proc.terminate()
+        try:
+            proc.wait(5)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+        if os.name != "nt":
+            report("Beim Beenden wird der eigene Lock freigegeben", not os.path.exists(lockf))
+        br.open("about:blank")
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 def run_decrypt_tool(br, base):
     print("Notfallwerkzeug tools/entschluesseln.py:")
     spec = importlib.util.spec_from_file_location("entschluesseln", os.path.join(ROOT, "tools", "entschluesseln.py"))
@@ -1357,6 +1448,7 @@ def main():
         run_groups_tab_check(br, base)
         run_moodle_check(br, base)
         run_decrypt_tool(br, base)
+        run_launcher_check(br, base)
     finally:
         br.close()
         srv.shutdown()

@@ -1,8 +1,33 @@
 # OrdoNota – Geplante Funktionen
 
-Erledigt: A Arbeit in Teilen (1.18.0), Druckauswahl (1.19.0), B Präsentationen (1.20.0–1.22.0), D Gruppenpräsentationen (1.23.0), E Reiter „Gruppen“ (1.24.0), Reiter ein-/ausschalten (1.25.0), Moodle-Import im Test (1.26.0).
+Erledigt: A Arbeit in Teilen (1.18.0), Druckauswahl (1.19.0), B Präsentationen (1.20.0–1.22.0), D Gruppenpräsentationen (1.23.0), E Reiter „Gruppen“ (1.24.0), Reiter ein-/ausschalten (1.25.0), Moodle-Import im Test (1.26.0), F Startprogramm (1.27.0).
 
-## C) Gamification des Pomodoro-Timers – 1.27.0 (als Nächstes)
+## F) Startprogramm (Server + App-Fenster) – umgesetzt in 1.27.0
+
+Ziel: Start per Verknüpfung, ohne die Rückfrage „Zugriff auf den Ordner erlauben“ – auf Linux, Windows und Mac, ohne dass Python o. Ä. installiert sein muss.
+
+Entscheidungen des Nutzers: Go (ein Programm je System, gebaut auf Linux), Start per Verknüpfung, Browser im App-Fenster (`--app`). Mit Empfehlung umgesetzt (Fragen offen gelassen): Datenordner beim ersten Start wählen (Ordner-Dialog des Systems, sonst Pfad eingeben) und in einer Einstellungsdatei merken; Server endet, wenn das Fenster geschlossen ist; Weitergabe an Kollegen als ZIP mit App-Dateien und Programmen.
+
+- `launcher/` (Go, nur Standardbibliothek): Server auf `127.0.0.1` mit festem Port (sonst gingen Gerätename und Ansicht im Browser-Speicher verloren), liefert nur die App-Dateien (`index.html`, `css/`, `js/`, `logo/`, `demo/`) und eine kleine Schnittstelle `/api/…` für Datenbank, Sicherungen, Lock und Konfliktkopien. Nur bekannte Dateinamen. Zugriff nur mit Kennwort-Cookie (pro Benutzer, Datei nur für ihn lesbar) und passendem `Host`.
+- Browser: Chrome/Edge/Chromium/Thorium/Brave mit `--app` und eigenem Profil; sonst Standardbrowser. Zweiter Start öffnet nur ein neues Fenster.
+- Linux: `.desktop`-Eintrag legt das Programm selbst an. Windows: `OrdoNota.exe` ohne Konsole. Mac: `OrdoNota.app` (Skript wählt Intel/Apple-Silicon).
+- App: `NM.storage.ServerStore` (gleiche Schnittstelle wie `FolderStore`), `NM.storage.detectServer()`. Doppelklick auf `index.html` funktioniert weiter.
+- Bauen: `launcher/build.sh` → `dist/`. Nur die App-Dateien kommen mit eingebauten Dateien ins Programm (`-tags embedapp`), damit es unter macOS auch nach dem Verschieben durch Gatekeeper läuft.
+- Offen/später: Programmsymbol für Windows (`.ico`) und Mac (`.icns`), Signierung.
+
+## G) Datenbank aus Datei öffnen und Datenordner wechseln – 1.28.0 (als Nächstes)
+
+Anlass: Der Nutzer will Programmordner (nur lokal, per Git) und Datenordner (Synology) trennen und die Datenbank als eine Datei sichern und umziehen.
+
+1. **Aus Datei wiederherstellen:** Einstellungen → Speicherort & Sicherungen → „Aus Datei wiederherstellen …“: eine `.nmdb`-Datei (z. B. „Verschlüsselte Kopie herunterladen“) wählen (`<input type=file>`, kein Ordnerzugriff nötig), wie `restoreBackup` öffnen (anderer Schlüssel → Passwort der Datei abfragen), aktuellen Stand vorher sichern, dann übernehmen. Auch auf dem Startbildschirm bei leerem Ordner: „Neue Datenbank anlegen“ oder „Vorhandene Datenbank aus Datei übernehmen“ (dann mit deren Passwort entsperren).
+2. **Datenordner wechseln:** Einstellungen → „Datenordner wechseln …“: neuen Ordner wählen; liegt dort schon eine Datenbank → Hinweis und Abbruch (nichts überschreiben) bzw. „diese öffnen“; sonst aktuelle Datenbank dorthin schreiben, Sicherungen auf Wunsch mitkopieren, Lock im alten Ordner freigeben, neuen Ordner merken. Der alte Ordner bleibt unverändert (Hinweis: kann gelöscht werden). Für `FolderStore` und `ServerStore` (neue Schnittstelle zum Kopieren der Sicherungen bzw. Schreiben in den neuen Ordner).
+3. Doku: Umzug Programmordner/Datenordner (Abschnitt 3 und 4), Git-Klon außerhalb von Synology, Update per `git pull && launcher/build.sh`.
+
+Offene Fragen (Empfehlung jeweils dabei):
+1. Sicherungen beim Wechsel mitkopieren: fragen (Empfehlung) oder immer/nie?
+2. Wiederherstellen aus Datei mit fremdem Passwort: das aktuelle Passwort behalten (Empfehlung, Datei wird mit dem aktuellen Schlüssel neu verschlüsselt) oder das der Datei übernehmen?
+
+## C) Gamification des Pomodoro-Timers (zurückgestellt, erst auf Nachfrage des Nutzers)
 
 **Vor Beginn die offenen Fragen unten mit dem Nutzer klären.** C ergänzt nur Felder → kein neues `SCHEMA`; `migrate()` und `tools/entschluesseln.py` (CSV-Ausgabe) mitziehen.
 

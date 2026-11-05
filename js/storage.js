@@ -4,6 +4,9 @@
  *   notenmanager.nmdb          verschlüsselte Datenbank
  *   notenmanager.lock.json     Hinweis, auf welchem Gerät die App gerade offen ist
  *   Sicherungen/               rollierende Sicherungskopien
+ *
+ * FolderStore greift über die File System Access API direkt auf den Ordner zu (Start per Doppelklick).
+ * ServerStore spricht mit dem Startprogramm (launcher/), das die Dateien schreibt – ohne Rückfrage des Browsers.
  */
 (function (NM) {
   'use strict';
@@ -240,6 +243,141 @@
     }
   }
 
+  // ---------- Startprogramm (launcher/) ----------
+
+  /** Läuft die App über das Startprogramm? (Antwort von /api/alive) */
+  async function detectServer() {
+    if (!/^https?:$/.test(location.protocol)) return false;
+    try {
+      const r = await fetch('/api/alive', { cache: 'no-store', credentials: 'same-origin' });
+      return r.ok && (await r.json()).ok === true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  async function api(path, { method = 'GET', body, headers = {}, keepalive = false } = {}) {
+    const h = Object.assign({ 'X-OrdoNota': '1' }, headers);
+    const r = await fetch('/api/' + path, { method, body, headers: h, cache: 'no-store', credentials: 'same-origin', keepalive });
+    if (r.status === 409) {
+      const e = await r.json().catch(() => ({}));
+      if (e.error === 'conflict') throw new ConflictError('Die Datenbank wurde inzwischen von einem anderen Gerät geändert.');
+      if (e.error === 'nofolder') throw new Error('Kein Datenordner gewählt.');
+    }
+    if (!r.ok) {
+      const e = await r.json().catch(() => ({}));
+      const err = new Error(e.error || 'Startprogramm antwortet nicht (' + r.status + ').');
+      err.status = r.status;
+      throw err;
+    }
+    return r;
+  }
+
+  /** Zugriff auf den Datenordner über das Startprogramm. Gleiche Schnittstelle wie FolderStore. */
+  class ServerStore {
+    constructor(info) {
+      this.name = info.name;
+      this.path = info.dataDir;
+      this.knownModified = null;
+      this.lastBackup = 0;
+      // Lebenszeichen: Das Startprogramm beendet sich, wenn das Fenster zu ist
+      if (!ServerStore.ping) ServerStore.ping = setInterval(() => fetch('/api/alive', { cache: 'no-store' }).catch(() => {}), 5000);
+    }
+
+    static async remembered() {
+      const info = await (await api('info')).json();
+      return info.dataDir ? new ServerStore(info) : null;
+    }
+
+    /** Ordner-Dialog des Systems; ohne Dialog (z. B. Linux ohne zenity) Pfad eingeben. */
+    static async pick() {
+      const r = await (await api('pick', { method: 'POST' })).json();
+      let path = r.path;
+      if (r.cancel) throw Object.assign(new Error('abgebrochen'), { name: 'AbortError' });
+      if (!path) {
+        path = await NM.util.promptDialog('Datenordner', 'Vollständiger Pfad des Datenordners (z. B. im Synology-Drive-Ordner):', '');
+        if (!path) throw Object.assign(new Error('abgebrochen'), { name: 'AbortError' });
+      }
+      const info = await (await api('folder', { method: 'POST', body: JSON.stringify({ path }) })).json();
+      return new ServerStore(info);
+    }
+
+    async ensurePermission() {
+      return true;
+    }
+
+    async exists() {
+      return (await (await api('db/stat')).json()).exists;
+    }
+
+    async read() {
+      const r = await api('db');
+      this.knownModified = r.headers.get('X-Modified');
+      return JSON.parse(await r.text());
+    }
+
+    async changedExternally() {
+      if (this.knownModified === null) return false;
+      try {
+        const st = await (await api('db/stat')).json();
+        return st.exists && st.modified !== this.knownModified;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    async write(obj, { force = false, backupEveryMin = 10, keepBackups = 10 } = {}) {
+      const backup = Date.now() - this.lastBackup > backupEveryMin * 60000;
+      const headers = { 'Content-Type': 'application/json', 'X-Expect': this.knownModified || '', 'X-Force': force ? '1' : '0', 'X-Backup-Keep': backup ? String(keepBackups) : '0' };
+      const r = await (await api('db', { method: 'PUT', body: JSON.stringify(obj), headers })).json();
+      if (backup) this.lastBackup = Date.now();
+      this.knownModified = r.modified;
+    }
+
+    async backupNow(obj, keep) {
+      await api('backups', { method: 'POST', body: JSON.stringify(obj), headers: { 'Content-Type': 'application/json', 'X-Backup-Keep': String(keep) } });
+      this.lastBackup = Date.now();
+    }
+
+    async listBackups() {
+      return (await api('backups')).json();
+    }
+
+    async readBackup(name) {
+      return (await api('backups/' + encodeURIComponent(name))).json();
+    }
+
+    async findConflicts() {
+      return (await api('conflicts')).json();
+    }
+
+    async readLock() {
+      try {
+        return await (await api('lock')).json();
+      } catch (e) {
+        return null;
+      }
+    }
+
+    async foreignLock() {
+      const l = await this.readLock();
+      if (!l || l.deviceId === deviceId()) return null;
+      if (Date.now() - new Date(l.heartbeat).getTime() > LOCK_STALE_MIN * 60000) return null;
+      return l;
+    }
+
+    async writeLock(since) {
+      const now = new Date().toISOString();
+      await api('lock', { method: 'PUT', body: JSON.stringify({ deviceId: deviceId(), device: deviceName(), since: since || now, heartbeat: now }), headers: { 'Content-Type': 'application/json' } });
+    }
+
+    /** keepalive: Die Anfrage geht auch beim Schließen des Fensters noch raus. */
+    async releaseLock() {
+      const l = await this.readLock();
+      if (l && l.deviceId === deviceId()) await api('lock', { method: 'DELETE', keepalive: true }).catch(() => {});
+    }
+  }
+
   /** Speicher im Arbeitsspeicher – nur für die Demo (index.html?demo). */
   class MemoryStore {
     constructor() {
@@ -261,7 +399,9 @@
 
   NM.storage = {
     FolderStore,
+    ServerStore,
     MemoryStore,
+    detectServer,
     ConflictError,
     supported,
     deviceId,
