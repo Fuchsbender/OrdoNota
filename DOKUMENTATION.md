@@ -1,6 +1,6 @@
 # OrdoNota – Dokumentation
 
-Version 1.37.0 · Stand November 2026
+Version 1.37.1 · Stand November 2026
 
 OrdoNota (bis Version 1.11 „Notenmanager“) verwaltet Noten für die Sekundarstufe I (Noten 1–6 mit Tendenz) und die Mainzer Studienstufe (MSS, Punkte 00–15) an Schulen in Rheinland-Pfalz. Die App läuft vollständig lokal im Browser, verschlüsselt alle Daten mit einem Passwort und legt sie in einem Ordner ab, den der Synology Drive Client auf die DiskStation spiegelt.
 
@@ -146,7 +146,7 @@ Statt `index.html` per Doppelklick zu öffnen, können Sie OrdoNota über das **
 
 | System | Datei | Start |
 |---|---|---|
-| Linux | `OrdoNota` (im Programmordner) bzw. `OrdoNota-Linux` | Doppelklick oder `./OrdoNota`. Beim ersten Start legt das Programm den Eintrag „OrdoNota“ im Startmenü an. Startmenü und Taskleiste zeigen das Zeichen ohne Schriftzug (`logo/ordonota-icon.svg`). |
+| Linux | `OrdoNota` (im Programmordner) bzw. `OrdoNota-Linux` | Doppelklick oder `./OrdoNota`. Beim ersten Start legt das Programm den Eintrag „OrdoNota“ im Startmenü an (`~/.local/share/applications/OrdoNota.desktop`, passend zur Fensterklasse `OrdoNota`; ein alter `ordonota.desktop` bis 1.37.0 wird ersetzt) und erneuert den Menü-Cache (`kbuildsycoca6`, sonst `update-desktop-database`). Wurde das Programm verschoben, genügt ein Start vom neuen Ort aus. Startmenü und Taskleiste zeigen das Zeichen ohne Schriftzug (`logo/ordonota-icon.svg`). |
 | Windows | `OrdoNota.exe` | Doppelklick; Verknüpfung über Rechtsklick → *Senden an* → *Desktop*. Beim ersten Mal: „Weitere Informationen“ → „Trotzdem ausführen“. |
 | macOS | `OrdoNota.app` | in „Programme“ ziehen; beim ersten Mal Rechtsklick → *Öffnen* → *Öffnen*. |
 
@@ -1190,6 +1190,7 @@ Das Startprogramm ist das einzige Teil mit Build-Schritt; die App selbst bleibt 
 | `main.go` | Ablauf: Einstellungen laden, App-Dateien finden (`--app-dir`, sonst `index.html` neben dem Programm oder bis zu 4 Ordner darüber, sonst eingebaut), Server starten, Fenster öffnen, beenden, wenn das Fenster zu ist (Browserprozess beendet und 15 s ohne Lebenszeichen; beim Standardbrowser 5 min ohne Lebenszeichen); legt unter Linux das Programmsymbol `logo/ordonota-icon.svg` (nur das Zeichen) als `ordonota-icon.svg` in den Einstellungsordner (`writeIcon`) |
 | `server.go` | HTTP: `/start?t=…` setzt das Zugriffs-Cookie, statische Dateien nur aus `index.html`, `css/`, `js/`, `logo/`, `demo/`, `cards/` (nie `ref/` o. Ä.), Schnittstelle `/api/…` |
 | `store.go` | Datenordner: nur `notenmanager.nmdb`, `notenmanager.lock.json`, `Sicherungen/notenmanager_*.nmdb`; Schreiben über Hilfsdatei und Umbenennen; Konfliktprüfung über die Änderungszeit |
+| `desktop_linux.go` | Startmenü-Eintrag `OrdoNota.desktop` (Name = Fensterklasse, sonst ordnet KWin das Fenster nicht zu), alten `ordonota.desktop` entfernen, Menü-Cache erneuern |
 | `config.go`, `browser.go`, `dialog.go` | Einstellungen und Kennwort, Browsersuche (`--app`, eigenes Profil), Ordner-Dialog und Fehlermeldungen mit Bordmitteln (zenity/kdialog, osascript, PowerShell) |
 | `embed_on.go`, `build.sh` | eingebaute App-Dateien (`-tags embedapp`, `build.sh` kopiert sie nach `launcher/webapp/`) |
 
@@ -1223,7 +1224,7 @@ Das Startprogramm ist das einzige Teil mit Build-Schritt; die App selbst bleibt 
   "kdf": "PBKDF2-SHA256",
   "savedAt": "2026-10-14T21:57:03.123Z",
   "device": "Laptop Schule",
-  "app": "1.37.0",
+  "app": "1.37.1",
   "pw":   { "salt": "<b64>", "iter": 600000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "rec":  { "salt": "<b64>", "iter": 100000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "data": { "iv": "<b64>", "ct": "<b64: verschlüsseltes JSON des Datenmodells>" }
@@ -1246,7 +1247,7 @@ Entschlüsselter Inhalt (`schema: 4`):
 ```js
 {
   schema: 4,                             // Datenformat (siehe 26.2)
-  savedWith: "1.37.0",                    // App-Version beim letzten Speichern
+  savedWith: "1.37.1",                    // App-Version beim letzten Speichern
   created: "<ISO>", savedAt: "<ISO>",
   settings: { autoLockMin, limitSek1, limitMss, precision, testCat: "ka" | "other" /* seit 1.30 */, keepBackups, backupEveryMin, gradeColors,
               tabs: { "<Reiter>": false },   // seit 1.25: ausgeschaltete Reiter (Standard für alle Kurse)
@@ -1415,5 +1416,5 @@ In `js/model.js` stehen zwei Nummern:
 - **Neue Kursart:** Eintrag in `COURSE_TYPES` in `js/grades.js`.
 - **Farben:** Tokens oben in `css/app.css` (`:root` hell, darunter dunkel).
 - **Änderungen am Datenmodell:** Standardwerte in `NM.model.migrate()` ergänzen, damit bestehende Datenbanken weiter funktionieren. Bei inkompatiblen Änderungen `SCHEMA` erhöhen.
-- **Startprogramm:** Quelltext in `launcher/` (Go, nur Standardbibliothek), Tests `launcher/server_test.go` (laufen in `run_tests.py` mit, E2E `run_launcher_check`). Neue Schnittstellen immer in `server.go` und `ServerStore` (`js/storage.js`) zugleich, mit derselben Bedeutung wie in `FolderStore`. Ordnerwechsel: `store.pickTarget()` → `{ name, hasDb, same }`, `store.moveTo(ziel, { backups })`, `Store.useTarget(ziel)` (ohne Kopieren); Oberfläche `changeFolder`, `restoreFromFile` in `js/view-settings.js`, `importFromFile`/`NM.app.switchStore` in `js/app.js`, Dateiauswahl `NM.util.pickFile`. Neue Ordner mit App-Dateien in `staticAllowed` (`server.go`) und in `build.sh` eintragen. Bauen: `launcher/build.sh`.
+- **Startprogramm:** Quelltext in `launcher/` (Go, nur Standardbibliothek), Tests `launcher/server_test.go`, `icon_test.go`, `desktop_linux_test.go` (laufen in `run_tests.py` mit, E2E `run_launcher_check`). Neue Schnittstellen immer in `server.go` und `ServerStore` (`js/storage.js`) zugleich, mit derselben Bedeutung wie in `FolderStore`. Ordnerwechsel: `store.pickTarget()` → `{ name, hasDb, same }`, `store.moveTo(ziel, { backups })`, `Store.useTarget(ziel)` (ohne Kopieren); Oberfläche `changeFolder`, `restoreFromFile` in `js/view-settings.js`, `importFromFile`/`NM.app.switchStore` in `js/app.js`, Dateiauswahl `NM.util.pickFile`. Neue Ordner mit App-Dateien in `staticAllowed` (`server.go`) und in `build.sh` eintragen. Bauen: `launcher/build.sh`.
 - **Neue Version einspielen:** Programmordner (`index.html`, `css/`, `js/`) ersetzen; für das Startprogramm mit eingebauten Dateien vorher `launcher/build.sh` laufen lassen. Der Datenordner bleibt unberührt. Vorher eine Sicherung anlegen.
