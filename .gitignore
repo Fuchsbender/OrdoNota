@@ -13,6 +13,13 @@ Sicherungen/
 *.xls
 *.ods
 .~lock.*
+# Alte Excel-Vorlagen und Referenzmaterial (echte Namen), ganz ausgeschlossen
+ref/
+
+# ── Claude Code (lokale Hinweise und Einstellungen, nicht öffentlich) ──
+CLAUDE.md
+CLAUDE.local.md
+.claude/
 
 # ── Sonstiges ──
 __pycache__/
