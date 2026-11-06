@@ -46,6 +46,31 @@
     return h('span', { class: 'muted small' }, parts.join(''), ' (änderbar unter „Kurs & Schüler“)');
   }
 
+  /** Zeitraum mehrerer Spalten, z. B. „12.09.–03.10.“ */
+  function drawRange(cols) {
+    const d = cols.map((a) => a.date).filter(Boolean).sort();
+    if (!d.length) return '';
+    const f = (x) => x.slice(8, 10) + '.' + x.slice(5, 7) + '.';
+    return d[0] === d[d.length - 1] ? f(d[0]) : f(d[0]) + '–' + f(d[d.length - 1]);
+  }
+
+  /** Gebündelte Ziehungsspalten: die Noten der Person nebeneinander (nur Anzeige; bearbeiten nach dem Aufklappen). */
+  function bundleCell(cols, s, level) {
+    const items = cols
+      .map((a) => {
+        const g = a.manual.grades[s.id] || {};
+        if (g.status) return { a, text: UI.STATUS_SHORT[g.status] };
+        if (g.p === undefined || g.p === null) return null;
+        return { a, text: G.label(g.p, level), p: g.p };
+      })
+      .filter(Boolean);
+    return h(
+      'td',
+      { class: 'center draw-bundle', title: items.map((x) => `${x.a.name}: ${x.text}`).join('\n') || 'Keine Note aus Ziehungen' },
+      items.length ? items.map((x) => (x.p !== undefined ? UI.gradeBadge(x.p, level, 'ro') : h('span', { class: 'muted small' }, x.text))) : h('span', { class: 'muted' }, '·')
+    );
+  }
+
   function halfCard(course, half, level) {
     const list = course.assessments.filter((a) => a.half === half);
     const ka = list.filter((a) => a.cat === 'ka').sort(byDate);
@@ -63,12 +88,35 @@
     });
     const students = sort.rows(all);
     const showKa = Number(course.wKa) > 0 || ka.length > 0;
-    let col = 0;
-    const colIndex = new Map();
-    for (const a of [...ka, ...other]) if (a.kind === 'manual') colIndex.set(a.id, col++);
-    const overCol = col;
     // Spalten aus dem Reiter „Ziehen“: wer nicht gezogen wurde, bekommt ein ausgegrautes Feld
     const drawn = new Map(((course.draw || {}).history || []).map((e) => [e.aid, new Set(e.sids)]));
+    // Eingeklappte Gruppen und gebündelte Ziehungsspalten (pro Gerät, nur Ansicht; Ausdrucke zeigen alles)
+    const fold = NM.app.state.ui.ovFold || {};
+    const toggleFold = (k) => {
+      const ui = NM.app.state.ui;
+      ui.ovFold = Object.assign({}, ui.ovFold, { [k]: !fold[k] });
+      NM.app.saveUi();
+      NM.app.rerender();
+    };
+    const drawCols = other.filter((a) => a.kind === 'manual' && drawn.has(a.id));
+    const BUNDLE = { bundle: true };
+    const kaCols = fold.ka ? [] : ka;
+    let otherCols = fold.other ? [] : other;
+    if (!fold.other && fold.draw && drawCols.length) {
+      const first = other.indexOf(drawCols[0]);
+      otherCols = other.filter((a) => !drawCols.includes(a));
+      otherCols.splice(other.slice(0, first).filter((a) => !drawCols.includes(a)).length, 0, BUNDLE);
+    }
+    let col = 0;
+    const colIndex = new Map();
+    for (const a of [...(showKa ? kaCols : []), ...otherCols]) if (a.kind === 'manual') colIndex.set(a.id, col++);
+    const overCol = col;
+    const foldBtn = (k, label, n) =>
+      h(
+        'button',
+        { class: 'link fold-btn', 'data-fold': k, 'aria-expanded': fold[k] ? 'false' : 'true', title: fold[k] ? label + ' einblenden' : label + ' einklappen (nur Ø bleibt)', onclick: () => toggleFold(k) },
+        (fold[k] ? '▸ ' : '▾ ') + label + (fold[k] && n ? ` (${n})` : '')
+      );
 
     const th = (a) =>
       h(
@@ -102,16 +150,27 @@
       'tr',
       { class: 'group-row' },
       sort.nameHeads({ rowspan: 2 }),
-      showKa ? h('th', { class: 'group', colspan: ka.length + 1 }, 'Klassen-/Kursarbeiten') : null,
-      h('th', { class: 'group', colspan: other.length + 1 }, 'Sonstige Leistungen'),
+      showKa ? h('th', { class: 'group', colspan: kaCols.length + 1 }, ka.length ? foldBtn('ka', 'Klassen-/Kursarbeiten', ka.length) : 'Klassen-/Kursarbeiten') : null,
+      h(
+        'th',
+        { class: 'group', colspan: otherCols.length + 1 },
+        other.length ? foldBtn('other', 'Sonstige Leistungen', other.length) : 'Sonstige Leistungen',
+        drawCols.length > 1 && !fold.other
+          ? h('button', { class: 'link tiny draw-bundle-btn', title: fold.draw ? 'Ziehungsspalten wieder einzeln zeigen' : 'Spalten aus dem Reiter „Ziehen“ zu einer Spalte zusammenschieben (nur Ansicht)', onclick: () => toggleFold('draw') }, fold.draw ? 'Ziehungen einzeln' : `Ziehungen bündeln (${drawCols.length})`)
+          : null
+      ),
       h('th', { class: 'group result', colspan: 3 }, half)
     );
     const head2 = h(
       'tr',
       null,
-      showKa ? ka.map(th) : null,
+      showKa ? kaCols.map(th) : null,
       showKa ? h('th', { class: 'num avg-col' }, sort.head('ka', 'Ø', 'Ø Klassen-/Kursarbeiten – sortieren')) : null,
-      other.map(th),
+      otherCols.map((a) =>
+        a === BUNDLE
+          ? h('th', { class: 'center assess-head draw-bundle' }, h('button', { class: 'link head-btn', title: 'Ziehungen wieder einzeln zeigen', onclick: () => toggleFold('draw') }, h('span', { class: 'col-head' }, h('span', { class: 'col-name' }, `Ziehen (${drawCols.length})`), h('span', { class: 'col-sub' }, drawRange(drawCols)))))
+          : th(a)
+      ),
       h('th', { class: 'num avg-col' }, sort.head('other', 'Ø', 'Ø Sonstige Leistungen – sortieren')),
       h('th', { class: 'num result' }, sort.head('raw', 'Gerechnet')),
       h('th', { class: 'center result' }, sort.head('override', 'Gesetzt')),
@@ -169,9 +228,9 @@
         'tr',
         { class: r.override !== null ? 'overridden' : '' },
         UI.nameCells(s, ri + 1),
-        showKa ? ka.map((a) => cell(a, s, ri)) : null,
+        showKa ? kaCols.map((a) => cell(a, s, ri)) : null,
         showKa ? h('td', { class: 'num avg-col' }, UI.valueText(r.ka, level)) : null,
-        other.map((a) => cell(a, s, ri)),
+        otherCols.map((a) => (a === BUNDLE ? bundleCell(drawCols, s, level) : cell(a, s, ri))),
         h('td', { class: 'num avg-col' }, UI.valueText(r.other, level)),
         h('td', { class: 'num result' }, h('span', { class: 'raw' }, UI.valueText(r.raw, level)), ' ', UI.gradeBadge(r.rounded, level)),
         h(

@@ -335,6 +335,10 @@ details.details-card[open] > summary { margin-bottom: 12px; }
 .table tr.foot td { background: var(--surface-2); font-size: 12px; }
 .table tr.overridden td.result { background: var(--override); }
 .table th.group { text-align: center; border-left: 1px solid var(--border); color: var(--text); }
+.table th.group .fold-btn { font-weight: 600; color: var(--text); white-space: nowrap; }
+.table th.group .draw-bundle-btn { margin-left: 8px; }
+.table td.draw-bundle { white-space: nowrap; }
+.table td.draw-bundle .grade-badge + .grade-badge, .table td.draw-bundle > * + * { margin-left: 3px; }
 .table th.result, .table td.result { border-left: 1px solid var(--border); }
 .table td.avg-col, .table th.avg-col { background: var(--surface-2); color: var(--muted); border-right: 1px solid var(--border); }
 .table th.num { text-align: right; }

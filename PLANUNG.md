@@ -1,6 +1,6 @@
 # OrdoNota – Geplante Funktionen
 
-Erledigt: A Arbeit in Teilen (1.18.0), Druckauswahl (1.19.0), B Präsentationen (1.20.0–1.22.0), D Gruppenpräsentationen (1.23.0), E Reiter „Gruppen“ (1.24.0), Reiter ein-/ausschalten (1.25.0), Moodle-Import im Test (1.26.0), F Startprogramm (1.27.0), G Datei öffnen/Ordner wechseln (1.28.0), H Reiter „Zufall“ (1.29.0), N Bereich neuer Tests (1.30.0), Q Demo aus der App (1.31.0), P Programmsymbol (1.32.0), O Update-Sicherheit (1.33.0), M Reiter sortieren (1.34.0).
+Erledigt: A Arbeit in Teilen (1.18.0), Druckauswahl (1.19.0), B Präsentationen (1.20.0–1.22.0), D Gruppenpräsentationen (1.23.0), E Reiter „Gruppen“ (1.24.0), Reiter ein-/ausschalten (1.25.0), Moodle-Import im Test (1.26.0), F Startprogramm (1.27.0), G Datei öffnen/Ordner wechseln (1.28.0), H Reiter „Zufall“ (1.29.0), N Bereich neuer Tests (1.30.0), Q Demo aus der App (1.31.0), P Programmsymbol (1.32.0), O Update-Sicherheit (1.33.0), M Reiter sortieren (1.34.0), L Spalten einklappen/bündeln (1.35.0).
 
 ## F) Startprogramm (Server + App-Fenster) – umgesetzt in 1.27.0
 
@@ -70,7 +70,7 @@ Entscheidung des Nutzers: Reiter „Zufall“ in **„Tools“** umbenennen (die
 - Vollbild wie bei den anderen Werkzeugen. **Pop-up** als eigenes Browserfenster, das sich auf den Beamer schieben lässt, während die App auf dem Laptop bleibt (Empfehlung; Alternative: schwebendes Fenster in der App).
 - Reine Logik (Restzeit aus Startzeit/Pausen berechnen) in `js/random.js` oder eigenem Modul, mit Tests.
 
-### L) Notenübersicht: Ziehungsspalten bündeln, Spaltengruppen ausblenden (offen)
+### L) Notenübersicht: Ziehungsspalten bündeln, Spaltengruppen ausblenden – umgesetzt in 1.35.0
 
 Entscheidung des Nutzers: beides.
 

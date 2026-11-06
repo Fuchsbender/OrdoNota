@@ -803,6 +803,59 @@ def run_tab_order_check(br, base):
     report("Reiter: ▲▼ in den Einstellungen, Ziehen in der Reiterleiste, Haken in derselben Reihenfolge, Standardreihenfolge", ok and not br.errors, str(res) + "; ".join(br.errors))
 
 
+def run_overview_fold_check(br, base):
+    print("Notenübersicht: Gruppen einklappen, Ziehungen bündeln:")
+    br.open(f"{base}/index.html?demo")
+    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.errors = []
+    res = br.eval("""(async () => {
+        const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
+        const db = NM.app.db(), c = db.courses[0];
+        NM.app.state.ui.ovFold = {};
+        NM.app.select({ courseId: c.id, tab: 'overview' }); await wait();
+        const half = NM.app.currentHalf(c, true);
+        // Zwei Ziehungsspalten anlegen (wie der Reiter „Ziehen“)
+        const [s1, s2, s3] = c.students;
+        const z1 = NM.model.newManual(half, 'other', 'HA-Kontrolle 01.10.'); z1.date = '2026-10-01'; z1.manual.grades[s1.id] = { p: 11 };
+        const z2 = NM.model.newManual(half, 'other', 'HA-Kontrolle 08.10.'); z2.date = '2026-10-08'; z2.manual.grades[s2.id] = { p: 8 }; z2.manual.grades[s1.id] = { status: 'fehlt' };
+        c.assessments.push(z1, z2);
+        c.draw = c.draw || { out: {}, history: [] };
+        c.draw.history.push({ id: 'h1', date: z1.date, half, aid: z1.id, sids: [s1.id], prevOut: {} }, { id: 'h2', date: z2.date, half, aid: z2.id, sids: [s2.id, s1.id], prevOut: {} });
+        NM.app.commit(); await wait();
+        const heads = () => document.querySelectorAll('.overview-table thead tr:nth-child(2) th').length;
+        const raws = () => [...document.querySelectorAll('.overview-table tbody td.result .raw')].map((x) => x.textContent).join('|');
+        const fold = (k) => document.querySelector(`[data-fold="${k}"]`).click();
+        const cols = () => [...document.querySelectorAll('.overview-table [data-col]')].map((x) => Number(x.dataset.col));
+        const out = { heads: heads(), raw: raws() };
+        const kaN = c.assessments.filter((a) => a.half === half && a.cat === 'ka').length;
+        fold('ka'); await wait();
+        out.ka = [out.heads - heads() === kaN, raws() === out.raw, document.querySelector('[data-fold="ka"]').textContent.includes('(' + kaN + ')'), NM.app.state.ui.ovFold.ka];
+        fold('ka'); await wait();
+        fold('other'); await wait();
+        out.other = [heads() < out.heads, raws() === out.raw, !document.querySelector('.draw-bundle-btn')];
+        fold('other'); await wait();
+        const btn = document.querySelector('.draw-bundle-btn');
+        out.btn = btn && btn.textContent;
+        btn.click(); await wait();
+        const bundle = [...document.querySelectorAll('.overview-table thead th.draw-bundle')];
+        const row1 = [...document.querySelectorAll('.overview-table tbody tr')].find((tr) => tr.textContent.includes(s1.last));
+        const cell1 = row1.querySelector('td.draw-bundle');
+        const c2 = cols();
+        out.bundle = [heads() === out.heads - 1, bundle.length, bundle[0] && bundle[0].textContent, cell1 && cell1.textContent, raws() === out.raw,
+                      Math.max(...c2) + 1 === new Set(c2).size];
+        // Ausdruck zeigt weiter alle Spalten
+        NM.print.course(c, half); await wait();
+        out.print = document.getElementById('print-root').textContent.includes('HA-Kontrolle 08.10.');
+        document.body.classList.remove('printing');
+        document.querySelector('.draw-bundle-btn').click(); await wait();
+        out.back = heads() === out.heads;
+        return out; })()""")
+    ok = bool(res) and res["ka"] == [True, True, True, True] and res["other"] == [True, True, True] and res["btn"] == "Ziehungen bündeln (2)" \
+        and res["bundle"][:3] == [True, 1, "Ziehen (2)01.10.–08.10."] and "f" in (res["bundle"][3] or "") and "2" in (res["bundle"][3] or "") \
+        and res["bundle"][4] and res["bundle"][5] and res["print"] and res["back"]
+    report("Notenübersicht: Gruppen ein-/ausklappen (Noten unverändert), Ziehungen bündeln mit Zeitraum, Ausdruck vollständig", ok and not br.errors, str(res) + "; ".join(br.errors))
+
+
 def run_demo_link_check(br, base):
     print("Demo aus der App öffnen:")
     br.open(f"{base}/index.html")
@@ -1743,6 +1796,7 @@ def main():
         run_unreachable_check(br, base)
         run_tabs_check(br, base)
         run_tab_order_check(br, base)
+        run_overview_fold_check(br, base)
         run_settings_layout_check(br, base)
         run_demo_link_check(br, base)
         run_old_db_check(br, base)
