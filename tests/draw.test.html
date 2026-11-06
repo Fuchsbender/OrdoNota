@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="de">
+<head><meta charset="utf-8"><title>Tests Ziehen</title></head>
+<body>
+<pre id="out"></pre>
+<script src="../js/util.js"></script>
+<script src="../js/grades.js"></script>
+<script src="../js/model.js"></script>
+<script src="../js/draw.js"></script>
+<script>
+  const D = NM.draw, M = NM.model;
+  const lines = [];
+  let fails = 0;
+  const eq = (name, actual, expected) => {
+    const ok = JSON.stringify(actual) === JSON.stringify(expected);
+    if (!ok) fails++;
+    lines.push((ok ? 'OK   ' : 'FAIL ') + name + (ok ? '' : '  → erhalten ' + JSON.stringify(actual) + ', erwartet ' + JSON.stringify(expected)));
+  };
+  const seeded = (seed) => () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
+  const course = () => {
+    const c = M.newCourse('y', { klasse: '7a', fach: 'M', jahrgang: 7, type: 'sek1' });
+    c.students = M.parseNames('A, a\nB, b\nC, c\nD, d\nE, e');
+    return c;
+  };
+
+  // Klassischer Pool: Auffüllen
+  {
+    const src = { out: {} }, ids = ['1', '2', '3'];
+    const a = D.drawFrom(src, ids, 2, { rand: seeded(1), refill: true });
+    const b = D.drawFrom(src, ids, 2, { rand: seeded(2), refill: true });
+    eq('klassisch: zweite Ziehung nimmt zuerst den Rest, füllt dann auf', [a.sids.length, b.refilled, b.sids.includes(ids.find((x) => !a.sids.includes(x))), new Set(b.sids).size], [2, true, true, 2]);
+    eq('vorheriger Stand wird zurückgegeben', Object.keys(b.prevOut).sort(), a.sids.slice().sort());
+  }
+
+  // Benannter Pool: eine Runde, eine Spalte
+  const c = course();
+  const ids = c.students.map((s) => s.id);
+  const p = D.newPool(c, 'HJ1', 'HA Runde 1');
+  const col = c.assessments.find((x) => x.id === p.aid);
+  eq('neuer Pool: Sammelspalte bei Sonstigen, Gewicht 1, Name', [col.kind, col.cat, col.weight, col.name, col.half, D.finished(c, p)], ['manual', 'other', 1, 'HA Runde 1', 'HJ1', false]);
+  const r1 = D.drawPool(c, p, 2, { rand: seeded(3), date: '2026-09-10' });
+  const r2 = D.drawPool(c, p, 2, { rand: seeded(4), date: '2026-09-17', away: new Set([ids.find((x) => !r1.sids.includes(x))]) });
+  eq('Ziehungen ohne Wiederholung, Abwesende übersprungen', [new Set([...r1.sids, ...r2.sids]).size, D.left(c, p).length, r2.finished], [4, 1, false]);
+  const r3 = D.drawPool(c, p, 3, { date: '2026-09-24' });
+  eq('Rest reicht nicht: nur die Übrigen, kein Auffüllen, Pool fertig', [r3.sids.length, r3.refilled, r3.finished, D.finished(c, p)], [1, false, true, true]);
+  eq('fertiger Pool zieht niemanden mehr', D.drawPool(c, p, 2).sids.length, 0);
+  eq('Zeitraum aus den Ziehungen', D.poolRange(p), ['2026-09-10', '2026-09-24']);
+  eq('nur eine Spalte für alle Ziehungen', c.assessments.length, 1);
+  eq('Notenübersicht: gezogen-Menge der Sammelspalte', D.drawnSets(c).get(p.aid).size, 5);
+  eq('Pool zur Spalte', D.poolOfColumn(c, p.aid) === p, true);
+
+  // Prüfung auf Ziehfehler
+  for (const sid of r1.sids) col.manual.grades[sid] = { p: 11 };
+  col.manual.grades[r3.sids[0]] = { status: 'fehlt' };
+  let probs = D.check(c, p);
+  eq('gezogen ohne Note gemeldet (genau die zweite Ziehung)', probs.filter((x) => x.kind === 'ohneNote').map((x) => x.sid).sort(), r2.sids.slice().sort());
+  p.out[r2.sids[0]] && delete p.out[r2.sids[0]];
+  D.drawPool(c, p, 1, { date: '2026-10-01' });
+  probs = D.check(c, p);
+  eq('doppelt gezogen gemeldet', probs.filter((x) => x.kind === 'doppelt').map((x) => x.sid), [r2.sids[0]]);
+  const c2 = course();
+  const p2 = D.newPool(c2, 'HJ1', 'Abfragen');
+  D.drawPool(c2, p2, 1, { date: '2026-10-02' });
+  const notDrawn = c2.students.find((s) => !p2.out[s.id]);
+  c2.assessments[0].manual.grades[notDrawn.id] = { p: 5 };
+  eq('Note ohne Ziehung gemeldet', D.check(c2).filter((x) => x.kind === 'ungezogen').map((x) => x.sid), [notDrawn.id]);
+  c2.assessments = [];
+  eq('fehlende Spalte gemeldet', D.check(c2).some((x) => x.kind === 'spalte'), true);
+
+  // Rückgängig
+  {
+    const c3 = course();
+    const p3 = D.newPool(c3, 'HJ1', 'X');
+    const a = D.drawPool(c3, p3, 2, { date: '2026-09-01' });
+    const b = D.drawPool(c3, p3, 2, { date: '2026-09-08' });
+    const col3 = c3.assessments[0];
+    for (const sid of [...a.sids, ...b.sids]) col3.manual.grades[sid] = { p: 8 };
+    D.undoPool(c3, p3);
+    eq('Rückgängig: Pool wie vorher, nur die Noten der letzten Ziehung weg', [Object.keys(p3.out).sort().join(), Object.keys(col3.manual.grades).sort().join(), p3.history.length], [a.sids.slice().sort().join(), a.sids.slice().sort().join(), 1]);
+  }
+
+  // Zusammenfassen alter Einzelspalten
+  {
+    const c4 = course();
+    const [s1, s2, s3] = c4.students;
+    const d = D.data(c4);
+    const col = (date, grades) => { const a = M.newManual('HJ1', 'other', 'HA-Kontrolle'); a.date = date; a.manual.grades = grades; c4.assessments.push(a); return a; };
+    const a1 = col('2026-09-03', { [s1.id]: { p: 5 }, [s2.id]: { p: 11 } });
+    const a2 = col('2026-09-10', { [s1.id]: { p: 9 }, [s3.id]: { status: 'fehlt' } });
+    const keep = col('2026-09-17', { [s2.id]: { p: 2 } });
+    const other = M.newManual('HJ1', 'other', 'Heft'); c4.assessments.push(other);
+    d.history.push({ id: 'h1', date: a1.date, half: 'HJ1', aid: a1.id, sids: [s1.id, s2.id] }, { id: 'h2', date: a2.date, half: 'HJ1', aid: a2.id, sids: [s1.id, s3.id] }, { id: 'h3', date: keep.date, half: 'HJ1', aid: keep.id, sids: [s2.id] });
+    eq('Kandidaten: klassische Spalten des Halbjahres', D.classicColumns(c4, 'HJ1').map((x) => x.a.id), [a1.id, a2.id, keep.id]);
+    eq('Konflikt: zwei Noten für eine Person', D.mergeConflicts(c4, [a1.id, a2.id]).map((x) => [x.sid, x.grades.length]), [[s1.id, 2]]);
+    const c5 = JSON.parse(JSON.stringify(c4));
+    const pn = D.merge(c4, 'HJ1', [a1.id, a2.id], 'HA Runde 1', 'newer');
+    const t = c4.assessments.find((x) => x.id === pn.aid);
+    eq('zusammengefasst (neuere Note): eine Spalte, Noten, Status', [t.manual.grades[s1.id].p, t.manual.grades[s2.id].p, t.manual.grades[s3.id].status, t.date], [9, 11, 'fehlt', '2026-09-03']);
+    eq('Einzelspalten und Ziehungen entfernt, andere bleiben', [c4.assessments.some((x) => x.id === a1.id || x.id === a2.id), c4.assessments.some((x) => x.id === keep.id), c4.assessments.some((x) => x.id === other.id), d.history.map((e) => e.id)], [false, true, true, ['h3']]);
+    eq('Pool kennt die Gezogenen und den Zeitraum, s1 nur einmal', [Object.keys(pn.out).length, D.poolRange(pn), pn.history.flatMap((e) => e.sids).filter((x) => x === s1.id).length, D.check(c4, pn).length], [3, ['2026-09-03', '2026-09-10'], 1, 0]);
+    const pb = D.merge(c5, 'HJ1', [c5.assessments[0].id, c5.assessments[1].id], 'B', 'better');
+    eq('zusammengefasst (bessere Note)', c5.assessments.find((x) => x.id === pb.aid).manual.grades[s1.id].p, 9);
+    const c6 = JSON.parse(JSON.stringify(c5));
+    D.removePool(c6, c6.draw.pools[0]);
+    eq('Pool löschen: Spalte bleibt', [c6.draw.pools.length, c6.assessments.some((x) => x.id === pb.aid)], [0, true]);
+  }
+
+  // Migration: alte Kurse bekommen eine leere Pool-Liste
+  const mdb = M.migrate({ schema: 4, years: [], courses: [{ id: 'c', jahrgang: 7, students: [], assessments: [], draw: { out: {}, history: [] } }] });
+  eq('Migration: draw.pools = []', mdb.courses[0].draw.pools, []);
+
+  lines.unshift(fails === 0 ? 'ALLE TESTS BESTANDEN' : fails + ' FEHLGESCHLAGEN');
+  document.getElementById('out').textContent = lines.join('\n');
+  document.title = 'fertig';
+</script>
+</body>
+</html>

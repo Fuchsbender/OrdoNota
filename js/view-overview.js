@@ -46,6 +46,15 @@
     return h('span', { class: 'muted small' }, parts.join(''), ' (änderbar unter „Kurs & Schüler“)');
   }
 
+  /** Unterzeile der Sammelspalte eines Pools: Zeitraum der Ziehungen statt Datum. */
+  function poolSub(course, a) {
+    const p = NM.draw.poolOfColumn(course, a.id);
+    const r = p && NM.draw.poolRange(p);
+    if (!r) return null;
+    const f = NM.util.fmtDateShort;
+    return [r[0] === r[1] ? f(r[0]) : f(r[0]) + '–' + f(r[1]), Number(a.weight) !== 1 ? '×' + NM.util.fmtScore(a.weight) : null, a.ungraded ? 'nicht gewertet' : null].filter(Boolean).join(' · ');
+  }
+
   /** Zeitraum mehrerer Spalten, z. B. „12.09.–03.10.“ */
   function drawRange(cols) {
     const d = cols.map((a) => a.date).filter(Boolean).sort();
@@ -89,7 +98,7 @@
     const students = sort.rows(all);
     const showKa = Number(course.wKa) > 0 || ka.length > 0;
     // Spalten aus dem Reiter „Ziehen“: wer nicht gezogen wurde, bekommt ein ausgegrautes Feld
-    const drawn = new Map(((course.draw || {}).history || []).map((e) => [e.aid, new Set(e.sids)]));
+    const drawn = NM.draw.drawnSets(course);
     // Eingeklappte Gruppen und gebündelte Ziehungsspalten (pro Gerät, nur Ansicht; Ausdrucke zeigen alles)
     const fold = NM.app.state.ui.ovFold || {};
     const toggleFold = (k) => {
@@ -125,7 +134,7 @@
         h(
           'button',
           { class: 'link head-btn', title: 'Bearbeiten (Name, Datum, Gewicht, Bereich)', onclick: () => UI.editAssessmentMeta(course, a) },
-          UI.assessmentHeader(a)
+          UI.assessmentHeader(a, poolSub(course, a))
         ),
         a.kind !== 'manual' && NM.app.tabOn(course, JUMP[a.kind][2])
           ? h(

@@ -165,12 +165,13 @@
     return true;
   }
 
-  function assessmentHeader(a) {
+  /** Spaltenkopf einer Leistung; sub ersetzt die Unterzeile (z. B. Zeitraum eines Ziehen-Pools). */
+  function assessmentHeader(a, sub = null) {
     return h(
       'span',
       { class: 'col-head' },
       h('span', { class: 'col-name' }, a.name),
-      h('span', { class: 'col-sub' }, [a.date ? NM.util.fmtDateShort(a.date) : null, Number(a.weight) !== 1 ? '×' + NM.util.fmtScore(a.weight) : null, a.ungraded ? 'nicht gewertet' : null].filter(Boolean).join(' · '))
+      h('span', { class: 'col-sub' }, sub || [a.date ? NM.util.fmtDateShort(a.date) : null, Number(a.weight) !== 1 ? '×' + NM.util.fmtScore(a.weight) : null, a.ungraded ? 'nicht gewertet' : null].filter(Boolean).join(' · '))
     );
   }
 

@@ -671,6 +671,14 @@
     );
   }
 
+  /** Datum einer Spalte; bei der Sammelspalte eines Ziehen-Pools der Zeitraum der Ziehungen. */
+  function drawDate(course, a) {
+    const p = NM.draw.poolOfColumn(course, a.id);
+    const r = p && NM.draw.poolRange(p);
+    if (!r) return NM.util.fmtDateShort(a.date);
+    return r[0] === r[1] ? NM.util.fmtDateShort(r[0]) : NM.util.fmtDateShort(r[0]) + '–' + NM.util.fmtDateShort(r[1]);
+  }
+
   // ---------- Notenliste ----------
 
   function course(c, half) {
@@ -699,7 +707,7 @@
     const ka = list.filter((a) => a.cat === 'ka').sort((a, b) => (a.date || '').localeCompare(b.date || ''));
     const other = list.filter((a) => a.cat === 'other').sort((a, b) => (a.date || '').localeCompare(b.date || ''));
     const showKa = Number(c.wKa) > 0 || ka.length > 0;
-    const th = (a) => h('th', { class: a.ungraded ? 'p-ungraded' : null }, a.name, h('br'), h('small', null, [NM.util.fmtDateShort(a.date), Number(a.weight) !== 1 ? '×' + fmtScore(a.weight) : '', a.ungraded ? 'nicht gewertet' : ''].filter(Boolean).join(' ')));
+    const th = (a) => h('th', { class: a.ungraded ? 'p-ungraded' : null }, a.name, h('br'), h('small', null, [drawDate(c, a), Number(a.weight) !== 1 ? '×' + fmtScore(a.weight) : '', a.ungraded ? 'nicht gewertet' : ''].filter(Boolean).join(' ')));
     const rows = students.map((s, i) => {
       const r = G.halfResult(c, half, s.id);
       const cell = (a) => h('td', { class: 'c' + (G.ungradedFor(a, s.id) ? ' p-ungraded' : '') }, badge(G.assessmentPoints(a, s.id, level), level));

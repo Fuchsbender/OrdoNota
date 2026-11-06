@@ -1,6 +1,6 @@
 # OrdoNota – Geplante Funktionen
 
-Erledigt: A Arbeit in Teilen (1.18.0), Druckauswahl (1.19.0), B Präsentationen (1.20.0–1.22.0), D Gruppenpräsentationen (1.23.0), E Reiter „Gruppen“ (1.24.0), Reiter ein-/ausschalten (1.25.0), Moodle-Import im Test (1.26.0), F Startprogramm (1.27.0), G Datei öffnen/Ordner wechseln (1.28.0), H Reiter „Zufall“ (1.29.0), N Bereich neuer Tests (1.30.0), Q Demo aus der App (1.31.0), P Programmsymbol (1.32.0), O Update-Sicherheit (1.33.0), M Reiter sortieren (1.34.0), L Spalten einklappen/bündeln (1.35.0), K Tools mit Timer (1.36.0).
+Erledigt: A Arbeit in Teilen (1.18.0), Druckauswahl (1.19.0), B Präsentationen (1.20.0–1.22.0), D Gruppenpräsentationen (1.23.0), E Reiter „Gruppen“ (1.24.0), Reiter ein-/ausschalten (1.25.0), Moodle-Import im Test (1.26.0), F Startprogramm (1.27.0), G Datei öffnen/Ordner wechseln (1.28.0), H Reiter „Zufall“ (1.29.0), N Bereich neuer Tests (1.30.0), Q Demo aus der App (1.31.0), P Programmsymbol (1.32.0), O Update-Sicherheit (1.33.0), M Reiter sortieren (1.34.0), L Spalten einklappen/bündeln (1.35.0), K Tools mit Timer (1.36.0), J Ziehen-Pools (1.37.0).
 
 ## F) Startprogramm (Server + App-Fenster) – umgesetzt in 1.27.0
 
@@ -47,19 +47,20 @@ Anlass: Die Kartenbilder in `cards/` (CC0, siehe `cards/LIZENZ.txt`) zeigen die 
 - Danach `cards/LIZENZ.txt` (Abschnitt „Änderungen“) und die Doku (10c: „Die Karten zeigen J, Q, K …“) anpassen. Der Test in `run_random_check` braucht keine Änderung.
 - Alternative ohne Bildbearbeitung: die Ecken in der App mit einem kleinen Feld „B“/„D“ überdecken (CSS). Das ist einfacher, sieht aber weniger sauber aus.
 
-## Wunschliste vom 06.11.2026 (Reihenfolge der Umsetzung: N, Q, P, O, M, L, K, J)
+## Wunschliste vom 06.11.2026 (Reihenfolge der Umsetzung: N, Q, P, O, M, L, K, J – alle erledigt)
 
-### J) Ziehen: mehrere Pools, eine Spalte je Pool (offen)
+### J) Ziehen: mehrere Pools, eine Spalte je Pool – umgesetzt in 1.37.0
 
 Entscheidung des Nutzers: benannte Pools, alle Ziehungen eines Pools in **einer** Notenspalte.
 
 - Mehrere Pools pro Kurs, z. B. „HA Runde 1“ oder „Abfragen Binomische Formeln“. Auswahl des Pools oben im Reiter, „+ Neuer Pool“, umbenennen, löschen (Spalte bleibt).
 - Jeder Pool hat eine Sammelspalte bei den sonstigen Leistungen. Der Spaltenkopf zeigt den **Zeitraum** der Ziehungen (z. B. „12.09.–03.10.“). Der Zeitraum wird aus den Ziehungen berechnet und nicht gespeichert.
-- Ist ein Pool einmal ganz durchgezogen, bekommt jede Person eine Note. Beim Auffüllen wird eine neue Runde mit neuer Spalte angelegt („… Runde 2“), weil eine Person in einer Spalte nur eine Note haben kann. (Empfehlung, beim Umsetzen bestätigen lassen.)
+- **Ein Pool ist nach einer Runde fertig** (Entscheidung des Nutzers): Sind weniger übrig als gewünscht, werden nur die Übrigen gezogen, danach ist der Pool abgeschlossen. Für weitere Ziehungen einen neuen Pool anlegen. Die Sammelspalte hat Gewicht 1 (änderbar wie jede Spalte).
+- Der bisherige Pool bleibt als **klassischer Pool** (je Ziehung eine Spalte, automatisches Auffüllen) unverändert; alte Einzelspalten bleiben, bis man sie zusammenfasst (Entscheidung des Nutzers).
 - **Prüfung auf Ziehfehler** je Pool: Note bei einer nicht gezogenen Person, gezogen ohne Note, doppelt gezogen in einer Runde, Note in einer Spalte, die zu keiner Ziehung gehört.
 - **Nachträglich zusammenfassen:** Bisherige Einzelspalten „HA-Kontrolle TT.MM.“ lassen sich auswählen und zu einer Pool-Spalte zusammenfassen (Konflikte: zwei Noten für eine Person → Rückfrage).
 - Rückgängig löscht nur die Noten der zurückgenommenen Ziehung aus der Sammelspalte.
-- Datenmodell (Vorschlag): `course.draw.pools: [ { id, name, round, aid, out } ]`, `draw.active`, `history[].poolId`. Bestehende Daten werden zum Standardpool „HA-Kontrolle“, alte Ziehungen behalten ihre Einzelspalten. Kein neues `SCHEMA`, solange alte Versionen den Standardpool weiter richtig lesen; beim Umsetzen prüfen.
+- Datenmodell: `course.draw.pools: [ { id, name, half, aid, created, out, history: [ { id, date, sids, prevOut } ] } ]`. Der klassische Pool bleibt in `draw.out`/`draw.history`, damit ältere App-Versionen ihn unverändert lesen (sie sehen die Sammelspalte als normale Einzelnote). Kein neues `SCHEMA`. Der gewählte Pool gilt pro Gerät (`ui.drawPool`).
 
 ### K) Reiter „Zufall“ → „Tools“ mit Timer – umgesetzt in 1.36.0
 

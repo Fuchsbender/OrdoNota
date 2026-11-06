@@ -153,7 +153,7 @@ def report(name, ok, detail=""):
 
 def run_test_pages(br, base):
     print("Testseiten:")
-    for page in ["grades", "model", "update", "moodle", "pomodoro", "groups", "random", "timer", "crypto", "storage"]:
+    for page in ["grades", "model", "update", "moodle", "pomodoro", "groups", "random", "timer", "draw", "crypto", "storage"]:
         br.open(f"{base}/tests/{page}.test.html")
         done = br.wait("/^(ALLE TESTS BESTANDEN|\\d+ FEHLGESCHLAGEN|FEHLER)/.test(document.getElementById('out').textContent)")
         text = br.eval("document.getElementById('out').textContent") or ""
@@ -447,6 +447,66 @@ def run_draw_check(br, base):
         and res["refill"][0] == 5 and res["refill"][1] and res["refill"][2] == 5 and res["refill"][3] == 7 \
         and res["grade"] == [1, "other", "manual"] and res["undo"] == [2, 2, False] and res["histGrade"] == [1, "3+", 5] and res["greyed"][0] == res["greyed"][1] == 7 and res["skip"] == [False, False, True, False, 10]
     report("Ziehen: ohne Wiederholung, Auffüllen, Note (auch nachträglich), Rückgängig, Abwesende/Herausgenommene", ok and not br.errors, str(res) + "; ".join(br.errors))
+
+
+def run_draw_pools_check(br, base):
+    print("Ziehen: benannte Pools, Sammelspalte, Prüfung, Zusammenfassen:")
+    br.open(f"{base}/index.html?demo")
+    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.errors = []
+    res = br.eval("""(async () => {
+        const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
+        const db = NM.app.db(), c = db.courses[0];          // 12 Personen
+        NM.app.state.ui.drawCount = 5;
+        NM.app.select({ courseId: c.id, tab: 'draw' }); await wait();
+        const q = (sel) => document.querySelector(sel);
+        const btn = (t) => [...document.querySelectorAll('button')].find((b) => b.textContent.includes(t));
+        const out = {}, nA = c.assessments.length;
+        // Neuer Pool
+        q('[data-draw-new]').click(); await wait();
+        const inp = q('dialog input'); inp.value = 'HA Runde 1'; q('dialog .btn-primary').click(); await wait();
+        const pool = c.draw.pools[0], col = () => c.assessments.find((a) => a.id === pool.aid);
+        out.created = [c.draw.pools.length, c.assessments.length - nA, col().name, q('.draw-pools .seg.active').textContent, NM.app.state.ui.drawPool[c.id] === pool.id];
+        q('[data-draw-go]').click(); await wait();
+        // Note für eine Gezogene eintragen
+        const gi = q('.draw-card .grade-input'); gi.value = '2'; gi.dispatchEvent(new Event('change')); await wait();
+        out.grade = [Object.keys(col().manual.grades).length, pool.history.length];
+        out.check = q('.draw-check') ? q('.draw-check summary').textContent : null;
+        // Notenübersicht: eine Spalte, Nicht-Gezogene blass
+        NM.app.select({ tab: 'overview' }); await wait();
+        const cells = NM.model.activeStudents(c).map((s) => q(`[data-focus-key="ov-${pool.aid}-${s.id}"]`).closest('td'));
+        out.overview = [cells.filter((td) => td.classList.contains('not-drawn')).length, !!q('.overview-table').textContent.includes('HA Runde 1')];
+        NM.app.select({ tab: 'draw' }); await wait();
+        q('[data-draw-go]').click(); await wait();
+        q('[data-draw-go]').click(); await wait();          // nur noch 2 übrig
+        out.finished = [pool.history.length, NM.draw.finished(c, pool), !!q('.draw-done'), !q('[data-draw-go]'), c.assessments.length - nA, q('.draw-pools .seg.active').textContent.endsWith('✓')];
+        // Rückgängig der letzten Ziehung: 2 wieder übrig, kein Fehler
+        btn('Rückgängig').click(); await wait(); q('dialog .btn-primary, dialog .btn-danger').click(); await wait();
+        out.undo = [pool.history.length, NM.draw.left(c, pool).length, !!q('[data-draw-go]')];
+        // Klassisch: drei Ziehungen, dann zusammenfassen
+        q('[data-draw-pool="classic"]').click(); await wait();
+        NM.app.state.ui.drawCount = 3;
+        for (let i = 0; i < 3; i++) { btn('🎲 Ziehen').click(); await wait(); }
+        const hist = c.draw.history.slice(-3);
+        const half = NM.app.currentHalf(c);
+        for (const e of hist) c.assessments.find((a) => a.id === e.aid).manual.grades[e.sids[0]] = { p: 8 };
+        NM.app.commit(); await wait();
+        q('[data-draw-merge]').click(); await wait();
+        const boxes = [...document.querySelectorAll('dialog [data-merge-aid]')];
+        q('dialog [data-merge-name]').value = 'HA alt';
+        q('dialog .btn-primary').click(); await wait(300);
+        const merged = c.draw.pools.find((p) => p.name === 'HA alt');
+        out.merge = [boxes.length >= 3, !!merged, c.draw.history.length, merged && Object.keys(c.assessments.find((a) => a.id === merged.aid).manual.grades).length,
+                     hist.every((e) => !c.assessments.some((a) => a.id === e.aid)), merged && q('.draw-pools .seg.active').textContent === 'HA alt'];
+        // Pool löschen: Spalte bleibt
+        q('[data-draw-del]').click(); await wait(); q('dialog .btn-primary').click(); await wait();
+        out.del = [c.draw.pools.some((p) => p.name === 'HA alt'), c.assessments.some((a) => a.name === 'HA alt'), q('.draw-pools .seg.active').dataset.drawPool];
+        out.dbcheck = NM.model.check(NM.model.migrate(JSON.parse(JSON.stringify(db)))).filter((p) => p.level === 'fehler').length;
+        return out; })()""")
+    ok = bool(res) and res["created"] == [1, 1, "HA Runde 1", "HA Runde 1", True] and res["grade"] == [1, 1] and res["check"] and "4 Gezogene noch ohne Note" in res["check"] \
+        and res["overview"] == [7, True] and res["finished"] == [3, True, True, True, 1, True] and res["undo"] == [2, 2, True] \
+        and res["merge"] == [True, True, 0, 3, True, True] and res["del"] == [False, True, "classic"] and res["dbcheck"] == 0
+    report("Ziehen-Pools: neuer Pool mit Sammelspalte, eine Runde bis fertig, Rückgängig, Prüfung, Notenübersicht, Zusammenfassen, Löschen ohne Notenverlust", ok and not br.errors, str(res) + "; ".join(br.errors))
 
 
 def run_random_check(br, base):
@@ -1857,6 +1917,7 @@ def main():
         run_sort_check(br, base)
         run_course_check(br, base)
         run_draw_check(br, base)
+        run_draw_pools_check(br, base)
         run_random_check(br, base)
         run_timer_check(br, base)
         run_pomodoro_check(br, base)

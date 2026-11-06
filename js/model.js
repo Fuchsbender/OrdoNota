@@ -10,7 +10,7 @@
   // 3 (1.20): Präsentationen (kind "pres") – ältere Versionen kennen diese Leistungsart nicht.
   // 4 (1.23): Gruppenpräsentationen – ältere Versionen würden Gruppenwerte ignorieren und falsche Noten zeigen.
   const SCHEMA = 4;
-  const APP_VERSION = '1.36.0';
+  const APP_VERSION = '1.37.0';
 
   class NewerSchemaError extends Error {}
 
@@ -155,6 +155,8 @@
       if (c.wHalf2 === undefined) c.wHalf2 = 2;
       // 1.11: Ziehen (Pool und bisherige Ziehungen)
       c.draw = c.draw || { out: {}, history: [] };
+      // 1.37: benannte Pools mit Sammelspalte (der klassische Pool bleibt in out/history)
+      if (!Array.isArray(c.draw.pools)) c.draw.pools = [];
       // 1.12.1: MSS-Kursart bei Jahrgang ≤ 10 (nur die Kursart gewählt) rechnete mit der Sek-I-Notenskala
       if ((c.type === 'lk' || c.type === 'gk') && Number(c.jahrgang) <= 10) setJahrgang(c, mssJahrgang(c), db.settings);
       // 1.3: ein Sitzplan pro Kurs → mehrere Räume
@@ -252,6 +254,11 @@
       const draw = c.draw || {};
       orphan(draw.out, 'Ziehen (Pool)');
       for (const e of draw.history || []) if (e.aid && !aids.has(e.aid)) add('hinweis', where, `Ziehung vom ${e.date}: Notenspalte wurde gelöscht`);
+      for (const p of draw.pools || []) {
+        if (!p || !p.id) { add('fehler', where, 'Ziehen: Pool ohne id'); continue; }
+        if (!aids.has(p.aid)) add('hinweis', where, `Pool „${p.name}“: Notenspalte wurde gelöscht`);
+        orphan(p.out, `Pool „${p.name}“`);
+      }
       for (const gs of c.groupSets || []) {
         const n = (gs.groups || []).reduce((k, g) => k + (g.members || []).filter((x) => !sids.has(x)).length, 0);
         if (n) add('hinweis', where, `Gruppen „${gs.name}“: ${n} nicht mehr vorhandene Person(en)`);

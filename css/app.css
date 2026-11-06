@@ -649,6 +649,10 @@ dialog.modal h2 { font-size: 17px; margin-bottom: 14px; }
 @media (max-width: 900px) { .seat-layout { grid-template-columns: 1fr; } .seat-side { position: static; max-height: none; } }
 .seat-grid { display: grid; grid-template-columns: repeat(var(--cols), minmax(64px, 96px)); gap: 8px; justify-content: center; }
 /* Ziehen */
+.draw-pools .inline { align-items: center; gap: 8px; }
+.segmented.wrap { flex-wrap: wrap; }
+.draw-done { margin: 0 0 8px; font-weight: 600; }
+.merge-list { display: flex; flex-direction: column; gap: 4px; margin: 8px 0 12px; max-height: 40vh; overflow: auto; }
 .draw-info { align-self: flex-end; margin: 0 0 10px auto; font-size: 15px; }
 .draw-cards { display: flex; flex-wrap: wrap; gap: 12px; }
 .draw-card { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 150px; padding: 12px; border: 1px solid var(--border-strong); border-radius: var(--radius); background: var(--surface-2); }
