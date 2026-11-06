@@ -376,5 +376,15 @@
     update();
   }
 
-  NM.pomodoro = { config, next, phaseMinutes, widget, settingsForm, openSettings, start, pause, reset, tick, mode, state: () => st };
+  /** Signal für andere Werkzeuge (Timer im Reiter „Tools“): alarm = bell | gong | beep, volume 0–100. */
+  function alarm(kind, volume = 60) {
+    sound('alarm', { volume, tick: 'off', alarm: kind }, 0, kind);
+  }
+
+  /** Audio beim Klick freischalten (Browser erlauben Töne erst nach einer Bedienung). */
+  function unlockAudio() {
+    ensureAudio();
+  }
+
+  NM.pomodoro = { config, next, phaseMinutes, widget, settingsForm, openSettings, start, pause, reset, tick, mode, alarm, unlockAudio, state: () => st };
 })((globalThis.NM = globalThis.NM || {}));

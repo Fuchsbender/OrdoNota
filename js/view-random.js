@@ -1,4 +1,4 @@
-/* OrdoNota – Reiter „Zufall“: Zufallszahl, Personen auswählen, Würfel (3D) und Karten ziehen.
+/* OrdoNota – Reiter „Tools“ (id random, bis 1.35 „Zufall“): Timer, Zufallszahl, Personen auswählen, Würfel (3D) und Karten ziehen.
    Nur Werkzeug für den Unterricht: Es wird nichts in die Notenliste eingetragen. Ergebnisse gelten nur für die Sitzung. */
 (function (NM) {
   'use strict';
@@ -15,15 +15,19 @@
 
   function opts() {
     const ui = NM.app.state.ui;
-    return (ui.random = Object.assign({ min: 1, max: 100, count: 1, noRepeat: false, die: 6, dice: 1, deck: '52', cards: 1 }, ui.random || {}));
+    // Immer dasselbe Objekt (Werkzeuge halten es fest); fehlende Werte mit Standard ergänzen
+    const def = { min: 1, max: 100, count: 1, noRepeat: false, die: 6, dice: 1, deck: '52', cards: 1, timerMs: 5 * 60000, timerDesign: 'ring', timerAlarm: 'gong' };
+    const o = ui.random && typeof ui.random === 'object' ? ui.random : (ui.random = {});
+    for (const [k, v] of Object.entries(def)) if (o[k] === undefined) o[k] = v;
+    return o;
   }
 
   const motion = () => !(globalThis.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
   function render(view, { course }) {
-    view.append(h('div', { class: 'view-head' }, h('h1', null, 'Zufall'), h('span', { class: 'muted small' }, 'Werkzeuge für den Unterricht – es wird nichts in die Notenliste eingetragen.')));
-    view.appendChild(h('div', { class: 'rnd-grid' }, numberTool(course), peopleTool(course), diceTool(course), cardTool(course)));
+    view.append(h('div', { class: 'view-head' }, h('h1', null, 'Tools'), h('span', { class: 'muted small' }, 'Werkzeuge für den Unterricht – es wird nichts in die Notenliste eingetragen.')));
+    view.appendChild(h('div', { class: 'rnd-grid' }, timerTool(), numberTool(course), peopleTool(course), diceTool(course), cardTool(course)));
   }
 
   /** Rahmen eines Werkzeugs mit Vollbild-Knopf (für den Beamer). */
@@ -51,6 +55,229 @@
 
   const numInput = (value, onchange, props = {}) =>
     h('input', Object.assign({ class: 'input', type: 'number', value, onchange: (e) => onchange(Math.round(parseNum(e.target.value))) }, props));
+
+  // ---------- Timer (Countdown) ----------
+  // Ein Timer für die ganze App (nicht je Kurs). Er läuft beim Reiterwechsel weiter; Anzeigen im
+  // Reiter, im Vollbild und im Pop-up-Fenster melden sich in `faces` an und werden gemeinsam aufgefrischt.
+
+  const T = NM.timer;
+  const TIMER_DESIGNS = [
+    ['ring', 'Ring'],
+    ['digits', 'Große Ziffern'],
+    ['bar', 'Balken'],
+    ['hourglass', 'Sanduhr'],
+  ];
+  const TIMER_QUICK = [1, 2, 3, 5, 10, 15, 20, 30];
+  const clock = { t: null, fired: false, popup: null, faces: new Set(), loop: null };
+
+  function timerState() {
+    if (!clock.t) clock.t = T.create(opts().timerMs);
+    return clock.t;
+  }
+
+  function refreshFaces() {
+    const t = timerState();
+    const now = Date.now();
+    for (const f of [...clock.faces]) {
+      if (f.gone()) clock.faces.delete(f);
+      else f.update(t, now);
+    }
+    if (T.finished(t, now) && T.running(t) && !clock.fired) {
+      clock.fired = true;
+      const cfg = Object.assign({}, (NM.app.db() && NM.app.db().settings.pomodoro) || {});
+      if (opts().timerAlarm !== 'off') NM.pomodoro.alarm(opts().timerAlarm, cfg.volume === undefined ? 60 : cfg.volume);
+    }
+    const busy = T.running(t);
+    if (busy && !clock.loop) clock.loop = setInterval(refreshFaces, 200);
+    if (!busy && clock.loop) {
+      clearInterval(clock.loop);
+      clock.loop = null;
+    }
+  }
+
+  const timerAct = {
+    toggle() {
+      const t = timerState(), now = Date.now();
+      if (T.running(t) && !T.finished(t, now)) T.pause(t, now);
+      else {
+        clock.fired = false;
+        T.start(t, now);
+        NM.pomodoro.unlockAudio();
+      }
+      refreshFaces();
+    },
+    reset() {
+      clock.fired = false;
+      T.reset(timerState());
+      refreshFaces();
+    },
+    add(min) {
+      const t = timerState(), now = Date.now();
+      T.add(t, min * 60000, now);
+      if (!T.finished(t, now)) clock.fired = false;
+      refreshFaces();
+    },
+    set(ms) {
+      clock.t = T.create(ms);
+      clock.fired = false;
+      opts().timerMs = ms;
+      NM.app.saveUi();
+      refreshFaces();
+    },
+  };
+
+  /** Abgemeldet erst, wenn das Element einmal im Dokument war und wieder entfernt wurde (z. B. Neuzeichnen). */
+  function goneCheck(node) {
+    let seen = false;
+    return () => {
+      if (node.isConnected) seen = true;
+      return seen && !node.isConnected;
+    };
+  }
+
+  /** Element in einem bestimmten Dokument (Hauptfenster oder Pop-up) erzeugen. */
+  function el(doc, tag, attrs, ...kids) {
+    const svg = ['svg', 'circle', 'path', 'rect', 'polygon', 'clipPath', 'defs', 'g'].includes(tag);
+    const e = svg ? doc.createElementNS('http://www.w3.org/2000/svg', tag) : doc.createElement(tag);
+    for (const [k, v] of Object.entries(attrs || {})) {
+      if (v === null || v === undefined || v === false) continue;
+      if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+      else e.setAttribute(k, v === true ? '' : v);
+    }
+    for (const k of kids.flat()) if (k !== null && k !== undefined) e.append(k);
+    return e;
+  }
+
+  /** Anzeige des Timers im gewählten Design. Liefert { el, update(t, now), gone() }. */
+  function timerFace(doc, design) {
+    const digits = el(doc, 'div', { class: 'tmr-digits', 'aria-live': 'off' });
+    const over = el(doc, 'div', { class: 'tmr-over' });
+    const box = el(doc, 'div', { class: 'tmr-face tmr-' + design, 'data-tmr-face': design });
+    let paint = () => {};
+    if (design === 'ring') {
+      const R0 = 88, C = 2 * Math.PI * R0;
+      const prog = el(doc, 'circle', { class: 'tmr-ring-prog', cx: 100, cy: 100, r: R0, 'stroke-dasharray': C.toFixed(2), transform: 'rotate(-90 100 100)' });
+      box.append(el(doc, 'div', { class: 'tmr-ring-wrap' }, el(doc, 'svg', { viewBox: '0 0 200 200', class: 'tmr-ring-svg', 'aria-hidden': 'true' }, el(doc, 'circle', { class: 'tmr-ring-track', cx: 100, cy: 100, r: R0 }), prog), digits));
+      paint = (f) => prog.setAttribute('stroke-dashoffset', (C * (1 - f)).toFixed(2));
+    } else if (design === 'bar') {
+      const fill = el(doc, 'div', { class: 'tmr-bar-fill' });
+      box.append(digits, el(doc, 'div', { class: 'tmr-bar', 'aria-hidden': 'true' }, fill));
+      paint = (f) => (fill.style.width = (f * 100).toFixed(2) + '%');
+    } else if (design === 'hourglass') {
+      // Sand oben nimmt ab, unten zu (Höhe der Rechtecke in den Dreiecken)
+      const top = el(doc, 'rect', { class: 'tmr-sand', x: 0, width: 120, y: 10, height: 80, 'clip-path': 'url(#tmrTop)' });
+      const bot = el(doc, 'rect', { class: 'tmr-sand', x: 0, width: 120, y: 170, height: 0, 'clip-path': 'url(#tmrBot)' });
+      box.append(
+        el(doc, 'svg', { viewBox: '0 0 120 180', class: 'tmr-glass', 'aria-hidden': 'true' },
+          el(doc, 'defs', null, el(doc, 'clipPath', { id: 'tmrTop' }, el(doc, 'polygon', { points: '14,10 106,10 62,88 58,88' })), el(doc, 'clipPath', { id: 'tmrBot' }, el(doc, 'polygon', { points: '58,92 62,92 106,170 14,170' }))),
+          el(doc, 'polygon', { class: 'tmr-glass-line', points: '10,6 110,6 64,90 110,174 10,174 56,90' }),
+          top, bot),
+        digits
+      );
+      paint = (f) => {
+        const ht = 78 * f, hb = 78 * (1 - f);
+        top.setAttribute('y', (88 - ht).toFixed(2));
+        top.setAttribute('height', ht.toFixed(2));
+        bot.setAttribute('y', (170 - hb).toFixed(2));
+        bot.setAttribute('height', hb.toFixed(2));
+      };
+    } else box.append(digits);
+    box.append(over);
+    return {
+      el: box,
+      gone: goneCheck(box),
+      update(t, now) {
+        const st = T.stage(t, now);
+        box.dataset.stage = st;
+        digits.textContent = T.format(T.remaining(t, now));
+        over.textContent = st === 'done' ? (T.running(t) ? 'Zeit ist um!  +' + T.format(T.overtime(t, now)) : 'Zeit ist um!') : st === 'paused' ? 'angehalten' : '';
+        paint(T.fraction(t, now));
+      },
+    };
+  }
+
+  /** Knöpfe Start/Pause, ↺, −1/+1 (im Reiter und im Pop-up). */
+  function timerButtons(doc) {
+    const go = el(doc, 'button', { class: 'btn btn-primary', 'data-tmr-go': '', onclick: () => timerAct.toggle() });
+    const sync = () => {
+      const t = timerState(), now = Date.now();
+      go.textContent = T.running(t) && !T.finished(t, now) ? '⏸ Pause' : T.elapsed(t, now) > 0 && !T.finished(t, now) ? '▶ Weiter' : '▶ Start';
+    };
+    const wrap = el(doc, 'div', { class: 'tmr-buttons' },
+      go,
+      el(doc, 'button', { class: 'btn', title: 'Eine Minute weniger', onclick: () => timerAct.add(-1) }, '− 1 Min.'),
+      el(doc, 'button', { class: 'btn', title: 'Eine Minute mehr', onclick: () => timerAct.add(1) }, '+ 1 Min.'),
+      el(doc, 'button', { class: 'btn', 'data-tmr-reset': '', title: 'Zurück auf die eingestellte Zeit', onclick: () => timerAct.reset() }, '↺'));
+    return { el: wrap, gone: goneCheck(wrap), update: sync };
+  }
+
+  function openTimerPopup() {
+    if (clock.popup && !clock.popup.closed) {
+      clock.popup.focus();
+      return clock.popup;
+    }
+    const w = window.open('', 'ordonota-timer', 'popup,width=640,height=520');
+    let d;
+    try {
+      d = w && w.document;
+    } catch (e) {
+      d = null;
+    }
+    if (!d) {
+      toast('Das Pop-up-Fenster wurde blockiert. Bitte Pop-ups für OrdoNota erlauben oder „⛶ Vollbild“ verwenden.', 'warn');
+      return null;
+    }
+    const css = new URL('css/app.css?v=' + M.APP_VERSION, location.href).href;
+    d.open();
+    d.write('<!doctype html><html lang="de"><head><meta charset="utf-8"><title>Timer – OrdoNota</title><link rel="stylesheet" href="' + css + '"></head><body class="tmr-popup"></body></html>');
+    d.close();
+    const theme = document.documentElement.getAttribute('data-theme');
+    if (theme) d.documentElement.setAttribute('data-theme', theme);
+    const face = timerFace(d, opts().timerDesign);
+    const btns = timerButtons(d);
+    d.body.append(face.el, btns.el);
+    clock.faces.add(face);
+    clock.faces.add(btns);
+    clock.popup = w;
+    w.addEventListener('keydown', (e) => {
+      if (e.key === ' ') (e.preventDefault(), timerAct.toggle());
+    });
+    window.addEventListener('pagehide', () => w.close(), { once: true });
+    refreshFaces();
+    return w;
+  }
+
+  function timerTool() {
+    const o = opts();
+    const t = timerState();
+    const face = timerFace(document, o.timerDesign);
+    const btns = timerButtons(document);
+    clock.faces.add(face);
+    clock.faces.add(btns);
+    const input = h('input', {
+      class: 'input',
+      value: T.format(t.total),
+      'data-tmr-input': '',
+      title: 'Minuten (z. B. 5 oder 2,5) oder mm:ss (z. B. 4:30)',
+      onchange: (e) => {
+        const ms = T.parse(e.target.value);
+        if (ms === null) return toast('Bitte z. B. 5, 2,5 oder 4:30 eingeben.', 'error');
+        timerAct.set(ms);
+        e.target.value = T.format(ms);
+      },
+    });
+    const quick = h('div', { class: 'tmr-quick' }, TIMER_QUICK.map((m) => h('button', { class: 'btn btn-sm', 'data-tmr-quick': m, onclick: () => (timerAct.set(m * 60000), (input.value = T.format(m * 60000))) }, m + ' Min.')));
+    const select = (value, options, onchange, attrs) => h('select', Object.assign({ class: 'input', onchange: (e) => onchange(e.target.value) }, attrs), options.map(([v, l]) => h('option', { value: v, selected: value === v }, l)));
+    const controls = [
+      h('label', { class: 'field narrow' }, h('span', null, 'Zeit'), input),
+      h('label', { class: 'field' }, h('span', null, 'Design'), select(o.timerDesign, TIMER_DESIGNS, (v) => ((o.timerDesign = v), NM.app.saveUi(), NM.app.rerender(), clock.popup && !clock.popup.closed && (clock.popup.close(), openTimerPopup())), { 'data-tmr-design': '' })),
+      h('label', { class: 'field' }, h('span', null, 'Signal'), select(o.timerAlarm, [['gong', 'Gong'], ['bell', 'Wecker'], ['beep', 'Piepen'], ['off', 'aus']], (v) => ((o.timerAlarm = v), NM.app.saveUi()))),
+      h('button', { class: 'btn', 'data-tmr-popup': '', title: 'Eigenes Fenster, z. B. zum Verschieben auf den Beamer; der Timer läuft im Hauptfenster weiter', onclick: openTimerPopup }, '⧉ Pop-up'),
+    ];
+    const card = tool('timer', '⏱ Timer', controls, h('div', { class: 'rnd-stage tmr-stage' }, face.el, btns.el, quick));
+    refreshFaces();
+    return card;
+  }
 
   // ---------- Zufallszahl ----------
 
@@ -620,5 +847,5 @@
     );
   }
 
-  NM.views.random = { render, session, paintDie };
+  NM.views.random = { render, session, paintDie, timer: { act: timerAct, state: timerState, popup: openTimerPopup, refresh: refreshFaces, clock } };
 })((globalThis.NM = globalThis.NM || {}));

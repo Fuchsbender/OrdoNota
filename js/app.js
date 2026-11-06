@@ -29,7 +29,7 @@
     { id: 'epo', label: 'Mitarbeit/EPO' },
     { id: 'pres', label: 'Präsentationen' },
     { id: 'draw', label: 'Ziehen' },
-    { id: 'random', label: 'Zufall' },
+    { id: 'random', label: 'Tools' }, // bis 1.35 „Zufall“; id bleibt wegen gespeicherter Auswahl
     { id: 'groups', label: 'Gruppen' },
     { id: 'overview', label: 'Notenübersicht' },
     { id: 'seating', label: 'Sitzplan' },

@@ -1,4 +1,4 @@
-/* OrdoNota – Zufallswerkzeuge (Reiter „Zufall“): reine Logik ohne DOM.
+/* OrdoNota – Zufallswerkzeuge (Reiter „Tools“, früher „Zufall“): reine Logik ohne DOM.
    Zufallszahlen, Personenauswahl, Kartenstapel und die Geometrie der Würfel (W4–W20) für den 3D-Zeichner. */
 (function (NM) {
   'use strict';

@@ -915,3 +915,45 @@ body.no-grade-colors .p-grade[style*='--g-hue'] { background: none; }
 .p-epo-slip-table td { height: 16px; font-weight: 600; }
 .p-sign { display: grid; grid-template-columns: 1fr 2fr; gap: 24px; margin-top: 15mm; font-size: 8.5pt; color: #444; }
 .p-sign span { border-top: 0.5pt solid #000; padding-top: 2px; }
+
+/* ---------- Timer (Reiter „Tools“) ---------- */
+.tmr-stage { gap: 12px; }
+.tmr-face { --tmr: var(--accent); display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; color: var(--text); }
+.tmr-face[data-stage="warn"] { --tmr: var(--warn); }
+.tmr-face[data-stage="end"], .tmr-face[data-stage="done"] { --tmr: var(--danger); }
+.tmr-face[data-stage="paused"] { --tmr: var(--muted); }
+.tmr-digits { font-size: 72px; font-weight: 750; line-height: 1; font-variant-numeric: tabular-nums; color: var(--tmr); }
+.tmr-face[data-stage="done"] .tmr-digits { animation: tmr-blink 1s steps(2, start) infinite; }
+@keyframes tmr-blink { to { visibility: hidden; } }
+.tmr-over { min-height: 1.3em; font-weight: 650; color: var(--tmr); }
+.tmr-ring-wrap { position: relative; width: 220px; aspect-ratio: 1; display: grid; place-items: center; }
+.tmr-ring-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.tmr-ring-track { fill: none; stroke: var(--border); stroke-width: 12; }
+.tmr-ring-prog { fill: none; stroke: var(--tmr); stroke-width: 12; stroke-linecap: round; transition: stroke-dashoffset 0.2s linear; }
+.tmr-ring .tmr-digits { position: relative; font-size: 48px; }
+.tmr-bar { width: 100%; height: 22px; border-radius: 11px; background: var(--border); overflow: hidden; }
+.tmr-bar-fill { height: 100%; background: var(--tmr); border-radius: 11px; transition: width 0.2s linear; }
+.tmr-glass { width: 110px; }
+.tmr-glass-line { fill: none; stroke: var(--border-strong); stroke-width: 3; stroke-linejoin: round; }
+.tmr-sand { fill: var(--tmr); }
+.tmr-hourglass { flex-direction: row; justify-content: center; gap: 24px; }
+.tmr-buttons, .tmr-quick { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.tmr-quick .btn { min-width: 4.5em; }
+@media (prefers-reduced-motion: reduce) {
+  .tmr-ring-prog, .tmr-bar-fill { transition: none; }
+  .tmr-face[data-stage="done"] .tmr-digits { animation: none; }
+}
+/* Vollbild und Pop-up: Anzeige so groß wie möglich */
+.rnd-tool:fullscreen .tmr-digits { font-size: min(32vh, 22vw); }
+.rnd-tool:fullscreen .tmr-ring-wrap { width: min(70vh, 60vw); }
+.rnd-tool:fullscreen .tmr-ring .tmr-digits { font-size: min(14vh, 11vw); }
+.rnd-tool:fullscreen .tmr-glass { width: min(30vh, 22vw); }
+.rnd-tool:fullscreen .tmr-bar { height: 5vh; border-radius: 2.5vh; }
+.rnd-tool:fullscreen .tmr-over { font-size: 1.6em; }
+body.tmr-popup { margin: 0; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3vh; padding: 3vh 4vw; box-sizing: border-box; background: var(--bg); color: var(--text); font-family: var(--font); }
+body.tmr-popup .tmr-digits { font-size: min(30vh, 24vw); }
+body.tmr-popup .tmr-ring-wrap { width: min(65vh, 80vw); }
+body.tmr-popup .tmr-ring .tmr-digits { font-size: min(13vh, 16vw); }
+body.tmr-popup .tmr-glass { width: min(32vh, 30vw); }
+body.tmr-popup .tmr-bar { height: 5vh; border-radius: 2.5vh; }
+body.tmr-popup .tmr-over { font-size: min(5vh, 6vw); }

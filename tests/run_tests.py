@@ -153,7 +153,7 @@ def report(name, ok, detail=""):
 
 def run_test_pages(br, base):
     print("Testseiten:")
-    for page in ["grades", "model", "update", "moodle", "pomodoro", "groups", "random", "crypto", "storage"]:
+    for page in ["grades", "model", "update", "moodle", "pomodoro", "groups", "random", "timer", "crypto", "storage"]:
         br.open(f"{base}/tests/{page}.test.html")
         done = br.wait("/^(ALLE TESTS BESTANDEN|\\d+ FEHLGESCHLAGEN|FEHLER)/.test(document.getElementById('out').textContent)")
         text = br.eval("document.getElementById('out').textContent") or ""
@@ -450,7 +450,7 @@ def run_draw_check(br, base):
 
 
 def run_random_check(br, base):
-    print("Zufall (Zahl, Personen, Würfel, Karten):")
+    print("Tools: Zufall (Zahl, Personen, Würfel, Karten):")
     br.open(f"{base}/index.html?demo")
     br.wait("!!document.querySelector('.overview-table')", 30)
     br.errors = []
@@ -532,7 +532,7 @@ def run_random_check(br, base):
         out.untouched = [c.assessments.length === %d, JSON.stringify(c.draw || {}) === %s];
         return out; })()""".replace('%d', str(res and res.get('nA'))).replace('%s', json.dumps(res and res.get('drawBefore'))))
     br.call("Emulation.setEmulatedMedia", features=[])
-    ok = bool(res) and bool(res2) and res["tools"] == 4 and res["number"] == [True, True] \
+    ok = bool(res) and bool(res2) and res["tools"] == 5 and res["number"] == [True, True] \
         and res2["range"][0] >= 5 and res2["range"][1] <= 7 and res2["range"][0] < res2["range"][1] \
         and res2["people"] == [5, 5, False, 5, False] and res2["refill"] == [True, 5] and res2["absent"] == [11, False] \
         and res2["dice"] == [3, True, True, True, True] and res2["pile"] == [True, "52"] and res2["cards"] == [49, 3, 2, True, True] and res2["svg"] and res2["multi"] == [5, 5, 44, 8, True] \
@@ -854,6 +854,75 @@ def run_overview_fold_check(br, base):
         and res["bundle"][:3] == [True, 1, "Ziehen (2)01.10.–08.10."] and "f" in (res["bundle"][3] or "") and "2" in (res["bundle"][3] or "") \
         and res["bundle"][4] and res["bundle"][5] and res["print"] and res["back"]
     report("Notenübersicht: Gruppen ein-/ausklappen (Noten unverändert), Ziehungen bündeln mit Zeitraum, Ausdruck vollständig", ok and not br.errors, str(res) + "; ".join(br.errors))
+
+
+def run_timer_check(br, base):
+    print("Tools: Timer (Countdown, Designs, Pop-up):")
+    br.open(f"{base}/index.html?demo")
+    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.errors = []
+    res = br.eval("""(async () => {
+        const wait = (ms = 150) => new Promise((r) => setTimeout(r, ms));
+        const db = NM.app.db(), c = db.courses[0], nA = c.assessments.length;
+        const alarms = [];
+        NM.pomodoro.alarm = (k, v) => alarms.push(k);
+        NM.app.select({ courseId: c.id, tab: 'random' }); await wait(300);
+        const q = (sel, d = document) => d.querySelector(sel);
+        const digits = (d = document) => q('.tmr-digits', d).textContent;
+        const stage = (d = document) => q('.tmr-face', d).dataset.stage;
+        const out = { label: [...document.querySelectorAll('.tabs .tab')].find((b) => b.dataset.tab === 'random').textContent, head: q('#view h1').textContent };
+        const inp = q('[data-tmr-input]'); inp.value = '0:03'; inp.dispatchEvent(new Event('change')); await wait();
+        out.set = [digits(), stage()];
+        q('[data-tmr-go]').click(); await wait(1200);
+        out.run = [digits(), stage(), q('[data-tmr-go]').textContent];
+        q('[data-tmr-go]').click(); const paused = digits(); await wait(1100);
+        out.pause = [digits() === paused, stage(), q('.tmr-over').textContent, q('[data-tmr-go]').textContent];
+        // Reiterwechsel: läuft weiter
+        q('[data-tmr-go]').click(); await wait(200);
+        NM.app.select({ tab: 'overview' }); await wait(2600);
+        NM.app.select({ tab: 'random' }); await wait(300);
+        out.done = [digits(), stage(), q('.tmr-over').textContent.startsWith('Zeit ist um!'), alarms.join()];
+        // +1 Minute nach dem Ende → läuft wieder
+        [...document.querySelectorAll('.tmr-buttons button')].find((b) => b.textContent === '+ 1 Min.').click(); await wait(300);
+        out.plus = [digits(), stage()];
+        q('[data-tmr-reset]').click(); await wait();
+        out.reset = [stage(), q('[data-tmr-go]').textContent];
+        // Schnellwahl
+        q('[data-tmr-quick="10"]').click(); await wait();
+        out.quick = [digits(), q('[data-tmr-input]').value, NM.app.state.ui.random.timerMs];
+        // Designs
+        out.designs = [];
+        for (const d of ['digits', 'bar', 'hourglass', 'ring']) {
+            const sel = q('[data-tmr-design]'); sel.value = d; sel.dispatchEvent(new Event('change')); await wait();
+            out.designs.push(q('.tmr-face').dataset.tmrFace === d && !!q('.tmr-digits').textContent);
+        }
+        out.noGrades = c.assessments.length === nA;
+        // Einstellungen aller Werkzeuge werden gespeichert (früher ging z. B. „von“ der Zufallszahl verloren)
+        const mi = q('[data-rnd-min]'); mi.value = '3'; mi.dispatchEvent(new Event('change')); await wait();
+        out.saved = [JSON.parse(localStorage.getItem('nm.ui.demo')).random.min, JSON.parse(localStorage.getItem('nm.ui.demo')).random.timerDesign];
+        return out; })()""")
+    # Pop-up: Fenster öffnen nur mit Nutzergeste (wie ein echter Klick)
+    r = br.call("Runtime.evaluate", userGesture=True, awaitPromise=True, returnByValue=True, expression="""(async () => {
+        const wait = (ms = 150) => new Promise((r) => setTimeout(r, ms));
+        const q = (sel, d = document) => d.querySelector(sel);
+        const digits = (d = document) => q('.tmr-digits', d).textContent;
+        const stage = (d = document) => q('.tmr-face', d).dataset.stage;
+        q('[data-tmr-popup]').click(); await wait(800);
+        const w = NM.views.random.timer.clock.popup, pd = w && w.document;
+        const out = { popup: pd ? [!!q('.tmr-face', pd), digits(pd) === digits(), pd.title] : null };
+        if (pd) { q('[data-tmr-go]', pd).click(); await wait(1300); out.popupRun = [stage(pd), stage(), digits(pd) === digits()]; q('[data-tmr-go]', pd).click(); w.close(); }
+        q('[data-tmr-reset]').click(); await wait();
+        return out; })()""")
+    res2 = r.get("result", {}).get("result", {}).get("value") or {}
+    if res: res.update(res2)
+    ok = bool(res) and res["label"] == "Tools" and res["head"] == "Tools" and res["set"] == ["00:03", "idle"] \
+        and res["run"][0] in ("00:02", "00:01") and res["run"][1] == "end" and res["run"][2] == "⏸ Pause" \
+        and res["pause"] == [True, "paused", "angehalten", "▶ Weiter"] \
+        and res["done"][:3] == ["00:00", "done", True] and res["done"][3] == "gong" \
+        and res["plus"][0] in ("01:00", "00:59") and res["plus"][1] in ("run", "warn") and res["reset"] == ["idle", "▶ Start"] \
+        and res["quick"] == ["10:00", "10:00", 600000] and res["designs"] == [True] * 4 \
+        and res.get("popup") and res["popup"][:2] == [True, True] and res["popupRun"] == ["run", "run", True] and res["noGrades"] and res["saved"] == [3, "ring"]
+    report("Timer: Zeit setzen, Start/Pause, läuft beim Reiterwechsel weiter, Ende mit Signal, ±1 Min., Schnellwahl, 4 Designs, Pop-up steuert denselben Timer", ok and not br.errors, str(res) + "; ".join(br.errors))
 
 
 def run_demo_link_check(br, base):
@@ -1789,6 +1858,7 @@ def main():
         run_course_check(br, base)
         run_draw_check(br, base)
         run_random_check(br, base)
+        run_timer_check(br, base)
         run_pomodoro_check(br, base)
         run_transition_check(br, base)
         run_sidebar_check(br, base)

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="de">
+<head><meta charset="utf-8"><title>Tests Timer</title></head>
+<body>
+<pre id="out"></pre>
+<script src="../js/timer.js"></script>
+<script>
+  const T = NM.timer;
+  const lines = [];
+  let fails = 0;
+  const eq = (name, actual, expected) => {
+    const ok = JSON.stringify(actual) === JSON.stringify(expected);
+    if (!ok) fails++;
+    lines.push((ok ? 'OK   ' : 'FAIL ') + name + (ok ? '' : '  → erhalten ' + JSON.stringify(actual) + ', erwartet ' + JSON.stringify(expected)));
+  };
+  const MIN = 60000;
+
+  // Ablauf mit festen Zeitpunkten
+  const t = T.create(5 * MIN);
+  eq('neu: voll, angehalten, bereit', [T.remaining(t, 0), T.running(t), T.stage(t, 0)], [5 * MIN, false, 'idle']);
+  T.start(t, 1000);
+  eq('läuft: Restzeit aus der Startzeit', [T.remaining(t, 61000), T.stage(t, 61000), T.format(T.remaining(t, 61000))], [4 * MIN, 'run', '04:00']);
+  T.pause(t, 121000);
+  eq('angehalten: Zeit steht', [T.remaining(t, 999999), T.stage(t, 999999)], [3 * MIN, 'paused']);
+  T.start(t, 200000);
+  eq('weiter nach der Pause', T.remaining(t, 260000), 2 * MIN);
+  eq('letzte Minute: warn', T.stage(t, 200000 + 2 * MIN + 5000), 'warn');
+  eq('letzte 10 s: end (Wert)', T.stage(t, 200000 + 2 * MIN + 51000), 'end');
+  const endAt = 200000 + 3 * MIN;
+  eq('abgelaufen: 0, done, Überzeit', [T.remaining(t, endAt + 12000), T.finished(t, endAt + 1), T.stage(t, endAt + 1), T.format(T.overtime(t, endAt + 12000))], [0, true, 'done', '00:12']);
+  T.start(t, endAt + 20000);
+  eq('Start nach dem Ende: neu von vorn', T.remaining(t, endAt + 20000), t.total);
+  T.reset(t);
+  eq('Zurücksetzen', [T.remaining(t, 5), T.running(t), T.elapsed(t, 5)], [5 * MIN, false, 0]);
+
+  // ± Minuten
+  const u = T.create(2 * MIN);
+  T.start(u, 0);
+  T.add(u, MIN, 30000);
+  eq('+1 Min. während des Laufens', [T.remaining(u, 30000), u.total], [150000, 3 * MIN]);
+  T.add(u, -5 * MIN, 30000);
+  eq('−5 Min.: nicht unter 0, dann abgelaufen', [T.remaining(u, 30000), T.finished(u, 30000)], [0, true]);
+  eq('Anteil', [T.fraction(T.create(MIN), 0), T.fraction({ total: 0, elapsed: 0, startedAt: null }, 0)], [1, 0]);
+  eq('Timer mit 0 startet nicht', T.running(T.start(T.create(0), 0)), false);
+  const big = T.create(2 * MIN);
+  eq('kurzer Timer: warn im letzten Fünftel (24 s von 2 Min.)', [T.stage(T.start(big, 0), 2 * MIN - 20000), T.stage(big, 2 * MIN - 30000)], ['warn', 'run']);
+
+  // Anzeige und Eingabe
+  eq('Format', [T.format(0), T.format(400), T.format(59000), T.format(61000), T.format(3600000), T.format(3725000)], ['00:00', '00:01', '00:59', '01:01', '1:00:00', '1:02:05']);
+  eq('Eingabe Minuten', [T.parse('5'), T.parse('2,5'), T.parse('10 min'), T.parse('90s')], [5 * MIN, 150000, 10 * MIN, 90000]);
+  eq('Eingabe mm:ss und h:mm:ss', [T.parse('5:30'), T.parse('1:05:00'), T.parse('0:45')], [330000, 3900000, 45000]);
+  eq('ungültige Eingaben', [T.parse(''), T.parse('abc'), T.parse('5:75'), T.parse('0'), T.parse('-3')], [null, null, null, null, null]);
+  eq('Obergrenze knapp 24 h', T.create(99 * 3600000).total, T.MAX_MS);
+
+  lines.unshift(fails === 0 ? 'ALLE TESTS BESTANDEN' : fails + ' FEHLGESCHLAGEN');
+  document.getElementById('out').textContent = lines.join('\n');
+  document.title = 'fertig';
+</script>
+</body>
+</html>
