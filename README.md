@@ -101,3 +101,11 @@ uv run --with websocket-client --with cryptography python tests/run_tests.py
 ```
 
 Einzeln: `tests/*.test.html` im Browser öffnen (`storage.test.html` nur über `http://localhost`). Details: DOKUMENTATION.md, Abschnitt 25–26.
+
+## Lizenz
+
+Copyright © 2026 Thomas Faßbender
+
+OrdoNota ist freie Software unter der **GNU Affero General Public License, Version 3** (AGPL-3.0, Datei `LICENSE`). Sie dürfen das Programm nutzen, ändern und weitergeben. Jede weitergegebene oder im Netz betriebene Fassung muss wieder unter der AGPL-3.0 stehen und ihren vollständigen Quelltext mitliefern. Das Programm wird ohne Gewährleistung bereitgestellt.
+
+Ausgenommen sind die Kartenbilder in `cards/`. Sie sind gemeinfrei (CC0), siehe `cards/LIZENZ.txt`.

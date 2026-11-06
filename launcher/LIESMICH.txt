@@ -48,3 +48,4 @@ Gut zu wissen
 - Das Programm ist nur auf diesem Rechner erreichbar (127.0.0.1), nicht im Netz.
 - Neue Version: die alte Datei durch die neue ersetzen. Die Daten bleiben unberührt.
 - Notfall ohne App: entschluesseln.py (braucht Python, siehe Kopf der Datei).
+- Lizenz: GNU AGPL-3.0 (Datei LICENSE). Quelltext: https://github.com/Fuchsbender/OrdoNota

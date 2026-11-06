@@ -56,6 +56,7 @@ cat > "$APP/Info.plist" <<PLIST
 PLIST
 
 cp "$ROOT/launcher/LIESMICH.txt" "$OUT/LIESMICH.txt"
+cp "$ROOT/LICENSE" "$OUT/LICENSE"
 cp "$ROOT/tools/entschluesseln.py" "$OUT/entschluesseln.py"
 
 # ZIP mit Ausführungsrechten (Linux/Mac)
