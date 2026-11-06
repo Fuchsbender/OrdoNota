@@ -720,6 +720,31 @@ def run_tabs_check(br, base):
     report("Reiter: Standard in Einstellungen, Abweichung je Kurs, Ersatzreiter, Sprunglinks, „Wie Standard“", ok and not br.errors, str(res) + "; ".join(br.errors))
 
 
+def run_demo_link_check(br, base):
+    print("Demo aus der App öffnen:")
+    br.open(f"{base}/index.html")
+    br.wait("!!document.querySelector('.auth-links')", 30)
+    br.errors = []
+    res = br.eval("""(async () => {
+        const opened = [];
+        window.open = (u, t) => { opened.push([u, t]); return null; };
+        const btn = [...document.querySelectorAll('.auth-links button')].find((b) => b.textContent === 'Demo ansehen');
+        if (btn) btn.click();
+        return { btn: !!btn, url: opened.length ? new URL(opened[0][0]).search : null, target: opened.length ? opened[0][1] : null }; })()""")
+    br.eval("localStorage.setItem('nm.ui', JSON.stringify({ tab: 'tests', marker: 'echt' }))")
+    br.open(f"{base}/index.html?demo")
+    br.wait("!!document.querySelector('.overview-table')", 30)
+    res2 = br.eval("""(async () => {
+        const wait = (ms = 250) => new Promise((r) => setTimeout(r, ms));
+        NM.app.select({ tab: 'settings' }); await wait();
+        const note = [...document.querySelectorAll('.card p')].some((p) => p.textContent.includes('Dies ist der Demo-Modus'));
+        const real = JSON.parse(localStorage.getItem('nm.ui') || '{}');
+        return { note, realKept: real.marker === 'echt' && real.tab === 'tests', demoKey: !!localStorage.getItem('nm.ui.demo') }; })()""")
+    br.eval("localStorage.removeItem('nm.ui'); localStorage.removeItem('nm.ui.demo')")
+    ok = bool(res) and res["btn"] and res["url"] == "?demo" and res["target"] == "_blank" and bool(res2) and res2["note"] and res2["realKept"] and res2["demoKey"]
+    report("Demo: Link auf dem Startbildschirm öffnet ?demo im neuen Fenster, Hinweis in den Einstellungen, eigene Ansicht bleibt unberührt", ok and not br.errors, str(res) + str(res2) + "; ".join(br.errors))
+
+
 def run_settings_layout_check(br, base):
     print("Layout Einstellungen (Pomodoro aktiv) und eingeklappte Kursliste:")
     out = {}
@@ -1620,6 +1645,7 @@ def main():
         run_unreachable_check(br, base)
         run_tabs_check(br, base)
         run_settings_layout_check(br, base)
+        run_demo_link_check(br, base)
         run_parts_check(br, base)
         run_print_menu_check(br, base)
         run_pres_check(br, base)

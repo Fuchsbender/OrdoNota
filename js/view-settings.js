@@ -497,6 +497,15 @@
       { class: 'card card-subtle' },
       h('h2', null, 'Hinweise'),
       h('p', { class: 'muted small' }, `OrdoNota Version ${NM.model.APP_VERSION} · Datenformat ${NM.model.SCHEMA}`),
+      NM.app.DEMO
+        ? h('p', { class: 'muted small' }, 'Dies ist der Demo-Modus mit Beispieldaten. Es wird nichts gespeichert.')
+        : h(
+            'p',
+            null,
+            h('button', { class: 'btn', onclick: NM.app.openDemo, title: 'Beispieldaten in einem neuen Fenster; Ihre Datenbank bleibt offen und unverändert' }, '▶ Demo ansehen'),
+            ' ',
+            h('span', { class: 'muted small' }, 'Öffnet die Beispieldaten in einem neuen Fenster. Dort wird nichts gespeichert.')
+          ),
       h(
         'ul',
         null,

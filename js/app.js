@@ -7,6 +7,8 @@
   const M = NM.model;
 
   const DEMO = new URLSearchParams(location.search).has('demo');
+  // Der Demo-Modus merkt sich seine Ansicht getrennt, damit er die Ansicht der echten Datenbank nicht überschreibt
+  const UI_KEY = DEMO ? 'nm.ui.demo' : 'nm.ui';
 
   const state = {
     store: null,
@@ -54,13 +56,21 @@
 
   function loadUi() {
     try {
-      return Object.assign({ tab: 'overview', courseId: null, yearId: null, half: {}, testId: {}, epoId: {}, presId: {}, seatingId: {}, sort: {}, theme: 'auto' }, JSON.parse(localStorage.getItem('nm.ui') || '{}'));
+      return Object.assign({ tab: 'overview', courseId: null, yearId: null, half: {}, testId: {}, epoId: {}, presId: {}, seatingId: {}, sort: {}, theme: 'auto' }, JSON.parse(localStorage.getItem(UI_KEY) || '{}'));
     } catch (e) {
       return { tab: 'overview', courseId: null, yearId: null, half: {}, testId: {}, epoId: {}, presId: {}, seatingId: {}, sort: {}, theme: 'auto' };
     }
   }
+  /** Demo-Modus in einem neuen Fenster öffnen (gleiche Seite mit ?demo); die eigene Datenbank bleibt offen. */
+  function openDemo() {
+    const u = new URL(location.href);
+    u.search = '?demo';
+    u.hash = '';
+    window.open(u.href, '_blank');
+  }
+
   function saveUi() {
-    try { localStorage.setItem('nm.ui', JSON.stringify(state.ui)); } catch (e) { /* egal */ }
+    try { localStorage.setItem(UI_KEY, JSON.stringify(state.ui)); } catch (e) { /* egal */ }
   }
 
   const root = () => document.getElementById('app');
@@ -135,7 +145,8 @@
           message ? h('p', { class: 'notice' }, message) : null,
           h('p', null, 'Wählen Sie den Ordner, in dem die Datenbank liegen soll – am besten einen Ordner, den der Synology Drive Client synchronisiert.'),
           h('p', { class: 'muted' }, 'Liegt dort schon eine Datenbank, wird sie geöffnet. Sonst legen Sie eine neue an.'),
-          h('button', { class: 'btn btn-primary btn-block', onclick: pickFolder }, 'Datenordner wählen …')
+          h('button', { class: 'btn btn-primary btn-block', onclick: pickFolder }, 'Datenordner wählen …'),
+          h('div', { class: 'auth-links' }, demoLink())
         )
       );
       return;
@@ -176,11 +187,16 @@
           'div',
           { class: 'auth-links' },
           h('button', { class: 'link', onclick: pickFolder }, 'Anderen Ordner wählen'),
-          h('button', { class: 'link', onclick: recoverFlow }, 'Passwort vergessen?')
+          h('button', { class: 'link', onclick: recoverFlow }, 'Passwort vergessen?'),
+          demoLink()
         )
       )
     );
     pw.focus();
+  }
+
+  function demoLink() {
+    return h('button', { class: 'link', onclick: openDemo, title: 'Beispieldaten in einem neuen Fenster, es wird nichts gespeichert' }, 'Demo ansehen');
   }
 
   async function pickFolder() {
@@ -247,7 +263,8 @@
           'div',
           { class: 'auth-links' },
           h('button', { class: 'link', onclick: importFromFile, title: 'z. B. eine „Verschlüsselte Kopie“ oder Sicherung (.nmdb)' }, 'Vorhandene Datenbank aus Datei übernehmen …'),
-          h('button', { class: 'link', onclick: pickFolder }, 'Anderen Ordner wählen')
+          h('button', { class: 'link', onclick: pickFolder }, 'Anderen Ordner wählen'),
+          demoLink()
         )
       )
     );
@@ -963,6 +980,7 @@
     switchStore,
     showRecoveryKey,
     saveUi,
+    openDemo,
     applyTheme,
     coursesOfYear,
     currentYear,
