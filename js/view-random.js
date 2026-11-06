@@ -25,9 +25,60 @@
   const motion = () => !(globalThis.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+  // Werkzeuge in der Standardreihenfolge (NM.model.TOOL_IDS): Name und Aufbau der Kachel
+  const TOOLS = {
+    timer: { label: '⏱ Timer', make: () => timerTool() },
+    number: { label: 'Zufallszahl', make: (c) => numberTool(c) },
+    people: { label: 'Personen auswählen', make: (c) => peopleTool(c) },
+    dice: { label: 'Würfel', make: (c) => diceTool(c) },
+    cards: { label: 'Karten ziehen', make: (c) => cardTool(c) },
+  };
+
   function render(view, { course }) {
-    view.append(h('div', { class: 'view-head' }, h('h1', null, 'Tools'), h('span', { class: 'muted small' }, 'Werkzeuge für den Unterricht – es wird nichts in die Notenliste eingetragen.')));
-    view.appendChild(h('div', { class: 'rnd-grid' }, timerTool(), numberTool(course), peopleTool(course), diceTool(course), cardTool(course)));
+    const menu = h('button', { class: 'btn btn-sm', 'data-tools-menu': '', 'aria-haspopup': 'dialog', title: 'Werkzeuge in diesem Kurs ein-/ausschalten und sortieren', onclick: () => toolsMenu(course) }, '⚙ Werkzeuge …');
+    view.append(h('div', { class: 'view-head' }, h('h1', null, 'Tools'), h('span', { class: 'muted small' }, 'Werkzeuge für den Unterricht – es wird nichts in die Notenliste eingetragen.'), h('span', { class: 'spacer' }), menu));
+    const shown = M.toolList(course).filter((x) => x.on && TOOLS[x.id]);
+    if (!shown.length) {
+      view.appendChild(UI.emptyState('Alle Werkzeuge sind ausgeschaltet', 'Über „⚙ Werkzeuge …“ lassen sich die Werkzeuge für diesen Kurs wieder einschalten.', h('button', { class: 'btn btn-primary', onclick: () => toolsMenu(course) }, '⚙ Werkzeuge …')));
+      return;
+    }
+    view.appendChild(h('div', { class: 'rnd-grid' }, shown.map((x) => TOOLS[x.id].make(course))));
+  }
+
+  /** Fenster: Werkzeuge des Kurses ein-/ausschalten (Haken) und sortieren (▲▼); gilt sofort. */
+  function toolsMenu(course) {
+    const list = h('ol', { class: 'tab-order-list tools-list' });
+    const apply = (items) => {
+      M.setTools(course, items);
+      NM.app.commit();
+      paint();
+    };
+    function paint() {
+      const items = M.toolList(course).filter((x) => TOOLS[x.id]);
+      clear(list).append(
+        ...items.map((x, i) =>
+          h(
+            'li',
+            { 'data-tool-item': x.id },
+            h(
+              'label',
+              { class: 'check' },
+              h('input', { type: 'checkbox', checked: x.on, 'data-tool-check': x.id, onchange: (e) => apply(items.map((y) => (y.id === x.id ? { id: y.id, on: e.target.checked } : y))) }),
+              ' ' + TOOLS[x.id].label
+            ),
+            h('button', { type: 'button', class: 'icon-btn', disabled: i === 0, 'aria-label': 'Nach vorn: ' + TOOLS[x.id].label, title: 'Nach vorn', onclick: () => apply(M.moveTab(items.map((y) => y.id), x.id, -1).map((id) => items.find((y) => y.id === id))) }, '▲'),
+            h('button', { type: 'button', class: 'icon-btn', disabled: i === items.length - 1, 'aria-label': 'Nach hinten: ' + TOOLS[x.id].label, title: 'Nach hinten', onclick: () => apply(M.moveTab(items.map((y) => y.id), x.id, 1).map((id) => items.find((y) => y.id === id))) }, '▼')
+          )
+        )
+      );
+    }
+    paint();
+    const reset = h('button', { type: 'button', class: 'btn btn-sm', 'data-tools-reset': '', onclick: () => apply(M.TOOL_IDS.map((id) => ({ id, on: true }))) }, 'Standard (alle an)');
+    return NM.util.modal({
+      title: 'Werkzeuge in „' + M.courseTitle(course) + '“',
+      body: [h('p', { class: 'muted small' }, 'Gilt nur für diesen Kurs, auf allen Geräten. Ein laufender Timer läuft weiter, auch wenn seine Kachel ausgeschaltet ist.'), list, reset],
+      buttons: [{ label: 'Fertig', value: true, kind: 'primary' }],
+    });
   }
 
   /** Rahmen eines Werkzeugs mit Vollbild-Knopf (für den Beamer). */

@@ -85,6 +85,19 @@
   ok('Reiter: neuer Reiter kommt hinter seinen Vorgänger', M.orderTabs(D, ['overview', 'course', 'tests', 'settings']).join() === 'overview,course,tests,epo,settings' && M.orderTabs(D, ['tests', 'settings']).join() === 'course,tests,epo,overview,settings');
   ok('Reiter verschieben (Grenzen)', M.moveTab(D, 'epo', -1).join() === 'course,epo,tests,overview,settings' && M.moveTab(D, 'course', -1).join() === D.join() && M.moveTab(D, 'overview', 5).join() === 'course,tests,epo,settings,overview');
 
+  // 1.39: Werkzeuge im Reiter „Tools“ je Kurs
+  const tdb = M.migrate({ years: [], courses: [{ id: 'k1', name: 'K' }, { id: 'k2', name: 'L', tools: { off: ['dice', 3], order: ['cards', 'timer'], extra: 1 } }] });
+  const [k1, k2] = tdb.courses;
+  ok('Tools: Standard alle an, Standardreihenfolge', k1.tools.off.length === 0 && k1.tools.order.length === 0 && M.toolList(k1).map((x) => x.id + (x.on ? '+' : '-')).join() === 'timer+,number+,people+,dice+,cards+');
+  ok('Tools: migrate behält gültige Werte und unbekannte Felder', k2.tools.off.join() === 'dice' && k2.tools.extra === 1);
+  ok('Tools: gespeicherte Reihenfolge, fehlende ergänzt', M.toolList(k2).map((x) => x.id + (x.on ? '+' : '-')).join() === 'cards+,timer+,number+,people+,dice-');
+  ok('Tools: unbekannte ids fallen weg', M.toolList({ tools: { order: ['xyz', 'dice'], off: ['xyz'] } }).length === 5);
+  const k3 = { tools: {} };
+  M.setTools(k3, M.toolList(k3).map((x) => ({ id: x.id, on: x.id !== 'people' })));
+  ok('Tools: setTools speichert Standardreihenfolge leer', k3.tools.order.length === 0 && k3.tools.off.join() === 'people');
+  M.setTools(k3, [{ id: 'dice', on: true }, { id: 'timer', on: true }, { id: 'number', on: false }, { id: 'people', on: true }, { id: 'cards', on: true }]);
+  ok('Tools: setTools speichert eigene Reihenfolge', k3.tools.order.join() === 'dice,timer,number,people,cards' && k3.tools.off.join() === 'number');
+
   const extra = M.migrate({ schema: 1, years: [], courses: [], zusatz: { a: 1 } });
   ok('Unbekannte Felder bleiben erhalten', extra.zusatz && extra.zusatz.a === 1);
 

@@ -10,7 +10,7 @@
   // 3 (1.20): Präsentationen (kind "pres") – ältere Versionen kennen diese Leistungsart nicht.
   // 4 (1.23): Gruppenpräsentationen – ältere Versionen würden Gruppenwerte ignorieren und falsche Noten zeigen.
   const SCHEMA = 4;
-  const APP_VERSION = '1.38.0';
+  const APP_VERSION = '1.39.0';
 
   class NewerSchemaError extends Error {}
 
@@ -149,6 +149,9 @@
       c.groupRules = Object.assign({ apart: [], together: [] }, c.groupRules || {});
       // 1.29: eigene Karten im Reiter „Zufall“ (je Eintrag eine Karte)
       c.randomCards = Array.isArray(c.randomCards) ? c.randomCards : [];
+      // 1.39: Werkzeuge im Reiter „Tools“ je Kurs aus-/umsortieren (leer = alle an, Standardreihenfolge)
+      c.tools = Object.assign({}, c.tools && typeof c.tools === 'object' ? c.tools : {});
+      for (const k of ['off', 'order']) c.tools[k] = Array.isArray(c.tools[k]) ? c.tools[k].filter((x) => typeof x === 'string') : [];
       c.overrides = c.overrides || {};
       c.comments = c.comments || {};
       if (c.wHalf1 === undefined) c.wHalf1 = 1;
@@ -287,6 +290,25 @@
   }
 
   /** Reiter id in der Liste order um delta Plätze verschieben (Ergebnis: neue Liste). */
+  // Werkzeuge im Reiter „Tools“ (Standardreihenfolge)
+  const TOOL_IDS = ['timer', 'number', 'people', 'dice', 'cards'];
+
+  /** Werkzeuge eines Kurses in seiner Reihenfolge: [{ id, on }]. Unbekannte ids fallen weg, neue Werkzeuge sind an. */
+  function toolList(course) {
+    const t = (course && course.tools) || {};
+    const off = new Set(t.off || []);
+    return orderTabs(TOOL_IDS, t.order || []).map((id) => ({ id, on: !off.has(id) }));
+  }
+
+  /** Setzt Reihenfolge und An/Aus aus einer Liste [{ id, on }]; Standardwerte werden als leere Listen gespeichert. */
+  function setTools(course, list) {
+    const order = list.map((x) => x.id);
+    course.tools = Object.assign({}, course.tools, {
+      order: order.join() === TOOL_IDS.join() ? [] : order,
+      off: list.filter((x) => !x.on).map((x) => x.id),
+    });
+  }
+
   function moveTab(order, id, delta) {
     const out = order.slice();
     const i = out.indexOf(id);
@@ -701,6 +723,9 @@
     newTest,
     check,
     orderTabs,
+    TOOL_IDS,
+    toolList,
+    setTools,
     moveTab,
     newEpo,
     newPres,

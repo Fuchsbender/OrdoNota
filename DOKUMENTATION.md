@@ -1,6 +1,6 @@
 # OrdoNota – Dokumentation
 
-Version 1.38.0 · Stand November 2026
+Version 1.39.0 · Stand November 2026
 
 OrdoNota (bis Version 1.11 „Notenmanager“) verwaltet Noten für die Sekundarstufe I (Noten 1–6 mit Tendenz) und die Mainzer Studienstufe (MSS, Punkte 00–15) an Schulen in Rheinland-Pfalz. Die App läuft vollständig lokal im Browser, verschlüsselt alle Daten mit einem Passwort und legt sie in einem Ordner ab, den der Synology Drive Client auf die DiskStation spiegelt.
 
@@ -701,7 +701,7 @@ Gruppen bilden für Gruppenaufträge, Lernaufträge, Stationenlernen, Gruppenpuz
 
 ## 10c. Reiter „Tools“
 
-Werkzeuge für den Unterricht (bis Version 1.35 hieß der Reiter „Zufall“). **Es wird nichts in die Notenliste eingetragen**, und die Ergebnisse gelten nur, bis die App geschlossen oder neu geladen wird. Alle Werkzeuge stehen in gleich großen Kacheln. Jedes Werkzeug hat oben rechts **⛶ Vollbild** für den Beamer (Esc beendet). Bei „Bewegung reduzieren“ im Betriebssystem erscheint das Ergebnis ohne Animation.
+Werkzeuge für den Unterricht (bis Version 1.35 hieß der Reiter „Zufall“). **Es wird nichts in die Notenliste eingetragen**, und die Ergebnisse gelten nur, bis die App geschlossen oder neu geladen wird. Alle Werkzeuge stehen in gleich großen Kacheln. Oben rechts im Reiter öffnet **⚙ Werkzeuge …** die Auswahl für den Kurs: Haken schalten ein Werkzeug ein oder aus, ▲▼ ändern die Reihenfolge, **Standard (alle an)** stellt alles zurück. Die Auswahl gilt sofort, nur für diesen Kurs und auf allen Geräten (sie steht in der Datenbank). Ein laufender Timer läuft weiter, auch wenn seine Kachel ausgeschaltet ist. Sind alle Werkzeuge aus, zeigt der Reiter einen Hinweis mit demselben Knopf. Jedes Werkzeug hat oben rechts **⛶ Vollbild** für den Beamer (Esc beendet). Bei „Bewegung reduzieren“ im Betriebssystem erscheint das Ergebnis ohne Animation.
 
 - **⏱ Timer:** großer Countdown, z. B. für Arbeitsphasen. Zeit eintragen (`5` = 5 Minuten, `2,5`, `4:30` oder `90s`) oder eine **Schnellwahl** (1 bis 30 Min.) anklicken, dann **▶ Start**. **⏸ Pause** hält an, **▶ Weiter** läuft weiter, **− 1 Min.**/**+ 1 Min.** ändern die Zeit auch während des Laufens, **↺** setzt auf die eingestellte Zeit zurück.
   - **Design:** Ring (Standard, läuft im Uhrzeigersinn ab: der Rest endet bei 12 Uhr), große Ziffern, Balken oder Sanduhr. Die Farbe zeigt, wie viel Zeit bleibt: blau, in der letzten Minute (bei kurzen Timern im letzten Fünftel) gelb, in den letzten 10 Sekunden und am Ende rot. Am Ende blinkt 00:00, „Zeit ist um!“ erscheint und daneben die Überzeit.
@@ -1226,7 +1226,7 @@ Das Startprogramm ist das einzige Teil mit Build-Schritt; die App selbst bleibt 
   "kdf": "PBKDF2-SHA256",
   "savedAt": "2026-10-14T21:57:03.123Z",
   "device": "Laptop Schule",
-  "app": "1.38.0",
+  "app": "1.39.0",
   "pw":   { "salt": "<b64>", "iter": 600000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "rec":  { "salt": "<b64>", "iter": 100000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "data": { "iv": "<b64>", "ct": "<b64: verschlüsseltes JSON des Datenmodells>" }
@@ -1249,7 +1249,7 @@ Entschlüsselter Inhalt (`schema: 4`):
 ```js
 {
   schema: 4,                             // Datenformat (siehe 26.2)
-  savedWith: "1.38.0",                    // App-Version beim letzten Speichern
+  savedWith: "1.39.0",                    // App-Version beim letzten Speichern
   created: "<ISO>", savedAt: "<ISO>",
   settings: { autoLockMin, limitSek1, limitMss, precision, testCat: "ka" | "other" /* seit 1.30 */, keepBackups, backupEveryMin, gradeColors,
               tabs: { "<Reiter>": false },   // seit 1.25: ausgeschaltete Reiter (Standard für alle Kurse)
@@ -1282,6 +1282,7 @@ Course = {
                  groups: [ { id, name, members: [ studentId ], task?, locked? } ] } ],   // seit 1.24: Reiter „Gruppen“
   groupRules: { apart: [ [ studentId, studentId ] ], together: [ [ studentId, studentId ] ] },  // vertraulich, nie gedruckt
   randomCards: [ "Thema 1", … ]          // seit 1.29: eigene Karten im Reiter „Tools“ (je Eintrag eine Karte)
+  tools: { off: ["dice"], order: [] }     // seit 1.39: Werkzeuge im Reiter „Tools“ (off = ausgeschaltet; order leer = Standard timer, number, people, dice, cards)
 }
 
 Assessment = {
@@ -1347,7 +1348,7 @@ Am Ende steht `ERGEBNIS: x von y bestanden`. Der Exit-Code ist 0, wenn alles bes
 | Datei | Prüft | Ausführen |
 |---|---|---|
 | `tests/grades.test.html` | Skalen, Eingabe-Parser, Rundung, Notenschlüssel (Vergleich mit Excel-Formeln), Bonus/Kappung, Status, Drittelparagraph, EPO (Werte aus der bisherigen EPO-Liste), Halbjahres-/Jahresnote, GK-Gewichtung, nicht erreichbare Stufen (zu wenig Punkte, eigene Schwellen, Präsentationen), Präsentationen (Gewicht, Status, Schlüssel, Halbjahresnote, Gruppen: Gruppenwert, Abweichung, Personenkriterium, Modus „alles als Gruppe“), Arbeiten in Teilen (gemeinsam/getrennt, Gewichte, fehlender Teil, Status je Teil, ganze Noten je Teil, MSS) | im Browser öffnen |
-| `tests/model.test.html` | Migration älterer Datenbanken (SCHEMA 1 → 4, Bereich neuer Tests, Kriterienpool, Startbestand ergänzen, Vorlagen, Standardvorlagen), neue Präsentation, Ablehnung neuerer Datenformate, Erhalt unbekannter Felder, Reiterauswahl (`settings.tabs`, `course.tabs`), Reihenfolge der Reiter (`orderTabs`, `moveTab`), Namensliste | im Browser öffnen |
+| `tests/model.test.html` | Migration älterer Datenbanken (SCHEMA 1 → 4, Bereich neuer Tests, Kriterienpool, Startbestand ergänzen, Vorlagen, Standardvorlagen), neue Präsentation, Ablehnung neuerer Datenformate, Erhalt unbekannter Felder, Reiterauswahl (`settings.tabs`, `course.tabs`), Reihenfolge der Reiter (`orderTabs`, `moveTab`), Werkzeuge je Kurs (`toolList`, `setTools`, Migration von `course.tools`), Namensliste | im Browser öffnen |
 | `tests/update.test.html` | Datenbanken früherer Versionen (Prüfstücke 1.1–1.29 in `tests/altdaten/`, je Datenformat mindestens eins): öffnen, Strukturprüfung ohne Fehler, **gleiche Halbjahres- und Jahresnoten wie in der alten Version**, unbekannte Felder bleiben, zweites Öffnen ändert nichts; `NM.model.check` findet kaputte Halbjahre, Bereiche, fehlende Inhalte, doppelte Personen, fehlende Schuljahre und ändert nichts | im Browser öffnen |
 | `tests/moodle.test.html` | CSV-Zerlegung, Erkennen und Zusammenführen von Antworten-/Bewertungen-CSV, bester Versuch, Textvergleich ohne Bewertungen, Zuordnung (Name, gemerkte E-Mail), Übernahme als Test, Import in einen bestehenden Test (Aufgaben ersetzen/behalten, Bezeichnung und Datum übernehmen), „fehlt“, erneuter Import, skalierte Punkte, Import in einen Teil (auch mit Ersetzen) | im Browser öffnen |
 | `tests/groups.test.html` | Gruppengrößen (Rest verteilt), Verteilung (alle genau einmal), Regeln „nicht zusammen“/„zusammen“, leistungsgemischt/-gleich, fehlende Noten, Abwechslung (auch Minimum), Expertengruppen (Standard und einstellbare Anzahl, gleich große Gruppen, kein Thema doppelt), Migration | im Browser öffnen |
@@ -1406,7 +1407,7 @@ In `js/model.js` stehen zwei Nummern:
 - **Arbeit in Teilen (seit 1.18):** Logik in `js/grades.js` (`hasParts`, `separateParts`, `taskGroups`, `partAsTest`, `keyForPart`, `partStats`; `testResult()` liefert `parts`), Oberfläche in `js/view-tests.js` (`partsCard`, Teilspalten, Schlüssel je Teil), Druck `NM.print.test(…, 'parts')`.
 - **Präsentationen (seit 1.20):** Logik in `js/grades.js` (`presAsTest`, `presResult`, `presStats`, `keyForPres`; Präsentation = Test mit Kriterien als Aufgaben, 3 × Gewicht), Modell `NM.model.newPres`/`presCriterion`/`defaultCriteriaPool`/`newPresTemplate`, Standardvorlagen `PRES_TEMPLATES` mit `defaultPresTemplates(pool)` und `missingDefaultTemplates`, Reiter `js/view-pres.js`, Druck `NM.print.pres(course, a, 'list' | 'key' | 'blank' | 'sheets')` und `NM.print.presGuide`. Die Schlüsselkarte teilt sich der Reiter mit den Tests (`NM.views.tests.keyCardFor`).
 - **Gruppenpräsentationen (seit 1.23):** Logik in `js/grades.js` (`presGroupOf`, `presCritIsGroup`, `presScores`, `presDeviation`, `presTopic`), Oberfläche in `js/view-pres.js` (`setGroupMode`, `groupsCard`, `groupRateCard`, `personRateCard`).
-- **Tools (seit 1.29 als „Zufall“, seit 1.36 „Tools“ mit Timer):** Timer-Logik in `js/timer.js` (`NM.timer`), Anzeige `timerTool`/`timerFace` (Designs ring, digits, bar, hourglass) und Pop-up `openTimerPopup` in `js/view-random.js`; ein Timer für die ganze App (`clock`), alle Anzeigen in `clock.faces`, Signal über `NM.pomodoro.alarm`. Zufalls-Logik in `js/random.js` (`NM.random`), Reiter `js/view-random.js` (`numberTool`, `peopleTool`, `diceTool` mit eigenem Canvas-3D-Zeichner `paintDie`, `cardTool` mit `flyIn`). Kartenbilder in `cards/` (`<Farbe C/D/H/S><Wert 2–10/B/D/K/A>.svg`, `back.svg`, CC0); ein neuer App-Ordner muss auch in `staticAllowed` (`launcher/server.go`) und in `launcher/build.sh`. Ergebnisse und Stapel nur in der Sitzung (`NM.views.random.session`), Einstellungen pro Gerät in `nm.ui` (`ui.random`), eigene Karten in `course.randomCards`. „Heute abwesend“ aus `NM.views.draw.absent`. Tests: `tests/random.test.html`, E2E `run_random_check`.
+- **Tools (seit 1.29 als „Zufall“, seit 1.36 „Tools“ mit Timer):** Timer-Logik in `js/timer.js` (`NM.timer`), Anzeige `timerTool`/`timerFace` (Designs ring, digits, bar, hourglass) und Pop-up `openTimerPopup` in `js/view-random.js`; ein Timer für die ganze App (`clock`), alle Anzeigen in `clock.faces`, Signal über `NM.pomodoro.alarm`. Zufalls-Logik in `js/random.js` (`NM.random`), Reiter `js/view-random.js` (`numberTool`, `peopleTool`, `diceTool` mit eigenem Canvas-3D-Zeichner `paintDie`, `cardTool` mit `flyIn`). Kartenbilder in `cards/` (`<Farbe C/D/H/S><Wert 2–10/B/D/K/A>.svg`, `back.svg`, CC0); ein neuer App-Ordner muss auch in `staticAllowed` (`launcher/server.go`) und in `launcher/build.sh`. Ergebnisse und Stapel nur in der Sitzung (`NM.views.random.session`), Einstellungen pro Gerät in `nm.ui` (`ui.random`), eigene Karten in `course.randomCards`. „Heute abwesend“ aus `NM.views.draw.absent`. Werkzeuge je Kurs (seit 1.39): `course.tools`, reine Logik `NM.model.TOOL_IDS`/`toolList`/`setTools`, Kacheln über die Tabelle `TOOLS` und Fenster `toolsMenu` in `js/view-random.js`; ein neues Werkzeug kommt in `TOOL_IDS` und `TOOLS`. Tests: `tests/random.test.html`, `tests/model.test.html`, E2E `run_random_check`, `run_tools_layout_check`, `run_tools_menu_check`.
 - **Demo öffnen (seit 1.31):** `NM.app.openDemo()` (`js/app.js`) öffnet die eigene Adresse mit `?demo` in einem neuen Fenster; Knöpfe über `demoLink()` auf den Startseiten (`renderStart`, `renderCreate`) und in `infoCard` (`js/view-settings.js`). Die Demo speichert ihre Ansicht unter `nm.ui.demo` (`UI_KEY`). E2E `run_demo_link_check`.
 - **Update-Sicherheit (seit 1.33):** Strukturprüfung `NM.model.check(db)` (`js/model.js`, rein, liefert `{ level: 'fehler' | 'hinweis', where, text }`), Aufruf nach dem Entsperren in `unlock` (`js/app.js`, nur Meldung) und im Dialog `checkDialog` (`js/view-settings.js`). Prüfstücke früherer Versionen in `tests/altdaten/` (erzeugt mit `erzeugen.js` aus dem Git-Verlauf), geprüft in `tests/update.test.html`, E2E `run_old_db_check` und in `run_decrypt_tool`. Neue Felder in `check` aufnehmen, wenn ein fehlerhafter Wert die Rechnung stören würde.
 - **Reihenfolge der Reiter (seit 1.34):** `settings.tabOrder`; reine Logik `NM.model.orderTabs`/`moveTab`, in der App `NM.app.orderedTabs()` (überall statt `TABS` verwenden, wo Reiter angezeigt werden) und `NM.app.setTabOrder()`. Ziehen in der Reiterleiste in `renderMain` (`js/app.js`), ▲▼ in `tabOrderList` (`js/view-settings.js`), Haken in `NM.ui.tabChecks`. E2E `run_tab_order_check`.

@@ -1040,6 +1040,42 @@ def run_tools_layout_check(br, base):
     report("Timer-Ring läuft im Uhrzeigersinn", bool(res) and -0.4 < res["ratio"] < -0.15 and not br.errors, str(res) + "; ".join(br.errors))
 
 
+def run_tools_menu_check(br, base):
+    print("Tools: Werkzeuge je Kurs ein-/ausschalten und sortieren:")
+    br.open(f"{base}/index.html?demo")
+    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.errors = []
+    res = br.eval("""(async () => {
+        const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
+        const db = NM.app.db(), [c, d] = db.courses;
+        const tiles = () => [...document.querySelectorAll('.rnd-tool')].map((e) => e.dataset.rnd).join();
+        NM.app.select({ courseId: c.id, tab: 'random' }); await wait(400);
+        const out = { start: tiles() };
+        document.querySelector('[data-tools-menu]').click(); await wait();
+        const dlg = () => document.querySelector('dialog.modal');
+        out.title = dlg().querySelector('h2').textContent;
+        dlg().querySelector('[data-tool-check="dice"]').click(); await wait();
+        dlg().querySelector('[data-tool-item="cards"] button').click(); await wait();   // ▲
+        out.after = [tiles(), c.tools.off.join(), c.tools.order.join(), !!dlg()];
+        [...dlg().querySelectorAll('button')].find((b) => b.textContent === 'Fertig').click(); await wait();
+        // anderer Kurs unberührt
+        NM.app.select({ courseId: d.id, tab: 'random' }); await wait(400);
+        out.other = tiles();
+        // alles aus → Hinweis, Standard stellt alles wieder her
+        NM.model.setTools(d, NM.model.toolList(d).map((x) => ({ id: x.id, on: false }))); NM.app.commit(); await wait();
+        out.empty = [tiles(), !!document.querySelector('#view .empty-state, #view .empty')];
+        document.querySelector('[data-tools-menu]').click(); await wait();
+        dlg().querySelector('[data-tools-reset]').click(); await wait();
+        out.reset = [tiles(), d.tools.off.length, d.tools.order.length];
+        [...dlg().querySelectorAll('button')].find((b) => b.textContent === 'Fertig').click(); await wait();
+        return out; })()""")
+    std = "timer,number,people,dice,cards"
+    ok = bool(res) and res["start"] == std and res["title"] == "Werkzeuge in „8b Mathe“" \
+        and res["after"] == ["timer,number,people,cards", "dice", "timer,number,people,cards,dice", True] \
+        and res["other"] == std and res["empty"] == ["", True] and res["reset"] == [std, 0, 0]
+    report("Tools: Haken und ▲▼ wirken sofort, nur im Kurs, alles aus zeigt Hinweis, Standard", ok and not br.errors, str(res) + "; ".join(br.errors))
+
+
 def run_demo_link_check(br, base):
     print("Demo aus der App öffnen:")
     br.open(f"{base}/index.html")
@@ -1978,6 +2014,7 @@ def main():
         run_random_check(br, base)
         run_timer_check(br, base)
         run_tools_layout_check(br, base)
+        run_tools_menu_check(br, base)
         run_pomodoro_check(br, base)
         run_transition_check(br, base)
         run_sidebar_check(br, base)

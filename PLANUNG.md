@@ -1,6 +1,6 @@
 # OrdoNota – Geplante Funktionen
 
-Erledigt: A Arbeit in Teilen (1.18.0), Druckauswahl (1.19.0), B Präsentationen (1.20.0–1.22.0), D Gruppenpräsentationen (1.23.0), E Reiter „Gruppen“ (1.24.0), Reiter ein-/ausschalten (1.25.0), Moodle-Import im Test (1.26.0), F Startprogramm (1.27.0), G Datei öffnen/Ordner wechseln (1.28.0), H Reiter „Zufall“ (1.29.0), N Bereich neuer Tests (1.30.0), Q Demo aus der App (1.31.0), P Programmsymbol (1.32.0), O Update-Sicherheit (1.33.0), M Reiter sortieren (1.34.0), L Spalten einklappen/bündeln (1.35.0), K Tools mit Timer (1.36.0), J Ziehen-Pools (1.37.0).
+Erledigt: A Arbeit in Teilen (1.18.0), Druckauswahl (1.19.0), B Präsentationen (1.20.0–1.22.0), D Gruppenpräsentationen (1.23.0), E Reiter „Gruppen“ (1.24.0), Reiter ein-/ausschalten (1.25.0), Moodle-Import im Test (1.26.0), F Startprogramm (1.27.0), G Datei öffnen/Ordner wechseln (1.28.0), H Reiter „Zufall“ (1.29.0), N Bereich neuer Tests (1.30.0), Q Demo aus der App (1.31.0), P Programmsymbol (1.32.0), O Update-Sicherheit (1.33.0), M Reiter sortieren (1.34.0), L Spalten einklappen/bündeln (1.35.0), K Tools mit Timer (1.36.0), J Ziehen-Pools (1.37.0), R Tools je Kurs ein-/ausschalten (1.39.0).
 
 ## F) Startprogramm (Server + App-Fenster) – umgesetzt in 1.27.0
 
@@ -105,6 +105,17 @@ Anlass: Im Startprogramm (App-Fenster) lässt sich die Adresse nicht um `?demo` 
 
 - Knopf „Demo ansehen“ auf dem Startbildschirm (Entsperren) und unter Einstellungen. Er öffnet `index.html?demo` in einem neuen Fenster, die eigene Datenbank bleibt offen und unberührt. Der Demo-Modus speichert wie bisher nichts.
 - Das Startprogramm liefert `index.html?demo` schon aus (nur die Abfrage `?demo`), das prüfen und testen.
+
+## Wunschliste vom 06.11.2026, zweiter Teil
+
+### R) Tools je Kurs ein-/ausschalten und sortieren – umgesetzt in 1.39.0
+
+Entscheidung des Nutzers: Auswahl **je Kurs** (wie die Reiter, in der Datenbank, auf allen Geräten gleich), Menü über einen **Knopf im Reiter „Tools“**. Neue Tools sind nicht gewünscht.
+
+- Knopf „⚙ Werkzeuge …“ oben im Reiter öffnet ein Fenster mit einem Haken je Werkzeug und ▲▼ für die Reihenfolge, dazu „Standard“. Änderungen gelten sofort.
+- Sind alle Werkzeuge aus, zeigt der Reiter einen Hinweis mit dem Knopf.
+- Ein ausgeschalteter Timer läuft weiter, falls er gerade läuft (er gilt für die ganze App); nur die Kachel fehlt.
+- Datenmodell: `course.tools: { off: [ids], order: [ids] }` (leer = alle an, Standardreihenfolge). Kein neues `SCHEMA`. Reine Logik `NM.model.toolList`/`setTools` mit `orderTabs`.
 
 ## C) Gamification des Pomodoro-Timers (zurückgestellt, erst auf Nachfrage des Nutzers)
 
