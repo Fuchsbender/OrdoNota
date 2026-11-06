@@ -141,8 +141,13 @@ def schreibe_csv(daten, ordner):
         for a in kurs.get("assessments", []):
             spalten.append(a)
         kopf = ["Nachname", "Vorname", "aktiv"]
+        namen = {a.get("id"): a.get("name") for a in spalten}
         for a in spalten:
-            kopf.append(f'{a.get("half")} {a.get("name")} ({a.get("kind")}, Gewicht {a.get("weight")})')
+            titel = f'{a.get("half")} {a.get("name")} ({a.get("kind")}, Gewicht {a.get("weight")})'
+            # Nachschreibtermin (1.40): zählt in der App mit der Original-Arbeit als eine Note
+            if a.get("makeupOf") in namen:
+                titel += f' – Nachschreibtermin zu „{namen[a["makeupOf"]]}“'
+            kopf.append(titel)
         override_keys = sorted(kurs.get("overrides", {}).keys())
         kopf += [f"gesetzt {k}" for k in override_keys] + ["Bemerkung"]
         zeilen = [kopf]

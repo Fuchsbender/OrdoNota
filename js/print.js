@@ -703,14 +703,14 @@
         )
       );
     }
-    const list = c.assessments.filter((a) => a.half === half);
+    const list = c.assessments.filter((a) => a.half === half && !G.isMakeup(c, a));
     const ka = list.filter((a) => a.cat === 'ka').sort((a, b) => (a.date || '').localeCompare(b.date || ''));
     const other = list.filter((a) => a.cat === 'other').sort((a, b) => (a.date || '').localeCompare(b.date || ''));
     const showKa = Number(c.wKa) > 0 || ka.length > 0;
     const th = (a) => h('th', { class: a.ungraded ? 'p-ungraded' : null }, a.name, h('br'), h('small', null, [drawDate(c, a), Number(a.weight) !== 1 ? '×' + fmtScore(a.weight) : '', a.ungraded ? 'nicht gewertet' : ''].filter(Boolean).join(' ')));
     const rows = students.map((s, i) => {
       const r = G.halfResult(c, half, s.id);
-      const cell = (a) => h('td', { class: 'c' + (G.ungradedFor(a, s.id) ? ' p-ungraded' : '') }, badge(G.assessmentPoints(a, s.id, level), level));
+      const cell = (a) => h('td', { class: 'c' + (G.ungradedFor(a, s.id, c) ? ' p-ungraded' : '') }, badge(G.assessmentPoints(a, s.id, level, c), level), G.countingFor(c, a, s.id) !== a ? h('sup', null, 'N') : null);
       return h(
         'tr',
         null,
@@ -741,7 +741,7 @@
           ),
           h('tbody', null, rows)
         ),
-        h('p', { class: 'p-note' }, '* = gesetzte Note weicht von der gerechneten ab')
+        h('p', { class: 'p-note' }, '* = gesetzte Note weicht von der gerechneten ab' + ([...ka, ...other].some((a) => G.makeupsOf(c, a).length) ? ' · N = nachgeschrieben' : ''))
       ),
       { landscape: ka.length + other.length > 8 }
     );
@@ -789,7 +789,7 @@
   function studentSheet(c, s, halves, o) {
     const level = G.courseLevel(c);
     const sections = halves.map((half) => {
-      const list = c.assessments.filter((a) => a.half === half).sort((a, b) => (a.cat === b.cat ? (a.date || '').localeCompare(b.date || '') : a.cat === 'ka' ? -1 : 1));
+      const list = c.assessments.filter((a) => a.half === half && !G.isMakeup(c, a)).sort((a, b) => (a.cat === b.cat ? (a.date || '').localeCompare(b.date || '') : a.cat === 'ka' ? -1 : 1));
       const r = G.halfResult(c, half, s.id);
       const parts = [h('h2', null, half)];
       if (o.grades) {
@@ -803,9 +803,10 @@
                   'tbody',
                   null,
                   list.map((a) => {
-                    const p = G.assessmentPoints(a, s.id, level);
-                    const status = G.assessmentStatus(a, s.id);
-                    return h('tr', null, h('td', null, fmtDate(a.date)), h('td', null, a.name, a.kind !== 'manual' ? h('small', null, ' (' + M.kindLabel(a) + ')') : null, G.ungradedFor(a, s.id) ? h('small', null, ' – nicht gewertet') : null), h('td', null, UI.catLabel(a.cat)), h('td', { class: 'n' }, fmtScore(a.weight)), h('td', { class: 'c' }, p === null ? UI.STATUS_SHORT[status] || '–' : badge(p, level)));
+                    const p = G.assessmentPoints(a, s.id, level, c);
+                    const status = G.assessmentStatus(a, s.id, c);
+                    const src = G.countingFor(c, a, s.id);
+                    return h('tr', null, h('td', null, fmtDate(src.date)), h('td', null, a.name, a.kind !== 'manual' ? h('small', null, ' (' + M.kindLabel(a) + ')') : null, src !== a ? h('small', null, ' – nachgeschrieben') : null, G.ungradedFor(a, s.id, c) ? h('small', null, ' – nicht gewertet') : null), h('td', null, UI.catLabel(a.cat)), h('td', { class: 'n' }, fmtScore(a.weight)), h('td', { class: 'c' }, p === null ? UI.STATUS_SHORT[status] || '–' : badge(p, level)));
                   })
                 )
               )

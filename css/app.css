@@ -967,3 +967,8 @@ body.tmr-popup .tmr-ring .tmr-digits { font-size: min(13vh, 16vw); }
 body.tmr-popup .tmr-glass { width: min(32vh, 30vw); }
 body.tmr-popup .tmr-bar { height: 5vh; border-radius: 2.5vh; }
 body.tmr-popup .tmr-over { font-size: min(5vh, 6vw); }
+
+/* Nachschreibtermine: Note in der Spalte der Original-Arbeit, markiert mit „N“ */
+.table td.makeup-cell { position: relative; }
+.table td.makeup-cell::after { content: 'N'; position: absolute; top: 2px; right: 4px; font-size: 10px; line-height: 1; color: var(--muted); }
+.makeup-info { margin: 8px 0 0; }

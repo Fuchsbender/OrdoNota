@@ -1,6 +1,6 @@
 # OrdoNota – Dokumentation
 
-Version 1.39.0 · Stand November 2026
+Version 1.40.0 · Stand November 2026
 
 OrdoNota (bis Version 1.11 „Notenmanager“) verwaltet Noten für die Sekundarstufe I (Noten 1–6 mit Tendenz) und die Mainzer Studienstufe (MSS, Punkte 00–15) an Schulen in Rheinland-Pfalz. Die App läuft vollständig lokal im Browser, verschlüsselt alle Daten mit einem Passwort und legt sie in einem Ordner ab, den der Synology Drive Client auf die DiskStation spiegelt.
 
@@ -336,13 +336,22 @@ In der Tabelle **Ergebnisse** die erreichten Punkte je Aufgabe eintragen (Komma 
 |---|---|
 | — | normale Wertung |
 | fehlt (entschuldigt) | keine Note, zählt nicht im Schnitt |
-| Nachschreiben | keine Note (Erinnerung zum Nachschreiben) |
+| Nachschreiben | keine Note (Erinnerung zum Nachschreiben; Nachtermin über „+ Nachschreibtermin“, siehe unten) |
 | Täuschung/Verweigerung | Note 6 bzw. 00 Punkte; wird beim Drittelparagraphen **nicht** mitgezählt |
 | nicht gewertet | Punkte und Note werden wie gewohnt berechnet und angezeigt, die Zeile ist ausgegraut. Die Arbeit zählt **nicht** zur Halbjahresnote dieser Person und nicht in Notenspiegel, Ø, Standardabweichung, „Ø gelöst“ und Drittelparagraph. In der Notenübersicht erscheint die Note ausgegraut. |
 
 **Unterschrift gesehen** (nur bei Klassen-/Kursarbeiten): In der letzten Spalte „Unterschrift“ abhaken, wenn die unterschriebene Arbeit zurück ist; das Datum wird gemerkt (Tooltip). Neben „Ergebnisse“ steht der Stand, z. B. „Unterschriften 9 / 11“ (gezählt werden Personen mit Note), grün hinterlegt, wenn alle da sind. Der Vermerk hat keinen Einfluss auf die Note und erscheint im Ausdruck „Ergebnisliste“ als eigene Spalte.
 
 Die Zeile **„Ø gelöst“** zeigt je Aufgabe, wie viel Prozent der möglichen Punkte im Schnitt erreicht wurden. Daran sieht man schnell, welche Aufgabe schwer war.
+
+**Nachschreibtermin:** Wer bei einer Arbeit fehlt, bekommt dort den Status **Nachschreiben** (oder „fehlt“). Mit **„+ Nachschreibtermin“** oben im Test legen Sie einen eigenen Test für den Nachtermin an. Aufgaben, Teile und Notenschlüssel werden als Vorlage übernommen und lassen sich ändern, zum Beispiel für andere Aufgaben. Ergebnisse und Moodle-Daten werden nicht übernommen.
+
+- Der Nachschreibtermin zeigt zuerst nur die Personen, die in der Arbeit „Nachschreiben“ oder „fehlt“ haben (auch nur in einem Teil), dazu alle, die im Nachtermin schon einen Eintrag haben. Über **„Alle zeigen“** erscheinen alle Personen des Kurses (pro Gerät gemerkt).
+- In der **Notenübersicht** gibt es für Arbeit und Nachschreibtermin **eine gemeinsame Spalte**. Wer im Nachschreibtermin Punkte oder einen Status hat, bekommt dort dessen Note. Die Note ist mit einem kleinen „N“ markiert, der Tooltip nennt den Termin. Im Ausdruck der Notenliste steht ein hochgestelltes „N“, auf dem Leistungsbogen „nachgeschrieben“.
+- Für die Rechnung zählen Arbeit und Nachschreibtermin als **eine Leistung**. Bereich, Gewicht, Halbjahr und „nicht gewertet“ kommen immer von der Arbeit, deshalb fehlen diese Felder beim Nachschreibtermin. Gibt es mehrere Nachschreibtermine, zählt für jede Person der späteste mit Eintrag.
+- Notenspiegel, Drittelparagraph und Ausdrucke bleiben je Test getrennt.
+- Ein bestehender Test lässt sich über die Auswahl **„Nachschreibtermin zu“** nachträglich mit einer Arbeit desselben Halbjahrs verknüpfen. Mit „– (eigene Leistung)“ lösen Sie die Verknüpfung wieder. Wird die Arbeit gelöscht, bleiben die Nachschreibtermine als eigene Tests erhalten.
+- Hat jemand in der Arbeit eine Note und im Nachschreibtermin einen Eintrag, zählt der Nachschreibtermin. „Datenbank prüfen“ weist darauf hin.
 
 ### 7.4 Notenschlüssel
 
@@ -1226,7 +1235,7 @@ Das Startprogramm ist das einzige Teil mit Build-Schritt; die App selbst bleibt 
   "kdf": "PBKDF2-SHA256",
   "savedAt": "2026-10-14T21:57:03.123Z",
   "device": "Laptop Schule",
-  "app": "1.39.0",
+  "app": "1.40.0",
   "pw":   { "salt": "<b64>", "iter": 600000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "rec":  { "salt": "<b64>", "iter": 100000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "data": { "iv": "<b64>", "ct": "<b64: verschlüsseltes JSON des Datenmodells>" }
@@ -1249,7 +1258,7 @@ Entschlüsselter Inhalt (`schema: 4`):
 ```js
 {
   schema: 4,                             // Datenformat (siehe 26.2)
-  savedWith: "1.39.0",                    // App-Version beim letzten Speichern
+  savedWith: "1.40.0",                    // App-Version beim letzten Speichern
   created: "<ISO>", savedAt: "<ISO>",
   settings: { autoLockMin, limitSek1, limitMss, precision, testCat: "ka" | "other" /* seit 1.30 */, keepBackups, backupEveryMin, gradeColors,
               tabs: { "<Reiter>": false },   // seit 1.25: ausgeschaltete Reiter (Standard für alle Kurse)
@@ -1290,6 +1299,7 @@ Assessment = {
   half: "HJ1" | "HJ2" | "11/1" | … | "13",
   cat: "ka" | "other",
   name, date: "YYYY-MM-DD", weight, ungraded?,   // ungraded: zählt nicht zur Note
+  makeupOf?: "<id>",   // nur Tests (seit 1.40): Nachschreibtermin zu dieser Arbeit; half/cat/weight/ungraded werden angeglichen
   manual?: { grades: { "<sid>": { p } | { status } } },
   test?:   { limit, precision, wholeGrades?,                            // wholeGrades: nur ganze Noten (Sek I)
              tasks: [ { id, name, max, bonus?, moodleNr?, partId? } ],   // moodleNr: Fragennummer in Moodle; partId: Teil
@@ -1334,7 +1344,7 @@ Das Skript startet einen unsichtbaren Chromium-Browser (Chrome, Edge, Chromium, 
 1. alle Testseiten (siehe 25.2), danach die Datenbanken früherer Versionen (`tests/altdaten/`) in der App: alle Reiter beider Kurse und die Jahresnote ohne Fehler, „Datenbank prüfen“ ohne Probleme,
 2. den Start der App im Demo-Modus und alle Reiter für einen Sek-I- und einen MSS-Kurs ohne JavaScript-Fehler, den Knopf „Demo ansehen“ (öffnet `?demo` im neuen Fenster, eigene Ansicht in `nm.ui` bleibt unberührt),
 3. das Sortieren per Klick auf Spaltenköpfe (Tests, EPO, Notenübersicht; Richtung und leere Werte unten),
-4. den Pomodoro-Timer (Aktivieren, Farben je Zustand, Phasenwechsel, Zurücksetzen, Einstellungsdialog), das Layout des Reiters „Einstellungen“ bei aktivem Timer (keine Lücken zwischen den Karten, Auswahllisten nicht abgeschnitten, bei 1570 und 2560 px) und die Kürzel in der eingeklappten Kursliste, die weichen Übergänge (nur bei Reiter-, Kurs- und Halbjahreswechsel), das Ein-/Ausklappen der Kursliste, das Ein-/Ausschalten von Reitern (Standard in den Einstellungen, Abweichung je Kurs, Ersatzreiter, Sprunglinks, „Wie Standard“), das Umsortieren der Reiter (▲▼, Ziehen in der Reiterleiste, Standardreihenfolge), das Einklappen der Spaltengruppen und Bündeln der Ziehungsspalten in der Notenübersicht (Noten unverändert, Zeitraum, Ausdruck vollständig), den Reiter „Tests“ in voller Breite, die Warnung bei zu wenig Punkten im Notenschlüssel (doppelte Schwellen markiert, Knöpfe „Halbe Punkte“/„Nur ganze Noten“ beheben sie), Arbeiten in Teilen (einschalten, Aufgaben und Punkte je Teil, Teil ausblenden, getrennt benoten, Status je Teil, Schlüssel je Teil, Ausdrucke inkl. „Ergebnisse nach Teilen“, Beamer, Teile aufheben), die Druckauswahl „🖨 Drucken …“ in Tests, EPO und Notenübersicht (Gruppen, Tooltips, Auswahl druckt, Abbrechen nicht) und den Haken „Unterschrift gesehen“ bei Klassenarbeiten (Zähler, Ausdruck), den Moodle-Import (Knopf im Test statt neben „+ Neuer Test“, bisherige Aufgaben ersetzen oder behalten, Dateiauswahl im Dialog, Zuordnung, Status „fehlt“, Ausdruck mit und ohne Note, erneuter Import),
+4. den Pomodoro-Timer (Aktivieren, Farben je Zustand, Phasenwechsel, Zurücksetzen, Einstellungsdialog), das Layout des Reiters „Einstellungen“ bei aktivem Timer (keine Lücken zwischen den Karten, Auswahllisten nicht abgeschnitten, bei 1570 und 2560 px) und die Kürzel in der eingeklappten Kursliste, die weichen Übergänge (nur bei Reiter-, Kurs- und Halbjahreswechsel), das Ein-/Ausklappen der Kursliste, das Ein-/Ausschalten von Reitern (Standard in den Einstellungen, Abweichung je Kurs, Ersatzreiter, Sprunglinks, „Wie Standard“), das Umsortieren der Reiter (▲▼, Ziehen in der Reiterleiste, Standardreihenfolge), das Einklappen der Spaltengruppen und Bündeln der Ziehungsspalten in der Notenübersicht (Noten unverändert, Zeitraum, Ausdruck vollständig), den Reiter „Tests“ in voller Breite, die Warnung bei zu wenig Punkten im Notenschlüssel (doppelte Schwellen markiert, Knöpfe „Halbe Punkte“/„Nur ganze Noten“ beheben sie), Arbeiten in Teilen (einschalten, Aufgaben und Punkte je Teil, Teil ausblenden, getrennt benoten, Status je Teil, Schlüssel je Teil, Ausdrucke inkl. „Ergebnisse nach Teilen“, Beamer, Teile aufheben), die Druckauswahl „🖨 Drucken …“ in Tests, EPO und Notenübersicht (Gruppen, Tooltips, Auswahl druckt, Abbrechen nicht) und den Haken „Unterschrift gesehen“ bei Klassenarbeiten (Zähler, Ausdruck), Nachschreibtermine („+ Nachschreibtermin“, nur Fehlende und „Alle zeigen“, eine gemeinsame Spalte in der Notenübersicht mit „N“, Rechnung als eine Leistung, Gewicht folgt der Arbeit, Verknüpfung lösen/setzen, Arbeit löschen), den Moodle-Import (Knopf im Test statt neben „+ Neuer Test“, bisherige Aufgaben ersetzen oder behalten, Dateiauswahl im Dialog, Zuordnung, Status „fehlt“, Ausdruck mit und ohne Note, erneuter Import),
 5. den Excel-Export der Schülerliste (gültiges ZIP/XML, Umlaute und Sonderzeichen), das Kurs-Löschen nur mit „LÖSCHEN“, das Ein-/Ausblenden der Fotos im EPO-Reiter und im Sitzplan (auch im Druck) das Erweitern/Verkleinern des Sitzplan-Rasters an allen vier Seiten sowie das Ziehen (keine Wiederholung bis zum Auffüllen, automatisches Auffüllen, Note, Rückgängig, Abwesende/Herausgenommene) und die benannten Pools (Sammelspalte, eine Runde bis fertig, Rückgängig, Prüfung, Notenübersicht, Zusammenfassen, Löschen ohne Notenverlust), den Reiter „Tools“ (Timer: Start/Pause, läuft beim Reiterwechsel weiter, Ende mit Signal, ± 1 Min., Schnellwahl, vier Designs, Pop-up steuert denselben Timer; Einstellungen aller Werkzeuge werden gemerkt; Zahl im Bereich, Personen ohne Wiederholung und ohne Abwesende, 3D-Würfel mit Summe und gewürfelter Seite oben, Karten 52/32/eigene als Bild, Stapel immer sichtbar, mehrere auf einmal, nichts in der Notenliste) und den Reiter „Präsentationen“ (Bewerten per Knopf und in der Tabelle, Gewicht, Kriterien aus dem Pool und eigene, Vorlage, Ausdrucke, Spalte in der Notenübersicht, Pool bearbeiten, Startbestand ergänzen, Vorlagen speichern/anlegen/verwenden/drucken/löschen, Standardvorlagen vorhanden und ergänzen, Handreichung mit Notenschlüssel) und Gruppenpräsentationen (Gruppenwert für alle Mitglieder, Personenkriterien, Abweichung setzen/zurücksetzen, Tabelle, Gruppen bearbeiten/übernehmen, Druck, Auflösen ohne Notenänderung), den Reiter „Gruppen“ (neue Einteilung, Abwesende, Fixieren, Anklicken/Ziehen, Auftrag, Regel mit Warnung, Beamer ohne Noten mit Schrift passend zum Bildschirm und Umschaltern für Fotos/Nachnamen, Druck, Fotos/Nachnamen in der Einteilung, Gruppenpuzzle mit Expertengruppen unter den Stammgruppen, Anzahl der Teilthemen einstellbar und beim Neu verteilen erhalten, Hinweis nach Änderungen, Beamer-Umschalter Stamm-/Expertengruppen, Übernahme in eine Präsentation),
 6. das Notfallwerkzeug: Eine von der App echt verschlüsselte Datenbank wird mit `tools/entschluesseln.py` per Passwort und per Wiederherstellungsschlüssel entschlüsselt und mit dem Original verglichen. Dazu kommen falsches Passwort, manipulierte Datei und CSV-Ausgabe (auch für die Datenbanken aller früheren Versionen aus `tests/altdaten/`),
 7. das Startprogramm (nur wenn Go installiert ist, sonst übersprungen): `go test` in `launcher/` (Programmsymbol ohne Schriftzug, Zugriffsschutz, nur erlaubte Dateien, Speichern und Konflikt, Sicherungen, Konfliktkopien, Lock, Datenordner wählen, Kennwort, Programmordner finden), dann ein echter Start mit Testordner: Zugriff ohne Kennwort abgelehnt, zweiter Start erkennt das laufende Programm, die App erkennt das Startprogramm, legt eine Datenbank an (ohne Rückfrage), speichert Änderungen in den Ordner (mit dem Notfallwerkzeug geprüft), erkennt eine externe Änderung, überschreibt auf Wunsch, stellt aus einer Datei mit fremdem Passwort wieder her (eigenes Passwort bleibt), wechselt den Datenordner mit Sicherungen (alter Ordner bleibt, neuer gemerkt, danach wird dort gespeichert), übernimmt in einem leeren Ordner eine Datenbank aus einer Datei und gibt den Lock beim Beenden frei.
@@ -1415,6 +1425,7 @@ In `js/model.js` stehen zwei Nummern:
 - **Ziehen-Pools (seit 1.37):** Logik `js/draw.js` (`NM.draw`), Reiter `js/view-draw.js` (`poolPicker`, `renderPool`, `checkCard`, `mergeDialog`; klassischer Pool weiter über `drawStudents`/`pool`). Gewählter Pool pro Gerät in `ui.drawPool`. Wer für eine Spalte gezogen wurde: `NM.draw.drawnSets` (Notenübersicht), Zeitraum im Kopf über `poolSub` (`js/view-overview.js`) und `drawDate` (`js/print.js`). Strukturprüfung der Pools in `NM.model.check`. E2E `run_draw_pools_check`.
 - **Gruppenbildung (seit 1.24):** Logik in `js/groups.js` (`sizes`, `build` mit Kostenfunktion und Tauschsuche, `check`, `experts`), Reiter `js/view-groups.js` (`roll`, `expertCard`), Druck `NM.print.groups`, Übernahme in Präsentationen `NM.views.pres.applyGroups`. „Heute abwesend“ kommt aus `NM.views.draw.absent` (nur Sitzung). Leistung = gerundete Halbjahresnote (`G.halfResult(...).final`), nie gespeichert. Tests: `tests/groups.test.html`, E2E `run_groups_tab_check`.
 - **Reiter ausschalten (seit 1.25):** `NM.app.OPTIONAL_TABS`, `tabOn(course, id)`, `shownTab(course)` (Ersatz: Notenübersicht, sonst „Kurs & Schüler“), Haken über `NM.ui.tabChecks`. Daten ausgeschalteter Reiter bleiben und zählen weiter. E2E `run_tabs_check`.
+- **Nachschreibtermine (seit 1.40):** `a.makeupOf` an einem Test. Logik in `js/grades.js` (`makeupTarget`, `isMakeup`, `makeupsOf`, `hasTestEntry`, `countingFor`). `assessmentPoints`, `assessmentStatus` und `ungradedFor` nehmen den Kurs als letztes Argument und lesen dann über `countingFor` den zählenden Termin. `halfResult` lässt Nachschreibtermine als eigene Leistung weg. Modell: `NM.model.newMakeup` und `syncMakeups` (bei jedem `NM.app.commit()` und in `migrate`). Oberfläche in `js/view-tests.js` (`metaCard`, Filter `missedIn` in `resultsCard`, `ui.makeupAll`). Spalten in Notenübersicht, Notenliste, Leistungsbogen und CSV-Export ohne Nachschreibtermine (`G.isMakeup`). Wer Leistungen einer Person liest, übergibt den Kurs. Tests: `tests/grades.test.html`, `tests/model.test.html`, E2E `run_makeup_check`.
 - **Notenschlüssel-Warnung:** `G.unreachableSteps(key)` meldet nicht erreichbare Stufen; Warnung mit Schnellknöpfen in `NM.views.tests.keyCardFor` (Tests, Teile, Präsentationen).
 - **Neue Kursart:** Eintrag in `COURSE_TYPES` in `js/grades.js`.
 - **Farben:** Tokens oben in `css/app.css` (`:root` hell, darunter dunkel).

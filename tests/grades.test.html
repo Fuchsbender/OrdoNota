@@ -288,6 +288,34 @@
     eq('Gruppe: Note fließt in die Halbjahresnote', G.halfResult(course, 'HJ1', 'c').other !== null, true);
   }
 
+  // Nachschreibtermine (1.40): zählen mit der Original-Arbeit als eine Leistung
+  {
+    const mk = (results) => ({ limit: 50, precision: 1, tasks: [{ id: 'x', name: 'A1', max: 10 }], custom: {}, results });
+    const orig = { id: 'ka', kind: 'test', half: 'HJ1', cat: 'ka', weight: 2, date: '2026-10-01', test: mk({ s1: { scores: { x: 10 } }, s2: { status: 'nachschreiben' }, s3: { status: 'fehlt' } }) };
+    const ns = { id: 'ns', kind: 'test', half: 'HJ1', cat: 'ka', weight: 2, date: '2026-10-08', makeupOf: 'ka', test: mk({ s2: { scores: { x: 5 } }, s3: { scores: {} } }) };
+    const man = { id: 'm', kind: 'manual', half: 'HJ1', cat: 'ka', weight: 1, manual: { grades: { s1: { p: 8 }, s2: { p: 8 } } } };
+    const cm = { jahrgang: 8, wKa: 100, wOther: 0, overrides: {}, assessments: [orig, ns, man] };
+    const pNs = G.testResult(ns.test, 's2', 'sek1').p;
+    eq('Nachschreibtermin erkannt, Original nicht', [G.isMakeup(cm, ns), G.isMakeup(cm, orig), G.makeupTarget(cm, ns) === orig, G.makeupsOf(cm, orig).length], [true, false, true, 1]);
+    eq('Nachschreibtermin: Note in der Spalte der Arbeit', G.assessmentPoints(orig, 's2', 'sek1', cm), pNs);
+    eq('Ohne Kurs: nur die Arbeit selbst (NS = keine Note)', G.assessmentPoints(orig, 's2', 'sek1'), null);
+    eq('Ohne Eintrag im Nachschreibtermin: Status der Arbeit bleibt', [G.assessmentStatus(orig, 's3', cm), G.countingFor(cm, orig, 's3') === orig], ['fehlt', true]);
+    eq('Mitgeschrieben: Note der Arbeit', G.assessmentPoints(orig, 's1', 'sek1', cm), G.testResult(orig.test, 's1', 'sek1').p);
+    const direct = { jahrgang: 8, wKa: 100, wOther: 0, overrides: {}, assessments: [{ ...orig, test: mk({ s2: { scores: { x: 5 } } }) }, man] };
+    eq('Halbjahr: eine Leistung mit dem Gewicht der Arbeit', G.halfResult(cm, 'HJ1', 's2').ka, G.halfResult(direct, 'HJ1', 's2').ka);
+    eq('Halbjahr: Nachschreibtermin zählt nicht zusätzlich', G.halfResult(cm, 'HJ1', 's1').ka, G.halfResult({ ...cm, assessments: [orig, man] }, 'HJ1', 's1').ka);
+    const ns2 = { ...ns, id: 'ns2', date: '2026-10-15', test: mk({ s2: { scores: { x: 9 } } }) };
+    const c2 = { ...cm, assessments: [orig, ns2, ns, man] };
+    eq('Zwei Nachschreibtermine: der spätere mit Eintrag zählt', [G.countingFor(c2, orig, 's2') === ns2, G.makeupsOf(c2, orig).map((x) => x.id)], [true, ['ns', 'ns2']]);
+    const nsU = { ...ns, test: mk({ s2: { scores: { x: 5 }, status: 'ungewertet' } }) };
+    eq('Nachschreibtermin „nicht gewertet“ gilt für die Spalte', G.ungradedFor(orig, 's2', { ...cm, assessments: [orig, nsU, man] }), true);
+    const lost = { ...ns, makeupOf: 'weg' };
+    const c3 = { ...cm, assessments: [orig, lost, man] };
+    eq('Original fehlt: Nachschreibtermin zählt als eigener Test', [G.isMakeup(c3, lost), G.assessmentPoints(orig, 's2', 'sek1', c3)], [false, null]);
+    eq('Keine Ketten: Nachschreibtermin eines Nachschreibtermins zählt nicht als solcher', G.isMakeup({ ...cm, assessments: [orig, ns, { ...ns, id: 'n3', makeupOf: 'ns' }] }, { ...ns, id: 'n3', makeupOf: 'ns' }), false);
+    eq('Eintrag erkannt (Punkte, Status, Teilstatus), leer nicht', [G.hasTestEntry(ns.test, 's2'), G.hasTestEntry(ns.test, 's3'), G.hasTestEntry(mk({ a: { partStatus: { p: 'fehlt' } } }), 'a'), G.hasTestEntry(ns.test, 'zz')], [true, false, true, false]);
+  }
+
   lines.unshift(fails === 0 ? 'ALLE TESTS BESTANDEN' : fails + ' FEHLGESCHLAGEN');
   
   document.getElementById('out').textContent = lines.join('\n');

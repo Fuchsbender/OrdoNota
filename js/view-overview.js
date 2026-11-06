@@ -81,7 +81,8 @@
   }
 
   function halfCard(course, half, level) {
-    const list = course.assessments.filter((a) => a.half === half);
+    // Nachschreibtermine stehen in der Spalte ihrer Original-Arbeit
+    const list = course.assessments.filter((a) => a.half === half && !G.isMakeup(course, a));
     const ka = list.filter((a) => a.cat === 'ka').sort(byDate);
     const other = list.filter((a) => a.cat === 'other').sort(byDate);
     const all = M.activeStudents(course);
@@ -89,7 +90,7 @@
     const res = (s) => results.get(s.id);
     const calc = calcFirst(level);
     const sort = UI.sorter('ov', {
-      ...Object.fromEntries(list.map((a) => ['a:' + a.id, { get: (s) => G.assessmentPoints(a, s.id, level), first: 'desc' }])),
+      ...Object.fromEntries(list.map((a) => ['a:' + a.id, { get: (s) => G.assessmentPoints(a, s.id, level, course), first: 'desc' }])),
       ka: { get: (s) => res(s).ka, first: calc },
       other: { get: (s) => res(s).other, first: calc },
       raw: { get: (s) => res(s).raw, first: calc },
@@ -188,10 +189,12 @@
 
     const cell = (a, s, ri) => {
       if (a.kind !== 'manual') {
-        const p = G.assessmentPoints(a, s.id, level);
-        const status = G.assessmentStatus(a, s.id);
-        const off = G.ungradedFor(a, s.id);
-        return h('td', { class: 'center' + (off ? ' ungraded' : ''), title: off && !a.ungraded ? 'Nicht gewertet – zählt nicht zur Note' : null }, p === null ? (status ? h('span', { class: 'muted small' }, UI.STATUS_SHORT[status]) : h('span', { class: 'muted' }, '·')) : UI.gradeBadge(p, level, 'ro'));
+        const p = G.assessmentPoints(a, s.id, level, course);
+        const status = G.assessmentStatus(a, s.id, course);
+        const off = G.ungradedFor(a, s.id, course);
+        const src = G.countingFor(course, a, s.id);
+        const tip = [src !== a ? 'Nachgeschrieben (' + src.name + ', ' + NM.util.fmtDate(src.date) + ')' : null, off && !a.ungraded ? 'Nicht gewertet – zählt nicht zur Note' : null].filter(Boolean).join(' · ') || null;
+        return h('td', { class: 'center' + (off ? ' ungraded' : '') + (src !== a ? ' makeup-cell' : ''), title: tip }, p === null ? (status ? h('span', { class: 'muted small' }, UI.STATUS_SHORT[status]) : h('span', { class: 'muted' }, '·')) : UI.gradeBadge(p, level, 'ro'));
       }
       const g = a.manual.grades[s.id] || {};
       const shown = g.status ? UI.STATUS_SHORT[g.status] : g.p === undefined || g.p === null ? '' : G.label(g.p, level);
@@ -454,7 +457,7 @@
     const lab = (p) => (p === null || p === undefined ? '' : G.label(p, level));
     const num = (v) => (v === null || v === undefined ? '' : fmtNum(v, 2));
     const header = ['Nr', 'Nachname', 'Vorname'];
-    const perHalf = halves.map((half) => course.assessments.filter((a) => a.half === half).sort((a, b) => (a.cat === b.cat ? byDate(a, b) : a.cat === 'ka' ? -1 : 1)));
+    const perHalf = halves.map((half) => course.assessments.filter((a) => a.half === half && !G.isMakeup(course, a)).sort((a, b) => (a.cat === b.cat ? byDate(a, b) : a.cat === 'ka' ? -1 : 1)));
     halves.forEach((half, i) => {
       for (const a of perHalf[i]) header.push(`${half} ${a.name}${Number(a.weight) !== 1 ? ' (×' + a.weight + ')' : ''}`);
       header.push(`${half} Ø KA`, `${half} Ø Sonstige`, `${half} gerechnet`, `${half} Note`);
@@ -464,7 +467,7 @@
     students.forEach((s, i) => {
       const row = [i + 1, s.last, s.first];
       halves.forEach((half, hi) => {
-        for (const a of perHalf[hi]) row.push(lab(G.assessmentPoints(a, s.id, level)));
+        for (const a of perHalf[hi]) row.push(lab(G.assessmentPoints(a, s.id, level, course)));
         const r = G.halfResult(course, half, s.id);
         row.push(num(r.ka), num(r.other), num(r.raw), lab(r.final));
       });

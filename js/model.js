@@ -10,7 +10,7 @@
   // 3 (1.20): Präsentationen (kind "pres") – ältere Versionen kennen diese Leistungsart nicht.
   // 4 (1.23): Gruppenpräsentationen – ältere Versionen würden Gruppenwerte ignorieren und falsche Noten zeigen.
   const SCHEMA = 4;
-  const APP_VERSION = '1.39.0';
+  const APP_VERSION = '1.40.0';
 
   class NewerSchemaError extends Error {}
 
@@ -152,6 +152,8 @@
       // 1.39: Werkzeuge im Reiter „Tools“ je Kurs aus-/umsortieren (leer = alle an, Standardreihenfolge)
       c.tools = Object.assign({}, c.tools && typeof c.tools === 'object' ? c.tools : {});
       for (const k of ['off', 'order']) c.tools[k] = Array.isArray(c.tools[k]) ? c.tools[k].filter((x) => typeof x === 'string') : [];
+      // 1.40: Nachschreibtermine übernehmen Halbjahr, Bereich, Gewicht und Wertung der Original-Arbeit
+      syncMakeups(c);
       c.overrides = c.overrides || {};
       c.comments = c.comments || {};
       if (c.wHalf1 === undefined) c.wHalf1 = 1;
@@ -236,6 +238,13 @@
           let unknown = 0;
           for (const r of Object.values(body.results)) for (const k of Object.keys((r && r.scores) || {})) if (!tids.has(k)) unknown++;
           if (unknown) add('hinweis', aw, `${unknown} Punktwert(e) zu gelöschten Aufgaben (zählen nicht)`);
+          if (a.makeupOf && !G.makeupTarget(c, a)) add('hinweis', aw, 'Nachschreibtermin ohne vorhandene Original-Arbeit (zählt als eigener Test)');
+          const ms = G.makeupsOf(c, a);
+          if (ms.length) {
+            const lvl = G.courseLevel(c);
+            const both = [...sids].filter((sid) => G.testResult(body, sid, lvl).p !== null && ms.some((m) => G.hasTestEntry(m.test, sid))).length;
+            if (both) add('hinweis', aw, `${both} Person(en) mit Note in der Arbeit und Eintrag im Nachschreibtermin (es zählt der Nachschreibtermin)`);
+          }
         } else if (a.kind === 'epo') {
           if (!Array.isArray(body.lessons) || !isObj(body.entries)) { add('fehler', aw, 'Stunden oder Einträge fehlen'); continue; }
           orphan(body.entries, aw);
@@ -464,6 +473,33 @@
     };
   }
 
+  /** Nachschreibtermin zu einem Test: Aufgaben, Teile und Schlüssel als Vorlage, ohne Ergebnisse und Moodle-Daten. */
+  function newMakeup(course, orig) {
+    const test = JSON.parse(JSON.stringify(orig.test));
+    test.results = {};
+    test.note = '';
+    delete test.moodle;
+    for (const part of test.parts || []) delete part.moodle;
+    const a = { id: uid(), kind: 'test', half: orig.half, cat: orig.cat, name: orig.name + ' – Nachschreibtermin', date: todayISO(), weight: orig.weight, makeupOf: orig.id, test };
+    if (orig.ungraded) a.ungraded = true;
+    return a;
+  }
+
+  /** Halbjahr, Bereich, Gewicht und „nicht gewertet“ der Nachschreibtermine an die Original-Arbeit angleichen. */
+  function syncMakeups(course) {
+    const ids = new Set((course.assessments || []).map((x) => x.id));
+    for (const a of course.assessments || []) {
+      if (a.makeupOf && !ids.has(a.makeupOf)) delete a.makeupOf; // Original-Arbeit gelöscht: eigener Test
+      const o = G.makeupTarget(course, a);
+      if (!o) continue;
+      a.half = o.half;
+      a.cat = o.cat;
+      a.weight = o.weight;
+      if (o.ungraded) a.ungraded = true;
+      else delete a.ungraded;
+    }
+  }
+
   function newEpo(course, half, settings) {
     const level = G.courseLevel(course);
     const limit = level === 'mss' ? settings.limitMss : settings.limitSek1;
@@ -552,8 +588,12 @@
       const f = 1 - i / 14;
       t.test.results[s.id] = { scores: { a1: Math.round(4 * f), a2: Math.round(6 * f * 2) / 2, a3: Math.round(10 * f), a4: Math.round(8 * (f - 0.1) * 2) / 2, a5: i % 4 === 0 ? 2 : '' } };
     });
-    t.test.results[c8.students[11].id] = { status: 'fehlt' };
+    t.test.results[c8.students[11].id] = { status: 'nachschreiben' };
     c8.assessments.push(t);
+    const ns = newMakeup(c8, t);
+    ns.date = t.date;
+    ns.test.results[c8.students[11].id] = { scores: { a1: 3, a2: 4, a3: 7, a4: 5, a5: '' } };
+    c8.assessments.push(ns);
     const hue = newManual('HJ1', 'other', 'HÜ 1');
     c8.students.forEach((s, i) => (hue.manual.grades[s.id] = { p: Math.max(0, 14 - i) }));
     c8.assessments.push(hue);
@@ -721,6 +761,8 @@
     parseNames,
     newManual,
     newTest,
+    newMakeup,
+    syncMakeups,
     check,
     orderTabs,
     TOOL_IDS,

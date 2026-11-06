@@ -446,9 +446,47 @@
   }
 
   /** Zählt diese Leistung für diese Person nicht? (ganze Leistung oder einzelne Testarbeit „nicht gewertet“) */
-  function ungradedFor(a, sid) {
-    const results = a.kind === 'test' ? a.test.results : a.kind === 'pres' ? a.pres.results : null;
+  function ungradedFor(a, sid, course) {
+    const src = countingFor(course, a, sid);
+    const results = src.kind === 'test' ? src.test.results : src.kind === 'pres' ? src.pres.results : null;
     return !!a.ungraded || (!!results && ((results || {})[sid] || {}).status === 'ungewertet');
+  }
+
+  // ---------- Nachschreibtermine ----------
+  // Ein Nachschreibtermin ist ein eigener Test mit makeupOf = id der Original-Arbeit (im selben Kurs).
+  // Für die Rechnung zählen Original und Nachschreibtermine als eine Leistung (Gewicht, Bereich der Original-Arbeit).
+
+  /** Original-Arbeit eines Nachschreibtermins oder null (auch, wenn die Original-Arbeit fehlt). */
+  function makeupTarget(course, a) {
+    if (!course || !a || a.kind !== 'test' || !a.makeupOf) return null;
+    const o = (course.assessments || []).find((x) => x.id === a.makeupOf);
+    return o && o !== a && o.kind === 'test' && !o.makeupOf ? o : null;
+  }
+
+  function isMakeup(course, a) {
+    return !!makeupTarget(course, a);
+  }
+
+  /** Nachschreibtermine einer Arbeit, nach Datum sortiert. */
+  function makeupsOf(course, a) {
+    if (!course || !a || a.kind !== 'test' || a.makeupOf) return [];
+    return (course.assessments || []).filter((x) => x.kind === 'test' && x.makeupOf === a.id && x !== a).sort((x, y) => (x.date || '').localeCompare(y.date || ''));
+  }
+
+  /** Hat die Person im Test irgendeinen Eintrag (Punkte oder Status)? */
+  function hasTestEntry(test, sid) {
+    const r = ((test && test.results) || {})[sid];
+    if (!r) return false;
+    if (r.status) return true;
+    if (r.partStatus && Object.values(r.partStatus).some(Boolean)) return true;
+    return Object.values(r.scores || {}).some((v) => v !== null && v !== undefined && v !== '');
+  }
+
+  /** Leistung, deren Ergebnis für die Person zählt: der letzte Nachschreibtermin mit Eintrag, sonst die Arbeit selbst. */
+  function countingFor(course, a, sid) {
+    if (!course) return a;
+    const ms = makeupsOf(course, a).filter((m) => hasTestEntry(m.test, sid));
+    return ms.length ? ms[ms.length - 1] : a;
   }
 
   /** Notenspiegel und Drittelparagraph (einzeln nicht gewertete Arbeiten zählen nicht mit). */
@@ -579,7 +617,8 @@
   }
 
   /** Punkte einer Leistung für eine Schülerin/einen Schüler (null = keine Note). */
-  function assessmentPoints(a, sid, level) {
+  function assessmentPoints(a, sid, level, course) {
+    a = countingFor(course, a, sid);
     if (a.kind === 'test') return testResult(a.test, sid, level).p;
     if (a.kind === 'epo') return epoResult(a.epo, sid, level).p;
     if (a.kind === 'pres') return presResult(a.pres, sid, level).p;
@@ -591,7 +630,8 @@
   }
 
   /** Status einer Person bei einer Leistung (fehlt, nachschreiben, taeuschung, ungewertet) oder ''. */
-  function assessmentStatus(a, sid) {
+  function assessmentStatus(a, sid, course) {
+    a = countingFor(course, a, sid);
     const src = a.kind === 'test' ? a.test.results : a.kind === 'pres' ? a.pres.results : a.kind === 'manual' ? a.manual.grades : null;
     return ((src || {})[sid] || {}).status || '';
   }
@@ -602,12 +642,12 @@
    */
   function halfResult(course, half, sid) {
     const level = courseLevel(course);
-    const list = (course.assessments || []).filter((a) => a.half === half);
+    const list = (course.assessments || []).filter((a) => a.half === half && !isMakeup(course, a));
     const collect = (cat) =>
       list
-        .filter((a) => a.cat === cat && !ungradedFor(a, sid))
+        .filter((a) => a.cat === cat && !ungradedFor(a, sid, course))
         .map((a) => {
-          const p = assessmentPoints(a, sid, level);
+          const p = assessmentPoints(a, sid, level, course);
           return { v: p === null ? null : calcValue(p, level), w: Number(a.weight) || 0 };
         });
     const ka = weightedAvg(collect('ka'));
@@ -702,6 +742,11 @@
     assessmentPoints,
     assessmentStatus,
     ungradedFor,
+    makeupTarget,
+    isMakeup,
+    makeupsOf,
+    hasTestEntry,
+    countingFor,
     halfResult,
     yearResult,
   };

@@ -11,7 +11,8 @@
     const half = NM.app.currentHalf(course);
     const tests = course.assessments.filter((a) => a.kind === 'test' && a.half === half);
     const ui = NM.app.state.ui;
-    let cur = tests.find((t) => t.id === ui.testId[course.id]) || tests[tests.length - 1] || null;
+    // Ohne Auswahl: die neueste Arbeit, die kein Nachschreibtermin ist
+    let cur = tests.find((t) => t.id === ui.testId[course.id]) || tests.filter((t) => !G.isMakeup(course, t)).pop() || tests[tests.length - 1] || null;
 
     view.append(
       h('div', { class: 'view-head' }, h('h1', null, 'Tests'), UI.halfSwitch(course, false)),
@@ -33,7 +34,8 @@
         addLabel: '+ Neuer Test',
         sub: (a) => {
           const st = G.testStats(a.test, M.statStudents(course).map((s) => s.id), level);
-          return [fmtDate(a.date), UI.catLabel(a.cat), a.ungraded ? 'nicht gewertet' : null, st.n ? 'Ø ' + fmtNum(level === 'mss' ? st.avgPoints : st.avgDec, 2) : null].filter(Boolean).join(' · ');
+          const o = G.makeupTarget(course, a);
+          return [fmtDate(a.date), o ? 'Nachschreibtermin zu „' + o.name + '“' : UI.catLabel(a.cat), a.ungraded ? 'nicht gewertet' : null, st.n ? 'Ø ' + fmtNum(level === 'mss' ? st.avgPoints : st.avgDec, 2) : null].filter(Boolean).join(' · ');
         },
       })
     );
@@ -53,6 +55,54 @@
       fn(e.target.value);
       NM.app.commit();
     };
+    const orig = G.makeupTarget(course, a);
+    const makeups = G.makeupsOf(course, a);
+    const openTest = (x) => {
+      NM.app.state.ui.testId[course.id] = x.id;
+      NM.app.saveUi();
+      NM.app.rerender();
+    };
+    // Verknüpfung als Nachschreibtermin (nicht bei Arbeiten, die selbst Nachschreibtermine haben)
+    const candidates = makeups.length ? [] : course.assessments.filter((x) => x.kind === 'test' && x !== a && x.half === a.half && !x.makeupOf);
+    const linkField =
+      orig || candidates.length
+        ? h(
+            'label',
+            { class: 'field', title: 'Ein Nachschreibtermin zählt mit der Original-Arbeit als eine Note: Wer hier Punkte oder einen Status hat, bekommt diese Note statt der aus der Arbeit.' },
+            h('span', null, 'Nachschreibtermin zu'),
+            h(
+              'select',
+              {
+                class: 'input',
+                'data-makeup-of': '',
+                onchange: (e) => {
+                  if (e.target.value) a.makeupOf = e.target.value;
+                  else delete a.makeupOf;
+                  NM.app.commit();
+                },
+              },
+              h('option', { value: '', selected: !orig }, '– (eigene Leistung)'),
+              candidates.map((x) => h('option', { value: x.id, selected: orig === x }, x.name))
+            )
+          )
+        : null;
+    const makeupInfo = orig
+      ? h(
+          'p',
+          { class: 'muted small makeup-info' },
+          'Zählt mit ',
+          h('button', { class: 'link', onclick: () => openTest(orig) }, '„' + orig.name + '“'),
+          ' als eine Note (Bereich, Gewicht und Wertung wie dort). Wer hier Punkte oder einen Status hat, bekommt diese Note statt der aus der Arbeit.'
+        )
+      : makeups.length
+        ? h(
+            'p',
+            { class: 'muted small makeup-info' },
+            makeups.length === 1 ? 'Nachschreibtermin: ' : 'Nachschreibtermine: ',
+            makeups.map((m, i) => [i ? ', ' : '', h('button', { class: 'link', onclick: () => openTest(m) }, m.name + ' (' + fmtDate(m.date) + ')')]),
+            ' – in der Notenübersicht eine gemeinsame Spalte.'
+          )
+        : null;
     return h(
       'div',
       { class: 'card' },
@@ -61,7 +111,8 @@
         { class: 'form-row' },
         h('label', { class: 'field grow' }, h('span', null, 'Bezeichnung'), h('input', { class: 'input', value: a.name, 'data-focus-key': 'test-name', onchange: set((v) => (a.name = v.trim() || a.name)) })),
         h('label', { class: 'field' }, h('span', null, 'Datum'), h('input', { class: 'input', type: 'date', value: a.date, onchange: set((v) => (a.date = v)) })),
-        h(
+        linkField,
+        orig ? null : h(
           'label',
           { class: 'field' },
           h('span', null, 'Bereich'),
@@ -72,7 +123,7 @@
             h('option', { value: 'other', selected: a.cat === 'other' }, 'Sonstige (z. B. HÜ)')
           )
         ),
-        h(
+        orig ? null : h(
           'label',
           { class: 'field' },
           h('span', null, 'Wertung'),
@@ -91,7 +142,7 @@
             ' nicht gewertet'
           )
         ),
-        h(
+        orig ? null : h(
           'label',
           { class: 'field narrow' },
           h('span', null, 'Gewicht'),
@@ -139,6 +190,25 @@
           h(
             'div',
             { class: 'inline' },
+            orig
+              ? null
+              : h(
+                  'button',
+                  {
+                    class: 'btn',
+                    'data-new-makeup': '',
+                    title: 'Neuen Test für die Nachschreibenden anlegen: Aufgaben und Notenschlüssel werden als Vorlage übernommen, in der Notenübersicht bleibt es eine Spalte.',
+                    onclick: () => {
+                      const m = M.newMakeup(course, a);
+                      course.assessments.push(m);
+                      NM.app.state.ui.testId[course.id] = m.id;
+                      NM.app.saveUi();
+                      NM.app.commit();
+                      toast('Nachschreibtermin angelegt – Aufgaben und Schlüssel aus „' + a.name + '“ übernommen.', 'success');
+                    },
+                  },
+                  '+ Nachschreibtermin'
+                ),
             h('button', { class: 'btn', title: 'Notenspiegel und Punkteverteilung ohne Namen im Vollbild', onclick: () => beamerView(course, a, level) }, '⛶ Beamer'),
             printButton(course, a),
             h(
@@ -148,8 +218,9 @@
                 title: 'Test löschen',
                 'aria-label': 'Test löschen',
                 onclick: async () => {
-                  if (!(await confirmDialog('Test löschen?', `„${a.name}“ mit allen Ergebnissen löschen?`, { okLabel: 'Löschen', danger: true }))) return;
+                  if (!(await confirmDialog('Test löschen?', `„${a.name}“ mit allen Ergebnissen löschen?` + (makeups.length ? ' Die Nachschreibtermine bleiben als eigene Tests erhalten.' : ''), { okLabel: 'Löschen', danger: true }))) return;
                   course.assessments = course.assessments.filter((x) => x.id !== a.id);
+                  for (const m of makeups) delete m.makeupOf;
                   NM.app.commit();
                 },
               },
@@ -157,7 +228,8 @@
             )
           )
         )
-      )
+      ),
+      makeupInfo
     );
   }
 
@@ -549,7 +621,18 @@
       NM.app.saveUi();
       NM.app.rerender();
     };
-    const all = M.activeStudents(course);
+    // Nachschreibtermin: standardmäßig nur, wer in der Original-Arbeit fehlt/nachschreibt oder hier schon etwas hat
+    const orig = G.makeupTarget(course, a);
+    const showAll = !!(ui.makeupAll || {})[a.id];
+    const everyone = M.activeStudents(course);
+    const missing = orig ? everyone.filter((s) => missedIn(orig.test, s.id) || G.hasTestEntry(t, s.id)) : everyone;
+    const all = orig && !showAll ? missing : everyone;
+    const toggleAll = () => {
+      ui.makeupAll = Object.assign({}, ui.makeupAll, { [a.id]: !showAll });
+      if (showAll) delete ui.makeupAll[a.id];
+      NM.app.saveUi();
+      NM.app.rerender();
+    };
     const results = new Map(all.map((s) => [s.id, G.testResult(t, s.id, level)]));
     const score = (s, task) => ((t.results[s.id] || {}).scores || {})[task.id];
     const sort = UI.sorter('test', {
@@ -691,14 +774,27 @@
                   (hidden.has(part.id) ? '▸ ' : '▾ ') + part.name
                 )
               )
+            : null,
+          orig
+            ? h(
+                'button',
+                { class: 'btn btn-sm', 'data-makeup-all': '', 'aria-pressed': String(showAll), title: showAll ? `Nur Personen zeigen, die in „${orig.name}“ fehlen oder nachschreiben` : 'Alle Personen des Kurses zeigen', onclick: toggleAll },
+                showAll ? 'Nur Nachschreibende' : `Alle zeigen (${everyone.length})`
+              )
             : null
         ),
         h('span', { class: 'muted small' }, 'Enter/↓ springt zur nächsten Person, Tab zur nächsten Aufgabe')
       ),
       students.length === 0
-        ? h('p', { class: 'muted' }, 'Bitte zuerst im Reiter „Kurs & Schüler“ Namen eintragen.')
+        ? h('p', { class: 'muted' }, orig && everyone.length ? `In „${orig.name}“ fehlt niemand und niemand schreibt nach. Über „Alle zeigen“ lassen sich trotzdem Punkte eintragen.` : 'Bitte zuerst im Reiter „Kurs & Schüler“ Namen eintragen.')
         : h('div', { class: 'table-wrap', 'data-scroll-key': 'test-results' }, h('table', { class: 'table grid-table' }, h('thead', null, head), h('tbody', null, rows, avgRow)))
     );
+  }
+
+  /** Fehlt die Person in der Arbeit (fehlt/Nachschreiben, auch nur in einem Teil)? */
+  function missedIn(test, sid) {
+    const r = (test.results || {})[sid] || {};
+    return r.status === 'fehlt' || r.status === 'nachschreiben' || Object.values(r.partStatus || {}).some((v) => v === 'fehlt' || v === 'nachschreiben');
   }
 
   /** Teilnote (getrennt benotete Teile); ohne Note Auswahl „fehlt“/„Nachschreiben“ nur für diesen Teil. */

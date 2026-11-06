@@ -525,6 +525,8 @@
 
   /** Nach jeder Änderung aufrufen: markiert ungespeichert, speichert verzögert, zeichnet neu. */
   function commit({ render = true } = {}) {
+    // Nachschreibtermine folgen der Original-Arbeit (Halbjahr, Bereich, Gewicht, Wertung)
+    for (const c of (state.db && state.db.courses) || []) NM.model.syncMakeups(c);
     state.dirty = true;
     lastChangeAt = Date.now();
     clearTimeout(saveTimer);

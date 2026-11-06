@@ -228,7 +228,7 @@ def run_sort_check(br, base):
         return NM.app.currentCourse().students.find((s) => k.includes(s.id)).id; })"""
     click = "(t) => { const b = [...document.querySelectorAll('thead .sort-btn')].find((x) => x.firstChild.textContent === t); b.click(); return !!b; }"
     cases = [
-        ("tests", 0, "Σ", "desc", "(c, s) => { const t = c.assessments.find((a) => a.id === NM.app.state.ui.testId[c.id]) || c.assessments.filter((a) => a.kind === 'test' && a.half === NM.app.currentHalf(c)).pop(); return NM.grades.testResult(t.test, s, NM.grades.courseLevel(c)).score; }"),
+        ("tests", 0, "Σ", "desc", "(c, s) => { const t = c.assessments.find((a) => a.id === NM.app.state.ui.testId[c.id]) || c.assessments.filter((a) => a.kind === 'test' && a.half === NM.app.currentHalf(c) && !NM.grades.isMakeup(c, a)).pop(); return NM.grades.testResult(t.test, s, NM.grades.courseLevel(c)).score; }"),
         ("tests", 0, "Σ", "asc", None),
         ("epo", 0, "Note", "desc", "(c, s) => { const e = c.assessments.filter((a) => a.kind === 'epo' && a.half === NM.app.currentHalf(c)).pop(); return NM.grades.epoResult(e.epo, s, NM.grades.courseLevel(c)).p; }"),
         ("overview", 0, "Gerechnet", "asc", "(c, s) => NM.grades.halfResult(c, NM.app.currentHalf(c, true), s).raw"),
@@ -779,6 +779,69 @@ def run_task_add_click_check(br, base):
     report("Ein Klick übernimmt die Punkte und legt die Aufgabe an", ok and not br.errors, f"{pos} {res} " + "; ".join(br.errors))
 
 
+def run_makeup_check(br, base):
+    print("Nachschreibtermin (eine Spalte mit der Original-Arbeit):")
+    br.open(f"{base}/index.html?demo")
+    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.errors = []
+    res = br.eval("""(async () => {
+        const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
+        const db = NM.app.db(), c = db.courses[0], G = NM.grades;
+        const out = {};
+        const ka = c.assessments.find((x) => x.kind === 'test' && x.name === 'KA 1 – Terme');
+        const demoNs = G.makeupsOf(c, ka)[0];
+        const s11 = c.students[11];
+        // Übersicht: keine eigene Spalte, Note mit „N“ in der KA-Spalte
+        NM.app.state.ui.half[c.id] = 'HJ1'; NM.app.select({ courseId: c.id, tab: 'overview' }); await wait();
+        const heads = () => [...document.querySelectorAll('.overview-table thead th.assess-head')].map((th) => th.textContent);
+        out.noOwnCol = !heads().some((t) => t.includes('Nachschreibtermin')) && heads().some((t) => t.includes('KA 1'));
+        out.mark = document.querySelectorAll('.overview-table td.makeup-cell').length;
+        out.demoP = G.assessmentPoints(ka, s11.id, 'sek1', c) === G.testResult(demoNs.test, s11.id, 'sek1').p && G.halfResult(c, 'HJ1', s11.id).ka !== null;
+        out.check = NM.model.check(db).filter((x) => /Nachschreib/.test(x.text || x.msg || JSON.stringify(x))).length;
+        // Tests: „+ Nachschreibtermin“ an der KA
+        NM.app.state.ui.testId[c.id] = ka.id; NM.app.select({ tab: 'tests' }); await wait();
+        document.querySelector('[data-new-makeup]').click(); await wait();
+        const ns = c.assessments[c.assessments.length - 1];
+        ns.date = '2099-01-01';
+        out.created = ns.makeupOf === ka.id && NM.app.state.ui.testId[c.id] === ns.id && ns.test.tasks.length === ka.test.tasks.length;
+        out.info = !!document.querySelector('.makeup-info') && !document.querySelector('[data-new-makeup]');
+        const rows = () => document.querySelectorAll('.grid-table tbody tr:not(.foot)').length;
+        out.rowsMissing = rows();
+        document.querySelector('[data-makeup-all]').click(); await wait();
+        out.rowsAll = rows();
+        document.querySelector('[data-makeup-all]').click(); await wait();
+        out.rowsBack = rows();
+        // Punkte im neuen (späteren) Termin → zählen statt des ersten Nachschreibtermins
+        ns.test.results[s11.id] = { scores: { [ns.test.tasks[0].id]: 2, [ns.test.tasks[2].id]: 6 } };
+        NM.app.commit(); await wait();
+        out.s11 = G.assessmentPoints(ka, s11.id, 'sek1', c) === G.testResult(ns.test, s11.id, 'sek1').p && G.countingFor(c, ka, s11.id) === ns;
+        out.half = G.halfResult(c, 'HJ1', s11.id).ka !== null;
+        // Gewicht der KA ändern → Nachschreibtermin folgt
+        ka.weight = 3; NM.app.commit(); await wait();
+        out.sync = ns.weight === 3 && demoNs.weight === 3;
+        // Verknüpfung über die Auswahl lösen → eigene Spalte
+        const sel = document.querySelector('[data-makeup-of]');
+        sel.value = ''; sel.dispatchEvent(new Event('change')); await wait();
+        out.unlinked = ns.makeupOf === undefined;
+        NM.app.select({ tab: 'overview' }); await wait();
+        out.ownCol = heads().filter((t) => t.includes('Nachschreibtermin')).length;
+        // wieder verknüpfen, dann Original löschen → beide werden eigene Tests
+        NM.app.select({ tab: 'tests' }); await wait();
+        const sel2 = document.querySelector('[data-makeup-of]');
+        sel2.value = ka.id; sel2.dispatchEvent(new Event('change')); await wait();
+        out.relinked = ns.makeupOf === ka.id;
+        c.assessments = c.assessments.filter((x) => x !== ka); NM.app.commit(); await wait();
+        out.orphan = ns.makeupOf === undefined && demoNs.makeupOf === undefined;
+        NM.app.state.dirty = false;
+        return out; })()""")
+    report("Übersicht: Nachschreibtermin in der Spalte der Arbeit (mit „N“), Rechnung, Datenbank prüfen",
+           res["noOwnCol"] and res["mark"] == 1 and res["demoP"] and res["check"] == 0, str(res))
+    report("Tests: „+ Nachschreibtermin“, nur Fehlende (umschaltbar), Punkte zählen in der KA, Gewicht folgt",
+           res["created"] and res["info"] and res["rowsMissing"] == 1 and res["rowsAll"] == 12 and res["rowsBack"] == 1 and res["s11"] and res["half"] and res["sync"], str(res))
+    report("Verknüpfung lösen/setzen, Original löschen macht eigene Tests",
+           res["unlinked"] and res["ownCol"] == 1 and res["relinked"] and res["orphan"] and not br.errors, str(res) + " " + "; ".join(br.errors))
+
+
 def run_unreachable_check(br, base):
     print("Notenschlüssel: Warnung bei zu wenig Punkten:")
     br.open(f"{base}/index.html?demo")
@@ -917,7 +980,7 @@ def run_overview_fold_check(br, base):
         const fold = (k) => document.querySelector(`[data-fold="${k}"]`).click();
         const cols = () => [...document.querySelectorAll('.overview-table [data-col]')].map((x) => Number(x.dataset.col));
         const out = { heads: heads(), raw: raws() };
-        const kaN = c.assessments.filter((a) => a.half === half && a.cat === 'ka').length;
+        const kaN = c.assessments.filter((a) => a.half === half && a.cat === 'ka' && !NM.grades.isMakeup(c, a)).length;
         fold('ka'); await wait();
         out.ka = [out.heads - heads() === kaN, raws() === out.raw, document.querySelector('[data-fold="ka"]').textContent.includes('(' + kaN + ')'), NM.app.state.ui.ovFold.ka];
         fold('ka'); await wait();
@@ -2020,6 +2083,7 @@ def main():
         run_sidebar_check(br, base)
         run_tests_view_check(br, base)
         run_task_add_click_check(br, base)
+        run_makeup_check(br, base)
         run_unreachable_check(br, base)
         run_tabs_check(br, base)
         run_tab_order_check(br, base)

@@ -1,6 +1,6 @@
 # OrdoNota – Geplante Funktionen
 
-Erledigt: A Arbeit in Teilen (1.18.0), Druckauswahl (1.19.0), B Präsentationen (1.20.0–1.22.0), D Gruppenpräsentationen (1.23.0), E Reiter „Gruppen“ (1.24.0), Reiter ein-/ausschalten (1.25.0), Moodle-Import im Test (1.26.0), F Startprogramm (1.27.0), G Datei öffnen/Ordner wechseln (1.28.0), H Reiter „Zufall“ (1.29.0), N Bereich neuer Tests (1.30.0), Q Demo aus der App (1.31.0), P Programmsymbol (1.32.0), O Update-Sicherheit (1.33.0), M Reiter sortieren (1.34.0), L Spalten einklappen/bündeln (1.35.0), K Tools mit Timer (1.36.0), J Ziehen-Pools (1.37.0), R Tools je Kurs ein-/ausschalten (1.39.0).
+Erledigt: A Arbeit in Teilen (1.18.0), Druckauswahl (1.19.0), B Präsentationen (1.20.0–1.22.0), D Gruppenpräsentationen (1.23.0), E Reiter „Gruppen“ (1.24.0), Reiter ein-/ausschalten (1.25.0), Moodle-Import im Test (1.26.0), F Startprogramm (1.27.0), G Datei öffnen/Ordner wechseln (1.28.0), H Reiter „Zufall“ (1.29.0), N Bereich neuer Tests (1.30.0), Q Demo aus der App (1.31.0), P Programmsymbol (1.32.0), O Update-Sicherheit (1.33.0), M Reiter sortieren (1.34.0), L Spalten einklappen/bündeln (1.35.0), K Tools mit Timer (1.36.0), J Ziehen-Pools (1.37.0), R Tools je Kurs ein-/ausschalten (1.39.0), S Nachschreibtermine (1.40.0).
 
 ## F) Startprogramm (Server + App-Fenster) – umgesetzt in 1.27.0
 
@@ -116,6 +116,15 @@ Entscheidung des Nutzers: Auswahl **je Kurs** (wie die Reiter, in der Datenbank,
 - Sind alle Werkzeuge aus, zeigt der Reiter einen Hinweis mit dem Knopf.
 - Ein ausgeschalteter Timer läuft weiter, falls er gerade läuft (er gilt für die ganze App); nur die Kachel fehlt.
 - Datenmodell: `course.tools: { off: [ids], order: [ids] }` (leer = alle an, Standardreihenfolge). Kein neues `SCHEMA`. Reine Logik `NM.model.toolList`/`setTools` mit `orderTabs`.
+
+### S) Nachschreibtermin mit der Klassenarbeit in einer Spalte – umgesetzt in 1.40.0
+
+Entscheidung des Nutzers: **echte Verknüpfung** (eine Spalte und eine Leistung), angelegt über einen **Knopf an der Original-Arbeit**, im Nachtermin **nur die Fehlenden** (umschaltbar).
+
+- „+ Nachschreibtermin“ im Test legt einen neuen Test an. Aufgaben, Teile und Schlüssel werden als Vorlage übernommen, Ergebnisse und Moodle-Daten nicht. Ein bestehender Test lässt sich über „Nachschreibtermin zu“ verknüpfen oder wieder lösen.
+- Notenübersicht, Notenliste, Leistungsbogen und CSV-Export zeigen eine Spalte. Wer im Nachtermin einen Eintrag hat, bekommt dessen Note (markiert mit „N“). Bei mehreren Nachterminen zählt der späteste mit Eintrag.
+- Bereich, Gewicht, Halbjahr und „nicht gewertet“ kommen immer von der Arbeit (`syncMakeups`). Notenspiegel und Drittelparagraph bleiben je Test.
+- Datenmodell: `a.makeupOf` (id der Arbeit). Kein neues `SCHEMA`: Ältere Versionen sehen den Nachtermin als eigenen Test mit demselben Gewicht und kommen auf dieselbe Note.
 
 ## C) Gamification des Pomodoro-Timers (zurückgestellt, erst auf Nachfrage des Nutzers)
 

@@ -145,6 +145,37 @@
   ok('EPO mit Standard-Umrechnung → MSS-Umrechnung (5-%-Stufen, „mehr als“)', e1.epo.limit === 45 && JSON.stringify(e1.epo.table) === JSON.stringify(G.epoDefaultTable('mss', 45)));
   ok('EPO mit eigener Umrechnung bleibt', e2.epo.table.mins.join() === '0,10,20');
 
+  // 1.40: Nachschreibtermine
+  {
+    const settings = M.newDb().settings;
+    const kc = M.newCourse('y', { klasse: '8a', fach: 'M', jahrgang: 8 });
+    const ka = M.newTest(kc, 'HJ1', settings);
+    ka.name = 'KA 1'; ka.cat = 'ka'; ka.weight = 2;
+    ka.test.results = { s1: { scores: { [ka.test.tasks[0].id]: 3 } } };
+    ka.test.moodle = { x: 1 };
+    kc.assessments.push(ka);
+    const ns = M.newMakeup(kc, ka);
+    ok('Nachschreibtermin: verknüpft, Aufgaben übernommen, ohne Ergebnisse und Moodle', ns.makeupOf === ka.id && ns.id !== ka.id && ns.test.tasks.map((x) => x.name).join() === ka.test.tasks.map((x) => x.name).join() && Object.keys(ns.test.results).length === 0 && !ns.test.moodle && ka.test.moodle);
+    ok('Nachschreibtermin: Bereich und Gewicht der Arbeit', ns.cat === 'ka' && ns.weight === 2 && ns.half === 'HJ1' && /Nachschreibtermin/.test(ns.name));
+    ns.test.tasks[0].max = 99;
+    ok('Nachschreibtermin: Aufgaben sind eine Kopie', ka.test.tasks[0].max !== 99);
+    kc.assessments.push(ns);
+    ka.weight = 3; ka.cat = 'other'; ka.half = 'HJ2'; ka.ungraded = true;
+    M.syncMakeups(kc);
+    ok('syncMakeups: folgt Gewicht, Bereich, Halbjahr, Wertung', ns.weight === 3 && ns.cat === 'other' && ns.half === 'HJ2' && ns.ungraded === true);
+    delete ka.ungraded; M.syncMakeups(kc);
+    ok('syncMakeups: „nicht gewertet“ wieder aus', !ns.ungraded);
+    kc.assessments = kc.assessments.filter((x) => x !== ka);
+    M.syncMakeups(kc);
+    ok('Original gelöscht: Nachschreibtermin wird eigener Test', ns.makeupOf === undefined && ns.weight === 3);
+    const mdb = M.migrate({ years: [], courses: [{ id: 'k', jahrgang: 8, assessments: [{ id: 'o', kind: 'test', half: 'HJ1', cat: 'ka', weight: 2, test: { tasks: [], results: {} } }, { id: 'n', kind: 'test', half: 'HJ2', cat: 'other', weight: 1, makeupOf: 'o', test: { tasks: [], results: {} } }] }] });
+    const nm = mdb.courses[0].assessments[1];
+    ok('migrate: Nachschreibtermin angeglichen', nm.makeupOf === 'o' && nm.half === 'HJ1' && nm.cat === 'ka' && nm.weight === 2);
+    const demo = M.demoDb();
+    const dc = demo.courses[0];
+    ok('Demo: KA 1 mit Nachschreibtermin', dc.assessments.some((a) => NM.grades.isMakeup(dc, a)));
+  }
+
   lines.unshift(fails === 0 ? 'ALLE TESTS BESTANDEN' : fails + ' FEHLGESCHLAGEN');
   document.getElementById('out').textContent = lines.join('\n');
   document.title = 'fertig';
