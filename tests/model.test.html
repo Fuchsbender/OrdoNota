@@ -68,6 +68,15 @@
   const withParts = M.migrate({ schema: 2, years: [], courses: [{ id: 'c', jahrgang: 8, students: [], assessments: [Object.assign(JSON.parse(JSON.stringify(plain)), { test: Object.assign({}, plain.test, { parts: [{ id: 'T', name: 'Theorie', weight: 2, limit: 40, custom: { 5: 3 } }], partMode: 'separate' }) })] }] });
   ok('Teile bleiben beim Öffnen erhalten', withParts.courses[0].assessments[0].test.parts[0].weight === 2 && withParts.courses[0].assessments[0].test.partMode === 'separate');
 
+  // 1.30: Bereich neuer Tests einstellbar, Standard „Sonstige“
+  const cdb = M.migrate({ schema: 4, years: [], courses: [], settings: { limitSek1: 50 } });
+  const cc = M.newCourse('y', { klasse: '7a', fach: 'M', jahrgang: 7, type: 'sek1' });
+  ok('Neuer Test: Standard „Sonstige“ (auch in alten Datenbanken)', cdb.settings.testCat === 'other' && M.newTest(cc, 'HJ1', cdb.settings).cat === 'other');
+  cdb.settings.testCat = 'ka';
+  ok('Neuer Test: Einstellung „Klassen-/Kursarbeit“ wirkt', M.newTest(cc, 'HJ1', cdb.settings).cat === 'ka' && M.migrate(cdb).settings.testCat === 'ka');
+  const noka = M.newCourse('y', { klasse: '11', fach: 'M', jahrgang: 11, type: 'noka' });
+  ok('Neuer Test im Kurs ohne Kursarbeiten bleibt „Sonstige“', M.newTest(noka, '11/1', cdb.settings).cat === 'other');
+
   const extra = M.migrate({ schema: 1, years: [], courses: [], zusatz: { a: 1 } });
   ok('Unbekannte Felder bleiben erhalten', extra.zusatz && extra.zusatz.a === 1);
 

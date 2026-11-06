@@ -1,6 +1,6 @@
 # OrdoNota – Geplante Funktionen
 
-Erledigt: A Arbeit in Teilen (1.18.0), Druckauswahl (1.19.0), B Präsentationen (1.20.0–1.22.0), D Gruppenpräsentationen (1.23.0), E Reiter „Gruppen“ (1.24.0), Reiter ein-/ausschalten (1.25.0), Moodle-Import im Test (1.26.0), F Startprogramm (1.27.0), G Datei öffnen/Ordner wechseln (1.28.0), H Reiter „Zufall“ (1.29.0).
+Erledigt: A Arbeit in Teilen (1.18.0), Druckauswahl (1.19.0), B Präsentationen (1.20.0–1.22.0), D Gruppenpräsentationen (1.23.0), E Reiter „Gruppen“ (1.24.0), Reiter ein-/ausschalten (1.25.0), Moodle-Import im Test (1.26.0), F Startprogramm (1.27.0), G Datei öffnen/Ordner wechseln (1.28.0), H Reiter „Zufall“ (1.29.0), N Bereich neuer Tests (1.30.0).
 
 ## F) Startprogramm (Server + App-Fenster) – umgesetzt in 1.27.0
 
@@ -47,7 +47,7 @@ Anlass: Die Kartenbilder in `cards/` (CC0, siehe `cards/LIZENZ.txt`) zeigen die 
 - Danach `cards/LIZENZ.txt` (Abschnitt „Änderungen“) und die Doku (10c: „Die Karten zeigen J, Q, K …“) anpassen. Der Test in `run_random_check` braucht keine Änderung.
 - Alternative ohne Bildbearbeitung: die Ecken in der App mit einem kleinen Feld „B“/„D“ überdecken (CSS). Das ist einfacher, sieht aber weniger sauber aus.
 
-## Wunschliste vom 06.11.2026 (Reihenfolge der Umsetzung: N, P, O, M, L, K, J)
+## Wunschliste vom 06.11.2026 (Reihenfolge der Umsetzung: N, Q, P, O, M, L, K, J)
 
 ### J) Ziehen: mehrere Pools, eine Spalte je Pool (offen)
 
@@ -84,7 +84,7 @@ Entscheidung des Nutzers: Reihenfolge global in der Datenbank.
 - `settings.tabOrder: [ "<Reiter>" ]` (fehlt = Standardreihenfolge; unbekannte/neue Reiter hinten bzw. an ihrer Standardstelle).
 - Umsortieren per Ziehen in der Reiterleiste und mit ▲▼ unter Einstellungen → Reiter, dazu „Standardreihenfolge“.
 
-### N) Tests: „Sonstige Leistungen“ als Standard (offen)
+### N) Tests: „Sonstige Leistungen“ als Standard – umgesetzt in 1.30.0
 
 - Neue Tests bekommen den Bereich „Sonstige“ statt „Klassen-/Kursarbeit“. Empfehlung: Einstellung unter „Standardwerte für neue Tests“ (`settings.testCat`, Standard `other`).
 
@@ -97,6 +97,13 @@ Entscheidung des Nutzers: Reihenfolge global in der Datenbank.
 
 - `logo/ordonota-icon.svg`: nur das Zeichen (wie das Favicon), quadratisch, ohne Schriftzug. Wird vom Startprogramm für den Startmenü-/Taskleisten-Eintrag verwendet und als Favicon in `index.html`.
 - Windows `.ico` und Mac `.icns` bleiben „später“ (siehe F).
+
+### Q) Demo-Modus aus der App öffnen (offen)
+
+Anlass: Im Startprogramm (App-Fenster) lässt sich die Adresse nicht um `?demo` ergänzen.
+
+- Knopf „Demo ansehen“ auf dem Startbildschirm (Entsperren) und unter Einstellungen. Er öffnet `index.html?demo` in einem neuen Fenster, die eigene Datenbank bleibt offen und unberührt. Der Demo-Modus speichert wie bisher nichts.
+- Das Startprogramm liefert `index.html?demo` schon aus (nur die Abfrage `?demo`), das prüfen und testen.
 
 ## C) Gamification des Pomodoro-Timers (zurückgestellt, erst auf Nachfrage des Nutzers)
 

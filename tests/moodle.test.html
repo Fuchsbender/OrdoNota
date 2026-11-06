@@ -144,7 +144,7 @@
     const m4 = MO.matchStudents(p.persons, c4.students);
     const s4 = MO.applyImport(c4, fresh, p, m4, { replace: true, adopt: true });
     ok('Ersetzen: A1/A2 weg, F1–F3 da, kein zweiter Test', fresh.test.tasks.map((x) => x.name).join() === 'F1,F2,F3' && c4.assessments.length === 1 && s4.assessment === fresh);
-    ok('Übernehmen: Bezeichnung und Datum aus Moodle, Genauigkeit aus Moodle', fresh.name === 'HÜ 1 - Grundlagen' && fresh.date === '2026-09-01' && fresh.test.precision === 0.5 && fresh.cat === 'ka');
+    ok('Übernehmen: Bezeichnung und Datum aus Moodle, Genauigkeit aus Moodle', fresh.name === 'HÜ 1 - Grundlagen' && fresh.date === '2026-09-01' && fresh.test.precision === 0.5 && fresh.cat === 'other');
     const kept = M.newTest(c4, 'HJ1', db.settings);
     kept.name = 'KA 1';
     kept.test.results = { [c4.students[0].id]: { scores: { [kept.test.tasks[0].id]: 4 } } };

@@ -135,6 +135,23 @@
               [0.1, 'Zehntel'],
             ].map(([v, l]) => h('option', { value: v, selected: Number(s.precision) === v }, l))
           )
+        ),
+        h(
+          'label',
+          { class: 'field' },
+          h('span', null, 'Bereich'),
+          h(
+            'select',
+            {
+              class: 'input',
+              onchange: (e) => {
+                s.testCat = e.target.value === 'ka' ? 'ka' : 'other';
+                NM.app.commit();
+              },
+            },
+            h('option', { value: 'other', selected: s.testCat !== 'ka' }, 'Sonstige (z. B. HÜ)'),
+            h('option', { value: 'ka', selected: s.testCat === 'ka' }, 'Klassen-/Kursarbeit')
+          )
         )
       ),
       h('p', { class: 'muted small' }, 'Bestehende Tests behalten ihre Werte; jeder Test lässt sich einzeln anpassen.')

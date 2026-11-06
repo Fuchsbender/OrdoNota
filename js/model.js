@@ -10,7 +10,7 @@
   // 3 (1.20): Präsentationen (kind "pres") – ältere Versionen kennen diese Leistungsart nicht.
   // 4 (1.23): Gruppenpräsentationen – ältere Versionen würden Gruppenwerte ignorieren und falsche Noten zeigen.
   const SCHEMA = 4;
-  const APP_VERSION = '1.29.0';
+  const APP_VERSION = '1.30.0';
 
   class NewerSchemaError extends Error {}
 
@@ -101,6 +101,7 @@
         limitSek1: 50,
         limitMss: 45,
         precision: 1,
+        testCat: 'other', // Bereich neuer Tests: 'ka' | 'other' (seit 1.30)
         keepBackups: 10,
         backupEveryMin: 10,
         gradeColors: true,
@@ -125,6 +126,8 @@
       );
     }
     db.settings = Object.assign(newDb().settings, db.settings || {});
+    // 1.30: Bereich neuer Tests (Standard „Sonstige“)
+    if (db.settings.testCat !== 'ka') db.settings.testCat = 'other';
     // 1.17: Pomodoro-Timer
     db.settings.pomodoro = Object.assign({}, POMODORO_DEFAULTS, db.settings.pomodoro || {});
     // 1.25: Reiter ein-/ausschalten (Standard für alle Kurse; course.tabs optional je Kurs)
@@ -289,7 +292,7 @@
       id: uid(),
       kind: 'test',
       half,
-      cat: course.type === 'noka' ? 'other' : 'ka',
+      cat: course.type !== 'noka' && settings && settings.testCat === 'ka' ? 'ka' : 'other',
       name: 'Neuer Test',
       date: todayISO(),
       weight: 1,
@@ -382,6 +385,7 @@
     c8.students = parseNames(names.join('\n'));
     const t = newTest(c8, 'HJ1', db.settings);
     t.name = 'KA 1 – Terme';
+    t.cat = 'ka';
     t.test.precision = 0.5; // Demo-Daten enthalten halbe Punkte
     t.test.tasks = [
       { id: 'a1', name: 'A1a', max: 4 },
@@ -455,6 +459,7 @@
     // Klassenarbeit in zwei Teilen, gemeinsam bepunktet (ein Schlüssel über alle Punkte)
     const t2 = newTest(c8, 'HJ2', db.settings);
     t2.name = 'KA 2 – Geometrie';
+    t2.cat = 'ka';
     t2.test.precision = 0.5;
     t2.test.partMode = 'sum';
     t2.test.parts = [
@@ -496,6 +501,7 @@
     c12.students = parseNames(names.slice(0, 9).join('\n'));
     const k = newTest(c12, '12/1', db.settings);
     k.name = 'Kursarbeit 1';
+    k.cat = 'ka';
     k.test.tasks = [
       { id: 'b1', name: 'A1', max: 12 },
       { id: 'b2', name: 'A2', max: 18 },
@@ -506,6 +512,7 @@
     // Kursarbeit in drei Teilen, getrennt benotet (Gesamtnote = gewichteter Schnitt der Teilnoten)
     const k2 = newTest(c12, '12/1', db.settings);
     k2.name = 'Kursarbeit 2 – Analysis';
+    k2.cat = 'ka';
     k2.test.partMode = 'separate';
     k2.test.parts = [
       { id: 'q1', name: 'Hilfsmittelfrei', weight: 1 },
