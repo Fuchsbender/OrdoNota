@@ -15,6 +15,8 @@ Notenverwaltung für Sek I und MSS (Rheinland-Pfalz) mit Sitzplänen. Läuft lok
 
 **Programm und Daten trennen:** Programmordner nur lokal (z. B. per `git clone`, Update mit `git pull && launcher/build.sh`), Datenordner im Synology-Drive-Ordner. Die Datenbank ist eine einzige Datei: Einstellungen → **Datenordner wechseln …** kopiert sie (auf Wunsch mit Sicherungen) in einen neuen Ordner, **Aus Datei wiederherstellen …** spielt eine Kopie ein (das eigene Passwort bleibt), und ein leerer Ordner bietet **„Vorhandene Datenbank aus Datei übernehmen …“** an. Details: DOKUMENTATION.md 3.7 und 20.
 
+**Updates:** Datenbanken aller früheren Versionen öffnen sich weiter und ergeben dieselben Noten (das prüfen die Tests mit Prüfstücken ab 1.1). Nach dem Entsperren prüft die App den Aufbau der Datenbank; Einstellungen → **Datenbank prüfen …** zeigt das Ergebnis (DOKUMENTATION.md 21.14).
+
 Ausprobieren ohne echte Daten: **„Demo ansehen“** auf dem Startbildschirm oder unter Einstellungen (auch im Startprogramm), sonst `index.html?demo` (nichts wird gespeichert). Beispiel-CSVs für den Moodle-Import (Kurs 8b Mathe) liegen in `demo/`.
 
 ## Was liegt wo

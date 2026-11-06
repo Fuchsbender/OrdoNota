@@ -153,7 +153,7 @@ def report(name, ok, detail=""):
 
 def run_test_pages(br, base):
     print("Testseiten:")
-    for page in ["grades", "model", "moodle", "pomodoro", "groups", "random", "crypto", "storage"]:
+    for page in ["grades", "model", "update", "moodle", "pomodoro", "groups", "random", "crypto", "storage"]:
         br.open(f"{base}/tests/{page}.test.html")
         done = br.wait("/^(ALLE TESTS BESTANDEN|\\d+ FEHLGESCHLAGEN|FEHLER)/.test(document.getElementById('out').textContent)")
         text = br.eval("document.getElementById('out').textContent") or ""
@@ -175,6 +175,47 @@ def run_app_smoke(br, base):
             stray = br.eval("[...document.getElementById('view').childNodes].some((x) => x.nodeType === 3 && /null|undefined/.test(x.textContent))")
             report(f"Reiter {tab} (Kurs {course + 1})", bool(n) and not stray and not br.errors, "; ".join(br.errors) + (" ; Text „null“ im Reiter" if stray else ""))
             br.errors = []
+
+
+def run_old_db_check(br, base):
+    print("Alte Datenbanken (tests/altdaten) in der App:")
+    import glob, os
+    files = sorted(glob.glob(os.path.join(os.path.dirname(os.path.abspath(__file__)), "altdaten", "v*.js")),
+                   key=lambda f: [int(x) for x in os.path.basename(f)[1:-3].split(".")])
+    for f in files:
+        name = os.path.basename(f)
+        br.open(f"{base}/index.html?demo")
+        br.wait("!!document.querySelector('.overview-table')", 30)
+        br.errors = []
+        res = br.eval("""(async () => {
+            const wait = (ms = 120) => new Promise((r) => setTimeout(r, ms));
+            globalThis.ALTDATEN = [];
+            await new Promise((ok, no) => { const s = document.createElement('script'); s.src = 'tests/altdaten/%s'; s.onload = ok; s.onerror = no; document.head.appendChild(s); });
+            const fx = ALTDATEN[0];
+            NM.app.state.db = NM.model.migrate(JSON.parse(JSON.stringify(fx.db)));
+            const db = NM.app.db(), bad = [];
+            const fehler = NM.model.check(db).filter((p) => p.level === 'fehler').length;
+            for (const c of db.courses) {
+                for (const tab of ['course', 'tests', 'epo', 'pres', 'draw', 'random', 'groups', 'overview', 'seating', 'settings']) {
+                    NM.app.select({ yearId: c.yearId, courseId: c.id, tab }); await wait();
+                    const v = document.getElementById('view');
+                    const stray = [...v.childNodes].some((x) => x.nodeType === 3 && /null|undefined|NaN/.test(x.textContent))
+                        || /\\bNaN\\b|undefined/.test(v.textContent);
+                    if (!v.children.length || stray) bad.push(c.klasse + '/' + tab);
+                }
+                if (NM.grades.hasYearGrade(c)) {
+                    NM.app.setHalf(c, 'Jahr'); NM.app.select({ tab: 'overview' }); await wait();
+                    if (!document.querySelector('#view table') || /\\bNaN\\b|undefined/.test(document.getElementById('view').textContent)) bad.push(c.klasse + '/Jahr');
+                }
+            }
+            // Dialog „Datenbank prüfen“ öffnet und meldet keine Probleme
+            NM.views.settings.checkDialog(db); await wait();
+            const dlg = document.querySelector('dialog.modal');
+            const dialogOk = !!dlg && dlg.textContent.includes('Keine Probleme gefunden') && dlg.textContent.includes(NM.model.APP_VERSION);
+            if (dlg) dlg.querySelector('.modal-actions button').click();
+            return { version: fx.version, fehler, bad, dialogOk }; })()""" % name)
+        ok = bool(res) and res["fehler"] == 0 and not res["bad"] and res["dialogOk"] and not br.errors
+        report(f"{name}: alle Reiter beider Kurse ohne Fehler, „Datenbank prüfen“ ohne Probleme", ok, str(res) + "; ".join(br.errors)[:500])
 
 
 def run_sort_check(br, base):
@@ -1562,6 +1603,21 @@ def run_decrypt_tool(br, base):
     tool = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(tool)
 
+    # CSV-Ausgabe auch für Datenbanken früherer Versionen (tests/altdaten, ohne Migration)
+    import glob, tempfile
+    bad = []
+    for f in sorted(glob.glob(os.path.join(ROOT, "tests", "altdaten", "v*.js"))):
+        text = open(f, encoding="utf-8").read()
+        fx = json.loads(text[text.index(".push(") + 6:text.rindex(");")])
+        with tempfile.TemporaryDirectory() as tmp:
+            try:
+                pfade = tool.schreibe_csv(fx["db"], tmp)
+                if len(pfade) != len(fx["db"]["courses"]):
+                    bad.append(f"{fx['version']}: {len(pfade)} CSV-Dateien")
+            except Exception as e:  # noqa: BLE001
+                bad.append(f"{fx['version']}: {e!r}")
+    report("CSV-Ausgabe für Datenbanken aller früheren Versionen", not bad, "; ".join(bad))
+
     br.open(f"{base}/index.html?demo")
     br.wait("!!window.NM && !!NM.crypto && !!NM.model")
     pw = "Prüf-Passwort ä€ 2026"
@@ -1646,6 +1702,7 @@ def main():
         run_tabs_check(br, base)
         run_settings_layout_check(br, base)
         run_demo_link_check(br, base)
+        run_old_db_check(br, base)
         run_parts_check(br, base)
         run_print_menu_check(br, base)
         run_pres_check(br, base)

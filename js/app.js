@@ -364,6 +364,9 @@
     state.vault = vault;
     state.db = db;
     startSession();
+    // Nach dem Öffnen (z. B. nach einem Update) den Aufbau prüfen; Probleme nur melden, nichts ändern
+    const probs = M.check(db).filter((p) => p.level === 'fehler').length;
+    if (probs) toast(`Die Datenbank-Prüfung meldet ${probs} Problem(e). Details: Einstellungen → Speicherort & Sicherungen → „Datenbank prüfen …“.`, 'error', 10000);
   }
 
   async function checkLockAndConflicts() {

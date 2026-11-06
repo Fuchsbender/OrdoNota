@@ -1,6 +1,6 @@
 # OrdoNota – Geplante Funktionen
 
-Erledigt: A Arbeit in Teilen (1.18.0), Druckauswahl (1.19.0), B Präsentationen (1.20.0–1.22.0), D Gruppenpräsentationen (1.23.0), E Reiter „Gruppen“ (1.24.0), Reiter ein-/ausschalten (1.25.0), Moodle-Import im Test (1.26.0), F Startprogramm (1.27.0), G Datei öffnen/Ordner wechseln (1.28.0), H Reiter „Zufall“ (1.29.0), N Bereich neuer Tests (1.30.0), Q Demo aus der App (1.31.0), P Programmsymbol (1.32.0).
+Erledigt: A Arbeit in Teilen (1.18.0), Druckauswahl (1.19.0), B Präsentationen (1.20.0–1.22.0), D Gruppenpräsentationen (1.23.0), E Reiter „Gruppen“ (1.24.0), Reiter ein-/ausschalten (1.25.0), Moodle-Import im Test (1.26.0), F Startprogramm (1.27.0), G Datei öffnen/Ordner wechseln (1.28.0), H Reiter „Zufall“ (1.29.0), N Bereich neuer Tests (1.30.0), Q Demo aus der App (1.31.0), P Programmsymbol (1.32.0), O Update-Sicherheit (1.33.0).
 
 ## F) Startprogramm (Server + App-Fenster) – umgesetzt in 1.27.0
 
@@ -88,7 +88,7 @@ Entscheidung des Nutzers: Reihenfolge global in der Datenbank.
 
 - Neue Tests bekommen den Bereich „Sonstige“ statt „Klassen-/Kursarbeit“. Empfehlung: Einstellung unter „Standardwerte für neue Tests“ (`settings.testCat`, Standard `other`).
 
-### O) Datenbank bleibt bei Updates verwendbar (offen)
+### O) Datenbank bleibt bei Updates verwendbar – umgesetzt in 1.33.0
 
 - Testdatenbanken früherer Formate (`schema` 1–4, typische Inhalte jeder Version) als Prüfstücke in `tests/`; `model.test.html` öffnet sie mit `migrate()` und prüft, dass alles rechnet und unbekannte Felder erhalten bleiben.
 - `NM.model.check(db)`: prüft nach dem Öffnen die Struktur (Verweise auf Personen, Aufgaben, Teile, Spalten) und meldet Auffälligkeiten, ohne etwas zu ändern. Aufruf in den Tests und auf Knopfdruck unter Einstellungen.

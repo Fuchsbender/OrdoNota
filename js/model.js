@@ -10,7 +10,7 @@
   // 3 (1.20): Präsentationen (kind "pres") – ältere Versionen kennen diese Leistungsart nicht.
   // 4 (1.23): Gruppenpräsentationen – ältere Versionen würden Gruppenwerte ignorieren und falsche Noten zeigen.
   const SCHEMA = 4;
-  const APP_VERSION = '1.32.0';
+  const APP_VERSION = '1.33.0';
 
   class NewerSchemaError extends Error {}
 
@@ -163,6 +163,99 @@
     db.schema = SCHEMA;
     db.savedWith = APP_VERSION;
     return db;
+  }
+
+  /**
+   * Strukturprüfung nach dem Öffnen (ändert nichts). Findet, was eine Rechnung oder Anzeige stören
+   * würde, z. B. nach einem Update oder einer von Hand bearbeiteten Datei.
+   * @returns [{ level: 'fehler' | 'hinweis', where, text }]
+   *   fehler: etwas kann nicht (richtig) gerechnet oder angezeigt werden;
+   *   hinweis: verwaiste Einträge (z. B. Punkte einer gelöschten Person), die nicht stören.
+   */
+  function check(db) {
+    const out = [];
+    const add = (level, where, text) => out.push({ level, where, text });
+    if (!db || typeof db !== 'object') return [{ level: 'fehler', where: 'Datenbank', text: 'kein gültiger Inhalt' }];
+    const isObj = (x) => x && typeof x === 'object' && !Array.isArray(x);
+    if (!Array.isArray(db.years)) add('fehler', 'Datenbank', 'keine Liste der Schuljahre');
+    if (!Array.isArray(db.courses)) return out.concat([{ level: 'fehler', where: 'Datenbank', text: 'keine Liste der Kurse' }]);
+    const years = new Set((db.years || []).map((y) => y.id));
+    const dup = (list, what, where) => {
+      const seen = new Set();
+      for (const x of list) {
+        if (!x || !x.id) add('fehler', where, `${what} ohne id`);
+        else if (seen.has(x.id)) add('fehler', where, `${what} „${x.name || x.last || x.id}“ doppelt (id ${x.id})`);
+        else seen.add(x.id);
+      }
+      return seen;
+    };
+    dup(db.courses, 'Kurs', 'Datenbank');
+    for (const c of db.courses) {
+      const where = `${c.klasse || '?'} ${c.fach || ''}`.trim();
+      if (!years.has(c.yearId)) add('fehler', where, 'gehört zu keinem vorhandenen Schuljahr');
+      if (!Array.isArray(c.students) || !Array.isArray(c.assessments)) {
+        add('fehler', where, 'Personen oder Leistungen fehlen');
+        continue;
+      }
+      if (!(Number(c.jahrgang) >= 5 && Number(c.jahrgang) <= 13)) add('fehler', where, `Jahrgang „${c.jahrgang}“ ungültig`);
+      const sids = dup(c.students, 'Person', where);
+      const halves = new Set(G.halvesFor(c));
+      const orphan = (obj, what) => {
+        const n = Object.keys(obj || {}).filter((k) => !sids.has(k)).length;
+        if (n) add('hinweis', where, `${what}: ${n} Eintrag/Einträge zu nicht mehr vorhandenen Personen`);
+      };
+      dup(c.assessments, 'Leistung', where);
+      for (const a of c.assessments) {
+        const aw = `${where} · ${a.name || a.kind}`;
+        if (!halves.has(a.half)) add('fehler', aw, `Halbjahr „${a.half}“ passt nicht zum Jahrgang`);
+        if (a.cat !== 'ka' && a.cat !== 'other') add('fehler', aw, `Bereich „${a.cat}“ unbekannt`);
+        if (!(Number(a.weight) >= 0)) add('fehler', aw, 'Gewicht ungültig');
+        const body = a[a.kind];
+        if (!['manual', 'test', 'epo', 'pres'].includes(a.kind)) { add('fehler', aw, `Art „${a.kind}“ unbekannt`); continue; }
+        if (!isObj(body)) { add('fehler', aw, 'Inhalt fehlt'); continue; }
+        if (a.kind === 'manual') {
+          if (!isObj(body.grades)) add('fehler', aw, 'Noten fehlen');
+          else {
+            orphan(body.grades, aw);
+            for (const g of Object.values(body.grades)) if (g && g.p !== undefined && g.p !== null && !(g.p >= 0 && g.p <= 15)) add('fehler', aw, `Note ${g.p} außerhalb 0–15`);
+          }
+        } else if (a.kind === 'test') {
+          if (!Array.isArray(body.tasks) || !isObj(body.results)) { add('fehler', aw, 'Aufgaben oder Ergebnisse fehlen'); continue; }
+          const tids = dup(body.tasks, 'Aufgabe', aw);
+          const pids = new Set((body.parts || []).map((x) => x.id));
+          if (body.parts) for (const t of body.tasks) if (t.partId && !pids.has(t.partId)) add('hinweis', aw, `Aufgabe ${t.name} gehört zu keinem vorhandenen Teil (zählt zum ersten Teil)`);
+          orphan(body.results, aw);
+          let unknown = 0;
+          for (const r of Object.values(body.results)) for (const k of Object.keys((r && r.scores) || {})) if (!tids.has(k)) unknown++;
+          if (unknown) add('hinweis', aw, `${unknown} Punktwert(e) zu gelöschten Aufgaben (zählen nicht)`);
+        } else if (a.kind === 'epo') {
+          if (!Array.isArray(body.lessons) || !isObj(body.entries)) { add('fehler', aw, 'Stunden oder Einträge fehlen'); continue; }
+          orphan(body.entries, aw);
+        } else if (a.kind === 'pres') {
+          if (!Array.isArray(body.criteria) || !isObj(body.results)) { add('fehler', aw, 'Kriterien oder Ergebnisse fehlen'); continue; }
+          dup(body.criteria, 'Kriterium', aw);
+          orphan(body.results, aw);
+          for (const g of body.groups || []) {
+            const n = (g.members || []).filter((x) => !sids.has(x)).length;
+            if (n) add('hinweis', aw, `Gruppe „${g.name}“: ${n} nicht mehr vorhandene Person(en)`);
+          }
+        }
+      }
+      for (const [h, ov] of Object.entries(c.overrides || {})) {
+        if (h !== 'Jahr' && !halves.has(h)) add('fehler', where, `gesetzte Noten für Halbjahr „${h}“, das zum Jahrgang nicht passt`);
+        orphan(ov, `gesetzte Noten ${h}`);
+      }
+      const aids = new Set(c.assessments.map((a) => a.id));
+      const draw = c.draw || {};
+      orphan(draw.out, 'Ziehen (Pool)');
+      for (const e of draw.history || []) if (e.aid && !aids.has(e.aid)) add('hinweis', where, `Ziehung vom ${e.date}: Notenspalte wurde gelöscht`);
+      for (const gs of c.groupSets || []) {
+        const n = (gs.groups || []).reduce((k, g) => k + (g.members || []).filter((x) => !sids.has(x)).length, 0);
+        if (n) add('hinweis', where, `Gruppen „${gs.name}“: ${n} nicht mehr vorhandene Person(en)`);
+      }
+      for (const sp of c.seatingPlans || []) orphan(sp.pos, `Sitzplan „${sp.name}“`);
+    }
+    return out;
   }
 
   /** Jahrgang für einen MSS-Kurs: 11, 12 oder 13 aus „Klasse / Stufe“ (z. B. „MSS 12“), sonst 11. */
@@ -567,6 +660,7 @@
     parseNames,
     newManual,
     newTest,
+    check,
     newEpo,
     newPres,
     presCriterion,

@@ -11,6 +11,28 @@
     );
   }
 
+  /** Ergebnis von NM.model.check als Dialog; ändert nichts an der Datenbank. */
+  function checkDialog(db) {
+    const res = NM.model.check(db);
+    const err = res.filter((p) => p.level === 'fehler');
+    const info = res.filter((p) => p.level !== 'fehler');
+    const list = (items) => h('ul', { class: 'check-list' }, items.map((p) => h('li', null, h('strong', null, p.where), ': ', p.text)));
+    return modal({
+      title: 'Datenbank prüfen',
+      wide: res.length > 0,
+      body: h(
+        'div',
+        null,
+        h('p', null, `Datenbank gespeichert mit Version ${db.savedWith || '?'}, geöffnet mit Version ${NM.model.APP_VERSION} (Datenformat ${NM.model.SCHEMA}).`),
+        err.length
+          ? [h('p', { class: 'error' }, `${err.length} Problem(e), die Rechnung oder Anzeige stören können:`), list(err)]
+          : h('p', { class: 'notice' }, '✓ Keine Probleme gefunden. Alle Kurse, Leistungen und Noten sind lesbar.'),
+        info.length ? [h('p', { class: 'muted' }, `${info.length} Hinweis(e) zu übrig gebliebenen Einträgen (stören nicht, z. B. Punkte gelöschter Personen):`), list(info)] : null,
+        err.length ? h('p', { class: 'muted small' }, 'Die Prüfung ändert nichts. Bei Problemen hilft oft eine Sicherung von vor dem Update (Sicherung wiederherstellen).') : null
+      ),
+    });
+  }
+
   function numField(label, value, onSet, { min, max, step = 1, hint } = {}) {
     return h(
       'label',
@@ -236,7 +258,8 @@
           'Verschlüsselte Kopie herunterladen'
         ),
         NM.app.DEMO ? null : h('button', { class: 'btn', onclick: restoreFromFile, title: 'Eine heruntergeladene Kopie oder Sicherung (.nmdb) einspielen' }, 'Aus Datei wiederherstellen …'),
-        NM.app.DEMO ? null : h('button', { class: 'btn', onclick: changeFolder, title: 'Datenbank in einen anderen Ordner kopieren und ab dann dort speichern' }, 'Datenordner wechseln …')
+        NM.app.DEMO ? null : h('button', { class: 'btn', onclick: changeFolder, title: 'Datenbank in einen anderen Ordner kopieren und ab dann dort speichern' }, 'Datenordner wechseln …'),
+        h('button', { class: 'btn', onclick: () => checkDialog(db), title: 'Aufbau der Datenbank prüfen (z. B. nach einem Update); ändert nichts' }, 'Datenbank prüfen …')
       ),
       h('h3', null, 'Sicherungen im Ordner „', S.BACKUP_DIR, '“'),
       listHost
@@ -517,5 +540,5 @@
     );
   }
 
-  NM.views.settings = { render };
+  NM.views.settings = { render, checkDialog };
 })((globalThis.NM = globalThis.NM || {}));

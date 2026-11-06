@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="de">
+<head><meta charset="utf-8"><title>Tests Updates (alte Datenbanken)</title></head>
+<body>
+<pre id="out"></pre>
+<script src="../js/util.js"></script>
+<script src="../js/grades.js"></script>
+<script src="../js/model.js"></script>
+<!-- Prüfstücke aus früheren Versionen, erzeugt mit tests/altdaten/erzeugen.js -->
+<script src="altdaten/v1.1.0.js"></script>
+<script src="altdaten/v1.5.0.js"></script>
+<script src="altdaten/v1.10.0.js"></script>
+<script src="altdaten/v1.17.0.js"></script>
+<script src="altdaten/v1.18.0.js"></script>
+<script src="altdaten/v1.20.0.js"></script>
+<script src="altdaten/v1.23.0.js"></script>
+<script src="altdaten/v1.25.0.js"></script>
+<script src="altdaten/v1.29.0.js"></script>
+<script>
+  const M = NM.model;
+  const G = NM.grades;
+  const lines = [];
+  let fails = 0;
+  const ok = (name, cond, detail) => { if (!cond) fails++; lines.push((cond ? 'OK   ' : 'FAIL ') + name + (!cond && detail ? '  → ' + detail : '')); };
+  const copy = (x) => JSON.parse(JSON.stringify(x));
+  const near = (a, b) => (a === null && b === null) || (a !== null && b !== null && Math.abs(a - b) < 1e-6);
+
+  ok('Prüfstücke geladen (mindestens eins je Datenformat 1–' + M.SCHEMA + ')', Array.isArray(globalThis.ALTDATEN) && [1, 2, 3, 4].every((s) => ALTDATEN.some((x) => x.schema === s)));
+  for (const fx of globalThis.ALTDATEN || []) {
+    const v = fx.version;
+    let db;
+    try {
+      const raw = copy(fx.db);
+      raw.zusatzAusZukunft = { bleibt: true };
+      raw.courses[0].zusatzImKurs = [1, 2];
+      db = M.migrate(raw);
+      ok(`${v}: öffnet (Datenformat ${fx.schema} → ${M.SCHEMA})`, db.schema === M.SCHEMA && db.savedWith === M.APP_VERSION);
+    } catch (e) {
+      ok(`${v}: öffnet`, false, e.message);
+      continue;
+    }
+    const probs = M.check(db).filter((p) => p.level === 'fehler');
+    ok(`${v}: Strukturprüfung ohne Fehler`, probs.length === 0, probs.map((p) => p.where + ': ' + p.text).join('; '));
+    // Gleiche Noten wie in der alten Version
+    const diff = [];
+    let n = 0, nonNull = 0;
+    for (const c of db.courses) {
+      for (const s of c.students) {
+        const exp = (fx.noten[c.id] || {})[s.id] || {};
+        for (const [h, [raw, fin]] of Object.entries(exp)) {
+          const r = h === 'Jahr' ? G.yearResult(c, s.id) : G.halfResult(c, h, s.id);
+          n++;
+          if (raw !== null) nonNull++;
+          if (!near(r.raw, raw) || r.final !== fin) diff.push(`${c.klasse} ${s.last} ${h}: damals ${raw}/${fin}, jetzt ${r.raw}/${r.final}`);
+        }
+      }
+    }
+    ok(`${v}: gleiche Halbjahres- und Jahresnoten (${n} Werte)`, n > 0 && nonNull > n / 2 && diff.length === 0, diff.slice(0, 5).join('; '));
+    ok(`${v}: unbekannte Felder bleiben erhalten`, db.zusatzAusZukunft && db.zusatzAusZukunft.bleibt === true && db.courses[0].zusatzImKurs.length === 2);
+    const again = M.migrate(copy(db));
+    ok(`${v}: zweites Öffnen ändert nichts`, JSON.stringify(again) === JSON.stringify(db));
+    ok(`${v}: gesetzte Note und Bemerkung erhalten`, Object.values(db.courses[0].overrides).some((o) => Object.values(o).some((x) => x.reason === 'Prüfstück')) && Object.values(db.courses[0].comments).some((t) => t.includes(v)));
+  }
+
+  // Strukturprüfung selbst
+  const fresh = M.demoDb();
+  const fe = M.check(M.migrate(copy(fresh))).filter((p) => p.level === 'fehler');
+  ok('Aktuelle Demo-Datenbank: keine Fehler', fe.length === 0, fe.map((p) => p.text).join('; '));
+  const bad = M.migrate(copy(fresh));
+  const bc = bad.courses[0];
+  bc.assessments[0].half = '12/2';
+  bc.assessments[1].cat = 'xyz';
+  bc.assessments.push({ id: 'kaputt', kind: 'test', half: G.halvesFor(bc)[0], cat: 'other', weight: 1, name: 'Ohne Inhalt' });
+  bc.students.push(copy(bc.students[0]));
+  bad.courses[1].yearId = 'gibtsnicht';
+  const t = bc.assessments.find((a) => a.kind === 'test' && a.test && a.test.tasks.length);
+  t.test.results['weg'] = { scores: {} };
+  const before = JSON.stringify(bad);
+  const pb = M.check(bad);
+  const has = (lvl, txt) => pb.some((p) => p.level === lvl && p.text.includes(txt));
+  ok('Prüfung findet: Halbjahr passt nicht', has('fehler', 'Halbjahr „12/2“'));
+  ok('Prüfung findet: Bereich unbekannt', has('fehler', 'Bereich „xyz“'));
+  ok('Prüfung findet: Inhalt fehlt', has('fehler', 'Inhalt fehlt'));
+  ok('Prüfung findet: Person doppelt', has('fehler', 'doppelt'));
+  ok('Prüfung findet: Schuljahr fehlt', has('fehler', 'Schuljahr'));
+  ok('Prüfung meldet verwaiste Ergebnisse nur als Hinweis', has('hinweis', 'nicht mehr vorhandenen Personen'));
+  ok('Prüfung ändert nichts', JSON.stringify(bad) === before);
+  ok('Kaputte Datenbank: Meldung statt Absturz', M.check(null)[0].level === 'fehler' && M.check({ years: [] }).some((p) => p.text.includes('Kurse')));
+
+  lines.unshift(fails === 0 ? 'ALLE TESTS BESTANDEN' : fails + ' FEHLGESCHLAGEN');
+  document.getElementById('out').textContent = lines.join('\n');
+  document.title = 'fertig';
+</script>
+</body>
+</html>

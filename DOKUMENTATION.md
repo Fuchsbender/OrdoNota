@@ -1,6 +1,6 @@
 # OrdoNota – Dokumentation
 
-Version 1.32.0 · Stand November 2026
+Version 1.33.0 · Stand November 2026
 
 OrdoNota (bis Version 1.11 „Notenmanager“) verwaltet Noten für die Sekundarstufe I (Noten 1–6 mit Tendenz) und die Mainzer Studienstufe (MSS, Punkte 00–15) an Schulen in Rheinland-Pfalz. Die App läuft vollständig lokal im Browser, verschlüsselt alle Daten mit einem Passwort und legt sie in einem Ordner ab, den der Synology Drive Client auf die DiskStation spiegelt.
 
@@ -739,7 +739,7 @@ So eignet sich derselbe Bogen für Elterngespräche (z. B. ohne Bemerkung) und f
 | Speicherort & Sicherungen | Name dieses Geräts | – |
 | | Anzahl aufbewahrter Sicherungen | 10 |
 | | Sicherung höchstens alle … Minuten | 10 |
-| | Jetzt sichern / Verschlüsselte Kopie herunterladen / Aus Datei wiederherstellen / Datenordner wechseln / Sicherung wiederherstellen (siehe 20) | – |
+| | Jetzt sichern / Verschlüsselte Kopie herunterladen / Aus Datei wiederherstellen / Datenordner wechseln / Sicherung wiederherstellen (siehe 20) / Datenbank prüfen (siehe 21.14) | – |
 | Schuljahre | Umbenennen, leere Schuljahre löschen | – |
 | Reiter | Reiter ein-/ausschalten als Standard für alle Kurse (Tests, Mitarbeit/EPO, Präsentationen, Ziehen, Zufall, Gruppen, Notenübersicht, Sitzplan); einzelne Kurse können abweichen (6.4) | alle an |
 | Darstellung | Noten farbig hinterlegen | an |
@@ -1109,6 +1109,11 @@ Er ist ausgeschaltet – für diesen Kurs (Kurs & Schüler → „Reiter in dies
 ### 21.13 Das Startprogramm startet nicht oder meldet „Port belegt“
 Die Meldung nennt die Ursache, Einzelheiten stehen in `launcher.log` (Ordner siehe 3.6). „Port 47110 ist belegt“: Ein anderes Programm nutzt den Port. In `config.json` einen anderen `port` eintragen (z. B. 47111). „App-Dateien nicht gefunden“: Ein selbst gebautes Programm ohne eingebaute App-Dateien muss im Programmordner neben `index.html` liegen. Öffnet sich kein eigenes Fenster, sondern ein Browser-Tab, wurde kein Chromium-Browser gefunden; dann Chrome oder Edge installieren oder in `config.json` unter `browser` den Pfad eintragen.
 
+### 21.14 Bleibt meine Datenbank nach einem Update verwendbar?
+Ja. Eine neue Version ergänzt beim Öffnen fehlende Felder mit Standardwerten und lässt alles andere unverändert, auch Felder, die sie nicht kennt. Gerechnete Noten werden nie gespeichert, sondern immer neu aus den eingetragenen Punkten und Noten berechnet. Vor jeder Veröffentlichung prüfen die Tests, dass Datenbanken **aller früheren Versionen** (1.1 bis heute) sich öffnen lassen, in allen Reitern ohne Fehler angezeigt werden und **dieselben Halbjahres- und Jahresnoten** ergeben wie in der Version, mit der sie angelegt wurden (siehe 25.1).
+
+Nach dem Entsperren prüft die App den Aufbau der Datenbank (Schuljahre, Personen, Leistungen, Halbjahre). Findet sie ein Problem, erscheint eine rote Meldung. **Einstellungen → Speicherort & Sicherungen → „Datenbank prüfen …“** zeigt das Ergebnis jederzeit an: Probleme, die Rechnung oder Anzeige stören können, und Hinweise auf übrig gebliebene Einträge (z. B. Punkte einer gelöschten Person), die nicht stören. Die Prüfung ändert nichts. Bei einem Problem nach einem Update hilft eine Sicherung von vorher (siehe 20).
+
 # Teil D – Technische Dokumentation
 
 ## 22. Aufbau der Anwendung
@@ -1190,7 +1195,7 @@ Das Startprogramm ist das einzige Teil mit Build-Schritt; die App selbst bleibt 
   "kdf": "PBKDF2-SHA256",
   "savedAt": "2026-10-14T21:57:03.123Z",
   "device": "Laptop Schule",
-  "app": "1.32.0",
+  "app": "1.33.0",
   "pw":   { "salt": "<b64>", "iter": 600000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "rec":  { "salt": "<b64>", "iter": 100000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "data": { "iv": "<b64>", "ct": "<b64: verschlüsseltes JSON des Datenmodells>" }
@@ -1213,7 +1218,7 @@ Entschlüsselter Inhalt (`schema: 4`):
 ```js
 {
   schema: 4,                             // Datenformat (siehe 26.2)
-  savedWith: "1.32.0",                    // App-Version beim letzten Speichern
+  savedWith: "1.33.0",                    // App-Version beim letzten Speichern
   created: "<ISO>", savedAt: "<ISO>",
   settings: { autoLockMin, limitSek1, limitMss, precision, testCat: "ka" | "other" /* seit 1.30 */, keepBackups, backupEveryMin, gradeColors,
               tabs: { "<Reiter>": false },   // seit 1.25: ausgeschaltete Reiter (Standard für alle Kurse)
@@ -1292,12 +1297,12 @@ python3 tests/run_tests.py
 
 Das Skript startet einen unsichtbaren Chromium-Browser (Chrome, Edge, Chromium, Brave oder Thorium wird automatisch gefunden) und prüft:
 
-1. alle Testseiten (siehe 25.2),
+1. alle Testseiten (siehe 25.2), danach die Datenbanken früherer Versionen (`tests/altdaten/`) in der App: alle Reiter beider Kurse und die Jahresnote ohne Fehler, „Datenbank prüfen“ ohne Probleme,
 2. den Start der App im Demo-Modus und alle Reiter für einen Sek-I- und einen MSS-Kurs ohne JavaScript-Fehler, den Knopf „Demo ansehen“ (öffnet `?demo` im neuen Fenster, eigene Ansicht in `nm.ui` bleibt unberührt),
 3. das Sortieren per Klick auf Spaltenköpfe (Tests, EPO, Notenübersicht; Richtung und leere Werte unten),
 4. den Pomodoro-Timer (Aktivieren, Farben je Zustand, Phasenwechsel, Zurücksetzen, Einstellungsdialog), das Layout des Reiters „Einstellungen“ bei aktivem Timer (keine Lücken zwischen den Karten, Auswahllisten nicht abgeschnitten, bei 1570 und 2560 px) und die Kürzel in der eingeklappten Kursliste, die weichen Übergänge (nur bei Reiter-, Kurs- und Halbjahreswechsel), das Ein-/Ausklappen der Kursliste, das Ein-/Ausschalten von Reitern (Standard in den Einstellungen, Abweichung je Kurs, Ersatzreiter, Sprunglinks, „Wie Standard“), den Reiter „Tests“ in voller Breite, die Warnung bei zu wenig Punkten im Notenschlüssel (doppelte Schwellen markiert, Knöpfe „Halbe Punkte“/„Nur ganze Noten“ beheben sie), Arbeiten in Teilen (einschalten, Aufgaben und Punkte je Teil, Teil ausblenden, getrennt benoten, Status je Teil, Schlüssel je Teil, Ausdrucke inkl. „Ergebnisse nach Teilen“, Beamer, Teile aufheben), die Druckauswahl „🖨 Drucken …“ in Tests, EPO und Notenübersicht (Gruppen, Tooltips, Auswahl druckt, Abbrechen nicht) und den Haken „Unterschrift gesehen“ bei Klassenarbeiten (Zähler, Ausdruck), den Moodle-Import (Knopf im Test statt neben „+ Neuer Test“, bisherige Aufgaben ersetzen oder behalten, Dateiauswahl im Dialog, Zuordnung, Status „fehlt“, Ausdruck mit und ohne Note, erneuter Import),
 5. den Excel-Export der Schülerliste (gültiges ZIP/XML, Umlaute und Sonderzeichen), das Kurs-Löschen nur mit „LÖSCHEN“, das Ein-/Ausblenden der Fotos im EPO-Reiter und im Sitzplan (auch im Druck) das Erweitern/Verkleinern des Sitzplan-Rasters an allen vier Seiten sowie das Ziehen (keine Wiederholung bis zum Auffüllen, automatisches Auffüllen, Note, Rückgängig, Abwesende/Herausgenommene), den Reiter „Zufall“ (Zahl im Bereich, Personen ohne Wiederholung und ohne Abwesende, 3D-Würfel mit Summe und gewürfelter Seite oben, Karten 52/32/eigene als Bild, Stapel immer sichtbar, mehrere auf einmal, nichts in der Notenliste) und den Reiter „Präsentationen“ (Bewerten per Knopf und in der Tabelle, Gewicht, Kriterien aus dem Pool und eigene, Vorlage, Ausdrucke, Spalte in der Notenübersicht, Pool bearbeiten, Startbestand ergänzen, Vorlagen speichern/anlegen/verwenden/drucken/löschen, Standardvorlagen vorhanden und ergänzen, Handreichung mit Notenschlüssel) und Gruppenpräsentationen (Gruppenwert für alle Mitglieder, Personenkriterien, Abweichung setzen/zurücksetzen, Tabelle, Gruppen bearbeiten/übernehmen, Druck, Auflösen ohne Notenänderung), den Reiter „Gruppen“ (neue Einteilung, Abwesende, Fixieren, Anklicken/Ziehen, Auftrag, Regel mit Warnung, Beamer ohne Noten mit Schrift passend zum Bildschirm und Umschaltern für Fotos/Nachnamen, Druck, Fotos/Nachnamen in der Einteilung, Gruppenpuzzle mit Expertengruppen unter den Stammgruppen, Anzahl der Teilthemen einstellbar und beim Neu verteilen erhalten, Hinweis nach Änderungen, Beamer-Umschalter Stamm-/Expertengruppen, Übernahme in eine Präsentation),
-6. das Notfallwerkzeug: Eine von der App echt verschlüsselte Datenbank wird mit `tools/entschluesseln.py` per Passwort und per Wiederherstellungsschlüssel entschlüsselt und mit dem Original verglichen. Dazu kommen falsches Passwort, manipulierte Datei und CSV-Ausgabe,
+6. das Notfallwerkzeug: Eine von der App echt verschlüsselte Datenbank wird mit `tools/entschluesseln.py` per Passwort und per Wiederherstellungsschlüssel entschlüsselt und mit dem Original verglichen. Dazu kommen falsches Passwort, manipulierte Datei und CSV-Ausgabe (auch für die Datenbanken aller früheren Versionen aus `tests/altdaten/`),
 7. das Startprogramm (nur wenn Go installiert ist, sonst übersprungen): `go test` in `launcher/` (Programmsymbol ohne Schriftzug, Zugriffsschutz, nur erlaubte Dateien, Speichern und Konflikt, Sicherungen, Konfliktkopien, Lock, Datenordner wählen, Kennwort, Programmordner finden), dann ein echter Start mit Testordner: Zugriff ohne Kennwort abgelehnt, zweiter Start erkennt das laufende Programm, die App erkennt das Startprogramm, legt eine Datenbank an (ohne Rückfrage), speichert Änderungen in den Ordner (mit dem Notfallwerkzeug geprüft), erkennt eine externe Änderung, überschreibt auf Wunsch, stellt aus einer Datei mit fremdem Passwort wieder her (eigenes Passwort bleibt), wechselt den Datenordner mit Sicherungen (alter Ordner bleibt, neuer gemerkt, danach wird dort gespeichert), übernimmt in einem leeren Ordner eine Datenbank aus einer Datei und gibt den Lock beim Beenden frei.
 
 Am Ende steht `ERGEBNIS: x von y bestanden`. Der Exit-Code ist 0, wenn alles bestanden ist.
@@ -1310,6 +1315,7 @@ Am Ende steht `ERGEBNIS: x von y bestanden`. Der Exit-Code ist 0, wenn alles bes
 |---|---|---|
 | `tests/grades.test.html` | Skalen, Eingabe-Parser, Rundung, Notenschlüssel (Vergleich mit Excel-Formeln), Bonus/Kappung, Status, Drittelparagraph, EPO (Werte aus der bisherigen EPO-Liste), Halbjahres-/Jahresnote, GK-Gewichtung, nicht erreichbare Stufen (zu wenig Punkte, eigene Schwellen, Präsentationen), Präsentationen (Gewicht, Status, Schlüssel, Halbjahresnote, Gruppen: Gruppenwert, Abweichung, Personenkriterium, Modus „alles als Gruppe“), Arbeiten in Teilen (gemeinsam/getrennt, Gewichte, fehlender Teil, Status je Teil, ganze Noten je Teil, MSS) | im Browser öffnen |
 | `tests/model.test.html` | Migration älterer Datenbanken (SCHEMA 1 → 4, Bereich neuer Tests, Kriterienpool, Startbestand ergänzen, Vorlagen, Standardvorlagen), neue Präsentation, Ablehnung neuerer Datenformate, Erhalt unbekannter Felder, Reiterauswahl (`settings.tabs`, `course.tabs`), Namensliste | im Browser öffnen |
+| `tests/update.test.html` | Datenbanken früherer Versionen (Prüfstücke 1.1–1.29 in `tests/altdaten/`, je Datenformat mindestens eins): öffnen, Strukturprüfung ohne Fehler, **gleiche Halbjahres- und Jahresnoten wie in der alten Version**, unbekannte Felder bleiben, zweites Öffnen ändert nichts; `NM.model.check` findet kaputte Halbjahre, Bereiche, fehlende Inhalte, doppelte Personen, fehlende Schuljahre und ändert nichts | im Browser öffnen |
 | `tests/moodle.test.html` | CSV-Zerlegung, Erkennen und Zusammenführen von Antworten-/Bewertungen-CSV, bester Versuch, Textvergleich ohne Bewertungen, Zuordnung (Name, gemerkte E-Mail), Übernahme als Test, Import in einen bestehenden Test (Aufgaben ersetzen/behalten, Bezeichnung und Datum übernehmen), „fehlt“, erneuter Import, skalierte Punkte, Import in einen Teil (auch mit Ersetzen) | im Browser öffnen |
 | `tests/groups.test.html` | Gruppengrößen (Rest verteilt), Verteilung (alle genau einmal), Regeln „nicht zusammen“/„zusammen“, leistungsgemischt/-gleich, fehlende Noten, Abwechslung (auch Minimum), Expertengruppen (Standard und einstellbare Anzahl, gleich große Gruppen, kein Thema doppelt), Migration | im Browser öffnen |
 | `tests/random.test.html` | Zufallszahl (Bereich, vertauschte Grenzen), Personenauswahl (ohne Wiederholung, Neubeginn), Kartenstapel 52/32/eigene, Würfelkörper W4–W20 (Flächenzahl, eben, Beschriftung, Gegenseiten n + 1, gewürfelte Seite liegt am Ende genau oben), Migration | im Browser öffnen |
@@ -1351,7 +1357,7 @@ In `js/model.js` stehen zwei Nummern:
 2. Änderung in einem eigenen Git-Zweig vornehmen (`git switch -c funktion-xyz`).
 3. Gerechnete Werte nie speichern, sondern aus Rohdaten berechnen (wie bisher).
 4. Neue Felder mit Standardwert in `NM.model.migrate()` eintragen. Bei inkompatiblen Änderungen `SCHEMA` erhöhen.
-5. Tests ergänzen und **`tests/run_tests.py` ausführen – alles muss bestehen.**
+5. Tests ergänzen und **`tests/run_tests.py` ausführen – alles muss bestehen.** Dabei werden auch die Prüfstücke früherer Versionen geöffnet (`tests/altdaten/`). Ändert sich eine Rechenregel absichtlich, schlägt der Notenvergleich fehl; dann die Änderung bewusst prüfen und die betroffenen Prüfstücke nur mit Begründung im Commit anpassen. Nach einer Version mit neuem Datenformat ein Prüfstück dazunehmen: Commit in `VERSIONEN` von `tests/altdaten/erzeugen.js` eintragen, `deno run --allow-run=git --allow-write=tests/altdaten tests/altdaten/erzeugen.js` ausführen und die neue Datei in `tests/update.test.html` einbinden.
 6. Erst im Demo-Modus (`index.html?demo`) ausprobieren, dann mit der echten Datenbank.
 7. `APP_VERSION` erhöhen, committen, auf allen Geräten einspielen.
 
@@ -1367,6 +1373,7 @@ In `js/model.js` stehen zwei Nummern:
 - **Gruppenpräsentationen (seit 1.23):** Logik in `js/grades.js` (`presGroupOf`, `presCritIsGroup`, `presScores`, `presDeviation`, `presTopic`), Oberfläche in `js/view-pres.js` (`setGroupMode`, `groupsCard`, `groupRateCard`, `personRateCard`).
 - **Zufall (seit 1.29):** Logik in `js/random.js` (`NM.random`), Reiter `js/view-random.js` (`numberTool`, `peopleTool`, `diceTool` mit eigenem Canvas-3D-Zeichner `paintDie`, `cardTool` mit `flyIn`). Kartenbilder in `cards/` (`<Farbe C/D/H/S><Wert 2–10/B/D/K/A>.svg`, `back.svg`, CC0); ein neuer App-Ordner muss auch in `staticAllowed` (`launcher/server.go`) und in `launcher/build.sh`. Ergebnisse und Stapel nur in der Sitzung (`NM.views.random.session`), Einstellungen pro Gerät in `nm.ui` (`ui.random`), eigene Karten in `course.randomCards`. „Heute abwesend“ aus `NM.views.draw.absent`. Tests: `tests/random.test.html`, E2E `run_random_check`.
 - **Demo öffnen (seit 1.31):** `NM.app.openDemo()` (`js/app.js`) öffnet die eigene Adresse mit `?demo` in einem neuen Fenster; Knöpfe über `demoLink()` auf den Startseiten (`renderStart`, `renderCreate`) und in `infoCard` (`js/view-settings.js`). Die Demo speichert ihre Ansicht unter `nm.ui.demo` (`UI_KEY`). E2E `run_demo_link_check`.
+- **Update-Sicherheit (seit 1.33):** Strukturprüfung `NM.model.check(db)` (`js/model.js`, rein, liefert `{ level: 'fehler' | 'hinweis', where, text }`), Aufruf nach dem Entsperren in `unlock` (`js/app.js`, nur Meldung) und im Dialog `checkDialog` (`js/view-settings.js`). Prüfstücke früherer Versionen in `tests/altdaten/` (erzeugt mit `erzeugen.js` aus dem Git-Verlauf), geprüft in `tests/update.test.html`, E2E `run_old_db_check` und in `run_decrypt_tool`. Neue Felder in `check` aufnehmen, wenn ein fehlerhafter Wert die Rechnung stören würde.
 - **Gruppenbildung (seit 1.24):** Logik in `js/groups.js` (`sizes`, `build` mit Kostenfunktion und Tauschsuche, `check`, `experts`), Reiter `js/view-groups.js` (`roll`, `expertCard`), Druck `NM.print.groups`, Übernahme in Präsentationen `NM.views.pres.applyGroups`. „Heute abwesend“ kommt aus `NM.views.draw.absent` (nur Sitzung). Leistung = gerundete Halbjahresnote (`G.halfResult(...).final`), nie gespeichert. Tests: `tests/groups.test.html`, E2E `run_groups_tab_check`.
 - **Reiter ausschalten (seit 1.25):** `NM.app.OPTIONAL_TABS`, `tabOn(course, id)`, `shownTab(course)` (Ersatz: Notenübersicht, sonst „Kurs & Schüler“), Haken über `NM.ui.tabChecks`. Daten ausgeschalteter Reiter bleiben und zählen weiter. E2E `run_tabs_check`.
 - **Notenschlüssel-Warnung:** `G.unreachableSteps(key)` meldet nicht erreichbare Stufen; Warnung mit Schnellknöpfen in `NM.views.tests.keyCardFor` (Tests, Teile, Präsentationen).
