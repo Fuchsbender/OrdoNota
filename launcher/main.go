@@ -213,13 +213,16 @@ func alreadyRunning(port int, token string) bool {
 	return resp.StatusCode == 200
 }
 
-// writeIcon legt das Logo für den Startmenü-Eintrag in den Einstellungsordner.
+// writeIcon legt das Programmsymbol (nur das Zeichen, ohne Schriftzug) für den Startmenü- und
+// Taskleisten-Eintrag in den Einstellungsordner. Der neue Dateiname sorgt dafür, dass der
+// Startmenü-Eintrag sich ändert und die Arbeitsumgebung das Symbol neu lädt.
 func writeIcon(files fs.FS, dir string) string {
-	b, err := fs.ReadFile(files, "logo/ordonota-logo.svg")
+	b, err := fs.ReadFile(files, "logo/ordonota-icon.svg")
 	if err != nil {
 		return ""
 	}
-	p := filepath.Join(dir, "ordonota.svg")
+	os.Remove(filepath.Join(dir, "ordonota.svg")) // altes Symbol mit Schriftzug (bis 1.31)
+	p := filepath.Join(dir, "ordonota-icon.svg")
 	if old, err := os.ReadFile(p); err != nil || string(old) != string(b) {
 		os.WriteFile(p, b, 0o644)
 	}

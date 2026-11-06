@@ -1,6 +1,6 @@
 # OrdoNota – Dokumentation
 
-Version 1.31.0 · Stand November 2026
+Version 1.32.0 · Stand November 2026
 
 OrdoNota (bis Version 1.11 „Notenmanager“) verwaltet Noten für die Sekundarstufe I (Noten 1–6 mit Tendenz) und die Mainzer Studienstufe (MSS, Punkte 00–15) an Schulen in Rheinland-Pfalz. Die App läuft vollständig lokal im Browser, verschlüsselt alle Daten mit einem Passwort und legt sie in einem Ordner ab, den der Synology Drive Client auf die DiskStation spiegelt.
 
@@ -146,7 +146,7 @@ Statt `index.html` per Doppelklick zu öffnen, können Sie OrdoNota über das **
 
 | System | Datei | Start |
 |---|---|---|
-| Linux | `OrdoNota` (im Programmordner) bzw. `OrdoNota-Linux` | Doppelklick oder `./OrdoNota`. Beim ersten Start legt das Programm den Eintrag „OrdoNota“ im Startmenü an. |
+| Linux | `OrdoNota` (im Programmordner) bzw. `OrdoNota-Linux` | Doppelklick oder `./OrdoNota`. Beim ersten Start legt das Programm den Eintrag „OrdoNota“ im Startmenü an. Startmenü und Taskleiste zeigen das Zeichen ohne Schriftzug (`logo/ordonota-icon.svg`). |
 | Windows | `OrdoNota.exe` | Doppelklick; Verknüpfung über Rechtsklick → *Senden an* → *Desktop*. Beim ersten Mal: „Weitere Informationen“ → „Trotzdem ausführen“. |
 | macOS | `OrdoNota.app` | in „Programme“ ziehen; beim ersten Mal Rechtsklick → *Öffnen* → *Öffnen*. |
 
@@ -1154,7 +1154,7 @@ Das Startprogramm ist das einzige Teil mit Build-Schritt; die App selbst bleibt 
 
 | Datei | Aufgabe |
 |---|---|
-| `main.go` | Ablauf: Einstellungen laden, App-Dateien finden (`--app-dir`, sonst `index.html` neben dem Programm oder bis zu 4 Ordner darüber, sonst eingebaut), Server starten, Fenster öffnen, beenden, wenn das Fenster zu ist (Browserprozess beendet und 15 s ohne Lebenszeichen; beim Standardbrowser 5 min ohne Lebenszeichen) |
+| `main.go` | Ablauf: Einstellungen laden, App-Dateien finden (`--app-dir`, sonst `index.html` neben dem Programm oder bis zu 4 Ordner darüber, sonst eingebaut), Server starten, Fenster öffnen, beenden, wenn das Fenster zu ist (Browserprozess beendet und 15 s ohne Lebenszeichen; beim Standardbrowser 5 min ohne Lebenszeichen); legt unter Linux das Programmsymbol `logo/ordonota-icon.svg` (nur das Zeichen) als `ordonota-icon.svg` in den Einstellungsordner (`writeIcon`) |
 | `server.go` | HTTP: `/start?t=…` setzt das Zugriffs-Cookie, statische Dateien nur aus `index.html`, `css/`, `js/`, `logo/`, `demo/`, `cards/` (nie `ref/` o. Ä.), Schnittstelle `/api/…` |
 | `store.go` | Datenordner: nur `notenmanager.nmdb`, `notenmanager.lock.json`, `Sicherungen/notenmanager_*.nmdb`; Schreiben über Hilfsdatei und Umbenennen; Konfliktprüfung über die Änderungszeit |
 | `config.go`, `browser.go`, `dialog.go` | Einstellungen und Kennwort, Browsersuche (`--app`, eigenes Profil), Ordner-Dialog und Fehlermeldungen mit Bordmitteln (zenity/kdialog, osascript, PowerShell) |
@@ -1190,7 +1190,7 @@ Das Startprogramm ist das einzige Teil mit Build-Schritt; die App selbst bleibt 
   "kdf": "PBKDF2-SHA256",
   "savedAt": "2026-10-14T21:57:03.123Z",
   "device": "Laptop Schule",
-  "app": "1.31.0",
+  "app": "1.32.0",
   "pw":   { "salt": "<b64>", "iter": 600000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "rec":  { "salt": "<b64>", "iter": 100000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "data": { "iv": "<b64>", "ct": "<b64: verschlüsseltes JSON des Datenmodells>" }
@@ -1213,7 +1213,7 @@ Entschlüsselter Inhalt (`schema: 4`):
 ```js
 {
   schema: 4,                             // Datenformat (siehe 26.2)
-  savedWith: "1.31.0",                    // App-Version beim letzten Speichern
+  savedWith: "1.32.0",                    // App-Version beim letzten Speichern
   created: "<ISO>", savedAt: "<ISO>",
   settings: { autoLockMin, limitSek1, limitMss, precision, testCat: "ka" | "other" /* seit 1.30 */, keepBackups, backupEveryMin, gradeColors,
               tabs: { "<Reiter>": false },   // seit 1.25: ausgeschaltete Reiter (Standard für alle Kurse)
@@ -1298,7 +1298,7 @@ Das Skript startet einen unsichtbaren Chromium-Browser (Chrome, Edge, Chromium, 
 4. den Pomodoro-Timer (Aktivieren, Farben je Zustand, Phasenwechsel, Zurücksetzen, Einstellungsdialog), das Layout des Reiters „Einstellungen“ bei aktivem Timer (keine Lücken zwischen den Karten, Auswahllisten nicht abgeschnitten, bei 1570 und 2560 px) und die Kürzel in der eingeklappten Kursliste, die weichen Übergänge (nur bei Reiter-, Kurs- und Halbjahreswechsel), das Ein-/Ausklappen der Kursliste, das Ein-/Ausschalten von Reitern (Standard in den Einstellungen, Abweichung je Kurs, Ersatzreiter, Sprunglinks, „Wie Standard“), den Reiter „Tests“ in voller Breite, die Warnung bei zu wenig Punkten im Notenschlüssel (doppelte Schwellen markiert, Knöpfe „Halbe Punkte“/„Nur ganze Noten“ beheben sie), Arbeiten in Teilen (einschalten, Aufgaben und Punkte je Teil, Teil ausblenden, getrennt benoten, Status je Teil, Schlüssel je Teil, Ausdrucke inkl. „Ergebnisse nach Teilen“, Beamer, Teile aufheben), die Druckauswahl „🖨 Drucken …“ in Tests, EPO und Notenübersicht (Gruppen, Tooltips, Auswahl druckt, Abbrechen nicht) und den Haken „Unterschrift gesehen“ bei Klassenarbeiten (Zähler, Ausdruck), den Moodle-Import (Knopf im Test statt neben „+ Neuer Test“, bisherige Aufgaben ersetzen oder behalten, Dateiauswahl im Dialog, Zuordnung, Status „fehlt“, Ausdruck mit und ohne Note, erneuter Import),
 5. den Excel-Export der Schülerliste (gültiges ZIP/XML, Umlaute und Sonderzeichen), das Kurs-Löschen nur mit „LÖSCHEN“, das Ein-/Ausblenden der Fotos im EPO-Reiter und im Sitzplan (auch im Druck) das Erweitern/Verkleinern des Sitzplan-Rasters an allen vier Seiten sowie das Ziehen (keine Wiederholung bis zum Auffüllen, automatisches Auffüllen, Note, Rückgängig, Abwesende/Herausgenommene), den Reiter „Zufall“ (Zahl im Bereich, Personen ohne Wiederholung und ohne Abwesende, 3D-Würfel mit Summe und gewürfelter Seite oben, Karten 52/32/eigene als Bild, Stapel immer sichtbar, mehrere auf einmal, nichts in der Notenliste) und den Reiter „Präsentationen“ (Bewerten per Knopf und in der Tabelle, Gewicht, Kriterien aus dem Pool und eigene, Vorlage, Ausdrucke, Spalte in der Notenübersicht, Pool bearbeiten, Startbestand ergänzen, Vorlagen speichern/anlegen/verwenden/drucken/löschen, Standardvorlagen vorhanden und ergänzen, Handreichung mit Notenschlüssel) und Gruppenpräsentationen (Gruppenwert für alle Mitglieder, Personenkriterien, Abweichung setzen/zurücksetzen, Tabelle, Gruppen bearbeiten/übernehmen, Druck, Auflösen ohne Notenänderung), den Reiter „Gruppen“ (neue Einteilung, Abwesende, Fixieren, Anklicken/Ziehen, Auftrag, Regel mit Warnung, Beamer ohne Noten mit Schrift passend zum Bildschirm und Umschaltern für Fotos/Nachnamen, Druck, Fotos/Nachnamen in der Einteilung, Gruppenpuzzle mit Expertengruppen unter den Stammgruppen, Anzahl der Teilthemen einstellbar und beim Neu verteilen erhalten, Hinweis nach Änderungen, Beamer-Umschalter Stamm-/Expertengruppen, Übernahme in eine Präsentation),
 6. das Notfallwerkzeug: Eine von der App echt verschlüsselte Datenbank wird mit `tools/entschluesseln.py` per Passwort und per Wiederherstellungsschlüssel entschlüsselt und mit dem Original verglichen. Dazu kommen falsches Passwort, manipulierte Datei und CSV-Ausgabe,
-7. das Startprogramm (nur wenn Go installiert ist, sonst übersprungen): `go test` in `launcher/` (Zugriffsschutz, nur erlaubte Dateien, Speichern und Konflikt, Sicherungen, Konfliktkopien, Lock, Datenordner wählen, Kennwort, Programmordner finden), dann ein echter Start mit Testordner: Zugriff ohne Kennwort abgelehnt, zweiter Start erkennt das laufende Programm, die App erkennt das Startprogramm, legt eine Datenbank an (ohne Rückfrage), speichert Änderungen in den Ordner (mit dem Notfallwerkzeug geprüft), erkennt eine externe Änderung, überschreibt auf Wunsch, stellt aus einer Datei mit fremdem Passwort wieder her (eigenes Passwort bleibt), wechselt den Datenordner mit Sicherungen (alter Ordner bleibt, neuer gemerkt, danach wird dort gespeichert), übernimmt in einem leeren Ordner eine Datenbank aus einer Datei und gibt den Lock beim Beenden frei.
+7. das Startprogramm (nur wenn Go installiert ist, sonst übersprungen): `go test` in `launcher/` (Programmsymbol ohne Schriftzug, Zugriffsschutz, nur erlaubte Dateien, Speichern und Konflikt, Sicherungen, Konfliktkopien, Lock, Datenordner wählen, Kennwort, Programmordner finden), dann ein echter Start mit Testordner: Zugriff ohne Kennwort abgelehnt, zweiter Start erkennt das laufende Programm, die App erkennt das Startprogramm, legt eine Datenbank an (ohne Rückfrage), speichert Änderungen in den Ordner (mit dem Notfallwerkzeug geprüft), erkennt eine externe Änderung, überschreibt auf Wunsch, stellt aus einer Datei mit fremdem Passwort wieder her (eigenes Passwort bleibt), wechselt den Datenordner mit Sicherungen (alter Ordner bleibt, neuer gemerkt, danach wird dort gespeichert), übernimmt in einem leeren Ordner eine Datenbank aus einer Datei und gibt den Lock beim Beenden frei.
 
 Am Ende steht `ERGEBNIS: x von y bestanden`. Der Exit-Code ist 0, wenn alles bestanden ist.
 
