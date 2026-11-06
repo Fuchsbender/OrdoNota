@@ -937,11 +937,40 @@
   // ---------- Neuzeichnen mit Fokus-Erhalt ----------
 
   let rerenderQueued = false;
+  // Wird ein Knopf gedrückt, während ein Eingabefeld beim Verlassen speichert (change → commit), würde das
+  // Neuzeichnen den Knopf zwischen Maus-runter und Maus-hoch ersetzen und der Klick ginge verloren.
+  // Deshalb wird dann erst nach dem Klick neu gezeichnet.
+  let pressing = false;
+  let renderAfterPress = false;
+  let pressTimer = null;
+  const endPress = () => {
+    clearTimeout(pressTimer);
+    setTimeout(() => {
+      pressing = false;
+      if (renderAfterPress) {
+        renderAfterPress = false;
+        rerender();
+      }
+    }, 0);
+  };
+  document.addEventListener('pointerdown', (e) => {
+    if (!e.target.closest || !e.target.closest('button, a, label, summary, [role="button"], [role="tab"], select, input[type="checkbox"], input[type="radio"]')) return;
+    pressing = true;
+    clearTimeout(pressTimer);
+    pressTimer = setTimeout(endPress, 3000); // Sicherheitsnetz, falls kein pointerup kommt
+  }, true);
+  document.addEventListener('pointerup', () => pressing && endPress(), true);
+  document.addEventListener('pointercancel', () => pressing && endPress(), true);
+
   function rerender() {
     if (rerenderQueued) return;
     rerenderQueued = true;
     setTimeout(() => {
       rerenderQueued = false;
+      if (pressing) {
+        renderAfterPress = true;
+        return;
+      }
       const active = document.activeElement;
       const key = active && active.dataset ? active.dataset.focusKey : null;
       let sel = null;

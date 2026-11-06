@@ -1,6 +1,6 @@
 # OrdoNota – Dokumentation
 
-Version 1.37.1 · Stand November 2026
+Version 1.37.2 · Stand November 2026
 
 OrdoNota (bis Version 1.11 „Notenmanager“) verwaltet Noten für die Sekundarstufe I (Noten 1–6 mit Tendenz) und die Mainzer Studienstufe (MSS, Punkte 00–15) an Schulen in Rheinland-Pfalz. Die App läuft vollständig lokal im Browser, verschlüsselt alle Daten mit einem Passwort und legt sie in einem Ordner ab, den der Synology Drive Client auf die DiskStation spiegelt.
 
@@ -1179,6 +1179,8 @@ Eingabe (change) → Daten im Objekt ändern → NM.app.commit()
 
 Berechnete Werte (Schnitte, Testnoten, EPO-Noten) werden **nie gespeichert**, sondern bei jedem Zeichnen aus den Rohdaten berechnet.
 
+Ist beim Neuzeichnen gerade ein Knopf gedrückt (z. B. „+ Aufgabe“, während ein Eingabefeld beim Verlassen speichert), wartet `rerender()` bis nach dem Klick (`pressing` in `js/app.js`). Sonst würde der Knopf zwischen Maus-runter und Maus-hoch ersetzt und der Klick ginge verloren.
+
 **Pro Gerät im Browser gespeichert** (`localStorage`/IndexedDB, nicht in der Datenbank): Ordner-Handle, Geräte-ID und -name, gewählter Kurs/Reiter/Halbjahr, Farbschema, ein-/ausgeklappte Kursliste, ausgeblendete Teile in der Ergebnistabelle, Umschalter Fotos/Nachnamen im Reiter „Gruppen“ und in dessen Beameransicht, Stand des Pomodoro-Timers.
 
 ### 22.1 Startprogramm (`launcher/`)
@@ -1224,7 +1226,7 @@ Das Startprogramm ist das einzige Teil mit Build-Schritt; die App selbst bleibt 
   "kdf": "PBKDF2-SHA256",
   "savedAt": "2026-10-14T21:57:03.123Z",
   "device": "Laptop Schule",
-  "app": "1.37.1",
+  "app": "1.37.2",
   "pw":   { "salt": "<b64>", "iter": 600000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "rec":  { "salt": "<b64>", "iter": 100000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "data": { "iv": "<b64>", "ct": "<b64: verschlüsseltes JSON des Datenmodells>" }
@@ -1247,7 +1249,7 @@ Entschlüsselter Inhalt (`schema: 4`):
 ```js
 {
   schema: 4,                             // Datenformat (siehe 26.2)
-  savedWith: "1.37.1",                    // App-Version beim letzten Speichern
+  savedWith: "1.37.2",                    // App-Version beim letzten Speichern
   created: "<ISO>", savedAt: "<ISO>",
   settings: { autoLockMin, limitSek1, limitMss, precision, testCat: "ka" | "other" /* seit 1.30 */, keepBackups, backupEveryMin, gradeColors,
               tabs: { "<Reiter>": false },   // seit 1.25: ausgeschaltete Reiter (Standard für alle Kurse)

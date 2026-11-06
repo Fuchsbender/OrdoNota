@@ -749,6 +749,36 @@ def run_tests_view_check(br, base):
     report("Tests: volle Breite, Unterschrift abhaken/zählen/drucken, nur bei Klassenarbeiten", ok and not br.errors, str(res) + "; ".join(br.errors))
 
 
+def run_task_add_click_check(br, base):
+    print("Tests: Punkte eingeben, dann „+ Aufgabe“ mit einem Klick:")
+    br.open(f"{base}/index.html?demo")
+    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.errors = []
+    pos = br.eval("""(async () => {
+        const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
+        const c = NM.app.db().courses[0];
+        NM.app.select({ courseId: c.id, tab: 'tests' }); await wait();
+        const a = c.assessments.find((x) => x.kind === 'test');
+        window.__t = a.test;
+        const inp = document.querySelector('.task-max');
+        inp.focus(); inp.select();
+        window.__task = a.test.tasks.find((x) => inp.dataset.focusKey === 'task-max-' + x.id);
+        const btn = [...document.querySelectorAll('.tasks button')].find((b) => b.textContent === '+ Aufgabe');
+        btn.scrollIntoView({ block: 'center' }); await wait(50);
+        const r = btn.getBoundingClientRect();
+        return { x: r.left + r.width / 2, y: r.top + r.height / 2, n: a.test.tasks.length }; })()""")
+    br.call("Input.insertText", text="7")
+    for typ in ("mousePressed", "mouseReleased"):
+        br.call("Input.dispatchMouseEvent", type=typ, x=pos["x"], y=pos["y"], button="left", clickCount=1)
+        time.sleep(0.05)
+    time.sleep(0.4)
+    res = br.eval("({ n: __t.tasks.length, max: __task.max })")
+    # Nach echtem Klick (Nutzeraktivierung) würde „Seite verlassen?“ das nächste Laden blockieren
+    br.eval("(NM.app.state.dirty = false, 1)")
+    ok = res["n"] == pos["n"] + 1 and res["max"] == 7
+    report("Ein Klick übernimmt die Punkte und legt die Aufgabe an", ok and not br.errors, f"{pos} {res} " + "; ".join(br.errors))
+
+
 def run_unreachable_check(br, base):
     print("Notenschlüssel: Warnung bei zu wenig Punkten:")
     br.open(f"{base}/index.html?demo")
@@ -1924,6 +1954,7 @@ def main():
         run_transition_check(br, base)
         run_sidebar_check(br, base)
         run_tests_view_check(br, base)
+        run_task_add_click_check(br, base)
         run_unreachable_check(br, base)
         run_tabs_check(br, base)
         run_tab_order_check(br, base)
