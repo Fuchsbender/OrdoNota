@@ -761,6 +761,48 @@ def run_tabs_check(br, base):
     report("Reiter: Standard in Einstellungen, Abweichung je Kurs, Ersatzreiter, Sprunglinks, „Wie Standard“", ok and not br.errors, str(res) + "; ".join(br.errors))
 
 
+def run_tab_order_check(br, base):
+    print("Reiter umsortieren:")
+    br.open(f"{base}/index.html?demo")
+    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.errors = []
+    res = br.eval("""(async () => {
+        const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
+        const db = NM.app.db(), c = db.courses[0];
+        const tabs = () => [...document.querySelectorAll('.tabs .tab')].map((b) => b.dataset.tab);
+        const out = { start: tabs().join() };
+        NM.app.select({ courseId: c.id, tab: 'settings' }); await wait();
+        // ▲ bei „Notenübersicht“ zweimal: vor „Zufall“ ... (Standard: …, draw, random, groups, overview, …)
+        const up = (id) => document.querySelector(`[data-tab-order="${id}"] button`).click();
+        up('overview'); await wait(); up('overview'); await wait();
+        out.up = [tabs().join(), db.settings.tabOrder.join()];
+        out.checks = [...document.querySelectorAll('[data-tab-check]')].map((x) => x.dataset.tabCheck).join();
+        // Ziehen in der Reiterleiste: „Sitzplan“ vor „Tests“
+        const src = document.querySelector('.tabs [data-tab="seating"]'), dst = document.querySelector('.tabs [data-tab="tests"]');
+        const dt = new DataTransfer();
+        src.dispatchEvent(new DragEvent('dragstart', { dataTransfer: dt, bubbles: true }));
+        const r = dst.getBoundingClientRect();
+        dst.dispatchEvent(new DragEvent('dragover', { dataTransfer: dt, bubbles: true, cancelable: true, clientX: r.left + 2, clientY: r.top + 5 }));
+        dst.dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true, clientX: r.left + 2, clientY: r.top + 5 }));
+        await wait();
+        out.drag = tabs().join();
+        // Ausgeschalteter Reiter behält seinen Platz
+        db.settings.tabs.pres = false; NM.app.renderShell(); await wait();
+        out.off = tabs().join();
+        delete db.settings.tabs.pres; NM.app.renderShell(); await wait();
+        out.on = tabs().join();
+        // Standardreihenfolge
+        [...document.querySelectorAll('.tab-order button')].find((b) => b.textContent === 'Standardreihenfolge').click(); await wait();
+        out.reset = [tabs().join(), db.settings.tabOrder.length];
+        return out; })()""")
+    std = "course,tests,epo,pres,draw,random,groups,overview,seating,settings"
+    up = "course,tests,epo,pres,draw,overview,random,groups,seating,settings"
+    drag = "course,seating,tests,epo,pres,draw,overview,random,groups,settings"
+    ok = bool(res) and res["start"] == std and res["up"] == [up, up] and res["checks"] == "tests,epo,pres,draw,overview,random,groups,seating" \
+        and res["drag"] == drag and res["off"] == drag.replace("pres,", "") and res["on"] == drag and res["reset"] == [std, 0]
+    report("Reiter: ▲▼ in den Einstellungen, Ziehen in der Reiterleiste, Haken in derselben Reihenfolge, Standardreihenfolge", ok and not br.errors, str(res) + "; ".join(br.errors))
+
+
 def run_demo_link_check(br, base):
     print("Demo aus der App öffnen:")
     br.open(f"{base}/index.html")
@@ -1700,6 +1742,7 @@ def main():
         run_tests_view_check(br, base)
         run_unreachable_check(br, base)
         run_tabs_check(br, base)
+        run_tab_order_check(br, base)
         run_settings_layout_check(br, base)
         run_demo_link_check(br, base)
         run_old_db_check(br, base)

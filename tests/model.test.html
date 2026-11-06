@@ -77,6 +77,14 @@
   const noka = M.newCourse('y', { klasse: '11', fach: 'M', jahrgang: 11, type: 'noka' });
   ok('Neuer Test im Kurs ohne Kursarbeiten bleibt „Sonstige“', M.newTest(noka, '11/1', cdb.settings).cat === 'other');
 
+  // 1.34: Reihenfolge der Reiter
+  const D = ['course', 'tests', 'epo', 'overview', 'settings'];
+  ok('Reiter: leere Reihenfolge = Standard', M.orderTabs(D, []).join() === D.join() && M.migrate({ years: [], courses: [] }).settings.tabOrder.length === 0);
+  ok('Reiter: gespeicherte Reihenfolge gilt', M.orderTabs(D, ['overview', 'course', 'tests', 'epo', 'settings']).join() === 'overview,course,tests,epo,settings');
+  ok('Reiter: unbekannte und doppelte ids fallen weg', M.orderTabs(D, ['xyz', 'tests', 'tests', 'course', 'epo', 'overview', 'settings']).join() === 'tests,course,epo,overview,settings');
+  ok('Reiter: neuer Reiter kommt hinter seinen Vorgänger', M.orderTabs(D, ['overview', 'course', 'tests', 'settings']).join() === 'overview,course,tests,epo,settings' && M.orderTabs(D, ['tests', 'settings']).join() === 'course,tests,epo,overview,settings');
+  ok('Reiter verschieben (Grenzen)', M.moveTab(D, 'epo', -1).join() === 'course,epo,tests,overview,settings' && M.moveTab(D, 'course', -1).join() === D.join() && M.moveTab(D, 'overview', 5).join() === 'course,tests,epo,settings,overview');
+
   const extra = M.migrate({ schema: 1, years: [], courses: [], zusatz: { a: 1 } });
   ok('Unbekannte Felder bleiben erhalten', extra.zusatz && extra.zusatz.a === 1);
 

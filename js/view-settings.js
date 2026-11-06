@@ -466,7 +466,35 @@
           NM.app.renderShell();
         }
       ),
-      h('p', { class: 'muted small' }, own ? `${own} ${own === 1 ? 'Kurs weicht' : 'Kurse weichen'} davon ab (einstellbar im Reiter „Kurs & Schüler“).` : 'Einzelne Kurse können abweichen (Reiter „Kurs & Schüler“).')
+      h('p', { class: 'muted small' }, own ? `${own} ${own === 1 ? 'Kurs weicht' : 'Kurse weichen'} davon ab (einstellbar im Reiter „Kurs & Schüler“).` : 'Einzelne Kurse können abweichen (Reiter „Kurs & Schüler“).'),
+      tabOrderList(db)
+    );
+  }
+
+  /** Reihenfolge der Reiter mit ▲▼ (alternativ in der Reiterleiste ziehen); gilt für alle Kurse. */
+  function tabOrderList(db) {
+    const tabs = NM.app.orderedTabs();
+    const ids = tabs.map((t) => t.id);
+    const move = (id, d) => NM.app.setTabOrder(NM.model.moveTab(ids, id, d));
+    return h(
+      'div',
+      { class: 'tab-order' },
+      h('h3', null, 'Reihenfolge'),
+      h('p', { class: 'muted small' }, 'Gilt für alle Kurse. Reiter lassen sich auch direkt in der Reiterleiste ziehen.'),
+      h(
+        'ol',
+        { class: 'tab-order-list' },
+        tabs.map((t, i) =>
+          h(
+            'li',
+            { 'data-tab-order': t.id },
+            h('span', null, t.label),
+            h('button', { class: 'icon-btn', disabled: i === 0, 'aria-label': 'Nach vorn: ' + t.label, title: 'Nach vorn', onclick: () => move(t.id, -1) }, '▲'),
+            h('button', { class: 'icon-btn', disabled: i === tabs.length - 1, 'aria-label': 'Nach hinten: ' + t.label, title: 'Nach hinten', onclick: () => move(t.id, 1) }, '▼')
+          )
+        )
+      ),
+      db.settings.tabOrder && db.settings.tabOrder.length ? h('button', { class: 'btn', onclick: () => NM.app.setTabOrder(NM.app.TABS.map((t) => t.id)) }, 'Standardreihenfolge') : null
     );
   }
 

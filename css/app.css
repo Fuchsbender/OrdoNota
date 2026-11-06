@@ -257,6 +257,9 @@ select.input { padding-right: 4px; }
   .view-enter { animation: none; }
 }
 .tab:disabled { opacity: 0.4; cursor: default; }
+.tab.dragging { opacity: 0.5; }
+.tab.drop-before { box-shadow: inset 2px 0 0 var(--accent); }
+.tab.drop-after { box-shadow: inset -2px 0 0 var(--accent); }
 .view { padding: 20px; max-width: 1500px; }
 .view-tests { max-width: none; } /* viele Aufgaben: Ergebnistabelle nutzt die volle Breite */
 .view-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 16px; }
@@ -519,6 +522,12 @@ body.grp-dragging, body.grp-dragging * { cursor: grabbing !important; }
 .key-table tr.unreachable td:first-child { color: var(--warn); white-space: nowrap; }
 .key-table tr.unreachable .grade-badge { opacity: .55; }
 .tab-checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 4px 16px; margin: 8px 0; }
+.tab-order h3 { margin: 14px 0 2px; }
+.tab-order-list { list-style: none; padding: 0; margin: 6px 0 10px; max-width: 320px; counter-reset: tabpos; }
+.tab-order-list li { display: flex; align-items: center; gap: 4px; counter-increment: tabpos; }
+.tab-order-list li span { flex: 1; }
+.tab-order-list li span::before { content: counter(tabpos) ". "; color: var(--muted); }
+.tab-order-list .icon-btn:disabled { opacity: 0.3; }
 .key-warn { font-size: 13px; display: grid; gap: 6px; }
 .key-warn-fixes { display: flex; flex-wrap: wrap; gap: 6px; }
 .dist { display: flex; align-items: stretch; gap: 6px; height: 130px; margin: 16px 0 10px; padding: 0 4px; }

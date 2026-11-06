@@ -10,7 +10,7 @@
   // 3 (1.20): Präsentationen (kind "pres") – ältere Versionen kennen diese Leistungsart nicht.
   // 4 (1.23): Gruppenpräsentationen – ältere Versionen würden Gruppenwerte ignorieren und falsche Noten zeigen.
   const SCHEMA = 4;
-  const APP_VERSION = '1.33.0';
+  const APP_VERSION = '1.34.0';
 
   class NewerSchemaError extends Error {}
 
@@ -106,6 +106,7 @@
         backupEveryMin: 10,
         gradeColors: true,
         tabs: {}, // ausgeschaltete Reiter als Standard für alle Kurse: { "<Reiter>": false }; course.tabs weicht je Kurs ab
+        tabOrder: [], // seit 1.34: Reihenfolge der Reiter (leer = Standardreihenfolge)
         pomodoro: Object.assign({}, POMODORO_DEFAULTS),
       },
       criteriaPool: pool,
@@ -132,6 +133,8 @@
     db.settings.pomodoro = Object.assign({}, POMODORO_DEFAULTS, db.settings.pomodoro || {});
     // 1.25: Reiter ein-/ausschalten (Standard für alle Kurse; course.tabs optional je Kurs)
     if (!db.settings.tabs || typeof db.settings.tabs !== 'object') db.settings.tabs = {};
+    // 1.34: Reihenfolge der Reiter
+    if (!Array.isArray(db.settings.tabOrder)) db.settings.tabOrder = [];
     // 1.20: Kriterienpool für Präsentationen (Startbestand nur, wenn es noch keinen gibt)
     if (!Array.isArray(db.criteriaPool)) db.criteriaPool = defaultCriteriaPool();
     // 1.21: Vorlagen für Präsentationen (benannte Kriteriensätze); 1.22: mit Standardvorlagen
@@ -255,6 +258,35 @@
       }
       for (const sp of c.seatingPlans || []) orphan(sp.pos, `Sitzplan „${sp.name}“`);
     }
+    return out;
+  }
+
+  /**
+   * Reiter-ids in der gespeicherten Reihenfolge. Unbekannte ids in order fallen weg; Reiter, die in
+   * order fehlen (z. B. neu in einer späteren Version), kommen hinter ihren Vorgänger aus der Standardreihenfolge.
+   */
+  function orderTabs(defaults, order) {
+    const out = (order || []).filter((id, i, a) => defaults.includes(id) && a.indexOf(id) === i);
+    defaults.forEach((id, i) => {
+      if (out.includes(id)) return;
+      let at = 0;
+      for (let k = i - 1; k >= 0; k--) {
+        const j = out.indexOf(defaults[k]);
+        if (j >= 0) { at = j + 1; break; }
+      }
+      out.splice(at, 0, id);
+    });
+    return out;
+  }
+
+  /** Reiter id in der Liste order um delta Plätze verschieben (Ergebnis: neue Liste). */
+  function moveTab(order, id, delta) {
+    const out = order.slice();
+    const i = out.indexOf(id);
+    const j = Math.max(0, Math.min(out.length - 1, i + delta));
+    if (i < 0 || i === j) return out;
+    out.splice(i, 1);
+    out.splice(j, 0, id);
     return out;
   }
 
@@ -661,6 +693,8 @@
     newManual,
     newTest,
     check,
+    orderTabs,
+    moveTab,
     newEpo,
     newPres,
     presCriterion,

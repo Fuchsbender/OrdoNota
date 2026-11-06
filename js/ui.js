@@ -337,7 +337,7 @@
     return h(
       'div',
       { class: 'tab-checks' },
-      NM.app.TABS.filter((t) => NM.app.OPTIONAL_TABS.includes(t.id)).map((t) =>
+      NM.app.orderedTabs().filter((t) => NM.app.OPTIONAL_TABS.includes(t.id)).map((t) =>
         h(
           'label',
           { class: 'check' },

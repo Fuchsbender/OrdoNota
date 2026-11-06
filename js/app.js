@@ -47,6 +47,20 @@
     return def[id] !== false;
   }
 
+  /** Alle Reiter in der eingestellten Reihenfolge (settings.tabOrder, gilt für alle Kurse). */
+  function orderedTabs() {
+    const order = M.orderTabs(TABS.map((t) => t.id), (state.db && state.db.settings.tabOrder) || []);
+    return order.map((id) => TABS.find((t) => t.id === id));
+  }
+
+  /** Neue Reihenfolge speichern; entspricht sie dem Standard, wird sie geleert. */
+  function setTabOrder(order) {
+    const def = TABS.map((t) => t.id);
+    state.db.settings.tabOrder = order.join() === def.join() ? [] : order.slice();
+    commit({ render: false });
+    renderShell();
+  }
+
   /** Angezeigter Reiter: der gewählte, sonst (ausgeschaltet) die Notenübersicht bzw. „Kurs & Schüler“. */
   function shownTab(course) {
     const t = state.ui.tab;
@@ -835,19 +849,50 @@
     const tabs = h(
       'div',
       { class: 'tabs', role: 'tablist' },
-      TABS.filter((t) => tabOn(course, t.id)).map((t) =>
-        h(
-          'button',
-          {
-            role: 'tab',
-            class: 'tab' + (tab === t.id ? ' active' : ''),
-            'aria-selected': tab === t.id ? 'true' : 'false',
-            disabled: !course && t.id !== 'settings',
-            onclick: () => select({ tab: t.id }),
-          },
-          t.label
+      orderedTabs()
+        .filter((t) => tabOn(course, t.id))
+        .map((t) =>
+          h(
+            'button',
+            {
+              role: 'tab',
+              class: 'tab' + (tab === t.id ? ' active' : ''),
+              'aria-selected': tab === t.id ? 'true' : 'false',
+              disabled: !course && t.id !== 'settings',
+              draggable: 'true',
+              'data-tab': t.id,
+              title: 'Zum Umsortieren ziehen',
+              onclick: () => select({ tab: t.id }),
+              ondragstart: (e) => {
+                e.dataTransfer.setData('text/x-ordonota-tab', t.id);
+                e.dataTransfer.effectAllowed = 'move';
+                e.currentTarget.classList.add('dragging');
+              },
+              ondragend: (e) => e.currentTarget.classList.remove('dragging'),
+              ondragover: (e) => {
+                if (!e.dataTransfer.types.includes('text/x-ordonota-tab')) return;
+                e.preventDefault();
+                const r = e.currentTarget.getBoundingClientRect();
+                e.currentTarget.classList.toggle('drop-before', e.clientX < r.left + r.width / 2);
+                e.currentTarget.classList.toggle('drop-after', e.clientX >= r.left + r.width / 2);
+              },
+              ondragleave: (e) => e.currentTarget.classList.remove('drop-before', 'drop-after'),
+              ondrop: (e) => {
+                const from = e.dataTransfer.getData('text/x-ordonota-tab');
+                e.preventDefault();
+                e.currentTarget.classList.remove('drop-before', 'drop-after');
+                if (!from || from === t.id) return;
+                const r = e.currentTarget.getBoundingClientRect();
+                const after = e.clientX >= r.left + r.width / 2;
+                // Auf die volle Liste (auch ausgeschaltete Reiter) übertragen
+                const order = orderedTabs().map((x) => x.id).filter((id) => id !== from);
+                order.splice(order.indexOf(t.id) + (after ? 1 : 0), 0, from);
+                setTabOrder(order);
+              },
+            },
+            t.label
+          )
         )
-      )
     );
     main.appendChild(tabs);
     placeTabInk(tabs, tabChanged);
@@ -974,6 +1019,8 @@
     currentCourse,
     TABS,
     OPTIONAL_TABS,
+    orderedTabs,
+    setTabOrder,
     tabOn,
     shownTab,
     currentHalf,

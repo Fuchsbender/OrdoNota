@@ -60,7 +60,7 @@ Ausprobieren ohne echte Daten: **„Demo ansehen“** auf dem Startbildschirm od
 
 ## Bedienung – Kurzfassung
 
-- **Reiter ausschalten**: Einstellungen → Reiter (Standard für alle Kurse), je Kurs abweichend in „Kurs & Schüler“ („Wie Standard“ setzt zurück). Daten bleiben gespeichert und zählen weiter.
+- **Reiter ausschalten**: Einstellungen → Reiter (Standard für alle Kurse), je Kurs abweichend in „Kurs & Schüler“ („Wie Standard“ setzt zurück). Daten bleiben gespeichert und zählen weiter. **Reihenfolge** ändern: Reiter in der Reiterleiste ziehen oder Einstellungen → Reiter → ▲▼ (gilt für alle Kurse).
 - **Kurs & Schüler**: Kursdaten, Gewichtung, Namen aus Excel einfügen (eine Zeile pro Person). Abgänge nur „Aktiv“ abwählen – Noten bleiben erhalten. Haken „I-Status“ markiert Personen mit einem **I**. **⬇ Excel** speichert die Schülerliste als `.xlsx`. Kurs löschen erst nach Eintippen von **LÖSCHEN**.
 - **Tests**: neue Tests zählen standardmäßig zu den sonstigen Leistungen (einstellbar); Aufgaben mit Höchstpunkten, Rohpunkte eintragen; Schlüssel, Notenspiegel, Statistik, Ausdrucke über **🖨 Drucken …** (Ergebnisliste, Notenschlüssel und Notenspiegel, Ergebniszettel); bei Klassenarbeiten Haken **„Unterschrift gesehen“** mit Zähler; **⛶ Beamer**-Ansicht ohne Namen (Notenspiegel, Punkteverteilung, Ø je Aufgabe).
 - **Arbeit in Teilen** (Haken in den Eckdaten): Teile umbenennen, „+ Teil“, Gewicht und Schlüssel je Teil, Status „fehlt“/„NS“ je Teil, Teil in der Ergebnistabelle per **▾ Teilname** ausblenden, Moodle-Import in einen Teil, Ausdruck **Ergebnisse nach Teilen**.
