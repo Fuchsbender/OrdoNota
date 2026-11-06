@@ -10,7 +10,7 @@
   // 3 (1.20): Präsentationen (kind "pres") – ältere Versionen kennen diese Leistungsart nicht.
   // 4 (1.23): Gruppenpräsentationen – ältere Versionen würden Gruppenwerte ignorieren und falsche Noten zeigen.
   const SCHEMA = 4;
-  const APP_VERSION = '1.37.2';
+  const APP_VERSION = '1.37.3';
 
   class NewerSchemaError extends Error {}
 

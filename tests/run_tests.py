@@ -1015,6 +1015,31 @@ def run_timer_check(br, base):
     report("Timer: Zeit setzen, Start/Pause, läuft beim Reiterwechsel weiter, Ende mit Signal, ±1 Min., Schnellwahl, 4 Designs, Pop-up steuert denselben Timer", ok and not br.errors, str(res) + "; ".join(br.errors))
 
 
+def run_tools_layout_check(br, base):
+    print("Tools: gleich große Kacheln, Ring läuft im Uhrzeigersinn:")
+    br.call("Emulation.setDeviceMetricsOverride", width=1600, height=1000, deviceScaleFactor=1, mobile=False)
+    br.open(f"{base}/index.html?demo")
+    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.errors = []
+    res = br.eval("""(async () => {
+        const wait = (ms = 150) => new Promise((r) => setTimeout(r, ms));
+        const c = NM.app.db().courses[0];
+        NM.app.select({ courseId: c.id, tab: 'random' }); await wait(400);
+        const sizes = [...document.querySelectorAll('.rnd-tool')].map((e) => { const r = e.getBoundingClientRect(); return Math.round(r.width) + 'x' + Math.round(r.height); });
+        const q = (sel) => document.querySelector(sel);
+        const sel = q('[data-tmr-design]'); sel.value = 'ring'; sel.dispatchEvent(new Event('change')); await wait();
+        const inp = q('[data-tmr-input]'); inp.value = '0:08'; inp.dispatchEvent(new Event('change')); await wait();
+        q('[data-tmr-go]').click(); await wait(2000);
+        const prog = q('.tmr-ring-prog');
+        const C = Number(prog.getAttribute('stroke-dasharray')), off = Number(prog.getAttribute('stroke-dashoffset'));
+        q('[data-tmr-reset]').click(); await wait();
+        return { sizes, n: new Set(sizes).size, ratio: off / C }; })()""")
+    br.call("Emulation.clearDeviceMetricsOverride")
+    report("Alle Werkzeug-Kacheln gleich groß", bool(res) and len(res["sizes"]) == 5 and res["n"] == 1, str(res))
+    # Rest endet bei 12 Uhr: negativer Versatz (nach 2 von 8 s etwa −¼ des Umfangs)
+    report("Timer-Ring läuft im Uhrzeigersinn", bool(res) and -0.4 < res["ratio"] < -0.15 and not br.errors, str(res) + "; ".join(br.errors))
+
+
 def run_demo_link_check(br, base):
     print("Demo aus der App öffnen:")
     br.open(f"{base}/index.html")
@@ -1950,6 +1975,7 @@ def main():
         run_draw_pools_check(br, base)
         run_random_check(br, base)
         run_timer_check(br, base)
+        run_tools_layout_check(br, base)
         run_pomodoro_check(br, base)
         run_transition_check(br, base)
         run_sidebar_check(br, base)

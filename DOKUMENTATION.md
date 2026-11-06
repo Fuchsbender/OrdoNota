@@ -1,6 +1,6 @@
 # OrdoNota – Dokumentation
 
-Version 1.37.2 · Stand November 2026
+Version 1.37.3 · Stand November 2026
 
 OrdoNota (bis Version 1.11 „Notenmanager“) verwaltet Noten für die Sekundarstufe I (Noten 1–6 mit Tendenz) und die Mainzer Studienstufe (MSS, Punkte 00–15) an Schulen in Rheinland-Pfalz. Die App läuft vollständig lokal im Browser, verschlüsselt alle Daten mit einem Passwort und legt sie in einem Ordner ab, den der Synology Drive Client auf die DiskStation spiegelt.
 
@@ -701,10 +701,10 @@ Gruppen bilden für Gruppenaufträge, Lernaufträge, Stationenlernen, Gruppenpuz
 
 ## 10c. Reiter „Tools“
 
-Werkzeuge für den Unterricht (bis Version 1.35 hieß der Reiter „Zufall“). **Es wird nichts in die Notenliste eingetragen**, und die Ergebnisse gelten nur, bis die App geschlossen oder neu geladen wird. Jedes Werkzeug hat oben rechts **⛶ Vollbild** für den Beamer (Esc beendet). Bei „Bewegung reduzieren“ im Betriebssystem erscheint das Ergebnis ohne Animation.
+Werkzeuge für den Unterricht (bis Version 1.35 hieß der Reiter „Zufall“). **Es wird nichts in die Notenliste eingetragen**, und die Ergebnisse gelten nur, bis die App geschlossen oder neu geladen wird. Alle Werkzeuge stehen in gleich großen Kacheln. Jedes Werkzeug hat oben rechts **⛶ Vollbild** für den Beamer (Esc beendet). Bei „Bewegung reduzieren“ im Betriebssystem erscheint das Ergebnis ohne Animation.
 
 - **⏱ Timer:** großer Countdown, z. B. für Arbeitsphasen. Zeit eintragen (`5` = 5 Minuten, `2,5`, `4:30` oder `90s`) oder eine **Schnellwahl** (1 bis 30 Min.) anklicken, dann **▶ Start**. **⏸ Pause** hält an, **▶ Weiter** läuft weiter, **− 1 Min.**/**+ 1 Min.** ändern die Zeit auch während des Laufens, **↺** setzt auf die eingestellte Zeit zurück.
-  - **Design:** Ring (Standard), große Ziffern, Balken oder Sanduhr. Die Farbe zeigt, wie viel Zeit bleibt: blau, in der letzten Minute (bei kurzen Timern im letzten Fünftel) gelb, in den letzten 10 Sekunden und am Ende rot. Am Ende blinkt 00:00, „Zeit ist um!“ erscheint und daneben die Überzeit.
+  - **Design:** Ring (Standard, läuft im Uhrzeigersinn ab: der Rest endet bei 12 Uhr), große Ziffern, Balken oder Sanduhr. Die Farbe zeigt, wie viel Zeit bleibt: blau, in der letzten Minute (bei kurzen Timern im letzten Fünftel) gelb, in den letzten 10 Sekunden und am Ende rot. Am Ende blinkt 00:00, „Zeit ist um!“ erscheint und daneben die Überzeit.
   - **Signal** am Ende: Gong, Wecker, Piepen oder aus. Die Lautstärke ist die des Pomodoro-Timers (Einstellungen).
   - **⧉ Pop-up** öffnet den Timer in einem eigenen, frei verschiebbaren Fenster, z. B. auf dem Beamer, während die App auf dem Laptop bleibt. Im Fenster gibt es Start/Pause, ± 1 Min. und ↺; die Leertaste startet bzw. hält an. Fenster und Reiter zeigen denselben Timer. Blockiert der Browser das Fenster, hilft „Pop-ups erlauben“ oder **⛶ Vollbild**.
   - Der Timer gilt für die ganze App, nicht je Kurs. Er läuft beim Wechsel von Reiter oder Kurs weiter, endet aber beim Schließen oder Neuladen der App. Zeit, Design und Signal merkt sich das Gerät.
@@ -1226,7 +1226,7 @@ Das Startprogramm ist das einzige Teil mit Build-Schritt; die App selbst bleibt 
   "kdf": "PBKDF2-SHA256",
   "savedAt": "2026-10-14T21:57:03.123Z",
   "device": "Laptop Schule",
-  "app": "1.37.2",
+  "app": "1.37.3",
   "pw":   { "salt": "<b64>", "iter": 600000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "rec":  { "salt": "<b64>", "iter": 100000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "data": { "iv": "<b64>", "ct": "<b64: verschlüsseltes JSON des Datenmodells>" }
@@ -1249,7 +1249,7 @@ Entschlüsselter Inhalt (`schema: 4`):
 ```js
 {
   schema: 4,                             // Datenformat (siehe 26.2)
-  savedWith: "1.37.2",                    // App-Version beim letzten Speichern
+  savedWith: "1.37.3",                    // App-Version beim letzten Speichern
   created: "<ISO>", savedAt: "<ISO>",
   settings: { autoLockMin, limitSek1, limitMss, precision, testCat: "ka" | "other" /* seit 1.30 */, keepBackups, backupEveryMin, gradeColors,
               tabs: { "<Reiter>": false },   // seit 1.25: ausgeschaltete Reiter (Standard für alle Kurse)

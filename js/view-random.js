@@ -158,7 +158,8 @@
       const R0 = 88, C = 2 * Math.PI * R0;
       const prog = el(doc, 'circle', { class: 'tmr-ring-prog', cx: 100, cy: 100, r: R0, 'stroke-dasharray': C.toFixed(2), transform: 'rotate(-90 100 100)' });
       box.append(el(doc, 'div', { class: 'tmr-ring-wrap' }, el(doc, 'svg', { viewBox: '0 0 200 200', class: 'tmr-ring-svg', 'aria-hidden': 'true' }, el(doc, 'circle', { class: 'tmr-ring-track', cx: 100, cy: 100, r: R0 }), prog), digits));
-      paint = (f) => prog.setAttribute('stroke-dashoffset', (C * (1 - f)).toFixed(2));
+      // Negativer Versatz: Der Rest des Rings endet bei 12 Uhr, seine Grenze wandert im Uhrzeigersinn
+      paint = (f) => prog.setAttribute('stroke-dashoffset', (-C * (1 - f)).toFixed(2));
     } else if (design === 'bar') {
       const fill = el(doc, 'div', { class: 'tmr-bar-fill' });
       box.append(digits, el(doc, 'div', { class: 'tmr-bar', 'aria-hidden': 'true' }, fill));

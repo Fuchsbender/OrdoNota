@@ -661,8 +661,11 @@ dialog.modal h2 { font-size: 17px; margin-bottom: 14px; }
 .draw-card .grade-input { margin-top: 4px; width: 64px; }
 
 /* Reiter „Zufall“ */
-.rnd-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(440px, 1fr)); gap: 16px; align-items: start; }
+/* Alle Kacheln gleich groß: gleiche Spaltenbreite, alle Zeilen so hoch wie die höchste Kachel */
+.rnd-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(440px, 1fr)); grid-auto-rows: 1fr; gap: 16px; }
 .rnd-grid .card { margin-bottom: 0; }
+.rnd-grid > .rnd-tool { display: flex; flex-direction: column; }
+.rnd-grid > .rnd-tool > .rnd-stage { flex: 1; }
 .rnd-tool .card-head { display: flex; align-items: center; gap: 10px; }
 .rnd-tool .card-head h2 { margin-right: auto; }
 .rnd-controls { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin-bottom: 8px; }
