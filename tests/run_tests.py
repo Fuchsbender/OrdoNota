@@ -1760,6 +1760,8 @@ def run_launcher_check(br, base):
         br.open(url)
         ok = br.wait("!!(window.NM && NM.app && NM.app.state.server && NM.app.state.store && document.querySelector('.auth-card input[type=password]'))", 30)
         report("App erkennt das Startprogramm", ok and br.eval("NM.app.state.store.name") == "Daten ä", "; ".join(br.errors))
+        ver = br.eval("(document.querySelector('.auth-card .auth-version') || {}).textContent")
+        report("Sperrbildschirm zeigt die Version", ver == "Version " + br.eval("NM.model.APP_VERSION"), str(ver))
         pw = "Prüf-Passwort 2026"
         # Entsperren ohne Datenbank → „Neue Datenbank anlegen“
         br.eval(f"(() => {{ const i = document.querySelector('.auth-card input[type=password]'); i.value = {json.dumps(pw)}; i.form.requestSubmit(); return 1; }})()")

@@ -145,7 +145,7 @@
     return h(
       'div',
       { class: 'auth' },
-      h('div', { class: 'auth-card' }, h('div', { class: 'auth-logo', html: NM.logo.full(44) }), h('h1', null, title), content)
+      h('div', { class: 'auth-card' }, h('div', { class: 'auth-logo', html: NM.logo.full(44) }), h('h1', null, title), content, h('p', { class: 'auth-version' }, 'Version ' + M.APP_VERSION))
     );
   }
 
