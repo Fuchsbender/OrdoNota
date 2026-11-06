@@ -47,6 +47,57 @@ Anlass: Die Kartenbilder in `cards/` (CC0, siehe `cards/LIZENZ.txt`) zeigen die 
 - Danach `cards/LIZENZ.txt` (Abschnitt „Änderungen“) und die Doku (10c: „Die Karten zeigen J, Q, K …“) anpassen. Der Test in `run_random_check` braucht keine Änderung.
 - Alternative ohne Bildbearbeitung: die Ecken in der App mit einem kleinen Feld „B“/„D“ überdecken (CSS). Das ist einfacher, sieht aber weniger sauber aus.
 
+## Wunschliste vom 06.11.2026 (Reihenfolge der Umsetzung: N, P, O, M, L, K, J)
+
+### J) Ziehen: mehrere Pools, eine Spalte je Pool (offen)
+
+Entscheidung des Nutzers: benannte Pools, alle Ziehungen eines Pools in **einer** Notenspalte.
+
+- Mehrere Pools pro Kurs, z. B. „HA Runde 1“ oder „Abfragen Binomische Formeln“. Auswahl des Pools oben im Reiter, „+ Neuer Pool“, umbenennen, löschen (Spalte bleibt).
+- Jeder Pool hat eine Sammelspalte bei den sonstigen Leistungen. Der Spaltenkopf zeigt den **Zeitraum** der Ziehungen (z. B. „12.09.–03.10.“). Der Zeitraum wird aus den Ziehungen berechnet und nicht gespeichert.
+- Ist ein Pool einmal ganz durchgezogen, bekommt jede Person eine Note. Beim Auffüllen wird eine neue Runde mit neuer Spalte angelegt („… Runde 2“), weil eine Person in einer Spalte nur eine Note haben kann. (Empfehlung, beim Umsetzen bestätigen lassen.)
+- **Prüfung auf Ziehfehler** je Pool: Note bei einer nicht gezogenen Person, gezogen ohne Note, doppelt gezogen in einer Runde, Note in einer Spalte, die zu keiner Ziehung gehört.
+- **Nachträglich zusammenfassen:** Bisherige Einzelspalten „HA-Kontrolle TT.MM.“ lassen sich auswählen und zu einer Pool-Spalte zusammenfassen (Konflikte: zwei Noten für eine Person → Rückfrage).
+- Rückgängig löscht nur die Noten der zurückgenommenen Ziehung aus der Sammelspalte.
+- Datenmodell (Vorschlag): `course.draw.pools: [ { id, name, round, aid, out } ]`, `draw.active`, `history[].poolId`. Bestehende Daten werden zum Standardpool „HA-Kontrolle“, alte Ziehungen behalten ihre Einzelspalten. Kein neues `SCHEMA`, solange alte Versionen den Standardpool weiter richtig lesen; beim Umsetzen prüfen.
+
+### K) Reiter „Zufall“ → „Tools“ mit Timer (offen)
+
+Entscheidung des Nutzers: Reiter „Zufall“ in **„Tools“** umbenennen (die interne id `random` bleibt), dort das Werkzeug **Timer** dazu, zusätzlich als Pop-up.
+
+- Großer Countdown mit Minuten/Sekunden, Schnellwahl (1, 2, 5, 10, 15, 20 Min.), Start/Pause/Zurücksetzen, ± 1 Min. während des Laufens.
+- Designs: große Ziffern, Ring, Sanduhr, Balken (Farbwechsel gegen Ende). Signal wie beim Pomodoro (`NM.pomodoro`-Töne wiederverwenden).
+- Vollbild wie bei den anderen Werkzeugen. **Pop-up** als eigenes Browserfenster, das sich auf den Beamer schieben lässt, während die App auf dem Laptop bleibt (Empfehlung; Alternative: schwebendes Fenster in der App).
+- Reine Logik (Restzeit aus Startzeit/Pausen berechnen) in `js/random.js` oder eigenem Modul, mit Tests.
+
+### L) Notenübersicht: Ziehungsspalten bündeln, Spaltengruppen ausblenden (offen)
+
+Entscheidung des Nutzers: beides.
+
+- Spaltengruppen „Klassen-/Kursarbeiten“ und „Sonstige Leistungen“ lassen sich einklappen, dann steht nur noch der Ø des Bereichs da. Zustand pro Gerät (`nm.ui`), gilt nicht für Ausdrucke.
+- Ziehungsspalten (alte Einzelspalten aus dem Reiter „Ziehen“) lassen sich zu einer Gruppe „Ziehen“ einklappen. Mit J entstehen ohnehin weniger Spalten.
+
+### M) Reiter sortierbar (offen)
+
+Entscheidung des Nutzers: Reihenfolge global in der Datenbank.
+
+- `settings.tabOrder: [ "<Reiter>" ]` (fehlt = Standardreihenfolge; unbekannte/neue Reiter hinten bzw. an ihrer Standardstelle).
+- Umsortieren per Ziehen in der Reiterleiste und mit ▲▼ unter Einstellungen → Reiter, dazu „Standardreihenfolge“.
+
+### N) Tests: „Sonstige Leistungen“ als Standard (offen)
+
+- Neue Tests bekommen den Bereich „Sonstige“ statt „Klassen-/Kursarbeit“. Empfehlung: Einstellung unter „Standardwerte für neue Tests“ (`settings.testCat`, Standard `other`).
+
+### O) Datenbank bleibt bei Updates verwendbar (offen)
+
+- Testdatenbanken früherer Formate (`schema` 1–4, typische Inhalte jeder Version) als Prüfstücke in `tests/`; `model.test.html` öffnet sie mit `migrate()` und prüft, dass alles rechnet und unbekannte Felder erhalten bleiben.
+- `NM.model.check(db)`: prüft nach dem Öffnen die Struktur (Verweise auf Personen, Aufgaben, Teile, Spalten) und meldet Auffälligkeiten, ohne etwas zu ändern. Aufruf in den Tests und auf Knopfdruck unter Einstellungen.
+
+### P) Programmsymbol nur mit Logo (offen)
+
+- `logo/ordonota-icon.svg`: nur das Zeichen (wie das Favicon), quadratisch, ohne Schriftzug. Wird vom Startprogramm für den Startmenü-/Taskleisten-Eintrag verwendet und als Favicon in `index.html`.
+- Windows `.ico` und Mac `.icns` bleiben „später“ (siehe F).
+
 ## C) Gamification des Pomodoro-Timers (zurückgestellt, erst auf Nachfrage des Nutzers)
 
 **Vor Beginn die offenen Fragen unten mit dem Nutzer klären.** C ergänzt nur Felder → kein neues `SCHEMA`; `migrate()` und `tools/entschluesseln.py` (CSV-Ausgabe) mitziehen.
