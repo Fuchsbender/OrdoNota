@@ -7,7 +7,7 @@
   function render(view, { db }) {
     view.append(
       h('div', { class: 'view-head' }, h('h1', null, 'Einstellungen')),
-      h('div', { class: 'masonry' }, securityCard(db), defaultsCard(db), storageCard(db), yearsCard(db), tabsCard(db), displayCard(db), pomodoroCard(db), infoCard())
+      h('div', { class: 'masonry' }, securityCard(db), defaultsCard(db), printCard(db), storageCard(db), yearsCard(db), tabsCard(db), displayCard(db), pomodoroCard(db), infoCard())
     );
   }
 
@@ -177,6 +177,118 @@
         )
       ),
       h('p', { class: 'muted small' }, 'Bestehende Tests behalten ihre Werte; jeder Test lässt sich einzeln anpassen.')
+    );
+  }
+
+  // ---------- Ausdrucke (Druckkopf, seit 1.47) ----------
+
+  const LOGO_PX = 600;
+  const LOGO_SVG_MAX = 300 * 1024;
+
+  /** Logo-Datei als Data-URL: Rasterbilder auf höchstens 600 px (längste Seite) verkleinert, SVG unverändert. */
+  function readLogo(file) {
+    return new Promise((resolve, reject) => {
+      if (!file || !/^image\/(png|jpeg|gif|webp|svg\+xml)$/.test(file.type)) return reject(new Error('Bitte ein Bild wählen (PNG, JPEG, GIF, WebP oder SVG).'));
+      if (file.type === 'image/svg+xml' && file.size > LOGO_SVG_MAX) return reject(new Error('Das SVG ist zu groß (höchstens 300 KB).'));
+      const fr = new FileReader();
+      fr.onerror = () => reject(new Error('Die Datei konnte nicht gelesen werden.'));
+      fr.onload = () => {
+        const url = String(fr.result);
+        if (file.type === 'image/svg+xml') return resolve(url);
+        const img = new Image();
+        img.onload = () => {
+          const w = img.naturalWidth, hgt = img.naturalHeight;
+          const f = Math.min(1, LOGO_PX / Math.max(w, hgt, 1));
+          const c = document.createElement('canvas');
+          c.width = Math.max(1, Math.round(w * f));
+          c.height = Math.max(1, Math.round(hgt * f));
+          c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+          // JPEG bleibt JPEG (kleiner), alles andere PNG (Transparenz)
+          resolve(file.type === 'image/jpeg' ? c.toDataURL('image/jpeg', 0.9) : c.toDataURL('image/png'));
+        };
+        img.onerror = () => reject(new Error('Das Bild konnte nicht gelesen werden.'));
+        img.src = url;
+      };
+      fr.readAsDataURL(file);
+    });
+  }
+
+  function printCard(db) {
+    const p = (db.settings.print = NM.model.cleanPrint(db.settings.print));
+    const text = (label, key, placeholder) =>
+      h(
+        'label',
+        { class: 'field' },
+        h('span', null, label),
+        h('input', {
+          class: 'input',
+          value: p[key],
+          placeholder,
+          maxlength: 200,
+          'data-print-field': key,
+          onchange: (e) => {
+            p[key] = e.target.value.trim();
+            NM.app.commit();
+          },
+        })
+      );
+    const file = h('input', {
+      type: 'file',
+      accept: 'image/png,image/jpeg,image/gif,image/webp,image/svg+xml',
+      hidden: true,
+      'data-print-logo-file': '',
+      onchange: async (e) => {
+        const f = e.target.files && e.target.files[0];
+        e.target.value = '';
+        if (!f) return;
+        try {
+          p.logo = await readLogo(f);
+          NM.app.commit();
+          toast('Schullogo gespeichert.', 'success');
+        } catch (err) {
+          toast(err.message, 'error');
+        }
+      },
+    });
+    return h(
+      'div',
+      { class: 'card' },
+      h('h2', null, 'Ausdrucke'),
+      h('p', { class: 'muted small' }, 'Kopf für alle Ausdrucke: links Logo und Schulname, rechts Kurs, Schuljahr, Lehrkraft und Datum. Leere Angaben fallen weg. Gespeichert in der verschlüsselten Datenbank, also auf allen Geräten gleich.'),
+      h(
+        'div',
+        { class: 'form-grid' },
+        text('Schulname', 'schoolName', 'z. B. Musterschule Neustadt'),
+        text('Lehrkraft', 'teacher', 'z. B. M. Muster')
+      ),
+      h(
+        'div',
+        { class: 'field' },
+        h('span', null, 'Schullogo'),
+        h(
+          'div',
+          { class: 'print-logo-row' },
+          p.logo ? h('img', { class: 'print-logo-prev', src: p.logo, alt: 'Schullogo', 'data-print-logo': '' }) : h('span', { class: 'muted small' }, 'Kein Logo'),
+          h('button', { class: 'btn', type: 'button', 'data-print-logo-pick': '', onclick: () => file.click() }, p.logo ? 'Ändern …' : 'Logo wählen …'),
+          p.logo
+            ? h(
+                'button',
+                {
+                  class: 'btn',
+                  type: 'button',
+                  'data-print-logo-remove': '',
+                  onclick: () => {
+                    p.logo = '';
+                    NM.app.commit();
+                  },
+                },
+                'Entfernen'
+              )
+            : null,
+          file
+        ),
+        h('small', { class: 'muted' }, 'PNG, JPEG, GIF, WebP oder SVG; Bilder werden auf höchstens 600 px verkleinert.')
+      )
     );
   }
 
@@ -622,5 +734,5 @@
     );
   }
 
-  NM.views.settings = { render, checkDialog };
+  NM.views.settings = { render, checkDialog, readLogo };
 })((globalThis.NM = globalThis.NM || {}));

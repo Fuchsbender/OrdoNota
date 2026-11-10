@@ -10,7 +10,7 @@
   // 3 (1.20): Präsentationen (kind "pres") – ältere Versionen kennen diese Leistungsart nicht.
   // 4 (1.23): Gruppenpräsentationen – ältere Versionen würden Gruppenwerte ignorieren und falsche Noten zeigen.
   const SCHEMA = 4;
-  const APP_VERSION = '1.46.0';
+  const APP_VERSION = '1.47.0';
 
   class NewerSchemaError extends Error {}
 
@@ -90,6 +90,23 @@
     return defaultPresTemplates(pool).filter((t) => !have.has(t.name.toLowerCase()));
   }
 
+  /** Standardwerte des Druckkopfs (settings.print, seit 1.47). */
+  function printDefaults() {
+    return { schoolName: '', teacher: '', logo: '' };
+  }
+
+  /** Druckkopf bereinigen: nur Texte; das Logo nur als Bild-Data-URL (PNG, JPEG, GIF, WebP, SVG). */
+  function cleanPrint(p) {
+    const o = p && typeof p === 'object' && !Array.isArray(p) ? p : {};
+    const str = (v) => (typeof v === 'string' ? v.trim().slice(0, 200) : '');
+    return Object.assign(o, {
+      schoolName: str(o.schoolName),
+      teacher: str(o.teacher),
+      logo: typeof o.logo === 'string' && LOGO_URL.test(o.logo) ? o.logo : '',
+    });
+  }
+  const LOGO_URL = /^data:image\/(png|jpeg|gif|webp|svg\+xml)[;,]/;
+
   function newDb() {
     const pool = defaultCriteriaPool();
     const year = { id: uid(), name: currentSchoolYearName() };
@@ -109,6 +126,7 @@
         tabOrder: [], // seit 1.34: Reihenfolge der Reiter (leer = Standardreihenfolge)
         pomodoro: Object.assign({}, POMODORO_DEFAULTS),
         scriptoSeq: 0, // seit 1.41: zuletzt vergebene laufende Nummer der OrdoScripto-Test-IDs (T-<Jahr>-NNNN)
+        print: printDefaults(), // seit 1.47: Druckkopf (Schulname, Lehrkraft, Logo als Data-URL)
       },
       criteriaPool: pool,
       presTemplates: defaultPresTemplates(pool),
@@ -136,6 +154,8 @@
     if (!db.settings.tabs || typeof db.settings.tabs !== 'object') db.settings.tabs = {};
     // 1.34: Reihenfolge der Reiter
     if (!Array.isArray(db.settings.tabOrder)) db.settings.tabOrder = [];
+    // 1.47: Druckkopf
+    db.settings.print = cleanPrint(db.settings.print);
     // 1.20: Kriterienpool für Präsentationen (Startbestand nur, wenn es noch keinen gibt)
     if (!Array.isArray(db.criteriaPool)) db.criteriaPool = defaultCriteriaPool();
     // 1.21: Vorlagen für Präsentationen (benannte Kriteriensätze); 1.22: mit Standardvorlagen
@@ -209,6 +229,9 @@
       return seen;
     };
     dup(db.courses, 'Kurs', 'Datenbank');
+    const pr = db.settings && db.settings.print;
+    if (pr !== undefined && (!isObj(pr) || ['schoolName', 'teacher', 'logo'].some((k) => pr[k] !== undefined && typeof pr[k] !== 'string'))) add('fehler', 'Einstellungen', 'Druckkopf ungültig');
+    else if (pr && pr.logo && !LOGO_URL.test(pr.logo)) add('fehler', 'Einstellungen', 'Schullogo ist kein Bild');
     for (const c of db.courses) {
       const where = `${c.klasse || '?'} ${c.fach || ''}`.trim();
       if (!years.has(c.yearId)) add('fehler', where, 'gehört zu keinem vorhandenen Schuljahr');
@@ -634,6 +657,8 @@
 
   function demoDb() {
     const db = newDb();
+    // erfundene Schule ohne Logo (echte Angaben stehen nur in der verschlüsselten Datenbank)
+    db.settings.print = { schoolName: 'Beispielschule', teacher: 'M. Muster', logo: '' };
     const year = db.years[0];
     const names = ['Becker, Lea', 'Demir, Can', 'Fischer, Mia', 'Hoffmann, Paul', 'Jung, Emma', 'Klein, Noah', 'Lang, Sophie', 'Meyer, Ben', 'Neumann, Lina', 'Schmitt, Finn', 'Wagner, Ella', 'Weber, Luis'];
     const c8 = newCourse(year.id, { klasse: '8b', fach: 'Mathe', jahrgang: 8, type: 'sek1' });
@@ -833,6 +858,7 @@
     setJahrgang,
     mssJahrgang,
     courseTitle,
+    cleanPrint,
     sortStudents,
     activeStudents,
     statStudents,

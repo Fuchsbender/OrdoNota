@@ -35,14 +35,53 @@
     setTimeout(() => window.print(), 50);
   }
 
-  function header(course, title, sub) {
+  /** Druckkopf aus den Einstellungen (settings.print, seit 1.47); fehlt etwas, fällt es weg. */
+  function printSettings() {
+    const db = NM.app.state && NM.app.state.db;
+    return (db && db.settings && db.settings.print) || {};
+  }
+
+  function schoolBlock(ps) {
+    if (!ps.logo && !ps.schoolName) return null;
+    return h('div', { class: 'p-school' }, ps.logo ? h('img', { class: 'p-logo', src: ps.logo, alt: ps.schoolName || 'Schullogo' }) : null, ps.schoolName ? h('span', { class: 'p-school-name' }, ps.schoolName) : null);
+  }
+
+  /**
+   * Gemeinsamer Kopf aller Ausdrucke (seit 1.47): links Logo und Schulname (falls eingetragen), rechts Kurs,
+   * Schuljahr/Halbjahr, Lehrkraft und Datum; darunter Titel, Name der Person und Untertitel.
+   * opts: kicker (kleine Zeile über dem Titel), person, half, date (Datum der Leistung; sonst „Stand“ = Druckdatum),
+   * dateLabel, showDate (false: keine Datumszeile, z. B. bei leeren Bögen mit Datumsfeld), extra (weitere Zeilen rechts), compact (einzeilig für Zettel zum Ausschneiden).
+   */
+  function header(course, title, sub, { kicker = null, person = null, half = null, date = null, dateLabel = 'Datum', showDate = true, extra = [], compact = false } = {}) {
+    const ps = printSettings();
+    const school = schoolBlock(ps);
+    if (compact) {
+      return h(
+        'div',
+        { class: 'p-head p-head-compact' },
+        h('div', { class: 'p-head-left' }, school, h('strong', { class: 'p-head-person' }, person || title)),
+        h('div', { class: 'p-head-right' }, [person ? title : null, course ? M.courseTitle(course) : null, date ? fmtDate(date) : null, sub].filter(Boolean).join(' · '))
+      );
+    }
     const year = NM.app.currentYear();
-    return h(
+    const titleBlock = h(
       'div',
-      { class: 'p-header' },
-      h('div', null, h('h1', null, title), sub ? h('div', { class: 'p-sub' }, sub) : null),
-      h('div', { class: 'p-meta' }, h('div', null, h('strong', null, M.courseTitle(course))), h('div', null, 'Schuljahr ', year ? year.name : ''), h('div', null, 'Stand ', new Date().toLocaleDateString('de-DE')))
+      { class: 'p-head-title' },
+      kicker ? h('div', { class: 'p-kicker' }, kicker) : null,
+      h('h1', null, title),
+      person ? h('div', { class: 'p-head-person' }, person) : null,
+      sub ? h('div', { class: 'p-sub' }, sub) : null
     );
+    const meta = h(
+      'div',
+      { class: 'p-meta' },
+      course ? h('div', null, h('strong', null, M.courseTitle(course))) : null,
+      year ? h('div', null, 'Schuljahr ', year.name, half ? ' · ' + half : '') : null,
+      ps.teacher ? h('div', null, 'Lehrkraft: ', ps.teacher) : null,
+      extra.filter(Boolean).map((x) => h('div', null, x)),
+      showDate ? h('div', null, date ? `${dateLabel} ${fmtDate(date)}` : 'Stand ' + new Date().toLocaleDateString('de-DE')) : null
+    );
+    return h('div', { class: 'p-head' + (school ? ' with-school' : '') }, h('div', { class: 'p-head-row' }, school || titleBlock, meta), school ? titleBlock : null);
   }
 
   const badge = (p, level) => (p === null || p === undefined ? h('span', { class: 'p-empty' }, '–') : h('span', { class: 'p-grade', style: gradeStyle(p) }, G.label(p, level)));
@@ -170,7 +209,7 @@
     const sep = G.separateParts(t);
     const groups = G.taskGroups(t);
     if (mode === 'key') {
-      return doPrint(`${a.name} – Notenschlüssel`, h('div', { class: 'p-page' }, header(course, a.name, testMeta(course, a)), h('div', { class: 'p-cols' }, h('div', null, h('h2', null, 'Notenschlüssel'), keyTables(course, a, level)), h('div', null, h('h2', null, sep ? 'Notenspiegel (Gesamtnote)' : 'Notenspiegel'), statsBlock(course, a, level)))));
+      return doPrint(`${a.name} – Notenschlüssel`, h('div', { class: 'p-page' }, header(course, a.name, testMeta(course, a), { half: a.half, date: a.date, dateLabel: 'Testdatum' }), h('div', { class: 'p-cols' }, h('div', null, h('h2', null, 'Notenschlüssel'), keyTables(course, a, level)), h('div', null, h('h2', null, sep ? 'Notenspiegel (Gesamtnote)' : 'Notenspiegel'), statsBlock(course, a, level)))));
     }
     if (mode === 'parts') {
       // Ergebnisse nach Teilen: je Person Punkte, Prozent (und Note) je Teil, dann Gesamt
@@ -201,7 +240,7 @@
         h(
           'div',
           { class: 'p-page' },
-          header(course, a.name + ' – Ergebnisse nach Teilen', testMeta(course, a)),
+          header(course, a.name + ' – Ergebnisse nach Teilen', testMeta(course, a), { half: a.half, date: a.date, dateLabel: 'Testdatum' }),
           h(
             'table',
             { class: 'p-table p-full p-parts' },
@@ -251,7 +290,7 @@
         h(
           'div',
           { class: 'p-page' },
-          header(course, a.name, testMeta(course, a)),
+          header(course, a.name, testMeta(course, a), { half: a.half, date: a.date, dateLabel: 'Testdatum' }),
           h(
             'table',
             { class: 'p-table p-full' },
@@ -289,7 +328,7 @@
       return h(
         'div',
         { class: 'p-slip' },
-        h('div', { class: 'p-slip-head' }, h('strong', null, M.studentName(s)), h('span', null, `${a.name} · ${M.courseTitle(course)} · ${fmtDate(a.date)}`)),
+        header(course, a.name, null, { compact: true, person: M.studentName(s), date: a.date }),
         taskTable(t, r.scores || {}, res, 'p-slip-table'),
         pg ? h('div', { class: 'p-slip-result' }, 'Teilnoten: ', pg) : null,
         h('div', { class: 'p-slip-result' }, res.p === null ? UI.STATUS_SHORT[r.status] || (pg && res.score !== null ? 'Gesamtnote erst, wenn alle Teile bewertet sind' : 'keine Wertung') : ['Ergebnis: ', res.score !== null && G.testMaxScore(t) ? fmtNum((res.score / G.testMaxScore(t)) * 100, 0) + ' % · ' : '', 'Note ', h('strong', { class: 'p-big' }, G.label(res.p, level)), level === 'mss' ? ` Punkte (${G.wholeGrade(res.p)}${G.tendency(res.p)})` : ''])
@@ -338,12 +377,7 @@
       return h(
         'div',
         { class: 'p-page p-break p-mr' },
-        h(
-          'div',
-          { class: 'p-mr-head' },
-          h('div', null, h('div', { class: 'p-mr-kicker' }, 'Testergebnis'), h('h1', null, a.name), h('div', { class: 'p-mr-name' }, [s.first, s.last].filter(Boolean).join(' '))),
-          h('div', { class: 'p-mr-meta' }, h('strong', null, M.courseTitle(course)), h('div', null, 'Testdatum ', fmtDate(a.date)))
-        ),
+        header(course, a.name, null, { kicker: 'Testergebnis', person: [s.first, s.last].filter(Boolean).join(' '), half: a.half, date: a.date, dateLabel: 'Testdatum' }),
         h(
           'div',
           { class: 'p-mr-summary' },
@@ -395,10 +429,9 @@
       return h(
         'div',
         { class: 'p-page p-break p-sc', 'data-scripto-sheet': sid },
-        h('div', { class: 'p-sc-kicker' }, 'Trennblatt · OrdoScripto'),
+        header(course, o.name, null, { kicker: 'Trennblatt · OrdoScripto', half: o.half, date: a.date, dateLabel: a !== o ? 'Nachschreibtermin' : 'Datum' }),
         h('div', { class: 'p-sc-name' }, [s.first, s.last].filter(Boolean).join(' ')),
         h('div', { class: 'p-sc-class' }, M.courseTitle(course)),
-        h('div', { class: 'p-sc-test' }, h('strong', null, o.name), a !== o ? h('span', null, ' · Nachschreibtermin ' + fmtDate(a.date)) : h('span', null, ' · ' + fmtDate(o.date))),
         qr,
         h('div', { class: 'p-sc-ids' }, d.testId, h('span', null, ' · '), sid),
         h('div', { class: 'p-sc-hint' }, 'Trennblatt – vor die Arbeit des Schülers legen')
@@ -425,7 +458,7 @@
     const st = G.presStats(p, M.statStudents(course).map((s) => s.id), level);
     const key = G.keyForPres(p, level);
     if (mode === 'key') {
-      return doPrint(`${a.name} – Notenschlüssel`, h('div', { class: 'p-page' }, header(course, a.name, presMeta(course, a)), h('div', { class: 'p-cols' }, h('div', null, h('h2', null, 'Notenschlüssel'), keyTableFor(key, st, level)), h('div', null, h('h2', null, 'Notenspiegel'), statsBlockFor(course, st, level)))));
+      return doPrint(`${a.name} – Notenschlüssel`, h('div', { class: 'p-page' }, header(course, a.name, presMeta(course, a), { half: a.half, date: a.date }), h('div', { class: 'p-cols' }, h('div', null, h('h2', null, 'Notenschlüssel'), keyTableFor(key, st, level)), h('div', null, h('h2', null, 'Notenspiegel'), statsBlockFor(course, st, level)))));
     }
     if (mode === 'list') {
       // Bei Gruppen nach Gruppen geordnet (innerhalb alphabetisch), Personen ohne Gruppe am Ende
@@ -458,7 +491,7 @@
         h(
           'div',
           { class: 'p-page' },
-          header(course, a.name, presMeta(course, a)),
+          header(course, a.name, presMeta(course, a), { half: a.half, date: a.date }),
           h(
             'table',
             { class: 'p-table p-full' },
@@ -497,12 +530,14 @@
       return h(
         'div',
         { class: 'p-page p-break p-mr p-pres' },
-        h(
-          'div',
-          { class: 'p-mr-head' },
-          h('div', null, h('div', { class: 'p-mr-kicker' }, 'Bewertung der Präsentation'), h('h1', null, a.name), h('div', { class: 'p-mr-name' }, [s.first, s.last].filter(Boolean).join(' '))),
-          h('div', { class: 'p-mr-meta' }, h('strong', null, M.courseTitle(course)), g ? h('div', null, g.name) : null, h('div', null, 'Datum ', date ? fmtDate(date) : blank ? '__________' : fmtDate(a.date)))
-        ),
+        header(course, a.name, null, {
+          kicker: 'Bewertung der Präsentation',
+          person: [s.first, s.last].filter(Boolean).join(' '),
+          half: a.half,
+          extra: [g ? g.name : null, blank && !date ? 'Datum __________' : null],
+          date: date || a.date,
+          showDate: !(blank && !date),
+        }),
         h('div', { class: 'p-pres-topic' }, 'Thema: ', blank ? h('span', { class: 'p-mr-line p-inline-line' }) : h('strong', null, topic || '–')),
         h(
           'table',
@@ -562,12 +597,7 @@
       h(
         'div',
         { class: 'p-page p-mr p-pres p-guide' },
-        h(
-          'div',
-          { class: 'p-mr-head' },
-          h('div', null, h('div', { class: 'p-mr-kicker' }, 'Bewertungskriterien'), h('h1', null, title), h('div', { class: 'p-mr-name' }, 'So wird deine Präsentation bewertet')),
-          course ? h('div', { class: 'p-mr-meta' }, h('strong', null, M.courseTitle(course))) : null
-        ),
+        header(course, title, null, { kicker: 'Bewertungskriterien', person: 'So wird deine Präsentation bewertet' }),
         h('p', { class: 'p-guide-intro' }, `Für jedes Kriterium gibt es 0 bis 3 Punkte; die Beschreibung zeigt, was für die jeweilige Stufe erwartet wird. Kriterien mit Gewicht (z. B. ×2) zählen mehrfach. Insgesamt sind ${fmtScore(max)} Punkte möglich.` + (groupMode ? ' Gruppenkriterien werden einmal für die ganze Gruppe bewertet und gelten für alle Mitglieder; bei deutlichen Unterschieden kann eine Person abweichend bewertet werden. Jede Person bekommt eine eigene Note.' : '')),
         h(
           'table',
@@ -589,7 +619,7 @@
     const cards = mode === 'cards';
     doPrint(
       `${set.name} – ${cards ? 'Gruppenkarten' : 'Gruppeneinteilung'}`,
-      h('div', { class: 'p-page' }, cards ? null : header(course, set.name, [fmtDate(set.date), `${tiles.length} Gruppen`].filter(Boolean).join(' · ')), h('div', { class: cards ? 'p-grp-cards' : 'p-grp-grid' }, tiles))
+      h('div', { class: 'p-page' }, cards ? null : header(course, set.name, `${tiles.length} Gruppen`, { date: set.date || null }), h('div', { class: cards ? 'p-grp-cards' : 'p-grp-grid' }, tiles))
     );
   }
 
@@ -619,7 +649,7 @@
       h(
         'div',
         { class: 'p-page' },
-        header(course, a.name, `Mitarbeit · ${lessons.length} Stunden · ${a.half}`),
+        header(course, a.name, `Mitarbeit · ${lessons.length} Stunden`, { half: a.half }),
         h(
           'table',
           { class: 'p-table p-full p-epo' },
@@ -651,7 +681,7 @@
       return h(
         'div',
         { class: 'p-slip p-epo-slip' },
-        h('div', { class: 'p-epo-slip-head' }, h('h2', null, M.studentName(s)), h('div', { class: 'p-sub' }, `${M.courseTitle(course)} · ${a.name} · ${period}`)),
+        header(course, a.name, period, { compact: true, person: M.studentName(s) }),
         h('div', { class: 'p-note' }, legend),
         chunks.map((ls) =>
           h(
@@ -734,7 +764,7 @@
     );
     doPrint(
       `${M.courseTitle(c)} – Fehlzeiten ${half}`,
-      h('div', { class: 'p-page' }, header(c, 'Fehlzeiten', `${half} · ${days.length} Unterrichtstage`), tables, h('p', { class: 'p-note' }, 'A = abwesend, Entschuldigung offen · E = entschuldigt · U = unentschuldigt · Zahl in Klammern = Unterrichtsstunden an dem Tag; Summen in Unterrichtsstunden')),
+      h('div', { class: 'p-page' }, header(c, 'Fehlzeiten', `${days.length} Unterrichtstage`, { half }), tables, h('p', { class: 'p-note' }, 'A = abwesend, Entschuldigung offen · E = entschuldigt · U = unentschuldigt · Zahl in Klammern = Unterrichtsstunden an dem Tag; Summen in Unterrichtsstunden')),
       { landscape: days.length > 8 }
     );
   }
@@ -797,7 +827,7 @@
       h(
         'div',
         { class: 'p-page' },
-        header(c, 'Notenliste ' + half, `Klassen-/Kursarbeiten ${fmtNum(c.wKa, 0)} % · Sonstige ${fmtNum(c.wOther, 0)} %`),
+        header(c, 'Notenliste ' + half, `Klassen-/Kursarbeiten ${fmtNum(c.wKa, 0)} % · Sonstige ${fmtNum(c.wOther, 0)} %`, { half }),
         h(
           'table',
           { class: 'p-table p-full' },

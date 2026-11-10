@@ -601,6 +601,96 @@ def run_epo_tiles_check(br, base):
            ok and not br.errors, str([setup, s1, s2, s3, s4]) + "; ".join(br.errors))
 
 
+def run_print_head_check(br, base):
+    """Einheitlicher Druckkopf (1.47): Einstellungen mit Logo-Upload (verkleinert), Kopf in allen Druckarten, Zettel kompakt, leere Angaben fallen weg."""
+    br.open(f"{base}/index.html?demo")
+    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.errors = []
+    res = br.eval("""(async () => {
+        const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
+        const out = {}, db = NM.app.db(), P = db.settings.print;
+        const origPrint = window.print; window.print = () => {};
+        try {
+            out.demo = [P.schoolName, P.teacher, P.logo];
+            NM.app.select({ tab: 'settings' }); await wait();
+            const field = (k) => document.querySelector('[data-print-field="' + k + '"]');
+            out.card = [field('schoolName').value, field('teacher').value, !document.querySelector('[data-print-logo]')];
+            field('teacher').value = '  T. Lehrkraft '; field('teacher').dispatchEvent(new Event('change')); await wait();
+            out.teacher = P.teacher;
+            // Logo 1200 × 400 hochladen → 600 × 200
+            const cv = document.createElement('canvas'); cv.width = 1200; cv.height = 400;
+            const g = cv.getContext('2d'); g.fillStyle = '#c00'; g.fillRect(0, 0, 1200, 400);
+            const blob = await new Promise((r) => cv.toBlob(r, 'image/png'));
+            const dt = new DataTransfer(); dt.items.add(new File([blob], 'logo.png', { type: 'image/png' }));
+            const inp = document.querySelector('[data-print-logo-file]'); inp.files = dt.files; inp.dispatchEvent(new Event('change'));
+            for (let i = 0; i < 30 && !P.logo; i++) await wait(100);
+            await wait();
+            const img = new Image(); img.src = P.logo; await img.decode();
+            out.logo = [P.logo.slice(0, 22), img.naturalWidth, img.naturalHeight, !!document.querySelector('[data-print-logo]')];
+            // kein Bild → abgelehnt, Logo bleibt
+            const dt2 = new DataTransfer(); dt2.items.add(new File(['x'], 'a.txt', { type: 'text/plain' }));
+            inp.files = dt2.files; inp.dispatchEvent(new Event('change')); await wait();
+            out.reject = P.logo.startsWith('data:image/png');
+            // Kopf in den Druckarten
+            const c = db.courses[0], half = NM.app.currentHalf(c);
+            const test = c.assessments.find((a) => a.kind === 'test' && a.half === half) || c.assessments.find((a) => a.kind === 'test');
+            const epo = c.assessments.find((a) => a.kind === 'epo');
+            const pres = c.assessments.find((a) => a.kind === 'pres');
+            const root = () => document.getElementById('print-root');
+            const head = (fn) => { fn(); const hs = [...root().querySelectorAll('.p-head')]; const h0 = hs[0];
+                const r = h0 ? { n: hs.length, compact: h0.classList.contains('p-head-compact'), logo: !!h0.querySelector('img.p-logo'), school: h0.textContent.includes('Beispielschule'),
+                    teacher: h0.textContent.includes('T. Lehrkraft'), course: h0.textContent.includes(NM.model.courseTitle(c)), old: !!root().querySelector('.p-header, .p-mr-head, .p-slip-head, .p-epo-slip-head') } : null;
+                document.body.classList.remove('printing'); return r; };
+            out.kinds = {
+                course: head(() => NM.print.course(c, half)),
+                year: head(() => NM.print.course(c, 'Jahr')),
+                testList: head(() => NM.print.test(c, test, 'list')),
+                testKey: head(() => NM.print.test(c, test, 'key')),
+                slips: head(() => NM.print.test(c, test, 'slips')),
+                epo: head(() => NM.print.epo(c, epo)),
+                epoSlips: head(() => NM.print.epoSlips(c, epo)),
+                presList: head(() => NM.print.pres(c, pres, 'list')),
+                presBlank: head(() => NM.print.pres(c, pres, 'blank')),
+                guide: head(() => NM.print.presGuide({ title: 'Plakat', course: c, criteria: pres.pres.criteria })),
+                seating: head(() => NM.print.seating(c)),
+                attendance: head(() => NM.print.attendance(c, half)),
+            };
+            NM.print.test(c, test, 'list');
+            out.date = root().querySelector('.p-head .p-meta').textContent.includes('Testdatum ' + NM.util.fmtDate(test.date));
+            document.body.classList.remove('printing');
+            NM.print.test(c, test, 'slips');
+            const ch = root().querySelector('.p-head-compact');
+            out.compactRow = [!!ch.querySelector('.p-head-person'), ch.querySelector('.p-head-right').textContent.includes(test.name), !ch.textContent.includes('T. Lehrkraft')];
+            document.body.classList.remove('printing');
+            // leere Angaben fallen weg: wie früher Titel links
+            Object.assign(P, { schoolName: '', teacher: '', logo: '' });
+            NM.print.course(c, half);
+            const hd = root().querySelector('.p-head');
+            out.empty = [!hd.classList.contains('with-school'), !hd.querySelector('.p-school'), !hd.textContent.includes('Lehrkraft'), !!hd.querySelector('.p-head-row > .p-head-title h1')];
+            document.body.classList.remove('printing');
+            // Migration und Prüfung
+            const d2 = { schema: NM.model.SCHEMA, settings: { print: { schoolName: 7, teacher: ' X ', logo: 'javascript:alert(1)' } }, years: [], courses: [] };
+            NM.model.migrate(d2);
+            out.migrate = d2.settings.print;
+            const d3 = { schema: NM.model.SCHEMA, settings: { print: { logo: 'http://x/y.png' } }, years: [], courses: [] };
+            out.check = NM.model.check(d3).some((x) => x.where === 'Einstellungen');
+            const d4 = { schema: NM.model.SCHEMA, years: [], courses: [] }; NM.model.migrate(d4);
+            out.fresh = d4.settings.print;
+        } finally { window.print = origPrint; NM.app.state.dirty = false; }
+        return out; })()""")
+    k = (res or {}).get("kinds", {})
+    full = [n for n in k if n not in ("slips", "epoSlips")]
+    ok = (bool(res) and res["demo"] == ["Beispielschule", "M. Muster", ""] and res["card"] == ["Beispielschule", "M. Muster", True]
+          and res["teacher"] == "T. Lehrkraft" and res["logo"] == ["data:image/png;base64,", 600, 200, True] and res["reject"]
+          and all(k.get(n) and not k[n]["compact"] and k[n]["logo"] and k[n]["school"] and k[n]["teacher"] and k[n]["course"] and not k[n]["old"] for n in full)
+          and all(k.get(n) and k[n]["compact"] and k[n]["logo"] and k[n]["school"] and k[n]["n"] > 1 and not k[n]["old"] for n in ("slips", "epoSlips"))
+          and res["date"] and all(res["compactRow"]) and all(res["empty"])
+          and res["migrate"] == {"schoolName": "", "teacher": "X", "logo": ""} and res["check"]
+          and res["fresh"] == {"schoolName": "", "teacher": "", "logo": ""})
+    report("Druckkopf: Schulname/Lehrkraft/Logo (verkleinert auf 600 px) in den Einstellungen, ein Kopf für alle Druckarten, Zettel kompakt, leere Angaben fallen weg, Migration/Prüfung",
+           ok and not br.errors, str(res) + "; ".join(br.errors))
+
+
 def run_draw_check(br, base):
     print("Ziehen (Pool, Auffüllen, Noten, Rückgängig):")
     br.open(f"{base}/index.html?demo")
@@ -1579,7 +1669,7 @@ def run_settings_layout_check(br, base):
             return r; })()""")
         out[width] = res
     br.call("Emulation.clearDeviceMetricsOverride")
-    ok = all(r and r["cards"] == 8 and r["gap"] <= 20 and r["selOk"] and r["chipOk"] for r in out.values())
+    ok = all(r and r["cards"] == 9 and r["gap"] <= 20 and r["selOk"] and r["chipOk"] for r in out.values())
     report("Einstellungen ohne Lücken bei 1570/2560 px, Auswahllisten nicht abgeschnitten, Kürzel „MSS12“ passt", ok and not br.errors, str(out) + "; ".join(br.errors))
 
 
@@ -2571,6 +2661,7 @@ def main():
         run_epo_material_check(br, base)
         run_attendance_check(br, base)
         run_epo_tiles_check(br, base)
+        run_print_head_check(br, base)
         run_draw_check(br, base)
         run_draw_pools_check(br, base)
         run_random_check(br, base)
