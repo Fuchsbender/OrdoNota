@@ -1364,6 +1364,93 @@ def run_settings_layout_check(br, base):
     report("Einstellungen ohne Lücken bei 1570/2560 px, Auswahllisten nicht abgeschnitten, Kürzel „MSS12“ passt", ok and not br.errors, str(out) + "; ".join(br.errors))
 
 
+def run_theme_check(br, base):
+    print("Farbschemata: je drei helle und dunkle Designs:")
+    br.call("Emulation.setEmulatedMedia", features=[{"name": "prefers-color-scheme", "value": "light"}])
+    br.open(f"{base}/index.html?demo")
+    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.errors = []
+    # Kontrast (WCAG): Schrift ≥ 4.5:1 auf allen Flächen, Akzent- und Statusfarben ≥ 3:1, Schrift auf den Notenfarben ≥ 4.5:1
+    res = br.eval("""(async () => {
+        const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
+        const probe = document.createElement('div'); document.body.append(probe);
+        const rgb = (css) => { probe.style.color = ''; probe.style.color = css; return getComputedStyle(probe).color.match(/[\\d.]+/g).slice(0, 3).map(Number); };
+        const lum = (c) => { const f = (v) => (v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; const [r, g, b] = c.map(f); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+        const cr = (a, b) => { const x = lum(rgb(a)), y = lum(rgb(b)); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+        const out = { themes: {}, bgs: [] };
+        for (const mode of ['light', 'dark']) for (const [id] of NM.app.THEMES[mode]) {
+            Object.assign(NM.app.state.ui, { theme: mode, [mode + 'Theme']: id }); NM.app.applyTheme(); await wait(50);
+            const root = document.documentElement, low = [];
+            const check = (fg, bg, min) => { const r = cr(fg, bg); if (r < min) low.push(`${fg} auf ${bg}: ${r.toFixed(2)}`); };
+            for (const bg of ['var(--bg)', 'var(--surface)', 'var(--surface-2)']) {
+                for (const fg of ['var(--text)', 'var(--muted)']) check(fg, bg, 4.5);
+                for (const fg of ['var(--accent)', 'var(--ok)', 'var(--warn)', 'var(--danger)']) check(fg, bg, 3);
+            }
+            check('var(--on-accent)', 'var(--accent)', 4.5);
+            for (const p of [0, 5, 10, 15]) check('var(--g-text)', `hsl(${Math.round(p / 15 * 125)} var(--g-s) var(--g-l))`, 4.5);
+            out.themes[mode + ':' + id] = [root.dataset.theme, root.dataset.variant, getComputedStyle(root).colorScheme, low];
+            out.bgs.push(getComputedStyle(document.body).backgroundColor);
+        }
+        probe.remove();
+        // Einstellungen: Kacheln, Wahl wirkt sofort und wechselt den fest eingestellten Modus mit
+        Object.assign(NM.app.state.ui, { theme: 'light', lightTheme: 'standard', darkTheme: 'standard' }); NM.app.saveUi(); NM.app.applyTheme();
+        NM.app.select({ tab: 'settings' }); await wait(300);
+        const tiles = [...document.querySelectorAll('[data-theme-pick]')];
+        out.tiles = tiles.map((t) => t.dataset.themePick + (t.getAttribute('aria-pressed') === 'true' ? '*' : ''));
+        // jede Kachel zeigt ihre eigenen Farben
+        out.tileBgs = new Set(tiles.map((t) => getComputedStyle(t).backgroundColor)).size;
+        document.querySelector('[data-theme-pick="light:lavendel"]').click(); await wait(300);
+        out.pickLight = [document.documentElement.dataset.theme, document.documentElement.dataset.variant];
+        document.querySelector('[data-theme-pick="dark:nord"]').click(); await wait(300);
+        out.pickDark = [document.documentElement.dataset.theme, document.documentElement.dataset.variant, document.querySelector('[data-theme-pick="dark:nord"]').getAttribute('aria-pressed')];
+        const saved = JSON.parse(localStorage.getItem('nm.ui.demo'));
+        out.saved = [saved.theme, saved.lightTheme, saved.darkTheme];
+        return out; })()""")
+    # Neu laden: Wahl bleibt (je Gerät im Browser-Speicher)
+    br.open(f"{base}/index.html?demo")
+    br.wait("!!document.querySelector('.overview-table')", 30)
+    res2 = br.eval("""(async () => {
+        const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
+        const at = () => [document.documentElement.dataset.theme, document.documentElement.dataset.variant];
+        const out = { reload: at() };
+        // Mond-Symbol: nur hell ↔ dunkel, das gewählte Design bleibt
+        const moon = document.querySelector('.topbar [aria-label="Hell/Dunkel umschalten"]');
+        moon.click(); await wait(); out.moon1 = at(); moon.click(); await wait(); out.moon2 = at();
+        // „Wie das System“
+        NM.app.select({ tab: 'settings' }); await wait(300);
+        const sel = [...document.querySelectorAll('select')].find((s) => [...s.options].some((o) => o.value === 'auto' && o.text === 'Wie das System'));
+        sel.value = 'auto'; sel.dispatchEvent(new Event('change')); await wait();
+        out.auto = at();
+        return out; })()""")
+    br.call("Emulation.setEmulatedMedia", features=[{"name": "prefers-color-scheme", "value": "dark"}])
+    time.sleep(0.3)
+    res3 = br.eval("[document.documentElement.dataset.theme, document.documentElement.dataset.variant]")
+    # Timer-Fenster übernimmt das Design (Fenster nur mit Nutzergeste)
+    r = br.call("Runtime.evaluate", userGesture=True, awaitPromise=True, returnByValue=True, expression="""(async () => {
+        const wait = (ms = 300) => new Promise((r) => setTimeout(r, ms));
+        NM.app.select({ tab: 'random' }); await wait();
+        document.querySelector('[data-tmr-popup]').click(); await wait(800);
+        const w = NM.views.random.timer.clock.popup, pd = w && w.document;
+        const out = pd ? [pd.documentElement.dataset.theme, pd.documentElement.dataset.variant, getComputedStyle(pd.body).backgroundColor === getComputedStyle(document.body).backgroundColor] : null;
+        if (w) w.close();
+        return out; })()""")
+    popup = r.get("result", {}).get("result", {}).get("value")
+    # Aufräumen: Standard für die übrigen Tests
+    br.eval("""(() => { Object.assign(NM.app.state.ui, { theme: 'auto', lightTheme: 'standard', darkTheme: 'standard' }); NM.app.saveUi(); NM.app.applyTheme(); NM.app.select({ tab: 'overview' }); return 1; })()""")
+    br.call("Emulation.setEmulatedMedia", features=[])
+    themes = (res or {}).get("themes", {})
+    ok_c = len(themes) == 6 and all(v[3] == [] and v[0] == k.split(":")[0] and v[1] == k.split(":")[1] and v[2] == ("dark" if v[0] == "dark" else "light") for k, v in themes.items()) \
+        and len(set(res["bgs"])) == 6
+    report("Sechs Designs: Attribute, color-scheme, eigener Hintergrund, Kontrast (Schrift ≥ 4.5:1, Akzent/Status ≥ 3:1, Notenfarben)", ok_c and not br.errors, str(themes) + "; ".join(br.errors))
+    ok_s = bool(res) and res["tiles"] == ["light:standard*", "light:salbei", "light:lavendel", "dark:standard*", "dark:nord", "dark:aubergine"] \
+        and res["tileBgs"] == 6 and res["pickLight"] == ["light", "lavendel"] and res["pickDark"] == ["dark", "nord", "true"] \
+        and res["saved"] == ["dark", "lavendel", "nord"]
+    report("Einstellungen: Vorschaukacheln je Modus, Wahl wirkt sofort und wird gespeichert", ok_s and not br.errors, str(res and {k: res[k] for k in ("tiles", "tileBgs", "pickLight", "pickDark", "saved")}))
+    ok_r = bool(res2) and res2["reload"] == ["dark", "nord"] and res2["moon1"] == ["light", "lavendel"] and res2["moon2"] == ["dark", "nord"] \
+        and res2["auto"] == ["light", "lavendel"] and res3 == ["dark", "nord"] and popup == ["dark", "nord", True]
+    report("Design bleibt nach dem Neuladen, Mond-Symbol schaltet nur hell/dunkel, „Wie das System“ folgt dem System, Timer-Fenster übernimmt das Design", ok_r and not br.errors, str(res2) + str(res3) + str(popup) + "; ".join(br.errors))
+
+
 def run_parts_check(br, base):
     print("Arbeit in Teilen (Theorie/Praxis):")
     br.open(f"{base}/index.html?demo")
@@ -2270,6 +2357,7 @@ def main():
         run_tab_order_check(br, base)
         run_overview_fold_check(br, base)
         run_settings_layout_check(br, base)
+        run_theme_check(br, base)
         run_demo_link_check(br, base)
         run_old_db_check(br, base)
         run_parts_check(br, base)

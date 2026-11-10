@@ -75,6 +75,7 @@ Ausprobieren ohne echte Daten: **„Demo ansehen“** auf dem Startbildschirm od
 - **Notenübersicht**: alle Noten des Halbjahres; direkte Noten eintragen (`2-`, `11`, oder `f` = fehlt, `ns` = Nachschreiben, `t` = Täuschung/Verweigerung). Ausdrucke über **🖨 Drucken …** (Notenliste, Leistungsbögen je Person), CSV-Export für Excel. Spaltengruppen (Klassenarbeiten, Sonstige) lassen sich einklappen, Spalten aus „Ziehen“ zu einer Spalte bündeln (nur Ansicht).
 - **Sitzplan**: mehrere Räume pro Kurs; Raster per „Raster bearbeiten“ an allen vier Seiten mit +/− erweitern oder verkleinern; Vornamen-Karten per Ziehen auf ein Raster setzen, tauschen, zufällig füllen, Stände speichern/laden, Fotos (Strg+V oder Bild auf die Karte ziehen, per Knopf ausblendbar), Druck.
 - **🍅 Pomodoro-Timer** (Einstellungen → aktivieren): in der Kopfzeile mit Start/Pause/Zurücksetzen/⚙; rot = Arbeitsphase, grün = Pause, gelb = pausiert. Anzahl, Längen, Ticken und Wecker-Signal einstellbar.
+- **Designs**: je drei helle (Standard, Salbei, Lavendel) und dunkle (Standard, Nord, Aubergine) unter Einstellungen → Darstellung, mit Vorschau; ☾ in der Kopfzeile schaltet hell/dunkel. Gilt je Gerät.
 - **Sortieren**: Klick auf einen Spaltenkopf (Name, Vorname, Aufgabe, Stunde, Note, …) sortiert, zweiter Klick dreht um; bei Köpfen mit eigener Funktion über das kleine ⇅. Leere Werte stehen unten, Ausdrucke bleiben alphabetisch.
 - Tastatur: Enter/↓ = nächste Person, Tab = nächste Spalte.
 

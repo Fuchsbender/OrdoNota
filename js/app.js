@@ -70,9 +70,9 @@
 
   function loadUi() {
     try {
-      return Object.assign({ tab: 'overview', courseId: null, yearId: null, half: {}, testId: {}, epoId: {}, presId: {}, seatingId: {}, sort: {}, theme: 'auto' }, JSON.parse(localStorage.getItem(UI_KEY) || '{}'));
+      return Object.assign({ tab: 'overview', courseId: null, yearId: null, half: {}, testId: {}, epoId: {}, presId: {}, seatingId: {}, sort: {}, theme: 'auto', lightTheme: 'standard', darkTheme: 'standard' }, JSON.parse(localStorage.getItem(UI_KEY) || '{}'));
     } catch (e) {
-      return { tab: 'overview', courseId: null, yearId: null, half: {}, testId: {}, epoId: {}, presId: {}, seatingId: {}, sort: {}, theme: 'auto' };
+      return { tab: 'overview', courseId: null, yearId: null, half: {}, testId: {}, epoId: {}, presId: {}, seatingId: {}, sort: {}, theme: 'auto', lightTheme: 'standard', darkTheme: 'standard' };
     }
   }
   /** Demo-Modus in einem neuen Fenster öffnen (gleiche Seite mit ?demo); die eigene Datenbank bleibt offen. */
@@ -683,15 +683,36 @@
     renderShell();
   }
 
-  function applyTheme() {
-    const t = state.ui.theme || 'auto';
-    if (t === 'auto') document.documentElement.removeAttribute('data-theme');
-    else document.documentElement.setAttribute('data-theme', t);
+  /** Designs je Modus (Tokens in css/app.css, Selektor [data-theme][data-variant]); das erste ist der Standard. */
+  const THEMES = {
+    light: [['standard', 'Standard'], ['salbei', 'Salbei'], ['lavendel', 'Lavendel']],
+    dark: [['standard', 'Standard'], ['nord', 'Nord'], ['aubergine', 'Aubergine']],
+  };
+  const systemDark = window.matchMedia ? matchMedia('(prefers-color-scheme: dark)') : null;
+
+  /** Gewähltes Design eines Modus (unbekannte Werte → Standard). */
+  function themeVariant(mode) {
+    const v = state.ui[mode + 'Theme'];
+    return THEMES[mode].some(([id]) => id === v) ? v : 'standard';
   }
 
+  /** Angezeigter Modus: „Wie das System“ wird hier aufgelöst, damit auch das Design des Systemmodus greift. */
+  function themeMode() {
+    const t = state.ui.theme;
+    if (t === 'light' || t === 'dark') return t;
+    return systemDark && systemDark.matches ? 'dark' : 'light';
+  }
+
+  function applyTheme() {
+    const mode = themeMode();
+    document.documentElement.setAttribute('data-theme', mode);
+    document.documentElement.setAttribute('data-variant', themeVariant(mode));
+  }
+  if (systemDark) systemDark.addEventListener('change', () => (state.ui.theme || 'auto') === 'auto' && applyTheme());
+
+  /** Mond-Symbol: nur hell ↔ dunkel, jeweils im gewählten Design. */
   function toggleTheme() {
-    const dark = document.documentElement.getAttribute('data-theme') === 'dark' || (!document.documentElement.getAttribute('data-theme') && matchMedia('(prefers-color-scheme: dark)').matches);
-    state.ui.theme = dark ? 'light' : 'dark';
+    state.ui.theme = themeMode() === 'dark' ? 'light' : 'dark';
     saveUi();
     applyTheme();
   }
@@ -1063,6 +1084,9 @@
     saveUi,
     openDemo,
     applyTheme,
+    THEMES,
+    themeMode,
+    themeVariant,
     coursesOfYear,
     currentYear,
   };

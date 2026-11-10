@@ -538,6 +538,60 @@
             ['dark', 'Dunkel'],
           ].map(([v, l]) => h('option', { value: v, selected: (ui.theme || 'auto') === v }, l))
         )
+      ),
+      themeTiles('light', 'Helles Design'),
+      themeTiles('dark', 'Dunkles Design')
+    );
+  }
+
+  /**
+   * Vorschaukacheln der Designs eines Modus. Jede Kachel trägt data-theme/data-variant und zeigt so ihre eigenen Farben.
+   * Ein Klick wählt das Design; ist der Modus fest eingestellt, wechselt er mit, damit die Wahl sofort sichtbar ist.
+   */
+  function themeTiles(mode, label) {
+    const ui = NM.app.state.ui;
+    const cur = NM.app.themeVariant(mode);
+    return h(
+      'div',
+      { class: 'field' },
+      h('span', null, label),
+      h(
+        'div',
+        { class: 'theme-tiles', role: 'group', 'aria-label': label },
+        NM.app.THEMES[mode].map(([id, name]) =>
+          h(
+            'button',
+            {
+              type: 'button',
+              class: 'theme-tile',
+              'data-theme': mode,
+              'data-variant': id,
+              'data-theme-pick': mode + ':' + id,
+              'aria-pressed': String(id === cur),
+              title: `${label}: ${name}`,
+              onclick: () => {
+                ui[mode + 'Theme'] = id;
+                if (ui.theme === 'light' || ui.theme === 'dark') ui.theme = mode;
+                NM.app.saveUi();
+                NM.app.applyTheme();
+                NM.app.rerender();
+              },
+            },
+            h(
+              'span',
+              { class: 'theme-prev', 'aria-hidden': 'true' },
+              h('span', { class: 'theme-prev-line' }),
+              h('span', { class: 'theme-prev-line muted' }),
+              h(
+                'span',
+                { class: 'theme-prev-row' },
+                h('span', { class: 'theme-prev-accent' }),
+                [125, 62, 0].map((hue) => h('span', { class: 'theme-prev-grade', style: `--g-hue:${hue}` }))
+              )
+            ),
+            h('span', { class: 'theme-name' }, name)
+          )
+        )
       )
     );
   }

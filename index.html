@@ -6,40 +6,40 @@
   <title>OrdoNota</title>
   <meta name="description" content="OrdoNota – Notenverwaltung für Sek I und MSS (Rheinland-Pfalz) – lokal, verschlüsselt, mit Synology-Drive-Spiegelung.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%22-12%20-12%20224%20224%22%3E%3Crect%20x%3D%22-12%22%20y%3D%22-12%22%20width%3D%22224%22%20height%3D%22224%22%20rx%3D%2240%22%20fill%3D%22%23F3F4F6%22%2F%3E%3Cdefs%3E%3Cpath%20id%3D%22ring%22%20fill-rule%3D%22evenodd%22%20d%3D%22M26%2C100%20a74%2C76%200%201%2C0%20148%2C0%20a74%2C76%200%201%2C0%20-148%2C0%20Z%20M46%2C100%20a54%2C69%200%201%2C0%20108%2C0%20a54%2C69%200%201%2C0%20-108%2C0%20Z%22%2F%3E%3Cg%20id%3D%22nletter%22%3E%3Cpolygon%20points%3D%2262%2C8%2086%2C8%20140%2C192%20116%2C192%22%2F%3E%3Crect%20x%3D%2262%22%20y%3D%228%22%20width%3D%227%22%20height%3D%22184%22%2F%3E%3Crect%20x%3D%22133%22%20y%3D%228%22%20width%3D%227%22%20height%3D%22184%22%2F%3E%3Crect%20x%3D%2250%22%20y%3D%228%22%20width%3D%2240%22%20height%3D%225%22%2F%3E%3Crect%20x%3D%2250%22%20y%3D%22187%22%20width%3D%2231%22%20height%3D%225%22%2F%3E%3Crect%20x%3D%22120%22%20y%3D%228%22%20width%3D%2232%22%20height%3D%225%22%2F%3E%3C%2Fg%3E%3Cmask%20id%3D%22gapO%22%20maskUnits%3D%22userSpaceOnUse%22%20x%3D%220%22%20y%3D%220%22%20width%3D%22200%22%20height%3D%22200%22%3E%3Crect%20width%3D%22200%22%20height%3D%22200%22%20fill%3D%22%23fff%22%2F%3E%3Cg%20clip-path%3D%22url(%23topHalf)%22%3E%3Cuse%20href%3D%22%23nletter%22%20fill%3D%22%23000%22%20stroke%3D%22%23000%22%20stroke-width%3D%229%22%2F%3E%3C%2Fg%3E%3C%2Fmask%3E%3Cmask%20id%3D%22gapN%22%20maskUnits%3D%22userSpaceOnUse%22%20x%3D%220%22%20y%3D%220%22%20width%3D%22200%22%20height%3D%22200%22%3E%3Crect%20width%3D%22200%22%20height%3D%22200%22%20fill%3D%22%23fff%22%2F%3E%3Cg%20clip-path%3D%22url(%23bottomHalf)%22%3E%3Cuse%20href%3D%22%23ring%22%20fill%3D%22%23000%22%20stroke%3D%22%23000%22%20stroke-width%3D%229%22%2F%3E%3C%2Fg%3E%3C%2Fmask%3E%3CclipPath%20id%3D%22topHalf%22%3E%3Crect%20width%3D%22200%22%20height%3D%22100%22%2F%3E%3C%2FclipPath%3E%3CclipPath%20id%3D%22bottomHalf%22%3E%3Crect%20y%3D%22100%22%20width%3D%22200%22%20height%3D%22100%22%2F%3E%3C%2FclipPath%3E%3C%2Fdefs%3E%3Cg%20fill%3D%22%231F2937%22%3E%3Cuse%20href%3D%22%23ring%22%20mask%3D%22url(%23gapO)%22%2F%3E%3Cuse%20href%3D%22%23nletter%22%20mask%3D%22url(%23gapN)%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E">
-  <link rel="stylesheet" href="css/app.css?v=1.42.1">
+  <link rel="stylesheet" href="css/app.css?v=1.43.0">
 </head>
 <body>
   <div id="app">
     <noscript><p style="padding:24px">OrdoNota benötigt JavaScript.</p></noscript>
   </div>
   <!-- Reihenfolge wichtig: klassische Skripte, damit die App per Doppelklick (file://) läuft -->
-  <script src="js/util.js?v=1.42.1"></script>
-  <script src="js/logo.js?v=1.42.1"></script>
-  <script src="js/xlsx.js?v=1.42.1"></script>
-  <script src="js/grades.js?v=1.42.1"></script>
-  <script src="js/crypto.js?v=1.42.1"></script>
-  <script src="js/storage.js?v=1.42.1"></script>
-  <script src="js/model.js?v=1.42.1"></script>
-  <script src="js/moodle.js?v=1.42.1"></script>
-  <script src="js/qr.js?v=1.42.1"></script>
-  <script src="js/scripto.js?v=1.42.1"></script>
-  <script src="js/groups.js?v=1.42.1"></script>
-  <script src="js/random.js?v=1.42.1"></script>
-  <script src="js/draw.js?v=1.42.1"></script>
-  <script src="js/pomodoro.js?v=1.42.1"></script>
-  <script src="js/timer.js?v=1.42.1"></script>
-  <script src="js/ui.js?v=1.42.1"></script>
-  <script src="js/app.js?v=1.42.1"></script>
-  <script src="js/view-course.js?v=1.42.1"></script>
-  <script src="js/view-tests.js?v=1.42.1"></script>
-  <script src="js/view-epo.js?v=1.42.1"></script>
-  <script src="js/view-pres.js?v=1.42.1"></script>
-  <script src="js/view-overview.js?v=1.42.1"></script>
-  <script src="js/view-draw.js?v=1.42.1"></script>
-  <script src="js/view-random.js?v=1.42.1"></script>
-  <script src="js/view-groups.js?v=1.42.1"></script>
-  <script src="js/view-seating.js?v=1.42.1"></script>
-  <script src="js/view-settings.js?v=1.42.1"></script>
-  <script src="js/print.js?v=1.42.1"></script>
+  <script src="js/util.js?v=1.43.0"></script>
+  <script src="js/logo.js?v=1.43.0"></script>
+  <script src="js/xlsx.js?v=1.43.0"></script>
+  <script src="js/grades.js?v=1.43.0"></script>
+  <script src="js/crypto.js?v=1.43.0"></script>
+  <script src="js/storage.js?v=1.43.0"></script>
+  <script src="js/model.js?v=1.43.0"></script>
+  <script src="js/moodle.js?v=1.43.0"></script>
+  <script src="js/qr.js?v=1.43.0"></script>
+  <script src="js/scripto.js?v=1.43.0"></script>
+  <script src="js/groups.js?v=1.43.0"></script>
+  <script src="js/random.js?v=1.43.0"></script>
+  <script src="js/draw.js?v=1.43.0"></script>
+  <script src="js/pomodoro.js?v=1.43.0"></script>
+  <script src="js/timer.js?v=1.43.0"></script>
+  <script src="js/ui.js?v=1.43.0"></script>
+  <script src="js/app.js?v=1.43.0"></script>
+  <script src="js/view-course.js?v=1.43.0"></script>
+  <script src="js/view-tests.js?v=1.43.0"></script>
+  <script src="js/view-epo.js?v=1.43.0"></script>
+  <script src="js/view-pres.js?v=1.43.0"></script>
+  <script src="js/view-overview.js?v=1.43.0"></script>
+  <script src="js/view-draw.js?v=1.43.0"></script>
+  <script src="js/view-random.js?v=1.43.0"></script>
+  <script src="js/view-groups.js?v=1.43.0"></script>
+  <script src="js/view-seating.js?v=1.43.0"></script>
+  <script src="js/view-settings.js?v=1.43.0"></script>
+  <script src="js/print.js?v=1.43.0"></script>
 </body>
 </html>

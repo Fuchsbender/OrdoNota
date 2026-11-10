@@ -169,6 +169,49 @@ Umgesetzt wie unten beschrieben (Doku: `DOKUMENTATION.md` 7.9 und 26.4). Abweich
 
 OrdoScripto kann Trennblätter auch selbst als PDF erzeugen, für Nutzer ohne OrdoNota. Für OrdoNota ändert das nichts: Wer OrdoNota nutzt, erzeugt IDs und Trennblätter dort, weil nur OrdoNota die Namen kennt.
 
+## U) Farbschemata: je drei helle und drei dunkle Designs – umgesetzt in 1.43.0
+
+Wunsch des Nutzers: In den Einstellungen lassen sich drei helle und drei dunkle Designs auswählen.
+
+### Ausgangslage
+- Alle Farben der Oberfläche sind Tokens auf `:root` in `css/app.css`. Davon gibt es 24, etwa `--bg`, `--surface`, `--text`, `--muted`, `--accent`, `--ok`, `--danger`, `--warn` und die Notenfarben `--g-l`, `--g-s`, `--g-text`, `--bar-l`. Hart codiert sind nur Schatten, der Hintergrund von Dialogen und `#fff` auf Fotoknöpfen. Ein Design ist deshalb nur ein Satz Tokens, ein Umbau der Regeln ist nicht nötig.
+- Heute sind ein helles und ein dunkles Schema eingebaut. `ui.theme` kann `auto`, `light` oder `dark` sein und wird je Gerät im Browser-Speicher gespeichert. Ausgewählt wird es in Einstellungen → „Farbschema“, umgeschaltet über das Mond-Symbol in der Kopfzeile. Das Timer-Fenster übernimmt `data-theme`.
+- Ausdrucke sind immer schwarz auf weiß. Das bleibt so.
+
+### Die sechs Designs (Farbwelten, Entscheidung des Nutzers)
+| Hell | Farbwelt | Dunkel | Farbwelt |
+|---|---|---|---|
+| **Standard** | wie bisher, Petrol | **Standard** | wie bisher, Schiefer |
+| **Salbei** | leicht grünliches Grau, gedämpfter Salbeigrün-Akzent | **Nord** | kühles Blaugrau, Eisblau-Akzent |
+| **Lavendel** | zartes Fliederweiß, Lila-Akzent | **Aubergine** | dunkles Violett, helles Lila als Akzent |
+
+Für alle sechs gilt:
+- Text und `--muted` erreichen auf `--bg`, `--surface` und `--surface-2` mindestens ein Kontrastverhältnis von 4.5:1 (WCAG AA).
+- `--on-accent` auf `--accent` erreicht 4.5:1.
+- `--ok`, `--warn` und `--danger` bleiben grün, gelb und rot. Bei **Salbei** muss sich `--ok` vom Akzent abheben: Der Akzent wird graugrün und gedämpft, `--ok` bleibt ein sattes Grün, und Haken und Erfolgsmeldungen zeigen zusätzlich ihr Symbol.
+- Die Notenfarben (grün → rot, Farbton aus der Note) bleiben gleich. Je Design werden nur Helligkeit und Sättigung (`--g-l`, `--g-s`) und die Schriftfarbe (`--g-text`) angepasst.
+
+### Umsetzung
+- **Einstellung:** `ui.theme` bleibt der Modus (`auto`, `light`, `dark`). Neu sind `ui.lightTheme` und `ui.darkTheme`, Standardwert jeweils `standard`. Wie bisher wird die Einstellung je Gerät im Browser-Speicher abgelegt (siehe Frage 2). Die Datenbank ändert sich nicht, `migrate()` und `SCHEMA` bleiben unberührt.
+- **CSS:** `:root[data-theme='dark']` und `[data-theme='light']` bleiben die Standard-Designs. Die übrigen vier überschreiben nur die abweichenden Tokens, z. B. `:root[data-theme='light'][data-variant='salbei']`. Der bisherige `prefers-color-scheme`-Block bleibt als Rückfall, solange das Skript noch nicht gelaufen ist.
+- **JS:** `applyTheme()` (`js/app.js`) rechnet `auto` selbst in hell oder dunkel um (`matchMedia`, mit Listener für den Systemwechsel). Danach setzt es immer beide Attribute, `data-theme` und `data-variant`. Das Timer-Fenster (`view-random.js`) übernimmt beide.
+- **Kopfzeile:** Das Mond-Symbol wechselt weiter nur zwischen hell und dunkel und nimmt dabei jeweils das gewählte helle bzw. dunkle Design.
+- **Einstellungen:** Unter „Farbschema“ (Wie das System / Hell / Dunkel) kommen zwei Reihen mit je drei anklickbaren Vorschaukacheln, „Helles Design“ und „Dunkles Design“. Jede Kachel zeigt eine Mini-Ansicht aus Hintergrund, Fläche, Text, Akzent und einer grünen, gelben und roten Notenzelle. Die Auswahl wirkt sofort.
+- **Hart codierte Farben:** Die Schatten und den Hintergrund der Dialoge (`rgba(…)`) in Tokens (`--shadow-lg`, `--backdrop`) überführen, damit die dunklen Designs sie anpassen können.
+
+### Tests
+- Im End-to-End-Test (`run_tests.py`) wird für alle sechs Designs `data-theme`/`data-variant` gesetzt. Dann werden die berechneten Tokens ausgelesen und die Kontrastregeln oben geprüft, einschließlich `--g-text` auf den Notenfarben für die Noten 0, 5, 10 und 15.
+- Weitere Prüfungen: Die Auswahl in den Einstellungen bleibt nach dem Neuladen erhalten. `auto` folgt dem System (über die Emulation von `prefers-color-scheme` im Chrome-Protokoll). Das Mond-Symbol behält das gewählte Design. Das Timer-Fenster übernimmt das Design.
+
+### Doku und Version
+- Neue Funktion, daher Minor-Version **1.43.0**.
+- In `DOKUMENTATION.md` den Abschnitt Einstellungen ergänzen, dazu die Testliste 25.1 und die Einstiegspunkte in 26.4. In `README.md` einen Satz ergänzen.
+
+### Entscheidungen des Nutzers (10.11.2026)
+1. **Designs:** Farbwelten statt Kontrast- und OLED-Designs. Hell: Standard, Salbei, Lavendel. Dunkel: Standard, Nord, Aubergine.
+2. **Speicherort:** je Gerät im Browser-Speicher, wie das bisherige Farbschema.
+3. **Kopfzeile:** Das Mond-Symbol wechselt nur zwischen hell und dunkel, jeweils im gewählten Design.
+
 ## C) Gamification des Pomodoro-Timers (zurückgestellt, erst auf Nachfrage des Nutzers)
 
 **Vor Beginn die offenen Fragen unten mit dem Nutzer klären.** C ergänzt nur Felder → kein neues `SCHEMA`; `migrate()` und `tools/entschluesseln.py` (CSV-Ausgabe) mitziehen.

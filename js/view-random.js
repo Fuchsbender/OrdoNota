@@ -283,8 +283,10 @@
     d.open();
     d.write('<!doctype html><html lang="de"><head><meta charset="utf-8"><title>Timer – OrdoNota</title><link rel="stylesheet" href="' + css + '"></head><body class="tmr-popup"></body></html>');
     d.close();
-    const theme = document.documentElement.getAttribute('data-theme');
-    if (theme) d.documentElement.setAttribute('data-theme', theme);
+    for (const k of ['data-theme', 'data-variant']) {
+      const v = document.documentElement.getAttribute(k);
+      if (v) d.documentElement.setAttribute(k, v);
+    }
     const face = timerFace(d, opts().timerDesign);
     const btns = timerButtons(d);
     d.body.append(face.el, btns.el);
