@@ -266,11 +266,7 @@
                   e.target.classList.add('invalid');
                   return toast('Erlaubt: ++, +, 0, -, --, k – optional mit u oder h und m (z. B. „0u“, „+hm“).', 'error');
                 }
-                epo.entries[s.id] = epo.entries[s.id] || {};
-                const before = epo.entries[s.id][l.id];
-                if (G.epoCellEmpty(v)) delete epo.entries[s.id][l.id];
-                else epo.entries[s.id][l.id] = v;
-                NM.attendance.syncFromEpo(course, a, l, s.id, before, v);
+                setCell(course, a, l, s.id, v);
                 NM.app.commit();
               },
             })
@@ -298,7 +294,8 @@
               'span',
               { class: 'head-toggles' },
               toggleBtn(ui, 'epoQuick', ui.epoQuick ? '▾ Schnellwahl ausblenden' : '▸ Schnellwahl einblenden', 'Schaltflächen zum Bewerten der neuesten Stunde ein-/ausblenden'),
-              toggleBtn(ui, 'epoPhotos', ui.epoPhotos ? '▾ Fotos ausblenden' : '▸ Fotos einblenden', 'Schülerfotos vor dem Namen ein-/ausblenden (Fotos werden im Reiter „Sitzplan“ hinzugefügt)')
+              toggleBtn(ui, 'epoPhotos', ui.epoPhotos ? '▾ Fotos ausblenden' : '▸ Fotos einblenden', 'Schülerfotos vor dem Namen ein-/ausblenden (Fotos werden im Reiter „Sitzplan“ hinzugefügt)'),
+              h('button', { class: 'btn btn-sm', 'data-tiles-open': '', title: 'Kachelansicht für das Tablet: eine Kachel je Person nach Sitzplan, Tippen bewertet die Stunde', onclick: () => tilesView(course, a) }, '▦ Kacheln')
             )
           : null,
         h(
@@ -353,32 +350,175 @@
     return v;
   }
 
-  /** Schaltflächen zum Bewerten einer Stunde; erneuter Klick auf die aktive Auswahl hebt sie auf. */
-  function quickButtons(course, a, sid, lesson) {
+  /** Zelle einer Stunde setzen (leer → löschen) und die Fehlzeiten abgleichen; speichert nicht. */
+  function setCell(course, a, lesson, sid, v) {
     const epo = a.epo;
-    const lid = lesson.id;
-    const c = (epo.entries[sid] || {})[lid] || { r: '', hw: '' };
-    const set = (r, hw, m = c.m) => {
-      epo.entries[sid] = epo.entries[sid] || {};
-      const v = m ? { r, hw, m: 1 } : { r, hw };
-      if (G.epoCellEmpty(v)) delete epo.entries[sid][lid];
-      else epo.entries[sid][lid] = v;
-      NM.attendance.syncFromEpo(course, a, lesson, sid, c, v);
-      NM.app.commit();
+    epo.entries[sid] = epo.entries[sid] || {};
+    const before = epo.entries[sid][lesson.id];
+    if (G.epoCellEmpty(v)) delete epo.entries[sid][lesson.id];
+    else epo.entries[sid][lesson.id] = v;
+    NM.attendance.syncFromEpo(course, a, lesson, sid, before, v);
+  }
+
+  /**
+   * Schaltflächen zum Bewerten einer Stunde; erneuter Klick auf die aktive Auswahl hebt sie auf.
+   * onDone(kind) nach jeder Änderung (kind = 'r' für die Bewertung, sonst 'extra'); Standard: speichern.
+   */
+  function quickButtons(course, a, sid, lesson, { onDone = () => NM.app.commit(), big = false } = {}) {
+    const c = (a.epo.entries[sid] || {})[lesson.id] || { r: '', hw: '' };
+    const set = (r, hw, m, kind) => {
+      setCell(course, a, lesson, sid, m ? { r, hw, m: 1 } : { r, hw });
+      onDone(kind);
     };
-    const btn = (label, active, cls, title, onclick) =>
-      h('button', { class: 'quick-btn' + (active ? ' active ' + cls : ''), title, onclick }, label);
+    const btn = (label, active, cls, title, onclick, key) =>
+      h('button', { class: 'quick-btn' + (big ? ' quick-big' : '') + (active ? ' active ' + cls : ''), title, 'aria-pressed': String(!!active), 'data-quick': key, onclick }, label);
     return h(
       'span',
-      { class: 'quick-group' },
+      { class: 'quick-group' + (big ? ' quick-group-big' : '') },
       ['++', '+', '0', '-', '--', 'k'].map((r) =>
-        btn(r, c.r === r, 'r-' + ratingClass({ r }), r === 'k' ? 'abwesend' : 'Mitarbeit ' + r, () => set(c.r === r ? '' : r, c.hw || ''))
+        btn(r, c.r === r, 'r-' + ratingClass({ r }), r === 'k' ? 'abwesend' : 'Mitarbeit ' + r, () => set(c.r === r ? '' : r, c.hw || '', c.m, 'r'), r)
       ),
       h('span', { class: 'quick-sep' }),
-      btn('u', c.hw === 'u', 'hw', 'Hausaufgaben unvollständig', () => set(c.r || '', c.hw === 'u' ? '' : 'u')),
-      btn('h', c.hw === 'h', 'hw', 'Hausaufgaben vergessen', () => set(c.r || '', c.hw === 'h' ? '' : 'h')),
-      btn('m', !!c.m, 'hw', 'Material vergessen', () => set(c.r || '', c.hw || '', !c.m))
+      btn('u', c.hw === 'u', 'hw', 'Hausaufgaben unvollständig', () => set(c.r || '', c.hw === 'u' ? '' : 'u', c.m, 'extra'), 'u'),
+      btn('h', c.hw === 'h', 'hw', 'Hausaufgaben vergessen', () => set(c.r || '', c.hw === 'h' ? '' : 'h', c.m, 'extra'), 'h'),
+      btn('m', !!c.m, 'hw', 'Material vergessen', () => set(c.r || '', c.hw || '', !c.m, 'extra'), 'm')
     );
+  }
+
+  // ---------- Kachelansicht für das Tablet (seit 1.46) ----------
+
+  /**
+   * Vollbild mit einer Kachel je Person für eine Stunde, angeordnet nach dem Sitzplan (ohne Plätze alphabetisch).
+   * Tippen öffnet große Knöpfe wie die Schnellwahl. Zeigt Bewertungen – nicht für den Beamer.
+   */
+  function tilesView(course, a) {
+    const ui = NM.app.state.ui;
+    const lessons = sortedLessons(a.epo);
+    let lesson = lessons[lessons.length - 1];
+    let picked = null;
+    const plans = course.seatingPlans || [];
+    const title = h('h1', null);
+    const grid = h('div', { class: 'tiles-grid' });
+    const extra = h('div', { class: 'tiles-free' });
+    const sheet = h('div', { class: 'tiles-sheet', hidden: true });
+    const lessonSel = h(
+      'select',
+      { class: 'input', 'data-tiles-lesson': '', 'aria-label': 'Stunde', onchange: (e) => ((lesson = lessons.find((l) => l.id === e.target.value) || lesson), (picked = null), draw()) },
+      lessons.map((l) => h('option', { value: l.id, selected: l === lesson }, fmtDate(l.date) || '?'))
+    );
+    const roomSel =
+      plans.length > 1
+        ? h(
+            'select',
+            {
+              class: 'input',
+              'data-tiles-room': '',
+              'aria-label': 'Raum',
+              onchange: (e) => {
+                ui.seatingId = ui.seatingId || {};
+                ui.seatingId[course.id] = e.target.value;
+                NM.app.saveUi();
+                draw();
+              },
+            },
+            plans.map((p) => h('option', { value: p.id, selected: p.id === (ui.seatingId || {})[course.id] }, p.name))
+          )
+        : null;
+    const photoBtn = h('button', { class: 'btn grp-beamer-toggle' + (ui.epoPhotos ? ' active' : ''), 'aria-pressed': String(!!ui.epoPhotos), 'data-tiles-photos': '', title: 'Fotos ein-/ausblenden', onclick: () => ((ui.epoPhotos = !ui.epoPhotos), NM.app.saveUi(), draw()) }, '📷 Fotos');
+
+    const tile = (s, names) => {
+      const c = (a.epo.entries[s.id] || {})[lesson.id];
+      const extras = [c && c.hw, c && c.m ? 'm' : ''].filter(Boolean).join(' ');
+      return h(
+        'button',
+        {
+          class: 'tile r-' + ratingClass(c) + (picked === s.id ? ' tile-picked' : ''),
+          'data-tile': s.id,
+          'aria-label': `${M.studentName(s)}: ${G.epoCellText(c) || 'noch nicht bewertet'}`,
+          onclick: () => {
+            picked = picked === s.id ? null : s.id;
+            draw();
+          },
+        },
+        ui.epoPhotos ? h('img', { class: 'tile-photo' + (s.photo ? '' : ' seat-photo-empty'), src: s.photo || M.PERSON_ICON, alt: '' }) : null,
+        h('span', { class: 'tile-name' }, names[s.id]),
+        h('span', { class: 'tile-val' }, (c && c.r) || '·', extras ? h('small', null, ' ' + extras) : null)
+      );
+    };
+
+    const draw = () => {
+      title.replaceChildren(a.name, h('span', { class: 'muted' }, ' · ' + M.courseTitle(course)));
+      const { st, students, cells, unplaced } = NM.views.seating.layout(course);
+      const names = NM.views.seating.cardNames(students);
+      const byId = new Map(students.map((s) => [s.id, s]));
+      const seated = Object.keys(cells).length > 0;
+      grid.replaceChildren();
+      extra.replaceChildren();
+      grid.classList.toggle('tiles-room', seated);
+      if (seated) {
+        grid.style.gridTemplateColumns = `repeat(${st.cols}, minmax(0, 1fr))`;
+        const seatRows = `repeat(${st.rows}, minmax(76px, auto))`;
+        grid.style.gridTemplateRows = st.desk === 'top' ? `auto ${seatRows}` : `${seatRows} auto`;
+        const desk = h('div', { class: 'tiles-desk', style: `grid-column: 1 / -1` }, 'Lehrerpult');
+        if (st.desk === 'top') grid.appendChild(desk);
+        const off = st.desk === 'top' ? 2 : 1;
+        for (const [key, sid] of Object.entries(cells)) {
+          const [x, y] = key.split(',').map(Number);
+          const el = tile(byId.get(sid), names);
+          el.style.gridColumn = String(x + 1);
+          el.style.gridRow = String(y + off);
+          grid.appendChild(el);
+        }
+        if (st.desk === 'bottom') {
+          desk.style.gridRow = String(st.rows + 1);
+          grid.appendChild(desk);
+        }
+        if (unplaced.length) extra.append(h('span', { class: 'muted small' }, 'Ohne Platz: '), ...unplaced.map((s) => tile(s, names)));
+      } else {
+        grid.style.gridTemplateColumns = '';
+        grid.style.gridTemplateRows = '';
+        grid.append(...M.sortStudents(students).map((s) => tile(s, names)));
+      }
+      extra.hidden = !extra.childNodes.length;
+      // Bewertungsknöpfe der gewählten Person
+      const ps = picked && byId.get(picked);
+      sheet.hidden = !ps;
+      sheet.replaceChildren();
+      if (ps)
+        sheet.append(
+          h('div', { class: 'tiles-sheet-head' }, h('strong', null, M.studentName(ps)), h('button', { class: 'btn', 'data-tiles-sheet-close': '', onclick: () => ((picked = null), draw()) }, '✕')),
+          quickButtons(course, a, ps.id, lesson, {
+            big: true,
+            onDone: (kind) => {
+              NM.app.commit();
+              if (kind === 'r') picked = null; // Bewertung gewählt → zurück zur Übersicht
+              draw();
+            },
+          })
+        );
+    };
+    const close = () => {
+      document.removeEventListener('keydown', onKey);
+      overlay.remove();
+    };
+    const onKey = (e) => {
+      if (e.key !== 'Escape') return;
+      if (picked) {
+        picked = null;
+        draw();
+      } else close();
+    };
+    const overlay = h(
+      'div',
+      { class: 'beamer grp-beamer epo-tiles', role: 'dialog', 'aria-label': 'Kachelansicht' },
+      h('div', { class: 'grp-beamer-head' }, title, h('div', { class: 'grp-beamer-bar' }, lessonSel, roomSel, photoBtn, h('button', { class: 'btn', 'data-tiles-close': '', onclick: close, title: 'Schließen (Esc)' }, '✕ Schließen'))),
+      grid,
+      extra,
+      sheet
+    );
+    document.body.appendChild(overlay);
+    document.addEventListener('keydown', onKey);
+    draw();
   }
 
   function ratingClass(c) {
@@ -515,5 +655,5 @@
     );
   }
 
-  NM.views.epo = { render };
+  NM.views.epo = { render, tilesView };
 })((globalThis.NM = globalThis.NM || {}));

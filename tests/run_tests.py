@@ -528,6 +528,79 @@ def run_attendance_check(br, base):
            and not br.errors, str(res) + "; ".join(br.errors))
 
 
+def run_epo_tiles_check(br, base):
+    """EPO-Kachelansicht (Tablet): nach Sitzplan bzw. alphabetisch, Tippen bewertet, Zusätze, k → Fehlzeit, Esc, Touch-Größen."""
+    br.open(f"{base}/index.html?demo")
+    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.errors = []
+    br.call("Emulation.setTouchEmulationEnabled", enabled=True, maxTouchPoints=5)
+
+    def tap(selector):
+        r = br.eval("(() => { const el = document.querySelector(%s); if (!el) return null; const b = el.getBoundingClientRect(); return [b.left + b.width / 2, b.top + b.height / 2]; })()" % json.dumps(selector))
+        if not r:
+            return False
+        br.call("Input.dispatchTouchEvent", type="touchStart", touchPoints=[{"x": r[0], "y": r[1]}])
+        br.call("Input.dispatchTouchEvent", type="touchEnd", touchPoints=[])
+        br.eval("new Promise((r) => setTimeout(r, 250))")
+        return True
+
+    setup = br.eval("""(async () => {
+        const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
+        const c = NM.app.db().courses[0], M = NM.model;
+        const ids = M.activeStudents(c).map((s) => s.id);
+        c.seatingPlans = [{ id: 'r1', name: 'Raum 1', cols: 6, rows: 3, desk: 'top', pos: {} }];
+        ids.slice(0, ids.length - 1).forEach((id, i) => (c.seatingPlans[0].pos[id] = { x: i % 5, y: Math.floor(i / 5) }));
+        NM.app.state.ui.seatingId = { [c.id]: 'r1' };
+        NM.app.select({ courseId: c.id, tab: 'epo' }); await wait();
+        document.querySelector('[data-tiles-open]').click(); await wait();
+        const half = NM.app.currentHalf(c);
+        const blocks = c.assessments.filter((x) => x.kind === 'epo' && x.half === half);
+        const a = blocks.find((x) => x.id === (NM.app.state.ui.epoId || {})[c.id]) || blocks[blocks.length - 1];
+        window.__t = { c, a, l: a.epo.lessons.slice().sort((x, y) => (x.date || '').localeCompare(y.date || '')).pop(), ids };
+        const tiles = [...document.querySelectorAll('.tiles-grid [data-tile]')];
+        const t0 = document.querySelector('[data-tile="' + ids[6] + '"]');
+        return { overlay: !!document.querySelector('.epo-tiles'), tiles: tiles.length, free: document.querySelectorAll('.tiles-free [data-tile]').length,
+                 pos: [t0.style.gridColumn, t0.style.gridRow], desk: !!document.querySelector('.tiles-desk'),
+                 minH: Math.min(...tiles.map((t) => t.getBoundingClientRect().height)) }; })()""")
+    sid = br.eval("window.__t.ids[2]")
+    tap(f'[data-tile="{sid}"]')
+    s1 = br.eval("""(() => { const sh = document.querySelector('.tiles-sheet');
+        const btns = [...sh.querySelectorAll('.quick-btn')];
+        return { open: !sh.hidden, n: btns.length, minBtn: Math.min(...btns.map((b) => Math.min(b.getBoundingClientRect().width, b.getBoundingClientRect().height))) }; })()""")
+    tap('.tiles-sheet [data-quick="+"]')
+    s2 = br.eval("""(() => { const { a, l, ids } = window.__t; const e = (a.epo.entries[ids[2]] || {})[l.id];
+        return { r: e && e.r, closed: document.querySelector('.tiles-sheet').hidden, cls: document.querySelector('[data-tile="' + ids[2] + '"]').classList.contains('r-p') }; })()""")
+    tap(f'[data-tile="{sid}"]')
+    tap('.tiles-sheet [data-quick="m"]')
+    tap('.tiles-sheet [data-quick="k"]')
+    s3 = br.eval("""(() => { const { c, a, l, ids } = window.__t; const e = a.epo.entries[ids[2]][l.id];
+        return { cell: NM.grades.epoCellText(e), att: NM.attendance.get(c, l.date, ids[2]), text: document.querySelector('[data-tile="' + ids[2] + '"]').textContent }; })()""")
+    s4 = br.eval("""(async () => { const wait = (ms = 150) => new Promise((r) => setTimeout(r, ms));
+        const { c, ids } = window.__t;
+        document.querySelector('[data-tile="' + ids[0] + '"]').click(); await wait();
+        const esc = () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+        esc(); await wait();
+        const sheetClosed = document.querySelector('.tiles-sheet').hidden && !!document.querySelector('.epo-tiles');
+        esc(); await wait();
+        const gone = !document.querySelector('.epo-tiles');
+        // ohne Sitzplätze: alphabetisch
+        c.seatingPlans[0].pos = {};
+        document.querySelector('[data-tiles-open]').click(); await wait();
+        const order = [...document.querySelectorAll('.tiles-grid [data-tile]')].map((t) => t.dataset.tile);
+        const alpha = JSON.stringify(order) === JSON.stringify(NM.model.sortStudents(NM.model.activeStudents(c)).map((s) => s.id)) && !document.querySelector('.tiles-desk');
+        document.querySelector('[data-tiles-close]').click(); await wait();
+        NM.app.state.dirty = false;
+        return { sheetClosed, gone, alpha, closed: !document.querySelector('.epo-tiles') }; })()""")
+    br.call("Emulation.setTouchEmulationEnabled", enabled=False)
+    ok = (bool(setup) and setup["overlay"] and setup["tiles"] == 11 and setup["free"] == 1 and setup["pos"] == ["2", "3"] and setup["desk"] and setup["minH"] >= 44
+          and s1["open"] and s1["n"] == 9 and s1["minBtn"] >= 44
+          and s2["r"] == "+" and s2["closed"] and s2["cls"]
+          and s3["cell"] == "km" and s3["att"] == "a" and "k" in s3["text"]
+          and all(s4.values()))
+    report("EPO-Kacheln (Touch): nach Sitzplan mit Pult und „Ohne Platz“, Tippen bewertet, m und k (Fehlzeit), Esc, alphabetisch ohne Plätze, Touch-Größen ≥ 44 px",
+           ok and not br.errors, str([setup, s1, s2, s3, s4]) + "; ".join(br.errors))
+
+
 def run_draw_check(br, base):
     print("Ziehen (Pool, Auffüllen, Noten, Rückgängig):")
     br.open(f"{base}/index.html?demo")
@@ -2497,6 +2570,7 @@ def main():
         run_course_check(br, base)
         run_epo_material_check(br, base)
         run_attendance_check(br, base)
+        run_epo_tiles_check(br, base)
         run_draw_check(br, base)
         run_draw_pools_check(br, base)
         run_random_check(br, base)

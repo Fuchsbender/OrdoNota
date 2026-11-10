@@ -233,7 +233,7 @@ Schon vorhanden und Grundlage für alle drei: die Schnellwahl im EPO-Reiter (neu
 - `migrate()`: `attendance` = `{}`; `check()` prüft die Werte. Notfallwerkzeug: Fehlzeiten in der CSV.
 - Tests: neues `attendance.test.html` bzw. in `model.test.html` (Summen, Sync mit EPO, Migration), E2E (Karte, Heute abwesend bleibt nach Neuladen, EPO-k).
 
-### X) Kachelansicht für das Tablet (1.46.0)
+### X) Kachelansicht für das Tablet – umgesetzt in 1.46.0
 - Im EPO-Block Knopf „▦ Kacheln“: Vollbild-Ansicht für die neueste Stunde (Stunde wählbar). Je Person eine große Kachel mit Foto, Vorname und Nachname und der aktuellen Bewertung als Farbe.
 - Anordnung nach Sitzplan: Raum = der im Reiter „Sitzplan“ gewählte (`ui.seatingId`), umschaltbar; wer im Raum keinen Platz hat, steht unten in einer Reihe. Ohne Sitzplan alphabetisch im Raster.
 - Tippen auf eine Kachel öffnet große Knöpfe ++ + 0 - -- k und u/h/m (wie die Schnellwahl, gleiche Logik, erneutes Tippen hebt auf). Abwesende aus W sind vorbelegt mit k.

@@ -713,6 +713,27 @@ body.no-grade-colors .r-pp, body.no-grade-colors .r-p, body.no-grade-colors .r-z
 .att-cell.att-a { background: var(--warn-soft); border-color: var(--warn); color: var(--text); }
 .att-cell.att-e { background: var(--ok-soft); border-color: var(--ok); color: var(--text); }
 .att-cell.att-u { background: var(--danger-soft); border-color: var(--danger); color: var(--text); }
+/* Kachelansicht für das Tablet (seit 1.46): eine Kachel je Person, Touch-Ziele ≥ 44 px */
+.epo-tiles { font-size: 16px; }
+.epo-tiles .grp-beamer-bar .input { width: auto; font-size: 16px; min-height: 44px; }
+.epo-tiles .grp-beamer-bar .btn { min-height: 44px; }
+.tiles-grid { flex: 1; min-height: 0; overflow: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; align-content: start; padding: 5px; }
+.tiles-desk { text-align: center; padding: 6px; border: 1px dashed var(--border-strong); border-radius: var(--radius-sm); color: var(--muted); font-size: 14px; }
+.tile { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 76px; min-width: 0; padding: 6px 4px; border: 2px solid var(--border-strong); border-radius: 12px; color: var(--text); font: inherit; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.tile.r-none { background: var(--surface); }
+.tile.r-pp, .tile.r-p, .tile.r-z, .tile.r-m, .tile.r-mm { color: var(--g-text); border-color: transparent; }
+.tile.r-k { background: var(--surface-2); color: var(--muted); border-style: dashed; }
+.tile.tile-picked { outline: 3px solid var(--accent); outline-offset: 2px; }
+.tile-photo { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; }
+.tile-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; font-size: 15px; }
+.tile-val { font-size: 20px; font-weight: 700; line-height: 1.1; }
+.tile-val small { font-size: 13px; font-weight: 600; }
+.tiles-free { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+.tiles-free .tile { width: 130px; }
+.tiles-sheet { position: fixed; left: 50%; bottom: 3vh; transform: translateX(-50%); z-index: 101; max-width: calc(100vw - 32px); padding: 12px 14px; border: 1px solid var(--border-strong); border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-lg); }
+.tiles-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.quick-group-big { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.quick-btn.quick-big { min-width: 52px; height: 52px; font-size: 20px; border-radius: 10px; }
 .quick-sep { width: 1px; height: 18px; margin: 0 4px; background: var(--border-strong); }
 
 /* ---------- Dialoge & Toasts ---------- */
