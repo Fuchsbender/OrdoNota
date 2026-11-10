@@ -4,6 +4,10 @@ Notenverwaltung für Sek I und MSS (Rheinland-Pfalz) mit Sitzplänen. Läuft lok
 
 **Ausführliche Anleitung, alle Rechenregeln und technische Details: [DOKUMENTATION.md](DOKUMENTATION.md)**
 
+## Über das Projekt
+
+Ich bin Lehrer für Mathematik, Chemie und Informatik. Mit Hilfe von KI schreibe ich Apps, die mir die Arbeit im Unterricht erleichtern. OrdoNota ist eine davon. Ich stelle diese Apps anderen Lehrkräften zur eigenen Nutzung zur Verfügung.
+
 ## Starten
 
 1. `index.html` per Doppelklick in **Chrome, Edge, Brave oder Thorium** öffnen (Firefox/Safari können nicht direkt in Ordner schreiben).
