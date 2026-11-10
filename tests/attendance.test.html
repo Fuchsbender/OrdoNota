@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="de">
+<head><meta charset="utf-8"><title>Tests Fehlzeiten</title></head>
+<body>
+<pre id="out"></pre>
+<script src="../js/util.js"></script>
+<script src="../js/grades.js"></script>
+<script src="../js/attendance.js"></script>
+<script src="../js/model.js"></script>
+<script>
+  const A = NM.attendance, M = NM.model;
+  const lines = [];
+  let fails = 0;
+  const eq = (name, actual, expected) => {
+    const ok = JSON.stringify(actual) === JSON.stringify(expected);
+    if (!ok) fails++;
+    lines.push((ok ? 'OK   ' : 'FAIL ') + name + (ok ? '' : '  → erhalten ' + JSON.stringify(actual) + ', erwartet ' + JSON.stringify(expected)));
+  };
+  const course = (jahrgang = 7) => {
+    const c = M.newCourse('y', { klasse: '7a', fach: 'M', jahrgang, type: jahrgang >= 11 ? 'lk' : 'sek1' });
+    c.students = M.parseNames('A, a\nB, b\nC, c');
+    return c;
+  };
+  const epoBlock = (c, half, dates) => {
+    const a = M.newEpo(c, half, M.newDb().settings);
+    a.epo.lessons = dates.map((d, i) => ({ id: 'l' + i, date: d }));
+    a.epo.entries = a.epo.entries || {};
+    c.assessments.push(a);
+    return a;
+  };
+
+  try {
+    // Grundlagen
+    let c = course();
+    const [s1, s2, s3] = c.students.map((s) => s.id);
+    eq('Neuer Kurs: leere Fehlzeiten', c.attendance, {});
+    eq('Halbjahr aus Datum (Sek I)', [A.halfOfDate(['HJ1', 'HJ2'], '2026-09-14'), A.halfOfDate(['HJ1', 'HJ2'], '2027-01-31'), A.halfOfDate(['HJ1', 'HJ2'], '2027-02-01'), A.halfOfDate(['HJ1', 'HJ2'], '2027-07-20')], ['HJ1', 'HJ1', 'HJ2', 'HJ2']);
+    eq('Halbjahr mit nur einem Halbjahr', A.halfOfDate(['13'], '2027-03-01'), '13');
+    eq('Reihum: – a e u –', ['', 'a', 'e', 'u'].map(A.cycle), ['a', 'e', 'u', '']);
+    A.set(c, '2026-09-14', s1, 'a');
+    A.set(c, '2026-09-14', s2, 'e');
+    A.setHours(c, '2026-09-14', 2);
+    A.set(c, '2026-09-21', s1, 'u');
+    A.set(c, '2027-03-01', s1, 'e');
+    eq('Tag mit Halbjahr und Stunden', c.attendance['2026-09-14'], { half: 'HJ1', hours: 2, abs: { [s1]: 'a', [s2]: 'e' } });
+    eq('Tage je Halbjahr sortiert', [A.dates(c, 'HJ1'), A.dates(c, 'HJ2')], [['2026-09-14', '2026-09-21'], ['2027-03-01']]);
+    eq('Summen in Unterrichtsstunden', A.totals(c, 'HJ1', s1), { days: 2, hours: 3, a: 2, e: 0, u: 1 });
+    eq('Summen andere Person / ohne Fehlzeit', [A.totals(c, 'HJ1', s2), A.totals(c, 'HJ1', s3)], [{ days: 1, hours: 2, a: 0, e: 2, u: 0 }, { days: 0, hours: 0, a: 0, e: 0, u: 0 }]);
+    eq('Abwesende eines Datums', [...A.awaySet(c, '2026-09-14')].sort(), [s1, s2].sort());
+    A.set(c, '2026-09-14', s2, '');
+    eq('Eintrag entfernen, Tag bleibt', [Object.keys(c.attendance['2026-09-14'].abs), !!c.attendance['2026-09-14']], [[s1], true]);
+    eq('hasData', [A.hasData(c, 'HJ1'), A.hasData(c, 'HJ2'), A.hasData(course(), 'HJ1')], [true, true, false]);
+
+    // EPO-Abgleich
+    c = course();
+    const [p1, p2] = c.students.map((s) => s.id);
+    const a = epoBlock(c, 'HJ1', ['2026-09-14', '2026-09-14', '2026-09-21']);
+    const [l0, l1, l2] = a.epo.lessons;
+    a.epo.entries[p1] = { [l0.id]: { r: 'k', hw: '' } };
+    A.syncFromEpo(c, a, l0, p1, undefined, a.epo.entries[p1][l0.id]);
+    eq('EPO k → abwesend (a) im Halbjahr des Blocks', [A.get(c, '2026-09-14', p1), c.attendance['2026-09-14'].half], ['a', 'HJ1']);
+    A.set(c, '2026-09-14', p1, 'e');
+    A.syncToEpo(c, '2026-09-14', p1);
+    eq('Fehlzeit → k in allen EPO-Stunden des Tages', [a.epo.entries[p1][l0.id].r, a.epo.entries[p1][l1.id].r, a.epo.entries[p1][l2.id]], ['k', 'k', undefined]);
+    // k gelöscht: e bleibt (bewusst eingetragen)
+    const before = a.epo.entries[p1][l0.id];
+    delete a.epo.entries[p1][l0.id];
+    A.syncFromEpo(c, a, l0, p1, before, undefined);
+    eq('k gelöscht: entschuldigt bleibt', A.get(c, '2026-09-14', p1), 'e');
+    // k durch Bewertung ersetzt: Person war da → Fehlzeit und k der anderen Stunde weg
+    const b2 = a.epo.entries[p1][l1.id];
+    a.epo.entries[p1][l1.id] = { r: '+', hw: '' };
+    A.syncFromEpo(c, a, l1, p1, b2, a.epo.entries[p1][l1.id]);
+    eq('k → + : Fehlzeit entfällt', A.get(c, '2026-09-14', p1), '');
+    // offenes a verschwindet mit dem k
+    a.epo.entries[p2] = { [l2.id]: { r: 'k', hw: 'h' } };
+    A.syncFromEpo(c, a, l2, p2, undefined, a.epo.entries[p2][l2.id]);
+    const b3 = a.epo.entries[p2][l2.id];
+    a.epo.entries[p2][l2.id] = { r: '', hw: 'h' };
+    A.syncFromEpo(c, a, l2, p2, b3, a.epo.entries[p2][l2.id]);
+    eq('k entfernt: offenes a verschwindet', A.get(c, '2026-09-21', p2), '');
+    // setAbsent (Heute abwesend) mit Zusätzen
+    a.epo.entries[p2][l2.id] = { r: '', hw: 'u', m: 1 };
+    A.setAbsent(c, '2026-09-21', p2, true);
+    eq('Heute abwesend: leere Bewertung wird k, Zusätze bleiben', [A.get(c, '2026-09-21', p2), a.epo.entries[p2][l2.id]], ['a', { r: 'k', hw: 'u', m: 1 }]);
+    A.setAbsent(c, '2026-09-21', p2, false);
+    eq('Heute anwesend: k weg, Zusätze bleiben', [A.get(c, '2026-09-21', p2), a.epo.entries[p2][l2.id]], ['', { r: '', hw: 'u', m: 1 }]);
+    A.setAbsent(c, '2026-09-21', p2, true);
+    A.set(c, '2026-09-21', p2, 'u');
+    A.setAbsent(c, '2026-09-21', p2, true);
+    eq('Heute abwesend überschreibt e/u nicht', A.get(c, '2026-09-21', p2), 'u');
+    // Tag löschen nimmt die k mit (sonst käme der Tag beim Laden zurück)
+    A.removeDay(c, '2026-09-21');
+    eq('Tag löschen: k der EPO-Stunde entfernt', [c.attendance['2026-09-21'], a.epo.entries[p2][l2.id].r], [undefined, '']);
+
+    // Migration: k aus EPO übernehmen, ungültige Werte entfernen, idempotent
+    c = course();
+    const [q1, q2] = c.students.map((s) => s.id);
+    const e2 = epoBlock(c, 'HJ2', ['2027-03-01']);
+    e2.epo.entries[q1] = { [e2.epo.lessons[0].id]: { r: 'k', hw: '' } };
+    c.attendance = { '2027-03-08': { half: 'XX', hours: 'zwei', abs: { [q1]: 'e', [q2]: 'x' } }, kaputt: { abs: {} }, '2027-03-15': null };
+    const db = { schema: 4, settings: {}, years: [{ id: 'y' }], courses: [c] };
+    M.migrate(db);
+    eq('Migration: k → a, ungültige Tage/Werte weg, Halbjahr aus Datum, Stunden ≥ 1',
+      [Object.keys(c.attendance).sort(), A.get(c, '2027-03-01', q1), c.attendance['2027-03-08'], c.attendance['2027-03-01'].half],
+      [['2027-03-01', '2027-03-08'], 'a', { half: 'HJ2', hours: 1, abs: { [q1]: 'e' } }, 'HJ2']);
+    const snap = JSON.stringify(c.attendance);
+    M.migrate(db);
+    eq('Migration ist idempotent', JSON.stringify(c.attendance), snap);
+    const old = { schema: 4, settings: {}, years: [{ id: 'y' }], courses: [{ id: 'k', jahrgang: 9, students: [], assessments: [] }] };
+    M.migrate(old);
+    eq('Migration: alter Kurs bekommt leere Fehlzeiten', old.courses[0].attendance, {});
+
+    // Jahrgang ändern: Halbjahre der Fehlzeiten wandern mit
+    c = course(10);
+    A.set(c, '2026-09-14', c.students[0].id, 'a');
+    A.set(c, '2027-03-01', c.students[0].id, 'u');
+    M.setJahrgang(c, 11, null);
+    eq('Jahrgang 10 → 11: Fehlzeiten auf 11/1 und 11/2', [c.attendance['2026-09-14'].half, c.attendance['2027-03-01'].half], G_halves(c));
+  } catch (e) {
+    fails++;
+    lines.push('FAIL Ausnahme: ' + (e && e.stack ? e.stack : e));
+  }
+  function G_halves(c) {
+    return NM.grades.halvesFor(c).slice(0, 2);
+  }
+
+  document.getElementById('out').textContent = (fails ? fails + ' FEHLGESCHLAGEN' : 'ALLE TESTS BESTANDEN') + '\n\n' + lines.join('\n');
+</script>
+</body>
+</html>

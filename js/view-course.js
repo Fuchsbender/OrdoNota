@@ -10,6 +10,7 @@
     view.append(
       h('div', { class: 'view-head' }, h('h1', null, M.courseTitle(course)), h('span', { class: 'pill' }, G.courseLevel(course) === 'mss' ? 'MSS · Punkte 00–15' : 'Sek I · Noten 1–6')),
       h('div', { class: 'grid-2' }, courseCard(course), studentsCard(course)),
+      attendanceCard(course),
       tabsCard(course, db),
       dangerCard(course, db)
     );
@@ -372,6 +373,138 @@
   }
 
   /** Reiter dieses Kurses: Abweichungen vom Standard (Einstellungen) in course.tabs. */
+  // ---------- Fehlzeiten (seit 1.45) ----------
+
+  const ABS_TEXT = { '': '', a: 'A', e: 'E', u: 'U' };
+
+  /** Karte „Fehlzeiten“: Tage des Halbjahres als Spalten, je Person a/e/u per Klick reihum, Summen je Person. */
+  function attendanceCard(course) {
+    const A = NM.attendance;
+    const { fmtDateShort, todayISO } = NM.util;
+    const half = NM.app.currentHalf(course);
+    const days = A.dates(course, half);
+    const students = M.activeStudents(course);
+    const tot = new Map(students.map((s) => [s.id, A.totals(course, half, s.id)]));
+    const sort = UI.sorter('attendance', {
+      hours: { get: (s) => tot.get(s.id).hours, first: 'desc' },
+      e: { get: (s) => tot.get(s.id).e, first: 'desc' },
+      u: { get: (s) => tot.get(s.id).u, first: 'desc' },
+      a: { get: (s) => tot.get(s.id).a, first: 'desc' },
+    });
+    const head = h(
+      'tr',
+      null,
+      sort.nameHeads(),
+      days.map((d) =>
+        h(
+          'th',
+          { class: 'center att-day' },
+          h('button', { class: 'link', title: 'Stunden ändern / Tag löschen', 'data-att-day': d, onclick: () => editDay(course, d) }, fmtDateShort(d)),
+          h('span', { class: 'tiny muted' }, A.hoursOf(course.attendance[d]) + ' Std.')
+        )
+      ),
+      h('th', { class: 'num' }, sort.head('hours', 'Σ', 'Fehlstunden gesamt – sortieren')),
+      h('th', { class: 'num' }, sort.head('e', 'E', 'davon entschuldigt – sortieren')),
+      h('th', { class: 'num' }, sort.head('u', 'U', 'davon unentschuldigt – sortieren')),
+      h('th', { class: 'num' }, sort.head('a', 'offen', 'Entschuldigung noch offen – sortieren'))
+    );
+    const rows = sort.rows(students).map((s) => {
+      const t = tot.get(s.id);
+      return h(
+        'tr',
+        null,
+        UI.nameCells(s),
+        days.map((d) => {
+          const v = A.get(course, d, s.id);
+          return h(
+            'td',
+            { class: 'center' },
+            h(
+              'button',
+              {
+                class: 'att-cell att-' + (v || 'none'),
+                'data-att': `${s.id}|${d}`,
+                title: (v ? A.LABELS[v] : 'anwesend') + ' – klicken: abwesend → entschuldigt → unentschuldigt → anwesend',
+                'aria-label': `${M.studentName(s)} am ${fmtDateShort(d)}: ${v ? A.LABELS[v] : 'anwesend'}`,
+                onclick: () => {
+                  A.set(course, d, s.id, A.cycle(v), half);
+                  A.syncToEpo(course, d, s.id);
+                  NM.app.commit();
+                },
+              },
+              ABS_TEXT[v]
+            )
+          );
+        }),
+        h('td', { class: 'num strong' }, t.hours || ''),
+        h('td', { class: 'num muted' }, t.e || ''),
+        h('td', { class: 'num muted' }, t.u || ''),
+        h('td', { class: 'num muted' + (t.a ? ' warn-text' : '') }, t.a || '')
+      );
+    });
+    return h(
+      'div',
+      { class: 'card att-card' },
+      h(
+        'div',
+        { class: 'card-head' },
+        h('h2', null, 'Fehlzeiten'),
+        UI.halfSwitch(course, false),
+        h('div', { class: 'spacer' }),
+        h('button', { class: 'btn btn-sm', 'data-att-add': '', onclick: () => addDay(course, half) }, '+ Tag'),
+        days.length ? UI.printButton('Drucken: Fehlzeiten', [{ id: 'attendance', icon: '🗓️', label: `Fehlzeiten ${half}`, group: 'teacher', tip: 'Alle Tage des Halbjahres mit A/E/U je Person und den Summen.', run: () => NM.print.attendance(course, half) }]) : null
+      ),
+      days.length && students.length
+        ? h('div', { class: 'table-wrap', 'data-scroll-key': 'att-grid' }, h('table', { class: 'table grid-table att-table' }, h('thead', null, head), h('tbody', null, rows)))
+        : h('p', { class: 'muted' }, students.length ? `Noch keine Fehlzeiten in ${half}. „+ Tag“ legt einen Unterrichtstag an; „Heute abwesend“ (Ziehen, Gruppen) und k in einer EPO-Stunde tragen automatisch ein.` : 'Bitte zuerst Namen eintragen.'),
+      h('p', { class: 'muted small' }, 'A = abwesend (Entschuldigung offen) · E = entschuldigt · U = unentschuldigt. Gezählt wird in Unterrichtsstunden (Stundenzahl je Tag unter dem Datum). ', `Heute (${fmtDateShort(todayISO())}) Abwesende erscheinen auch bei „Heute abwesend“ und als k in EPO-Stunden dieses Tages.`)
+    );
+  }
+
+  async function addDay(course, half) {
+    const { todayISO, fmtDate } = NM.util;
+    const date = h('input', { class: 'input', type: 'date', value: todayISO(), 'data-att-date': '' });
+    const hours = h('input', { class: 'input', type: 'number', min: 1, max: 10, value: 1, 'data-att-hours': '' });
+    const v = await modal({
+      title: 'Unterrichtstag hinzufügen',
+      body: h('div', { class: 'form-row' }, field('Datum', date), field('Stunden', hours, 'narrow')),
+      buttons: [
+        { label: 'Abbrechen', value: null },
+        { label: 'Hinzufügen', value: 'ok', kind: 'primary' },
+      ],
+    });
+    if (v !== 'ok') return;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date.value)) return toast('Bitte ein Datum wählen.', 'error');
+    const exists = !!(course.attendance || {})[date.value];
+    NM.attendance.setHours(course, date.value, parseNum(hours.value) || 1, half);
+    // k aus EPO-Stunden dieses Datums übernehmen
+    NM.attendance.fromEpo(course);
+    NM.app.commit();
+    if (exists) toast(`Den ${fmtDate(date.value)} gab es schon – Stundenzahl übernommen.`, 'info');
+  }
+
+  async function editDay(course, d) {
+    const { fmtDate } = NM.util;
+    const hours = h('input', { class: 'input', type: 'number', min: 1, max: 10, value: NM.attendance.hoursOf(course.attendance[d]) });
+    const v = await modal({
+      title: 'Unterrichtstag ' + fmtDate(d),
+      body: field('Unterrichtsstunden an diesem Tag', hours),
+      buttons: [
+        { label: 'Abbrechen', value: null },
+        { label: 'Tag löschen', value: 'delete', kind: 'danger' },
+        { label: 'Übernehmen', value: 'ok', kind: 'primary' },
+      ],
+    });
+    if (v === 'ok') {
+      NM.attendance.setHours(course, d, parseNum(hours.value) || 1);
+      NM.app.commit();
+    } else if (v === 'delete') {
+      if (!(await confirmDialog('Tag löschen?', `Den ${fmtDate(d)} mit allen Fehlzeiten löschen? Ein k in EPO-Stunden dieses Tages wird ebenfalls entfernt.`, { okLabel: 'Löschen', danger: true }))) return;
+      NM.attendance.removeDay(course, d);
+      NM.app.commit();
+    }
+  }
+
   function tabsCard(course, db) {
     const def = db.settings.tabs;
     const own = course.tabs && Object.keys(course.tabs).length;

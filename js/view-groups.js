@@ -646,7 +646,7 @@
       'details',
       { class: 'card pool-card grp-away' },
       h('summary', null, h('h2', null, 'Heute abwesend'), h('span', { class: 'muted small' }, away.size ? ` ${away.size} · ` + students.filter((s) => away.has(s.id)).map(fullName).join(', ') : ' niemand')),
-      h('p', { class: 'muted small' }, 'Abwesende werden beim Würfeln ausgelassen. Gilt nur bis zum Neuladen, gemeinsam mit dem Reiter „Ziehen“.'),
+      h('p', { class: 'muted small' }, 'Abwesende werden beim Würfeln ausgelassen. Wird als Fehlzeit von heute gespeichert, gemeinsam mit dem Reiter „Ziehen“.'),
       h(
         'div',
         { class: 'grp-away-list' },
@@ -658,11 +658,7 @@
               type: 'checkbox',
               checked: away.has(s.id),
               'data-focus-key': 'away-' + s.id,
-              onchange: (e) => {
-                if (e.target.checked) away.add(s.id);
-                else away.delete(s.id);
-                NM.app.rerender();
-              },
+              onchange: (e) => NM.views.draw.setAbsent(course, s.id, e.target.checked),
             }),
             ' ',
             M.studentName(s)

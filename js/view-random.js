@@ -385,9 +385,10 @@
   function peopleTool(course) {
     const o = opts(), ses = session(course);
     const students = M.activeStudents(course);
-    const away = NM.views.draw.absent(course);
+    // Abwesende bei jedem Zugriff frisch lesen (gespeicherte Fehlzeiten von heute, seit 1.45)
+    const away = () => NM.views.draw.absent(course);
     for (const sid of [...ses.used]) if (!students.some((s) => s.id === sid)) ses.used.delete(sid);
-    const ready = () => students.filter((s) => !away.has(s.id));
+    const ready = () => students.filter((s) => !away().has(s.id));
     const stage = h('div', { class: 'rnd-stage' });
     const cards = h('div', { class: 'draw-cards rnd-people', 'aria-live': 'polite' });
     const info = h('div', { class: 'muted small' });
@@ -396,7 +397,8 @@
     const showInfo = () => {
       const parts = [];
       if (o.noRepeat) parts.push(`${ready().filter((s) => !ses.used.has(s.id)).length} von ${ready().length} noch nicht dran`);
-      if (away.size) parts.push(`${away.size} heute abwesend (Reiter „Ziehen“)`);
+      const nAway = students.filter((s) => away().has(s.id)).length;
+      if (nAway) parts.push(`${nAway} heute abwesend (Reiter „Ziehen“)`);
       clear(info);
       info.append(parts.join(' · '));
       if (o.noRepeat && ses.used.size)

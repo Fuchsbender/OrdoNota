@@ -31,6 +31,7 @@
           { class: 'inline' },
           UI.printButton('Drucken: ' + M.courseTitle(course), [
             { id: 'course', icon: '📄', label: half === 'Jahr' ? 'Notenliste der Jahresnoten' : `Notenliste ${half}`, group: 'teacher', tip: half === 'Jahr' ? 'Alle Personen mit beiden Halbjahresnoten, gerechneter Jahresnote und Jahresnote; gesetzte Noten mit *.' : 'Alle Personen mit allen Leistungen des Halbjahres, Schnitten und Halbjahresnote; gesetzte Noten mit *.', run: () => NM.print.course(course, half) },
+            half !== 'Jahr' && NM.attendance.dates(course, half).length ? { id: 'attendance', icon: '🗓️', label: `Fehlzeiten ${half}`, group: 'teacher', tip: 'Alle Unterrichtstage des Halbjahres mit A/E/U je Person und den Summen in Unterrichtsstunden.', run: () => NM.print.attendance(course, half) } : null,
             { id: 'sheets', icon: '👤', label: 'Leistungsbögen je Person', group: 'students', tip: 'Eine Seite je Person mit Einzelnoten, Schnitten und Zeugnisnote, z. B. für Elterngespräche. Personen, Zeitraum und Inhalt wählen Sie im nächsten Schritt.', run: () => NM.print.studentsDialog(course) },
           ]),
           h('button', { class: 'btn', onclick: () => exportCsv(course) }, '⬇ CSV/Excel')
@@ -44,6 +45,12 @@
   function weightsLine(course) {
     const parts = [`Klassen-/Kursarbeiten ${fmtNum(course.wKa, 0)} % · Sonstige ${fmtNum(course.wOther, 0)} %`];
     return h('span', { class: 'muted small' }, parts.join(''), ' (änderbar unter „Kurs & Schüler“)');
+  }
+
+  /** Fehlstunden einer Person im Halbjahr, z. B. „6 (2 U)“. */
+  function attCell(course, half, s) {
+    const t = NM.attendance.totals(course, half, s.id);
+    return h('td', { class: 'num att-col muted', title: t.hours ? `entschuldigt ${t.e} · unentschuldigt ${t.u} · offen ${t.a}` : 'keine Fehlzeiten' }, t.hours ? [String(t.hours), t.u ? h('span', { class: 'small' }, ` (${t.u} U)`) : null] : '');
   }
 
   /** Unterzeile der Sammelspalte eines Pools: Zeitraum der Ziehungen statt Datum. */
@@ -156,6 +163,8 @@
         sort.toggle('a:' + a.id)
       );
 
+    // Fehlzeiten (seit 1.45): Spalte nur, wenn es im Halbjahr Einträge gibt
+    const attOn = NM.attendance.hasData(course, half);
     const head1 = h(
       'tr',
       { class: 'group-row' },
@@ -169,7 +178,8 @@
           ? h('button', { class: 'link tiny draw-bundle-btn', title: fold.draw ? 'Ziehungsspalten wieder einzeln zeigen' : 'Spalten aus dem Reiter „Ziehen“ zu einer Spalte zusammenschieben (nur Ansicht)', onclick: () => toggleFold('draw') }, fold.draw ? 'Ziehungen einzeln' : `Ziehungen bündeln (${drawCols.length})`)
           : null
       ),
-      h('th', { class: 'group result', colspan: 3 }, half)
+      h('th', { class: 'group result', colspan: 3 }, half),
+      attOn ? h('th', { class: 'num att-col', rowspan: 2, title: 'Fehlstunden im Halbjahr (davon unentschuldigt); Einzelheiten unter „Kurs & Schüler“ → Fehlzeiten' }, 'Fehlst.') : null
     );
     const head2 = h(
       'tr',
@@ -260,7 +270,8 @@
             onSet: (v) => setOverride(course, half, s.id, v),
           })
         ),
-        h('td', { class: 'result' }, overrideReasonBtn(course, half, s, r), commentBtn(course, s))
+        h('td', { class: 'result' }, overrideReasonBtn(course, half, s, r), commentBtn(course, s)),
+        attOn ? attCell(course, half, s) : null
       );
     });
 

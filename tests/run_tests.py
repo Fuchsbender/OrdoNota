@@ -154,7 +154,7 @@ def report(name, ok, detail=""):
 
 def run_test_pages(br, base):
     print("Testseiten:")
-    for page in ["grades", "model", "update", "moodle", "qr", "pomodoro", "groups", "random", "timer", "draw", "crypto", "storage"]:
+    for page in ["grades", "model", "attendance", "update", "moodle", "qr", "pomodoro", "groups", "random", "timer", "draw", "crypto", "storage"]:
         br.open(f"{base}/tests/{page}.test.html")
         done = br.wait("/^(ALLE TESTS BESTANDEN|\\d+ FEHLGESCHLAGEN|FEHLER)/.test(document.getElementById('out').textContent)")
         text = br.eval("document.getElementById('out').textContent") or ""
@@ -454,6 +454,80 @@ def run_epo_material_check(br, base):
            and not br.errors, str(res) + "; ".join(br.errors))
 
 
+def run_attendance_check(br, base):
+    """Fehlzeiten: „Heute abwesend“ wird gespeichert, EPO-k ⇄ Fehlzeit, Karte (reihum, + Tag), Notenübersicht, Ausdruck."""
+    br.open(f"{base}/index.html?demo")
+    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.errors = []
+    res = br.eval("""(async () => {
+        const wait = (ms = 150) => new Promise((r) => setTimeout(r, ms));
+        const A = NM.attendance, M = NM.model, today = NM.util.todayISO();
+        const c = NM.app.db().courses[0];
+        const [p, q] = M.activeStudents(c);
+        const out = {};
+        // Ziehen: Heute abwesend → Fehlzeit von heute, in Gruppen sichtbar
+        NM.app.select({ courseId: c.id, tab: 'draw' }); await wait();
+        const box = [...document.querySelectorAll('.draw-table tbody tr')].find((tr) => tr.textContent.includes(p.last)).querySelector('td:last-child input[type=checkbox]');
+        box.click(); await wait();
+        out.drawSaved = A.get(c, today, p.id) === 'a' && NM.app.state.dirty !== false;
+        NM.app.select({ tab: 'groups' }); await wait();
+        out.groupsSeen = !!document.querySelector('[data-focus-key="away-' + p.id + '"]') && document.querySelector('[data-focus-key="away-' + p.id + '"]').checked;
+        document.querySelector('[data-focus-key="away-' + p.id + '"]').click(); await wait();
+        out.groupsOff = A.get(c, today, p.id) === '';
+        // EPO: k in einer Stunde → abwesend an dem Datum
+        const half = NM.app.currentHalf(c);
+        const blocks = c.assessments.filter((x) => x.kind === 'epo' && x.half === half);
+        const a = blocks.find((x) => x.id === (NM.app.state.ui.epoId || {})[c.id]) || blocks[blocks.length - 1];
+        const l = a.epo.lessons.slice().sort((x, y) => (x.date || '').localeCompare(y.date || '')).pop();
+        NM.app.select({ tab: 'epo' }); await wait();
+        const cell = () => document.querySelector('[data-focus-key="epo-' + q.id + '-' + l.id + '"]');
+        cell().value = 'kh'; cell().dispatchEvent(new Event('change')); await wait();
+        out.epoK = A.get(c, l.date, q.id) === 'a';
+        // Kurs & Schüler: Karte, reihum a → e → u → –, k folgt
+        NM.app.select({ tab: 'course' }); await wait();
+        out.card = !!document.querySelector('.att-card') && document.querySelectorAll('.att-table thead th.att-day').length === A.dates(c, half).length;
+        const btn = () => document.querySelector('[data-att="' + q.id + '|' + l.date + '"]');
+        out.cellA = btn() && btn().textContent === 'A';
+        btn().click(); await wait();
+        out.cellE = btn().textContent === 'E' && A.get(c, l.date, q.id) === 'e' && a.epo.entries[q.id][l.id].r === 'k';
+        btn().click(); await wait(); btn().click(); await wait();
+        out.cellNone = btn().textContent === '' && A.get(c, l.date, q.id) === '' && JSON.stringify(a.epo.entries[q.id][l.id]) === JSON.stringify({ r: '', hw: 'h' });
+        btn().click(); await wait(); btn().click(); await wait();  // e
+        out.totals = JSON.stringify(A.totals(c, half, q.id)).includes('"e":' + A.hoursOf(c.attendance[l.date]));
+        // + Tag mit 2 Stunden
+        document.querySelector('[data-att-add]').click(); await wait();
+        const d = document.querySelector('[data-att-date]'), hrs = document.querySelector('[data-att-hours]');
+        const newDay = half === NM.grades.halvesFor(c)[0] ? '2026-10-05' : '2027-03-15';
+        d.value = newDay; hrs.value = '2';
+        [...document.querySelectorAll('dialog button')].find((b) => b.textContent === 'Hinzufügen').click(); await wait(300);
+        out.added = !!c.attendance[newDay] && c.attendance[newDay].hours === 2 && !!document.querySelector('[data-att-day="' + newDay + '"]');
+        const uBefore = A.totals(c, half, p.id).u;
+        document.querySelector('[data-att="' + p.id + '|' + newDay + '"]').click(); await wait();
+        document.querySelector('[data-att="' + p.id + '|' + newDay + '"]').click(); await wait();
+        document.querySelector('[data-att="' + p.id + '|' + newDay + '"]').click(); await wait();
+        const pt = A.totals(c, half, p.id);
+        out.unexcused = pt.u === uBefore + 2;
+        // Notenübersicht: Spalte Fehlst., Druckauswahl mit Fehlzeiten
+        NM.app.select({ tab: 'overview' }); await wait();
+        out.ovCol = [...document.querySelectorAll('.overview-table th')].some((th) => th.textContent === 'Fehlst.')
+          && [...document.querySelectorAll('.overview-table tbody tr')].some((tr) => tr.textContent.includes(p.last) && tr.querySelector('td.att-col').textContent === pt.hours + ' (' + pt.u + ' U)');
+        document.querySelector('[data-print-menu]').click(); await wait();
+        out.menu = !!document.querySelector('[data-print="attendance"]');
+        document.querySelector('dialog [data-print="attendance"]') && [...document.querySelectorAll('dialog button')].find((b) => /Abbrechen|Schließen|✕/.test(b.textContent)) ? [...document.querySelectorAll('dialog button')].find((b) => /Abbrechen|Schließen|✕/.test(b.textContent)).click() : null;
+        await wait();
+        const origPrint = window.print; window.print = () => {};
+        try {
+            NM.print.attendance(c, half);
+            const r = document.getElementById('print-root');
+            out.print = r.querySelectorAll('table.p-att tbody tr').length === M.activeStudents(c).length && r.textContent.includes('Fehlzeiten') && r.textContent.includes('unentschuldigt');
+        } finally { window.print = origPrint; }
+        NM.app.state.dirty = false;
+        return out; })()""")
+    report("Fehlzeiten: Heute abwesend gespeichert, EPO-k ⇄ Fehlzeit, Karte reihum und + Tag, Spalte in der Notenübersicht, Ausdruck",
+           bool(res) and all(res.get(k) for k in ["drawSaved", "groupsSeen", "groupsOff", "epoK", "card", "cellA", "cellE", "cellNone", "totals", "added", "unexcused", "ovCol", "menu", "print"])
+           and not br.errors, str(res) + "; ".join(br.errors))
+
+
 def run_draw_check(br, base):
     print("Ziehen (Pool, Auffüllen, Noten, Rückgängig):")
     br.open(f"{base}/index.html?demo")
@@ -613,11 +687,12 @@ def run_random_check(br, base):
         const rest = NM.model.activeStudents(c).map((s) => s.id).filter((id) => !a.includes(id) && !b.includes(id));
         await go('people');
         out.refill = [rest.every((id) => S.people.includes(id)), new Set(S.people).size];
-        const away = NM.views.draw.absent(c); away.add(NM.model.activeStudents(c)[0].id);
+        const awayId = NM.model.activeStudents(c)[0].id; NM.views.draw.setAbsent(c, awayId, true);
+        const away = NM.views.draw.absent(c);
         set('[data-rnd-norepeat]', false); set('[data-rnd-count]', '12');
         await go('people');
-        out.absent = [S.people.length, S.people.includes([...away][0])];
-        away.clear();
+        out.absent = [S.people.length, S.people.includes(awayId), away.has(awayId)];
+        NM.views.draw.setAbsent(c, awayId, false);
         // Würfel: 3 × W20, Ergebnis vorn
         set('[data-rnd-die]', '20'); set('[data-rnd-dice]', '3');
         await go('dice');
@@ -657,7 +732,7 @@ def run_random_check(br, base):
     br.call("Emulation.setEmulatedMedia", features=[])
     ok = bool(res) and bool(res2) and res["tools"] == 5 and res["number"] == [True, True] \
         and res2["range"][0] >= 5 and res2["range"][1] <= 7 and res2["range"][0] < res2["range"][1] \
-        and res2["people"] == [5, 5, False, 5, False] and res2["refill"] == [True, 5] and res2["absent"] == [11, False] \
+        and res2["people"] == [5, 5, False, 5, False] and res2["refill"] == [True, 5] and res2["absent"] == [11, False, True] \
         and res2["dice"] == [3, True, True, True, True] and res2["pile"] == [True, "52"] and res2["cards"] == [49, 3, 2, True, True] and res2["svg"] and res2["multi"] == [5, 5, 44, 8, True] \
         and res2["pileClick"] == [39, 5] and res2["rest"] == [0, 39, True, True, True] and res2["shuffle"] == 52 \
         and res2["skat"] == [32, 31, True] and res2["customHidden"] is False \
@@ -1634,7 +1709,7 @@ def run_print_menu_check(br, base):
     ok = bool(res) and res["oldButtons"] == 0 and t.get("ids", [])[:1] == ["list"] and "key" in t.get("ids", []) and "students" in t.get("ids", []) and t.get("tips") \
         and t.get("groups") == ["Für die Lehrkraft", "Zum Austeilen"] and t.get("menus") == 1 and not t.get("open") and t.get("title", "").endswith("– Ergebnisliste") \
         and e.get("ids") == ["list", "slips"] and e.get("title", "").endswith("– Mitarbeitszettel") \
-        and o.get("ids") == ["course", "sheets"] and o.get("tips") and res["cancel"] == [True, True]
+        and o.get("ids") == ["course", "attendance", "sheets"] and o.get("tips") and res["cancel"] == [True, True]
     report("Druckauswahl: ein Knopf je Reiter, Druckarten mit Tooltip nach Lehrkraft/Austeilen, Auswahl druckt, Abbrechen nicht", ok and not br.errors, str(res) + "; ".join(br.errors))
 
 
@@ -2399,6 +2474,15 @@ def run_decrypt_tool(br, base):
               and zeilen[1][4:6] == ["3 Pkt. [S-7F3K9Q]", "fehlt [S-7F3K9Q]"] and zeilen[2][4:6] == ["", ""])
         report("CSV: Pseudonyme für OrdoScripto (Test-ID im Kopf, Schüler-ID je Person, Nachschreibtermin)", ok, str(zeilen))
         report("CSV: Einstufung je Person (Kurs E, Abweichung E2)", zeilen[0][3] == "Einstufung" and zeilen[1][3] == "E" and zeilen[2][3] == "E2", str(zeilen))
+        # Fehlzeiten (1.45): je Halbjahr Fehlstunden gesamt (E/U/offen)
+        kurs["attendance"] = {"2026-09-01": {"half": "HJ1", "hours": 2, "abs": {"a": "e", "b": "a"}},
+                              "2026-09-08": {"half": "HJ1", "hours": 1, "abs": {"a": "u"}},
+                              "2026-03-02": {"half": "HJ2", "hours": 1, "abs": {"b": "u"}}}
+        pfad = tool.schreibe_csv({"years": [], "courses": [kurs]}, tmp)[0]
+        with open(pfad, encoding="utf-8-sig") as f:
+            zf = [z.rstrip("\n").split(";") for z in f]
+        i1, i2 = zf[0].index("Fehlstunden HJ1 (E/U/offen)"), zf[0].index("Fehlstunden HJ2 (E/U/offen)")
+        report("CSV: Fehlzeiten je Halbjahr in Unterrichtsstunden", [zf[1][i1], zf[2][i1], zf[1][i2], zf[2][i2]] == ["3 (2/1/0)", "2 (0/0/2)", "", "1 (0/1/0)"], str(zf))
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
@@ -2412,6 +2496,7 @@ def main():
         run_sort_check(br, base)
         run_course_check(br, base)
         run_epo_material_check(br, base)
+        run_attendance_check(br, base)
         run_draw_check(br, base)
         run_draw_pools_check(br, base)
         run_random_check(br, base)

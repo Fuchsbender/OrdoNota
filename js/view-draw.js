@@ -8,8 +8,6 @@
   const UI = NM.ui;
   const D = NM.draw;
 
-  // „Heute abwesend“ gilt nur für diese Sitzung und wird nicht gespeichert: Kurs-ID → Set von Schüler-IDs
-  const absentToday = {};
 
   /** Ziehungsdaten des Kurses: out = wer nicht (mehr) im Pool ist, history = bisherige Ziehungen. */
   function drawData(course) {
@@ -25,8 +23,18 @@
     return M.activeStudents(course).filter((s) => !d.out[s.id]);
   }
 
+  /**
+   * „Heute abwesend“ (seit 1.45 gespeichert): Fehlzeiten des heutigen Datums (NM.attendance).
+   * Liefert eine Momentaufnahme als Set; ändern nur über setAbsent.
+   */
   function absent(course) {
-    return (absentToday[course.id] = absentToday[course.id] || new Set());
+    return NM.attendance.awaySet(course, todayISO());
+  }
+
+  /** Heute abwesend setzen/aufheben: schreibt die Fehlzeit (mit Abgleich in EPO) und speichert. */
+  function setAbsent(course, sid, on) {
+    NM.attendance.setAbsent(course, todayISO(), sid, on);
+    NM.app.commit();
   }
 
   /**
@@ -65,7 +73,6 @@
     const d = drawData(course);
     const students = M.activeStudents(course);
     const away = absent(course);
-    for (const sid of [...away]) if (!students.some((s) => s.id === sid)) away.delete(sid);
     const inPool = pool(course);
     const ready = inPool.filter((s) => !away.has(s.id));
 
@@ -428,12 +435,8 @@
           h('input', {
             type: 'checkbox',
             checked: away.has(s.id),
-            title: 'Heute abwesend: wird bei dieser Ziehung übersprungen, bleibt im Pool (wird nicht gespeichert)',
-            onchange: (e) => {
-              if (e.target.checked) away.add(s.id);
-              else away.delete(s.id);
-              NM.app.rerender();
-            },
+            title: 'Heute abwesend: wird beim Ziehen übersprungen, bleibt im Pool; wird als Fehlzeit von heute gespeichert',
+            onchange: (e) => setAbsent(course, s.id, e.target.checked),
           })
         )
       );
@@ -441,7 +444,7 @@
     return h(
       'div',
       { class: 'card' },
-      h('div', { class: 'card-head' }, h('h2', null, 'Pool'), h('span', { class: 'muted small' }, '„Heute abwesend“ gilt nur bis zum Schließen der App.')),
+      h('div', { class: 'card-head' }, h('h2', null, 'Pool'), h('span', { class: 'muted small' }, '„Heute abwesend“ wird als Fehlzeit von heute gespeichert (Reiter „Kurs & Schüler“, Karte „Fehlzeiten“).')),
       h(
         'div',
         { class: 'table-wrap', 'data-scroll-key': 'draw-pool' },
@@ -511,5 +514,5 @@
     );
   }
 
-  NM.views.draw = { render, pool, drawStudents, absent };
+  NM.views.draw = { render, pool, drawStudents, absent, setAbsent };
 })((globalThis.NM = globalThis.NM || {}));

@@ -224,7 +224,7 @@ Schon vorhanden und Grundlage für alle drei: die Schnellwahl im EPO-Reiter (neu
 - Notfallwerkzeug: Kürzel mit m in der CSV.
 - Tests: `grades.test.html` (Parser, Punkte, Zählung), E2E (Eingabe, Schnellwahl, Ausdruck).
 
-### W) Fehlzeiten je Kurs (1.45.0)
+### W) Fehlzeiten je Kurs – umgesetzt in 1.45.0
 - Datenmodell `course.attendance = { "<YYYY-MM-DD>": { half, hours, abs: { "<sid>": "a" | "e" | "u" } } }`: `a` = abwesend (Entschuldigung offen), `e` = entschuldigt, `u` = unentschuldigt. `hours` = Unterrichtsstunden an diesem Tag (Standard 1, Doppelstunde 2). `half` = Halbjahr, das beim Anlegen gewählt war.
 - „Heute abwesend“ (Ziehen, Gruppen, Tools) wird dauerhaft: Es liest und schreibt die Einträge des heutigen Datums. Bisher galt es nur für die Sitzung.
 - EPO: Ein k in einer Stunde schreibt `a` für dieses Datum (wenn noch nichts eingetragen ist). Wird k entfernt, verschwindet ein `a`, ein `e`/`u` bleibt. Eine neue EPO-Stunde übernimmt die Abwesenden dieses Datums als k.

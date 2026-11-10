@@ -10,7 +10,7 @@
   // 3 (1.20): Präsentationen (kind "pres") – ältere Versionen kennen diese Leistungsart nicht.
   // 4 (1.23): Gruppenpräsentationen – ältere Versionen würden Gruppenwerte ignorieren und falsche Noten zeigen.
   const SCHEMA = 4;
-  const APP_VERSION = '1.44.0';
+  const APP_VERSION = '1.45.0';
 
   class NewerSchemaError extends Error {}
 
@@ -172,6 +172,11 @@
       if (c.seating && !c.seatingPlans) {
         c.seatingPlans = [Object.assign({ id: uid(), name: 'Raum 1', cols: 8, rows: 5, desk: 'top' }, c.seating, { pos: c.seating.pos || {} })];
         delete c.seating;
+      }
+      // 1.45: Fehlzeiten je Kurs; k aus EPO-Stunden gelten als „abwesend“ an dem Datum
+      if (NM.attendance) {
+        NM.attendance.clean(c, G.halvesFor(c));
+        NM.attendance.fromEpo(c);
       }
     }
     db.schema = SCHEMA;
@@ -352,6 +357,7 @@
     const map = (half) => newHalves[Math.min(Math.max(0, oldHalves.indexOf(half)), newHalves.length - 1)];
     for (const a of course.assessments || []) a.half = map(a.half);
     for (const e of (course.draw && course.draw.history) || []) e.half = map(e.half);
+    for (const d of Object.values(course.attendance || {})) if (d && typeof d === 'object') d.half = map(d.half);
     const old = course.overrides || {};
     const ov = {};
     oldHalves.forEach((x, i) => {
@@ -394,6 +400,7 @@
       comments: {},
       note: '',
       einstufung: { gk: 'GK', lk: 'LK' }[type] || 'U', // seit 1.42: 'U' (undifferenziert) | 'G' | 'E' | 'E1' | 'E2', seit 1.43.1 auch 'GK' | 'LK' (MSS); je Person abweichend in student.einstufung
+      attendance: {}, // seit 1.45: Fehlzeiten { "<Datum>": { half, hours, abs: { "<sid>": "a" | "e" | "u" } } }
     };
   }
 
@@ -665,7 +672,7 @@
     for (let l = 0; l < 6; l++) e.epo.lessons.push({ id: 'l' + l, date: `2026-09-${String(8 + l * 3).padStart(2, '0')}` });
     c8.students.forEach((s, i) => {
       e.epo.entries[s.id] = {};
-      e.epo.lessons.forEach((l, j) => (e.epo.entries[s.id][l.id] = Object.assign({ r: syms[(i + j) % syms.length], hw: (i + j) % 9 === 0 ? 'h' : '' }, (i + 2 * j) % 13 === 5 ? { m: 1 } : {})));
+      e.epo.lessons.forEach((l, j) => (e.epo.entries[s.id][l.id] = Object.assign({ r: (i * 5 + j) % 17 === 3 ? 'k' : syms[(i + j) % syms.length], hw: (i + j) % 9 === 0 ? 'h' : '' }, (i + 2 * j) % 13 === 5 ? { m: 1 } : {})));
     });
     c8.assessments.push(e);
     // Präsentationen im 2. Halbjahr (Kriterien aus dem Startbestand)
@@ -797,6 +804,13 @@
     c12.assessments.push(kv);
     for (const s of [...c8.students, ...c12.students]) s.photo = PERSON_ICON;
     db.courses.push(c8, c12);
+    // Fehlzeiten (1.45): k aus den EPO-Stunden, dazu einige entschuldigte/unentschuldigte
+    if (NM.attendance) {
+      NM.attendance.fromEpo(c8);
+      NM.attendance.dates(c8, 'HJ1').forEach((d, i) => {
+        for (const sid of NM.attendance.awaySet(c8, d)) if ((i + sid.length) % 3) NM.attendance.set(c8, d, sid, (i % 2 ? 'e' : 'u'));
+      });
+    }
     return db;
   }
 

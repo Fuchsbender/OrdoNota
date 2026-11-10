@@ -700,6 +700,45 @@
     );
   }
 
+  /** Fehlzeiten eines Halbjahres (seit 1.45): Tage als Spalten mit A/E/U, Summen je Person. */
+  function attendance(c, half) {
+    const A = NM.attendance;
+    const days = A.dates(c, half);
+    const PER = 20; // Tage je Tabelle, damit A4 quer reicht
+    const chunks = [];
+    for (let i = 0; i < days.length; i += PER) chunks.push(days.slice(i, i + PER));
+    if (!chunks.length) chunks.push([]);
+    const students = M.activeStudents(c);
+    const mark = { a: 'A', e: 'E', u: 'U' };
+    const tables = chunks.map((ds, ci) =>
+      h(
+        'table',
+        { class: 'p-table p-full p-att' },
+        h('thead', null, h('tr', null, h('th', null, 'Nr.'), h('th', null, 'Name'), ds.map((d) => h('th', null, NM.util.fmtDateShort(d), A.hoursOf(c.attendance[d]) > 1 ? ` (${A.hoursOf(c.attendance[d])})` : '')), ci === chunks.length - 1 ? [h('th', null, 'Σ'), h('th', null, 'E'), h('th', null, 'U'), h('th', null, 'offen')] : null)),
+        h(
+          'tbody',
+          null,
+          students.map((s, i) => {
+            const t = A.totals(c, half, s.id);
+            return h(
+              'tr',
+              null,
+              h('td', { class: 'n' }, i + 1),
+              h('td', null, pname(s)),
+              ds.map((d) => h('td', { class: 'c' }, mark[A.get(c, d, s.id)] || '')),
+              ci === chunks.length - 1 ? [h('td', { class: 'n' }, t.hours || ''), h('td', { class: 'n' }, t.e || ''), h('td', { class: 'n' }, t.u || ''), h('td', { class: 'n' }, t.a || '')] : null
+            );
+          })
+        )
+      )
+    );
+    doPrint(
+      `${M.courseTitle(c)} – Fehlzeiten ${half}`,
+      h('div', { class: 'p-page' }, header(c, 'Fehlzeiten', `${half} · ${days.length} Unterrichtstage`), tables, h('p', { class: 'p-note' }, 'A = abwesend, Entschuldigung offen · E = entschuldigt · U = unentschuldigt · Zahl in Klammern = Unterrichtsstunden an dem Tag; Summen in Unterrichtsstunden')),
+      { landscape: days.length > 8 }
+    );
+  }
+
   /** Datum einer Spalte; bei der Sammelspalte eines Ziehen-Pools der Zeitraum der Ziehungen. */
   function drawDate(course, a) {
     const p = NM.draw.poolOfColumn(course, a.id);
@@ -785,6 +824,7 @@
     ['tests', 'Test-Details je Aufgabe', true],
     ['pres', 'Präsentationen je Kriterium (mit Bemerkung)', true],
     ['epo', 'EPO-Zusammenfassung (Bewertungen, Hausaufgaben, Material, Fehlstunden)', true],
+    ['absence', 'Fehlzeiten (Fehlstunden, entschuldigt, unentschuldigt)', true],
     ['comment', 'Bemerkung', true],
   ];
 
@@ -906,6 +946,10 @@
           );
         }
       }
+      if (o.absence && NM.attendance.hasData(c, half)) {
+        const t = NM.attendance.totals(c, half, s.id);
+        parts.push(h('p', { class: 'p-detail' }, h('strong', null, 'Fehlzeiten: '), t.hours ? `${t.hours} Unterrichtsstunden an ${t.days} ${t.days === 1 ? 'Tag' : 'Tagen'} · entschuldigt ${t.e} · unentschuldigt ${t.u}${t.a ? ` · Entschuldigung offen ${t.a}` : ''}` : 'keine'));
+      }
       if (o.averages || o.final) {
         parts.push(
           h(
@@ -946,5 +990,5 @@
     );
   }
 
-  NM.print = { test, moodle, scripto, pres, presGuide, groups, epo, epoSlips, seating, course, studentsDialog };
+  NM.print = { test, moodle, scripto, pres, presGuide, groups, epo, epoSlips, seating, attendance, course, studentsDialog };
 })((globalThis.NM = globalThis.NM || {}));

@@ -132,6 +132,9 @@
     if (v !== 'ok') return;
     const l = { id: uid(), date: date.value };
     a.epo.lessons.push(l);
+    // Fehlzeiten dieses Datums (z. B. „Heute abwesend“) als k übernehmen
+    const course = NM.app.currentCourse();
+    if (course) for (const sid of NM.attendance.awaySet(course, l.date)) NM.attendance.syncToEpo(course, l.date, sid);
     NM.app.commit();
     // Fokus in die erste Zelle der neuen Spalte
     setTimeout(() => {
@@ -153,6 +156,8 @@
     });
     if (v === 'ok') {
       l.date = date.value;
+      const course = NM.app.currentCourse();
+      if (course) NM.attendance.fromEpo(course); // k am neuen Datum als Fehlzeit
       NM.app.commit();
     } else if (v === 'delete') {
       if (!(await confirmDialog('Stunde löschen?', `Die Stunde vom ${fmtDate(l.date)} und alle Bewertungen darin löschen?`, { okLabel: 'Löschen', danger: true }))) return;
@@ -181,7 +186,10 @@
     for (const s of M.activeStudents(course)) {
       const row = (a.epo.entries[s.id] = a.epo.entries[s.id] || {});
       const c = row[l.id] || { r: '', hw: '' };
-      if (!c.r) row[l.id] = Object.assign({}, c, { r: sel.value, hw: c.hw || '' });
+      if (!c.r) {
+        row[l.id] = Object.assign({}, c, { r: sel.value, hw: c.hw || '' });
+        NM.attendance.syncFromEpo(course, a, l, s.id, c, row[l.id]);
+      }
     }
     NM.app.commit();
   }
@@ -259,14 +267,16 @@
                   return toast('Erlaubt: ++, +, 0, -, --, k – optional mit u oder h und m (z. B. „0u“, „+hm“).', 'error');
                 }
                 epo.entries[s.id] = epo.entries[s.id] || {};
+                const before = epo.entries[s.id][l.id];
                 if (G.epoCellEmpty(v)) delete epo.entries[s.id][l.id];
                 else epo.entries[s.id][l.id] = v;
+                NM.attendance.syncFromEpo(course, a, l, s.id, before, v);
                 NM.app.commit();
               },
             })
           );
         }),
-        current ? h('td', { class: 'center' }, quickButtons(epo, s.id, current.id)) : null,
+        current ? h('td', { class: 'center' }, quickButtons(course, a, s.id, current)) : null,
         h('td', { class: 'num strong' }, res.attended ? res.sum : ''),
         h('td', { class: 'num muted' }, res.attended ? res.max : ''),
         h('td', { class: 'num muted' }, res.pct === null ? '' : fmtNum(res.pct, 0)),
@@ -344,13 +354,16 @@
   }
 
   /** Schaltflächen zum Bewerten einer Stunde; erneuter Klick auf die aktive Auswahl hebt sie auf. */
-  function quickButtons(epo, sid, lid) {
+  function quickButtons(course, a, sid, lesson) {
+    const epo = a.epo;
+    const lid = lesson.id;
     const c = (epo.entries[sid] || {})[lid] || { r: '', hw: '' };
     const set = (r, hw, m = c.m) => {
       epo.entries[sid] = epo.entries[sid] || {};
       const v = m ? { r, hw, m: 1 } : { r, hw };
       if (G.epoCellEmpty(v)) delete epo.entries[sid][lid];
       else epo.entries[sid][lid] = v;
+      NM.attendance.syncFromEpo(course, a, lesson, sid, c, v);
       NM.app.commit();
     };
     const btn = (label, active, cls, title, onclick) =>

@@ -159,7 +159,10 @@ def schreibe_csv(daten, ordner):
                 titel += f' – OrdoScripto {scripto(a)["testId"]}'
             kopf.append(titel)
         override_keys = sorted(kurs.get("overrides", {}).keys())
-        kopf += [f"gesetzt {k}" for k in override_keys] + ["Bemerkung"]
+        # Fehlzeiten (1.45): je Halbjahr Unterrichtsstunden gesamt, entschuldigt, unentschuldigt, offen
+        fehl = kurs.get("attendance") or {}
+        fehl_halbjahre = sorted({t.get("half") for t in fehl.values() if isinstance(t, dict) and t.get("half")})
+        kopf += [f"gesetzt {k}" for k in override_keys] + [f"Fehlstunden {hj} (E/U/offen)" for hj in fehl_halbjahre] + ["Bemerkung"]
         zeilen = [kopf]
         for s in schueler:
             sid = s["id"]
@@ -199,6 +202,16 @@ def schreibe_csv(daten, ordner):
                     z.append(" ".join((c.get("r", "") + c.get("hw", "") + ("m" if c.get("m") else "")) for c in e.values()))
             for k in override_keys:
                 z.append(_label(kurs["overrides"][k].get(sid, {}).get("p"), mss))
+            for hj in fehl_halbjahre:
+                summe = {"a": 0, "e": 0, "u": 0}
+                for tag in fehl.values():
+                    if not isinstance(tag, dict) or tag.get("half") != hj:
+                        continue
+                    wert = (tag.get("abs") or {}).get(sid)
+                    if wert in summe:
+                        summe[wert] += max(1, round(float(tag.get("hours") or 1)))
+                gesamt = sum(summe.values())
+                z.append(f'{gesamt} ({summe["e"]}/{summe["u"]}/{summe["a"]})' if gesamt else "")
             z.append(kurs.get("comments", {}).get(sid, ""))
             zeilen.append(z)
         name = f'{jahre.get(kurs.get("yearId"), "")}_{kurs.get("klasse", "")}_{kurs.get("fach", "")}'

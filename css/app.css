@@ -705,6 +705,14 @@ body.no-grade-colors .r-pp, body.no-grade-colors .r-p, body.no-grade-colors .r-z
 .quick-btn:hover { border-color: var(--muted); color: var(--text); }
 .quick-btn.active { border-color: var(--text); color: var(--g-text); }
 .quick-btn.active.r-k, .quick-btn.active.hw { background: var(--accent-soft); border-color: var(--accent); color: var(--text); }
+/* Fehlzeiten (seit 1.45): A offen, E entschuldigt, U unentschuldigt */
+.att-day { white-space: nowrap; }
+.att-day .tiny { display: block; }
+.att-cell { min-width: 30px; height: 28px; padding: 0 6px; border: 1px solid var(--border); border-radius: 5px; background: var(--bg); color: var(--text); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.att-cell:hover { border-color: var(--muted); }
+.att-cell.att-a { background: var(--warn-soft); border-color: var(--warn); color: var(--text); }
+.att-cell.att-e { background: var(--ok-soft); border-color: var(--ok); color: var(--text); }
+.att-cell.att-u { background: var(--danger-soft); border-color: var(--danger); color: var(--text); }
 .quick-sep { width: 1px; height: 18px; margin: 0 4px; background: var(--border-strong); }
 
 /* ---------- Dialoge & Toasts ---------- */
