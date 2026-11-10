@@ -892,7 +892,7 @@ def run_scripto_check(br, base):
         window.print = () => {};
         const db = NM.app.db(), c = db.courses[0], S = NM.scripto, M = NM.model;
         const out = {};
-        c.einstufung = '';
+        M.setCourseEinstufung(c, 'U');
         const ka = c.assessments.find((x) => x.kind === 'test' && x.name === 'KA 1 – Terme');
         NM.app.state.ui.half[c.id] = ka.half; NM.app.state.ui.testId[c.id] = ka.id;
         NM.app.select({ courseId: c.id, tab: 'tests' }); await wait();
@@ -900,17 +900,17 @@ def run_scripto_check(br, base):
             const has = !!document.querySelector('dialog [data-print="' + id + '"]');
             [...document.querySelectorAll('dialog button')].find((b) => b.textContent === 'Abbrechen').click(); await wait(); return has; };
         out.before = [!!document.querySelector('[data-scripto-prepare]'), !document.querySelector('[data-scripto-card]'), await menuHas('scripto')];
-        // Abbrechen bei der Einstufung: nichts passiert
+        // Abbrechen bei der Frage zu den Undifferenzierten: nichts passiert
         document.querySelector('[data-scripto-prepare]').click(); await wait();
-        out.asked = !!document.querySelector('dialog [data-einstufung-ask]');
+        out.asked = !!document.querySelector('dialog [data-undiff-ask]');
         [...document.querySelectorAll('dialog button')].find((b) => b.textContent === 'Abbrechen').click(); await wait();
-        out.cancel = !ka.test.scripto && c.einstufung === '';
+        out.cancel = !ka.test.scripto && c.einstufung === 'U';
         document.querySelector('[data-scripto-prepare]').click(); await wait();
-        document.querySelector('dialog [data-einstufung-ask]').value = 'E';
+        document.querySelector('dialog [data-undiff-ask]').value = 'E';
         document.querySelector('dialog .btn-primary').click(); await wait(300);
         const d = ka.test.scripto;
         const act = M.activeStudents(c);
-        out.prepared = [c.einstufung, S.TEST_ID.test(d.testId), act.every((s) => S.STUDENT_ID.test(d.ids[s.id])), new Set(Object.values(d.ids)).size === act.length,
+        out.prepared = [d.undiff, S.TEST_ID.test(d.testId), act.every((s) => S.STUDENT_ID.test(d.ids[s.id])), new Set(Object.values(d.ids)).size === act.length,
             !!document.querySelector('[data-scripto-card]'), !document.querySelector('[data-scripto-prepare]'), (document.querySelector('[data-scripto-id]') || {}).textContent === d.testId, await menuHas('scripto')];
         // Import-CSV
         const dl = []; const origDl = NM.util.download; NM.util.download = (n, t) => dl.push([n, t]);
@@ -930,7 +930,7 @@ def run_scripto_check(br, base):
             sheets[0].textContent.includes('Trennblatt – vor die Arbeit des Schülers legen'), !!sheets[0].querySelector('.p-sc-qr svg'), document.body.classList.contains('printing')];
         out.expected = act.map((s) => S.qrText(d.testId, d.ids[s.id]));
         return out; })()""")
-    report("Vorbereiten: Einstufung erfragt (Abbrechen ändert nichts), Test-ID, eine ID je Person, Karte, Druckauswahl",
+    report("Vorbereiten: G/E für Undifferenzierte erfragt (Abbrechen ändert nichts), Test-ID, eine ID je Person, Karte, Druckauswahl",
            res["before"] == [True, True, False] and res["asked"] and res["cancel"] and res["prepared"] == ["E", True, True, True, True, True, True, True], str({k: res[k] for k in ("before", "asked", "cancel", "prepared")}))
     report("Import-CSV: Dateiname, Kopfzeile, eine Zeile je Person, drei Spalten, Kurs E, keine Namen",
            res["csv"] == [1, True, "test_id;schueler_id;kurs", True, True, True], str(res["csv"]))
@@ -978,12 +978,29 @@ def run_scripto_check(br, base):
         const other = c.assessments.find((x) => x.kind === 'test' && x !== ka && !G.isMakeup(c, x));
         const r = S.prepare(db, c, other);
         out.other = [r.data.testId !== d.testId, S.nextSeq(db) === seq + 2, Object.keys(r.data.ids).every((k) => r.data.ids[k] !== d.ids[k])];
-        // Kursdialog: Einstufung als Auswahl
+        // Karte: Undifferenzierte nachträglich als G
+        const und = document.querySelector('[data-scripto-undiff]');
+        und.value = 'G'; und.dispatchEvent(new Event('change')); await wait();
+        out.undiffCard = d.undiff === 'G' && S.importCsv(c, ka).text.split('\\n')[1].endsWith(';G');
+        // Kurs & Schüler: Kurs auf E (keine Abweichungen → ohne Rückfrage), eine Person E1, dann Kurs E2 mit Rückfrage
         NM.app.select({ tab: 'course' }); await wait();
-        const sel = document.querySelector('[data-einstufung]');
-        out.courseField = !!sel && sel.value === 'E';
-        sel.value = 'G'; sel.dispatchEvent(new Event('change')); await wait();
-        out.courseSet = c.einstufung === 'G' && S.importCsv(c, ka).text.split('\\n')[1].endsWith(';G');
+        const sel = () => document.querySelector('[data-einstufung]');
+        out.courseField = !!sel() && sel().value === 'U' && sel().options.length === 5;
+        sel().value = 'E'; sel().dispatchEvent(new Event('change')); await wait();
+        out.courseSet = c.einstufung === 'E' && !document.querySelector('dialog[open]') && S.importCsv(c, ka).text.trim().split('\\n').slice(1).every((l) => l.endsWith(';E'));
+        const p = M.activeStudents(c)[2];
+        const ps = () => document.querySelector('[data-student-einstufung="' + p.id + '"]');
+        out.studentField = ps().value === 'E' && !ps().classList.contains('level-own');
+        ps().value = 'G'; ps().dispatchEvent(new Event('change')); await wait();
+        const line = () => S.importCsv(c, ka).text.split('\\n').find((l) => l.includes(d.ids[p.id]));
+        out.studentSet = p.einstufung === 'G' && ps().classList.contains('level-own') && line().endsWith(';G') && M.activeStudents(c).filter((x) => x.einstufung).length === 1;
+        sel().value = 'E2'; sel().dispatchEvent(new Event('change')); await wait();
+        out.ask = !!document.querySelector('dialog[open]') && document.querySelector('dialog[open]').textContent.includes(p.last);
+        [...document.querySelectorAll('dialog button')].find((b) => b.textContent === 'Abweichungen behalten').click(); await wait();
+        out.kept = c.einstufung === 'E2' && p.einstufung === 'G' && line().endsWith(';G') && S.kursFor(c, ka, M.activeStudents(c)[0]) === 'E';
+        sel().value = 'E1'; sel().dispatchEvent(new Event('change')); await wait();
+        [...document.querySelectorAll('dialog button')].find((b) => b.textContent === 'Für alle setzen').click(); await wait();
+        out.all = c.einstufung === 'E1' && p.einstufung === undefined && ps().value === 'E1';
         out.check = M.check(db).filter((x) => x.level === 'fehler').length;
         NM.app.state.dirty = false;
         return out; })()""")
@@ -991,8 +1008,9 @@ def run_scripto_check(br, base):
            all(res["makeupCard"]) and res["whoNs"] == "makeup" and all(res["nsSheets"]) and res["copy"], str(res))
     report("Neue Person: „+ IDs“ ergänzt, vergebene IDs bleiben; anderer Test bekommt neue Test-ID und Pseudonyme",
            res["addBtn"] and all(res["added"]) and all(res["other"]), str(res))
-    report("Kurs & Schüler: Einstufung G/E, Import-CSV folgt; Datenbank prüfen ohne Fehler",
-           res["courseField"] and res["courseSet"] and res["check"] == 0 and not br.errors, str(res) + " " + "; ".join(br.errors))
+    report("Einstufung: Kurs (5 Stufen) für alle, je Person abweichend, Rückfrage behalten/für alle; CSV: E1/E2 → E, undifferenziert nach Festlegung",
+           res["undiffCard"] and res["courseField"] and res["courseSet"] and res["studentField"] and res["studentSet"] and res["ask"] and res["kept"] and res["all"]
+           and res["check"] == 0 and not br.errors, str(res) + " " + "; ".join(br.errors))
 
 
 def run_unreachable_check(br, base):
@@ -2220,7 +2238,7 @@ def run_decrypt_tool(br, base):
     try:
         sc = {"testId": "T-2026-0007", "ids": {"a": "S-7F3K9Q"}, "created": "2026-11-10T08:00:00Z"}
         kurs = {"id": "k", "klasse": "9a", "fach": "M", "jahrgang": 9, "einstufung": "E",
-                "students": [{"id": "a", "last": "A", "first": "X"}, {"id": "b", "last": "B", "first": "Y"}],
+                "students": [{"id": "a", "last": "A", "first": "X"}, {"id": "b", "last": "B", "first": "Y", "einstufung": "E2"}],
                 "assessments": [{"id": "t1", "kind": "test", "half": "HJ1", "name": "KA", "weight": 1,
                                  "test": {"tasks": [], "results": {"a": {"scores": {"x": 3}}}, "scripto": sc}},
                                 {"id": "t2", "kind": "test", "half": "HJ1", "name": "NS", "weight": 1, "makeupOf": "t1",
@@ -2228,9 +2246,10 @@ def run_decrypt_tool(br, base):
         pfad = tool.schreibe_csv({"years": [], "courses": [kurs]}, tmp)[0]
         with open(pfad, encoding="utf-8-sig") as f:
             zeilen = [z.rstrip("\n").split(";") for z in f]
-        ok = ("OrdoScripto T-2026-0007" in zeilen[0][3] and "OrdoScripto T-2026-0007" in zeilen[0][4]
-              and zeilen[1][3:5] == ["3 Pkt. [S-7F3K9Q]", "fehlt [S-7F3K9Q]"] and zeilen[2][3:5] == ["", ""])
+        ok = ("OrdoScripto T-2026-0007" in zeilen[0][4] and "OrdoScripto T-2026-0007" in zeilen[0][5]
+              and zeilen[1][4:6] == ["3 Pkt. [S-7F3K9Q]", "fehlt [S-7F3K9Q]"] and zeilen[2][4:6] == ["", ""])
         report("CSV: Pseudonyme für OrdoScripto (Test-ID im Kopf, Schüler-ID je Person, Nachschreibtermin)", ok, str(zeilen))
+        report("CSV: Einstufung je Person (Kurs E, Abweichung E2)", zeilen[0][3] == "Einstufung" and zeilen[1][3] == "E" and zeilen[2][3] == "E2", str(zeilen))
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 

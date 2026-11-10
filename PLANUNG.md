@@ -150,7 +150,7 @@ Umgesetzt wie unten beschrieben (Doku: `DOKUMENTATION.md` 7.9 und 26.4). Abweich
   - dem Hinweis „Trennblatt – vor die Arbeit des Schülers legen“.
 
   Die Reihenfolge entspricht der Schülerliste. Eine Option druckt nur die Nachschreiber.
-- **Import-CSV speichern:** `<testId>_import.csv`, UTF-8 ohne BOM, Semikolon, Kopfzeile `test_id;schueler_id;kurs`, je Schüler eine Zeile, `kurs` = `course.einstufung` (`G` oder `E`). **Nur diese drei Spalten**, keine Namen (OrdoScripto lehnt weitere Spalten ab).
+- **Import-CSV speichern:** `<testId>_import.csv`, UTF-8 ohne BOM, Semikolon, Kopfzeile `test_id;schueler_id;kurs`, je Schüler eine Zeile, `kurs` = Einstufung der Person, abgebildet auf `G`/`E` (siehe Entscheidung 5). **Nur diese drei Spalten**, keine Namen (OrdoScripto lehnt weitere Spalten ab).
 - **Tests:** `tests/qr.test.html` (Matrixgröße je Version, Format-Bits, Reed-Solomon gegen bekannte Werte, ID-Format und Eindeutigkeit, Übernahme beim Nachschreibtermin). In `tests/run_tests.py` ein Rundlauf: Matrizen für mehrere Inhalte, Versionen und alle Masken aus der App holen, als Bild rastern und mit `zxing-cpp` lesen (`uv run --with zxing-cpp --with pillow …`). Der gelesene Text muss exakt übereinstimmen. Dieselbe Bibliothek liest die Codes später in OrdoScripto.
 
 ### Teil 2 – wird für OrdoScripto Bauplan-Schritt 7 (Export) gebraucht
@@ -165,6 +165,7 @@ Umgesetzt wie unten beschrieben (Doku: `DOKUMENTATION.md` 7.9 und 26.4). Abweich
 2. **Pseudonyme:** je Test neu.
 3. **Test-ID:** fortlaufend (`settings.scriptoSeq`).
 4. **Knopf** „Für OrdoScripto vorbereiten“: in der Testansicht neben dem Moodle-Import.
+5. **Nachtrag 10.11.2026, ersetzt Entscheidung 1** (umgesetzt in 1.42.0): Ein Kurs ist undifferenziert (Standard), G, E, E1 oder E2. Die Einstellung gilt für alle, einzelne Personen lassen sich abweichend einstufen (`student.einstufung`). Für die Import-CSV wird abgebildet, OrdoScripto bleibt unverändert: G → `G`, E/E1/E2 → `E`, undifferenziert → je Arbeit erfragt (`test.scripto.undiff`).
 
 OrdoScripto kann Trennblätter auch selbst als PDF erzeugen, für Nutzer ohne OrdoNota. Für OrdoNota ändert das nichts: Wer OrdoNota nutzt, erzeugt IDs und Trennblätter dort, weil nur OrdoNota die Namen kennt.
 

@@ -10,7 +10,8 @@
   const TEST_ID = /^T-\d{4}-\d{4}$/;
   const STUDENT_ID = /^S-[A-Z0-9]{6}$/; // so prüft OrdoScripto; das Alphabet ist eine Teilmenge
   const MAX_SEQ = 9000; // OrdoScripto vergibt ohne OrdoNota T-<Jahr>-9001 bis -9999
-  const LEVELS = ['G', 'E'];
+  // OrdoScripto kennt nur G und E: E1/E2 → E; undifferenziert legt die Lehrkraft je Arbeit fest (test.scripto.undiff)
+  const KURS = { G: 'G', E: 'E', E1: 'E', E2: 'E' };
 
   /** 6 Zufallszeichen (32 Zeichen → 256 / 32 ohne Verzerrung). */
   function randomCode(n = 6) {
@@ -58,7 +59,7 @@
    * „Für OrdoScripto vorbereiten“: Test-ID beim ersten Mal vergeben, jeder aktiven Person ohne ID eine neue geben.
    * Vergebene IDs ändern sich nie. Liefert { data, created, added: [sid] }.
    */
-  function prepare(db, course, a, now = new Date()) {
+  function prepare(db, course, a, now = new Date(), { undiff = null } = {}) {
     const o = owner(course, a);
     let created = false;
     if (!o.test.scripto) {
@@ -70,6 +71,7 @@
       created = true;
     }
     const d = o.test.scripto;
+    if (undiff) setUndiff(course, a, undiff);
     const taken = new Set(Object.values(d.ids));
     const added = [];
     for (const s of M.activeStudents(course)) {
@@ -105,15 +107,40 @@
 
   const qrText = (testId, studentId) => `ORDO|${testId}|${studentId}`;
 
+  /** Aktive Personen, die undifferenziert eingestuft sind. */
+  function undiffStudents(course) {
+    return M.activeStudents(course).filter((s) => M.studentEinstufung(course, s) === 'U');
+  }
+
+  /** Muss noch festgelegt werden, ob Undifferenzierte in dieser Arbeit als G oder E gelten? */
+  function needsUndiff(course, a) {
+    const d = dataOf(course, a);
+    return undiffStudents(course).length > 0 && !(d && KURS[d.undiff]);
+  }
+
+  /** Undifferenzierte gelten in dieser Arbeit (und ihren Nachschreibterminen) als 'G' oder 'E'. */
+  function setUndiff(course, a, v) {
+    const d = dataOf(course, a);
+    if (d && (v === 'G' || v === 'E')) d.undiff = v;
+  }
+
+  /** Wert der Spalte „kurs“ für eine Person (null: undifferenziert und noch nicht festgelegt). */
+  function kursFor(course, a, s) {
+    const lvl = M.studentEinstufung(course, s);
+    if (lvl !== 'U') return KURS[lvl];
+    const d = dataOf(course, a);
+    return (d && KURS[d.undiff]) || null;
+  }
+
   /** Import-CSV für OrdoScripto: UTF-8 ohne BOM, Semikolon, genau test_id;schueler_id;kurs – keine Namen. */
   function importCsv(course, a) {
     const d = dataOf(course, a);
     if (!d) throw new Error('Der Test ist noch nicht für OrdoScripto vorbereitet.');
-    if (!LEVELS.includes(course.einstufung)) throw new Error('Für den Kurs ist keine Einstufung (G- oder E-Kurs) festgelegt.');
+    if (needsUndiff(course, a)) throw new Error('Für undifferenziert eingestufte Personen ist noch nicht festgelegt, ob die Arbeit als G- oder E-Kurs gilt.');
     const rows = ['test_id;schueler_id;kurs'];
-    for (const s of M.activeStudents(course)) if (d.ids[s.id]) rows.push([d.testId, d.ids[s.id], course.einstufung].join(';'));
+    for (const s of M.activeStudents(course)) if (d.ids[s.id]) rows.push([d.testId, d.ids[s.id], kursFor(course, a, s)].join(';'));
     return { name: d.testId + '_import.csv', text: rows.join('\n') + '\n' };
   }
 
-  NM.scripto = { ALPHABET, TEST_ID, STUDENT_ID, LEVELS, testIdFor, owner, dataOf, nextSeq, missing, prepare, missed, makeupStudents, sheetStudents, qrText, importCsv, newStudentId };
+  NM.scripto = { ALPHABET, TEST_ID, STUDENT_ID, KURS, undiffStudents, needsUndiff, setUndiff, kursFor, testIdFor, owner, dataOf, nextSeq, missing, prepare, missed, makeupStudents, sheetStudents, qrText, importCsv, newStudentId };
 })((globalThis.NM = globalThis.NM || {}));

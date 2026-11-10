@@ -104,21 +104,38 @@
             )
           : null,
         field(
-          'Einstufung (G-/E-Kurs)',
+          'Einstufung',
           h(
             'select',
-            { class: 'input', 'data-einstufung': '', title: 'Für den ganzen Kurs, z. B. für die Import-Datei von OrdoScripto', onchange: set('einstufung') },
-            [
-              ['', '– (keine)'],
-              ['G', 'G-Kurs (Grundkurs)'],
-              ['E', 'E-Kurs (Erweiterungskurs)'],
-            ].map(([v, l]) => h('option', { value: v, selected: (course.einstufung || '') === v }, l))
+            { class: 'input', 'data-einstufung': '', title: 'Gilt für alle im Kurs; einzelne Personen lassen sich in der Schülerliste anders einstufen (Spalte „Einst.“)', onchange: (e) => changeEinstufung(course, e.target.value) },
+            M.EINSTUFUNGEN.map(([v, l]) => h('option', { value: v, selected: M.courseEinstufung(course) === v }, l))
           )
         ),
         field('Notizen zum Kurs', h('textarea', { class: 'input', rows: 2, value: course.note || '', onchange: set('note') }), 'span2')
       ),
       h('p', { class: 'muted small' }, 'Halbjahre: ', G.halvesFor(course).join(', '), G.hasYearGrade(course) ? ' · mit Jahresnote' : ' · jedes Halbjahr wird einzeln benotet')
     );
+  }
+
+  /** Einstufung des Kurses für alle setzen; bei abweichend eingestuften Personen nachfragen. */
+  async function changeEinstufung(course, v) {
+    const own = course.students.filter((s) => s.einstufung !== undefined && s.einstufung !== v);
+    let keep = false;
+    if (own.length) {
+      const r = await modal({
+        title: 'Einstufung für alle setzen?',
+        body: h('p', null, `${own.length === 1 ? '1 Person ist' : own.length + ' Personen sind'} abweichend vom Kurs eingestuft (${own.map((s) => M.studentName(s) + ': ' + s.einstufung).join(', ')}). Soll die neue Einstufung auch für ${own.length === 1 ? 'sie' : 'diese'} gelten?`),
+        buttons: [
+          { label: 'Abbrechen', value: null },
+          { label: 'Abweichungen behalten', value: 'keep' },
+          { label: 'Für alle setzen', value: 'all', kind: 'primary' },
+        ],
+      });
+      if (!r) return NM.app.rerender();
+      keep = r === 'keep';
+    }
+    M.setCourseEinstufung(course, v, { keep });
+    NM.app.commit();
   }
 
   async function changeJahrgang(course, j) {
@@ -157,7 +174,9 @@
     const sort = UI.sorter('students', {
       iStatus: { get: (s) => (s.iStatus ? 1 : 0), first: 'desc' },
       active: { get: (s) => (s.active !== false ? 1 : 0), first: 'desc' },
+      einstufung: { get: (s) => M.EINSTUFUNGEN.findIndex(([k]) => k === M.studentEinstufung(course, s)), first: 'asc' },
     });
+    const courseLvl = M.courseEinstufung(course);
     const all = sort.rows(M.sortStudents(course.students));
     const active = all.filter((s) => s.active !== false);
     const inactive = all.filter((s) => s.active === false);
@@ -182,6 +201,24 @@
         h('td', { class: 'num muted' }, s.active === false ? '' : i + 1),
         h('td', null, inp('last', 0)),
         h('td', null, inp('first', 1)),
+        h(
+          'td',
+          { class: 'center' },
+          h(
+            'select',
+            {
+              class: 'input input-sm' + (s.einstufung ? ' level-own' : ''),
+              'data-student-einstufung': s.id,
+              'aria-label': 'Einstufung von ' + M.studentName(s),
+              title: s.einstufung ? 'Abweichend vom Kurs (' + courseLvl + ')' : 'Wie der Kurs',
+              onchange: (e) => {
+                M.setStudentEinstufung(course, s, e.target.value);
+                NM.app.commit();
+              },
+            },
+            M.EINSTUFUNGEN.map(([v, l]) => h('option', { value: v, selected: M.studentEinstufung(course, s) === v, title: l }, v === 'U' ? 'undiff.' : v))
+          )
+        ),
         h(
           'td',
           { class: 'center' },
@@ -242,6 +279,7 @@
                   h('th', null, 'Nr.'),
                   h('th', null, sort.head('last', 'Nachname')),
                   h('th', null, sort.head('first', 'Vorname')),
+                  h('th', { class: 'center', title: 'Einstufung (Standard: wie der Kurs)' }, sort.head('einstufung', 'Einst.')),
                   h('th', { class: 'center' }, sort.head('iStatus', 'I-Status')),
                   h('th', { class: 'center' }, sort.head('active', 'Aktiv')),
                   h('th', null, '')
@@ -467,9 +505,10 @@
     copy.wOther = course.wOther;
     copy.wHalf1 = course.wHalf1;
     copy.wHalf2 = course.wHalf2;
-    copy.einstufung = course.einstufung || '';
+    copy.einstufung = M.courseEinstufung(course);
     if (course.tabs) copy.tabs = Object.assign({}, course.tabs);
-    if (withStudents.checked) copy.students = M.activeStudents(course).map((s) => ({ id: uid(), last: s.last, first: s.first, active: true }));
+    if (withStudents.checked)
+      copy.students = M.activeStudents(course).map((s) => Object.assign({ id: uid(), last: s.last, first: s.first, active: true }, s.einstufung ? { einstufung: s.einstufung } : {}));
     db.courses.push(copy);
     NM.app.commit({ render: false });
     NM.app.select({ yearId: year.value, courseId: copy.id, tab: 'course' });

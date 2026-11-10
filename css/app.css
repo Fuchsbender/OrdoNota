@@ -536,6 +536,7 @@ body.grp-dragging, body.grp-dragging * { cursor: grabbing !important; }
 .tools-list li .check { flex: 1; margin: 0; }
 .tools-list li .check::before { content: counter(tabpos) ". "; color: var(--muted); }
 .warn-text { color: var(--warn); }
+.level-own { border-color: var(--warn); background: var(--warn-soft); }
 .key-warn { font-size: 13px; display: grid; gap: 6px; }
 .key-warn-fixes { display: flex; flex-wrap: wrap; gap: 6px; }
 .dist { display: flex; align-items: stretch; gap: 6px; height: 130px; margin: 16px 0 10px; padding: 0 4px; }

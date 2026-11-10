@@ -10,7 +10,7 @@
   // 3 (1.20): Präsentationen (kind "pres") – ältere Versionen kennen diese Leistungsart nicht.
   // 4 (1.23): Gruppenpräsentationen – ältere Versionen würden Gruppenwerte ignorieren und falsche Noten zeigen.
   const SCHEMA = 4;
-  const APP_VERSION = '1.41.0';
+  const APP_VERSION = '1.42.0';
 
   class NewerSchemaError extends Error {}
 
@@ -153,8 +153,9 @@
       // 1.39: Werkzeuge im Reiter „Tools“ je Kurs aus-/umsortieren (leer = alle an, Standardreihenfolge)
       c.tools = Object.assign({}, c.tools && typeof c.tools === 'object' ? c.tools : {});
       for (const k of ['off', 'order']) c.tools[k] = Array.isArray(c.tools[k]) ? c.tools[k].filter((x) => typeof x === 'string') : [];
-      // 1.41: Einstufung G-/E-Kurs (für OrdoScripto), gilt für alle im Kurs
-      if (!['G', 'E'].includes(c.einstufung)) c.einstufung = '';
+      // 1.41: Einstufung des Kurses; 1.42: undifferenziert (Standard), G, E, E1, E2 und Abweichung je Person
+      c.einstufung = courseEinstufung(c);
+      for (const s of c.students) if (s.einstufung !== undefined && (!EINSTUFUNG_IDS.includes(s.einstufung) || s.einstufung === c.einstufung)) delete s.einstufung;
       // 1.40: Nachschreibtermine übernehmen Halbjahr, Bereich, Gewicht und Wertung der Original-Arbeit
       syncMakeups(c);
       c.overrides = c.overrides || {};
@@ -392,8 +393,41 @@
       overrides: {},
       comments: {},
       note: '',
-      einstufung: '', // seit 1.41: 'G' | 'E' | '' (G-/E-Kurs, für OrdoScripto)
+      einstufung: 'U', // seit 1.42: 'U' (undifferenziert) | 'G' | 'E' | 'E1' | 'E2'; je Person abweichend in student.einstufung
     };
+  }
+
+  // ---------- Einstufung (Leistungsdifferenzierung) ----------
+
+  const EINSTUFUNGEN = [
+    ['U', 'undifferenziert'],
+    ['G', 'G-Kurs'],
+    ['E', 'E-Kurs'],
+    ['E1', 'E1-Kurs'],
+    ['E2', 'E2-Kurs'],
+  ];
+  const EINSTUFUNG_IDS = EINSTUFUNGEN.map(([k]) => k);
+
+  /** Einstufung des Kurses (fehlt oder ungültig → undifferenziert). */
+  function courseEinstufung(c) {
+    return EINSTUFUNG_IDS.includes(c.einstufung) ? c.einstufung : 'U';
+  }
+
+  /** Einstufung einer Person: eigene Abweichung, sonst die des Kurses. */
+  function studentEinstufung(c, s) {
+    return EINSTUFUNG_IDS.includes(s.einstufung) ? s.einstufung : courseEinstufung(c);
+  }
+
+  /** Einstufung einer Person setzen; gleich wie der Kurs → keine Abweichung gespeichert. */
+  function setStudentEinstufung(c, s, v) {
+    if (!EINSTUFUNG_IDS.includes(v) || v === courseEinstufung(c)) delete s.einstufung;
+    else s.einstufung = v;
+  }
+
+  /** Einstufung des Kurses setzen: gilt für alle; keep = Abweichungen einzelner Personen behalten. */
+  function setCourseEinstufung(c, v, { keep = false } = {}) {
+    c.einstufung = EINSTUFUNG_IDS.includes(v) ? v : 'U';
+    for (const s of c.students) if (!keep || s.einstufung === c.einstufung) delete s.einstufung;
   }
 
   function courseTitle(c) {
@@ -756,6 +790,11 @@
     newDb,
     migrate,
     newCourse,
+    EINSTUFUNGEN,
+    courseEinstufung,
+    studentEinstufung,
+    setStudentEinstufung,
+    setCourseEinstufung,
     setJahrgang,
     mssJahrgang,
     courseTitle,

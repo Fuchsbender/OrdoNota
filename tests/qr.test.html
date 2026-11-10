@@ -100,7 +100,7 @@
     const ka = M.newTest(c, 'HJ1', db.settings);
     ka.date = '2026-11-20';
     c.assessments.push(ka);
-    eq('Neuer Kurs/neue Datenbank: einstufung leer, scriptoSeq 0', [c.einstufung, db.settings.scriptoSeq], ['', 0]);
+    eq('Neuer Kurs/neue Datenbank: undifferenziert, scriptoSeq 0', [c.einstufung, M.studentEinstufung(c, c.students[0]), db.settings.scriptoSeq], ['U', 'U', 0]);
     eq('ohne Vorbereitung: keine Daten, alle aktiv ohne ID', [S.dataOf(c, ka), S.missing(c, ka).length], [null, 29]);
 
     const r1 = S.prepare(db, c, ka, new Date('2026-11-10T08:00:00Z'));
@@ -147,9 +147,28 @@
 
     // Import-CSV
     let noLevel = null;
+    eq('undifferenziert ohne Festlegung: Frage nötig', [S.needsUndiff(c, ka), S.kursFor(c, ka, c.students[0])], [true, null]);
     try { S.importCsv(c, ka); } catch (e) { noLevel = e.message; }
-    eq('Import-CSV ohne Einstufung → Fehler', /Einstufung/.test(noLevel || ''), true);
-    c.einstufung = 'E';
+    eq('Import-CSV mit offenen Undifferenzierten → Fehler', /undifferenziert/.test(noLevel || ''), true);
+    S.setUndiff(c, ns, 'G'); // im Nachschreibtermin gesetzt → gilt für die Arbeit
+    eq('Undifferenzierte als G (über den Nachschreibtermin in der Arbeit gespeichert)', [d.undiff, S.needsUndiff(c, ka), S.kursFor(c, ka, c.students[0])], ['G', false, 'G']);
+    S.setUndiff(c, ka, 'X');
+    eq('ungültiger Wert ändert nichts', d.undiff, 'G');
+    // Einstufung je Person: E1/E2 → E, G → G, undifferenziert → Festlegung der Arbeit
+    M.setStudentEinstufung(c, c.students[1], 'E1');
+    M.setStudentEinstufung(c, c.students[2], 'E2');
+    M.setStudentEinstufung(c, c.students[3], 'G');
+    M.setStudentEinstufung(c, c.students[4], 'U'); // wie der Kurs → keine Abweichung
+    eq('Abweichung je Person gespeichert, gleich wie Kurs nicht', [c.students[1].einstufung, c.students[3].einstufung, 'einstufung' in c.students[4]], ['E1', 'G', false]);
+    const kursCol = () => Object.fromEntries(S.importCsv(c, ka).text.trim().split('\n').slice(1).map((r) => r.split(';')).map((f) => [Object.keys(d.ids).find((k) => d.ids[k] === f[1]), f[2]]));
+    eq('Import-CSV: E1/E2 → E, G → G, undifferenziert → G', [kursCol().s0, kursCol().s1, kursCol().s2, kursCol().s3], ['G', 'E', 'E', 'G']);
+    // Kurs auf E: Abweichungen behalten oder für alle setzen
+    M.setCourseEinstufung(c, 'E', { keep: true });
+    eq('Kurs E, Abweichungen behalten', [M.studentEinstufung(c, c.students[0]), M.studentEinstufung(c, c.students[1]), M.studentEinstufung(c, c.students[3]), S.undiffStudents(c).length], ['E', 'E1', 'G', 0]);
+    M.setCourseEinstufung(c, 'E2', { keep: true });
+    eq('Abweichung gleich dem neuen Kurswert wird gelöscht', 'einstufung' in c.students[2], false);
+    M.setCourseEinstufung(c, 'E');
+    eq('Kurs E für alle: keine Abweichungen mehr', c.students.filter((x) => 'einstufung' in x).length, 0);
     const csv = S.importCsv(c, ns);
     const rows = csv.text.split('\n');
     eq('Import-CSV: Name, Kopfzeile, eine Zeile je Person, Zeilenende \\n', [csv.name, rows[0], rows.length, rows[rows.length - 1]], ['T-2026-0001_import.csv', 'test_id;schueler_id;kurs', 1 + 31 + 1, '']);
@@ -157,9 +176,14 @@
     eq('Import-CSV: keine Namen, kein BOM', [/Nach|Vor|Zuletzt|Später/.test(csv.text), csv.text.charCodeAt(0) === 0xfeff], [false, false]);
 
     // Migration
-    const old = { schema: 4, settings: {}, years: [{ id: 'y' }], courses: [{ id: 'c', students: [], assessments: [], einstufung: 'X' }, { id: 'd', students: [], assessments: [], einstufung: 'G' }, { id: 'e', students: [], assessments: [] }] };
+    const old = { schema: 4, settings: {}, years: [{ id: 'y' }], courses: [
+      { id: 'c', students: [{ id: 'p', einstufung: 'Q' }], assessments: [], einstufung: 'X' },
+      { id: 'd', students: [{ id: 'q', einstufung: 'G' }, { id: 'r', einstufung: 'E1' }], assessments: [], einstufung: 'G' },
+      { id: 'e', students: [], assessments: [], einstufung: '' }, { id: 'f', students: [], assessments: [] }] };
     M.migrate(old);
-    eq('Migration: einstufung G/E bleibt, sonst leer; scriptoSeq 0', [old.courses.map((x) => x.einstufung), old.settings.scriptoSeq], [['', 'G', ''], 0]);
+    eq('Migration: Kurs gültig bleibt, sonst undifferenziert; ungültige/gleiche Abweichung weg; scriptoSeq 0',
+      [old.courses.map((x) => x.einstufung), old.courses[0].students[0].einstufung, old.courses[1].students.map((x) => x.einstufung), old.settings.scriptoSeq],
+      [['U', 'G', 'U', 'U'], undefined, [undefined, 'E1'], 0]);
   } catch (e) {
     fails++;
     lines.push('FAIL Ausnahme: ' + (e && e.stack ? e.stack : e));
