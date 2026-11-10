@@ -104,7 +104,7 @@
 
   const qrText = (testId, studentId) => `ORDO|${testId}|${studentId}`;
 
-  /** Wert der Spalte „kurs“: Einstufung der Person wie in OrdoNota (U, G, E, E1, E2), in OrdoScripto nur zur Anzeige. */
+  /** Wert der Spalte „kurs“: Einstufung der Person wie in OrdoNota (U, G, E, E1, E2, GK, LK), in OrdoScripto nur zur Anzeige. */
   function kursFor(course, a, s) {
     return M.studentEinstufung(course, s);
   }

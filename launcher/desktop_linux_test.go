@@ -34,4 +34,13 @@ func TestDesktopEntryName(t *testing.T) {
 	if !strings.Contains(string(b), "StartupWMClass=OrdoNota\n") || !strings.Contains(string(b), `Exec="/x/OrdoNota"`) {
 		t.Fatalf("unerwarteter Inhalt:\n%s", b)
 	}
+	// versteckte Einträge für die Wayland-app_id der Chromium-Browser
+	h, err := os.ReadFile(filepath.Join(dir, "chromium-127.0.0.1__start-Default.desktop"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(h), "NoDisplay=true\n") || !strings.Contains(string(h), "Icon=/i.svg\n") ||
+		!strings.Contains(string(h), "StartupWMClass=chromium-127.0.0.1__start-Default\n") {
+		t.Fatalf("unerwarteter versteckter Eintrag:\n%s", h)
+	}
 }

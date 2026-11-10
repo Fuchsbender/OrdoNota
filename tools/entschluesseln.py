@@ -141,7 +141,7 @@ def schreibe_csv(daten, ordner):
         for a in kurs.get("assessments", []):
             spalten.append(a)
         kopf = ["Nachname", "Vorname", "aktiv", "Einstufung"]
-        stufen = ("U", "G", "E", "E1", "E2")  # 1.42: undifferenziert, G, E, E1, E2; je Person abweichend möglich
+        stufen = ("U", "G", "E", "E1", "E2", "GK", "LK")  # 1.42: undifferenziert, G, E, E1, E2; 1.43.1: GK, LK (MSS); je Person abweichend möglich
         kurs_stufe = kurs.get("einstufung") if kurs.get("einstufung") in stufen else "U"
         namen = {a.get("id"): a.get("name") for a in spalten}
         nach_id = {a.get("id"): a for a in spalten}

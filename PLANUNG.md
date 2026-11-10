@@ -150,7 +150,7 @@ Umgesetzt wie unten beschrieben (Doku: `DOKUMENTATION.md` 7.9 und 26.4). Abweich
   - dem Hinweis „Trennblatt – vor die Arbeit des Schülers legen“.
 
   Die Reihenfolge entspricht der Schülerliste. Eine Option druckt nur die Nachschreiber.
-- **Import-CSV speichern:** `<testId>_import.csv`, UTF-8 ohne BOM, Semikolon, Kopfzeile `test_id;schueler_id;kurs`, je Schüler eine Zeile, `kurs` = Einstufung der Person (`U`, `G`, `E`, `E1`, `E2`, siehe Entscheidung 5). **Nur diese drei Spalten**, keine Namen (OrdoScripto lehnt weitere Spalten ab).
+- **Import-CSV speichern:** `<testId>_import.csv`, UTF-8 ohne BOM, Semikolon, Kopfzeile `test_id;schueler_id;kurs`, je Schüler eine Zeile, `kurs` = Einstufung der Person (`U`, `G`, `E`, `E1`, `E2`, `GK`, `LK`, siehe Entscheidungen 5 und 6). **Nur diese drei Spalten**, keine Namen (OrdoScripto lehnt weitere Spalten ab).
 - **Tests:** `tests/qr.test.html` (Matrixgröße je Version, Format-Bits, Reed-Solomon gegen bekannte Werte, ID-Format und Eindeutigkeit, Übernahme beim Nachschreibtermin). In `tests/run_tests.py` ein Rundlauf: Matrizen für mehrere Inhalte, Versionen und alle Masken aus der App holen, als Bild rastern und mit `zxing-cpp` lesen (`uv run --with zxing-cpp --with pillow …`). Der gelesene Text muss exakt übereinstimmen. Dieselbe Bibliothek liest die Codes später in OrdoScripto.
 
 ### Teil 2 – wird für OrdoScripto Bauplan-Schritt 7 (Export) gebraucht
@@ -166,6 +166,7 @@ Umgesetzt wie unten beschrieben (Doku: `DOKUMENTATION.md` 7.9 und 26.4). Abweich
 3. **Test-ID:** fortlaufend (`settings.scriptoSeq`).
 4. **Knopf** „Für OrdoScripto vorbereiten“: in der Testansicht neben dem Moodle-Import.
 5. **Nachtrag 10.11.2026, ersetzt Entscheidung 1** (umgesetzt in 1.42.0): Ein Kurs ist undifferenziert (Standard), G, E, E1 oder E2. Die Einstellung gilt für alle, einzelne Personen lassen sich abweichend einstufen (`student.einstufung`). Die Import-CSV schreibt die Einstufung je Person unverändert (`U`, `G`, `E`, `E1`, `E2`). OrdoScripto zeigt sie nur an, denn die Bepunktung folgt dem Erwartungshorizont und die Noten vergibt OrdoNota bzw. die Lehrkraft (OrdoScripto angepasst: DESIGN.md, CSV-Prüfung, Migration 9). Version 1.42.0 hatte zunächst auf G/E abgebildet und für undifferenziert je Arbeit nachgefragt; das entfiel in 1.42.1.
+6. **Nachtrag 10.11.2026** (umgesetzt in 1.43.1): In der Oberstufe gibt es die Einstufungen undifferenziert, **GK** (Grundkurs) und **LK** (Leistungskurs); die Sek I behält U, G, E, E1, E2. Die Einstufung des Kurses folgt der MSS-Kursart, Personen lassen sich abweichend einstufen (gemeinsame GK/LK-Kurse). Die Import-CSV schreibt `GK`/`LK` unverändert (OrdoScripto angepasst: DESIGN.md, CSV-Prüfung, Migration 10).
 
 OrdoScripto kann Trennblätter auch selbst als PDF erzeugen, für Nutzer ohne OrdoNota. Für OrdoNota ändert das nichts: Wer OrdoNota nutzt, erzeugt IDs und Trennblätter dort, weil nur OrdoNota die Namen kennt.
 
@@ -211,6 +212,47 @@ Für alle sechs gilt:
 1. **Designs:** Farbwelten statt Kontrast- und OLED-Designs. Hell: Standard, Salbei, Lavendel. Dunkel: Standard, Nord, Aubergine.
 2. **Speicherort:** je Gerät im Browser-Speicher, wie das bisherige Farbschema.
 3. **Kopfzeile:** Das Mond-Symbol wechselt nur zwischen hell und dunkel, jeweils im gewählten Design.
+
+## Wunschliste vom 10.11.2026 (Reihenfolge der Umsetzung: V, W, X, Y)
+
+Schon vorhanden und Grundlage für alle drei: die Schnellwahl im EPO-Reiter (neueste Stunde, ++ … --, k, u/h), die Hausaufgaben-Zusätze u/h und die Zählung von k je EPO-Block.
+
+### V) Material vergessen als Zusatz „m“ (1.44.0)
+- Ein Zellwert bekommt zusätzlich zu `r` und `hw` das Feld `m: 1` (Material vergessen). Eingabe z. B. `+m`, `0hm`, `m`, `km`; die Reihenfolge von h/u und m ist beliebig. `G.parseEpoCell`/`epoCellText` ziehen mit.
+- Punkte: `epo.points.m`, Standard **0**, also nur gezählt; in den Block-Einstellungen änderbar wie u/h. `epoResult` liefert zusätzlich `m` (Anzahl).
+- Anzeige: Knopf „m“ in der Schnellwahl, Legende, Spalte „HA“ wird zu „HA/M“ (u/h/m). Ausdrucke (EPO-Zusammenfassung, Leistungsbogen) nennen „Material vergessen: n“.
+- Notfallwerkzeug: Kürzel mit m in der CSV.
+- Tests: `grades.test.html` (Parser, Punkte, Zählung), E2E (Eingabe, Schnellwahl, Ausdruck).
+
+### W) Fehlzeiten je Kurs (1.45.0)
+- Datenmodell `course.attendance = { "<YYYY-MM-DD>": { half, hours, abs: { "<sid>": "a" | "e" | "u" } } }`: `a` = abwesend (Entschuldigung offen), `e` = entschuldigt, `u` = unentschuldigt. `hours` = Unterrichtsstunden an diesem Tag (Standard 1, Doppelstunde 2). `half` = Halbjahr, das beim Anlegen gewählt war.
+- „Heute abwesend“ (Ziehen, Gruppen, Tools) wird dauerhaft: Es liest und schreibt die Einträge des heutigen Datums. Bisher galt es nur für die Sitzung.
+- EPO: Ein k in einer Stunde schreibt `a` für dieses Datum (wenn noch nichts eingetragen ist). Wird k entfernt, verschwindet ein `a`, ein `e`/`u` bleibt. Eine neue EPO-Stunde übernimmt die Abwesenden dieses Datums als k.
+- Oberfläche: neue Karte „Fehlzeiten“ im Reiter „Kurs & Schüler“: Tage als Spalten, je Person a/e/u per Klick reihum, Stundenzahl je Tag, Summen je Halbjahr (Fehlstunden gesamt, davon entschuldigt, unentschuldigt, offen). Summen werden immer berechnet, nie gespeichert.
+- Notenübersicht: Spalte „Fehlst.“ (eingeklappt wie die anderen Gruppen); Leistungsbogen und Druckauswahl „Fehlzeiten“ je Halbjahr.
+- `migrate()`: `attendance` = `{}`; `check()` prüft die Werte. Notfallwerkzeug: Fehlzeiten in der CSV.
+- Tests: neues `attendance.test.html` bzw. in `model.test.html` (Summen, Sync mit EPO, Migration), E2E (Karte, Heute abwesend bleibt nach Neuladen, EPO-k).
+
+### X) Kachelansicht für das Tablet (1.46.0)
+- Im EPO-Block Knopf „▦ Kacheln“: Vollbild-Ansicht für die neueste Stunde (Stunde wählbar). Je Person eine große Kachel mit Foto, Vorname und Nachname und der aktuellen Bewertung als Farbe.
+- Anordnung nach Sitzplan: Raum = der im Reiter „Sitzplan“ gewählte (`ui.seatingId`), umschaltbar; wer im Raum keinen Platz hat, steht unten in einer Reihe. Ohne Sitzplan alphabetisch im Raster.
+- Tippen auf eine Kachel öffnet große Knöpfe ++ + 0 - -- k und u/h/m (wie die Schnellwahl, gleiche Logik, erneutes Tippen hebt auf). Abwesende aus W sind vorbelegt mit k.
+- Für Touch: Mindestgröße der Knöpfe 44 px, keine Hover-Abhängigkeit, Esc/✕ schließt. Fotos nur, wenn „Fotos“ an ist. Nicht für den Beamer gedacht (zeigt Bewertungen).
+- Tests: E2E mit Touch-Emulation (Kachel tippen, Bewertung gesetzt, Sitzplan-Positionen, ohne Sitzplan alphabetisch).
+
+### Y) Einheitlicher Druckkopf mit Schullogo (1.47.0)
+- Neue Einstellungen in der Datenbank: `settings.print = { schoolName, teacher, logo }`. `logo` ist eine Data-URL (PNG/JPEG/SVG), beim Hochladen auf höchstens 600 px verkleinert (SVG bleibt). Karte „Ausdrucke“ im Reiter „Einstellungen“: Logo wählen/entfernen mit Vorschau, Schulname, Lehrkraft.
+- Ein Kopf für alle Ausdrucke: `NM.print.header(course, { title, sub, person })` in `js/print.js`. Links das Logo (max. 18 mm hoch), daneben der Schulname. Rechts Kurs (Klasse · Fach), Schuljahr bzw. Halbjahr, Lehrkraft und Datum (Datum der Leistung, sonst Druckdatum). Darunter Titel und ggf. Name der Person. Was nicht eingetragen ist, fällt weg. Ohne Logo und Schulnamen sieht der Kopf aus wie heute.
+- Umstellen: Notenliste, Leistungsbögen, Ergebnisliste, Ergebnisse nach Teilen, Notenschlüssel/-spiegel, Moodle-Rückmeldung, Präsentationen (Liste, Schlüssel, leere Bögen, Bogen je Person, Handreichung), Gruppen, Sitzplan, EPO-Liste, Trennblätter. Die bisherigen Kopfvarianten (`p-header`, `p-mr-*`, `p-epo-slip-head`, `p-slip-head`) laufen in dieser einen Funktion zusammen; die Zettel zum Ausschneiden bekommen die kleine, einzeilige Variante (`compact`: Logo klein, Schulname, Name, Leistung, Datum).
+- Einheitliche Formatierung: gleiche Schriftgrößen, Abstände und Tabellenstil für alle Listen (gemeinsame Klassen in der Druck-CSS), gleiche Fußzeile „OrdoNota · Seite“ entfällt weiter (Browser-Kopf/Fuß bleiben aus).
+- Datenschutz: Logo und Schulname liegen nur in der verschlüsselten Datenbank, nie im Repo; Demo-Daten mit einer erfundenen „Beispielschule“ ohne Logo. `migrate()` legt `settings.print` an, `check()` prüft die Typen, Notfallwerkzeug ignoriert das Logo.
+- Tests: E2E je Druckart (Kopf vorhanden, Logo als Bild, Schulname/Lehrkraft/Kurs/Datum, fehlende Angaben fallen weg, Zettel kompakt), Upload mit Verkleinerung, Speichern und Neuladen.
+
+### Entscheidungen des Nutzers (10.11.2026)
+1. **Kacheln:** nach Sitzplan, ohne Sitzplan alphabetisch.
+2. **Material:** neuer Zusatz m, Standard 0 Punkte (nur gezählt), je Block änderbar.
+3. **Fehlzeiten:** eigene Liste je Kurs; „Heute abwesend“ und EPO-k schreiben hinein bzw. werden daraus vorbelegt.
+4. **Druckkopf:** für alle Ausdrucke; Inhalt Schullogo, Schulname, Lehrkraft, Kurs, Schuljahr und Datum; gespeichert in der (verschlüsselten) Datenbank, damit auf allen Geräten gleich.
 
 ## C) Gamification des Pomodoro-Timers (zurückgestellt, erst auf Nachfrage des Nutzers)
 

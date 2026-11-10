@@ -992,6 +992,14 @@ def run_scripto_check(br, base):
         sel().value = 'E1'; sel().dispatchEvent(new Event('change')); await wait();
         [...document.querySelectorAll('dialog button')].find((b) => b.textContent === 'Für alle setzen').click(); await wait();
         out.all = c.einstufung === 'E1' && p.einstufung === undefined && ps().value === 'E1' && line().endsWith(';E1');
+        // Oberstufe: Auswahl undifferenziert, Grundkurs, Leistungskurs (der alte Wert E1 bleibt sichtbar)
+        const jg = c.jahrgang; c.jahrgang = 12; NM.app.commit(); await wait();
+        const opts = (el) => [...el.options].map((o) => o.value).join(',');
+        out.mssOpts = [opts(sel()), opts(ps())];
+        sel().value = 'LK'; sel().dispatchEvent(new Event('change')); await wait();
+        ps().value = 'GK'; ps().dispatchEvent(new Event('change')); await wait();
+        out.mss = c.einstufung === 'LK' && p.einstufung === 'GK' && opts(sel()) === 'U,GK,LK' && line().endsWith(';GK') && S.kursFor(c, ka, M.activeStudents(c)[0]) === 'LK';
+        M.setCourseEinstufung(c, 'E1'); c.jahrgang = jg; NM.app.commit(); await wait();
         out.check = M.check(db).filter((x) => x.level === 'fehler').length;
         NM.app.state.dirty = false;
         return out; })()""")
@@ -999,8 +1007,9 @@ def run_scripto_check(br, base):
            all(res["makeupCard"]) and res["whoNs"] == "makeup" and all(res["nsSheets"]) and res["copy"], str(res))
     report("Neue Person: „+ IDs“ ergänzt, vergebene IDs bleiben; anderer Test bekommt neue Test-ID und Pseudonyme",
            res["addBtn"] and all(res["added"]) and all(res["other"]), str(res))
-    report("Einstufung: Kurs (5 Stufen) für alle, je Person abweichend, Rückfrage behalten/für alle; CSV mit der Einstufung je Person",
+    report("Einstufung: Kurs (5 Stufen) für alle, je Person abweichend, Rückfrage behalten/für alle; CSV mit der Einstufung je Person; MSS mit GK/LK",
            res["courseField"] and res["courseSet"] and res["studentField"] and res["studentSet"] and res["ask"] and res["kept"] and res["all"]
+           and res["mssOpts"] == ["U,E1,GK,LK", "U,E1,GK,LK"] and res["mss"]
            and res["check"] == 0 and not br.errors, str(res) + " " + "; ".join(br.errors))
 
 

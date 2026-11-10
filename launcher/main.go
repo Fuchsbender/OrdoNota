@@ -93,6 +93,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	// Der Pfad /start steckt in der Wayland-app_id (waylandAppID in desktop_linux.go).
 	startURL := fmt.Sprintf("http://127.0.0.1:%d/start?t=%s", *port, token)
 
 	ln, err := net.Listen("tcp", "127.0.0.1:"+strconv.Itoa(*port))

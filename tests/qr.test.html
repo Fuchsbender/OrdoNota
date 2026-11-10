@@ -161,6 +161,26 @@
     eq('Abweichung gleich dem neuen Kurswert wird gelöscht', 'einstufung' in c.students[2], false);
     M.setCourseEinstufung(c, 'E');
     eq('Kurs E für alle: keine Abweichungen mehr', c.students.filter((x) => 'einstufung' in x).length, 0);
+    // Auswahl je Stufe (1.43.1): Sek I ohne GK/LK, MSS nur U, GK, LK; ein gesetzter Wert bleibt wählbar
+    const keysOf = (list) => list.map(([k]) => k);
+    eq('Auswahl Sek I', keysOf(M.einstufungenFor({ jahrgang: 9 }, 'E')), ['U', 'G', 'E', 'E1', 'E2']);
+    eq('Auswahl MSS', keysOf(M.einstufungenFor({ jahrgang: 12 }, 'LK')), ['U', 'GK', 'LK']);
+    eq('Auswahl MSS mit altem Sek-I-Wert', keysOf(M.einstufungenFor({ jahrgang: 11 }, 'E')), ['U', 'E', 'GK', 'LK']);
+    eq('Neuer MSS-Kurs: Einstufung aus der Kursart', [M.newCourse('y', { jahrgang: 12, type: 'lk' }).einstufung, M.newCourse('y', { jahrgang: 12, type: 'gk' }).einstufung], ['LK', 'GK']);
+    const mc = M.newCourse('y', { jahrgang: 12, type: 'lk' });
+    mc.students = [{ id: 'a' }, { id: 'b' }];
+    M.setStudentEinstufung(mc, mc.students[1], 'GK');
+    mc.type = 'gk'; M.einstufungFromType(mc);
+    eq('Kursart GK: Kurs GK, Abweichung GK entfällt (gleich dem Kurs)', [mc.einstufung, 'einstufung' in mc.students[1]], ['GK', false]);
+    M.setStudentEinstufung(mc, mc.students[0], 'LK');
+    mc.type = 'lk'; M.einstufungFromType(mc);
+    eq('Kursart LK: Kurs LK, Abweichung LK entfällt', [mc.einstufung, mc.students.filter((x) => x.einstufung).length], ['LK', 0]);
+    M.setCourseEinstufung(mc, 'E'); mc.type = 'gk'; M.einstufungFromType(mc);
+    eq('Kursart ändert eine bewusst gesetzte Sek-I-Einstufung nicht', mc.einstufung, 'E');
+    M.setStudentEinstufung(c, c.students[1], 'GK');
+    M.setStudentEinstufung(c, c.students[2], 'LK');
+    eq('Import-CSV: GK und LK je Person', [kursCol().s1, kursCol().s2], ['GK', 'LK']);
+    M.setCourseEinstufung(c, 'E');
     const csv = S.importCsv(c, ns);
     const rows = csv.text.split('\n');
     eq('Import-CSV: Name, Kopfzeile, eine Zeile je Person, Zeilenende \\n', [csv.name, rows[0], rows.length, rows[rows.length - 1]], ['T-2026-0001_import.csv', 'test_id;schueler_id;kurs', 1 + 31 + 1, '']);
@@ -171,11 +191,12 @@
     const old = { schema: 4, settings: {}, years: [{ id: 'y' }], courses: [
       { id: 'c', students: [{ id: 'p', einstufung: 'Q' }], assessments: [], einstufung: 'X' },
       { id: 'd', students: [{ id: 'q', einstufung: 'G' }, { id: 'r', einstufung: 'E1' }], assessments: [], einstufung: 'G' },
-      { id: 'e', students: [], assessments: [], einstufung: '' }, { id: 'f', students: [], assessments: [] }] };
+      { id: 'e', students: [], assessments: [], einstufung: '' }, { id: 'f', students: [], assessments: [] },
+      { id: 'g', jahrgang: 12, students: [{ id: 's', einstufung: 'GK' }], assessments: [], einstufung: 'LK' }] };
     M.migrate(old);
     eq('Migration: Kurs gültig bleibt, sonst undifferenziert; ungültige/gleiche Abweichung weg; scriptoSeq 0',
-      [old.courses.map((x) => x.einstufung), old.courses[0].students[0].einstufung, old.courses[1].students.map((x) => x.einstufung), old.settings.scriptoSeq],
-      [['U', 'G', 'U', 'U'], undefined, [undefined, 'E1'], 0]);
+      [old.courses.map((x) => x.einstufung), old.courses[0].students[0].einstufung, old.courses[1].students.map((x) => x.einstufung), old.courses[4].students[0].einstufung, old.settings.scriptoSeq],
+      [['U', 'G', 'U', 'U', 'LK'], undefined, [undefined, 'E1'], 'GK', 0]);
   } catch (e) {
     fails++;
     lines.push('FAIL Ausnahme: ' + (e && e.stack ? e.stack : e));

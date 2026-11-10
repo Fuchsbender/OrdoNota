@@ -10,7 +10,7 @@
   // 3 (1.20): Präsentationen (kind "pres") – ältere Versionen kennen diese Leistungsart nicht.
   // 4 (1.23): Gruppenpräsentationen – ältere Versionen würden Gruppenwerte ignorieren und falsche Noten zeigen.
   const SCHEMA = 4;
-  const APP_VERSION = '1.43.0';
+  const APP_VERSION = '1.43.1';
 
   class NewerSchemaError extends Error {}
 
@@ -153,7 +153,7 @@
       // 1.39: Werkzeuge im Reiter „Tools“ je Kurs aus-/umsortieren (leer = alle an, Standardreihenfolge)
       c.tools = Object.assign({}, c.tools && typeof c.tools === 'object' ? c.tools : {});
       for (const k of ['off', 'order']) c.tools[k] = Array.isArray(c.tools[k]) ? c.tools[k].filter((x) => typeof x === 'string') : [];
-      // 1.41: Einstufung des Kurses; 1.42: undifferenziert (Standard), G, E, E1, E2 und Abweichung je Person
+      // 1.41: Einstufung des Kurses; 1.42: undifferenziert (Standard), G, E, E1, E2 und Abweichung je Person; 1.43.1: GK, LK (MSS)
       c.einstufung = courseEinstufung(c);
       for (const s of c.students) if (s.einstufung !== undefined && (!EINSTUFUNG_IDS.includes(s.einstufung) || s.einstufung === c.einstufung)) delete s.einstufung;
       // 1.40: Nachschreibtermine übernehmen Halbjahr, Bereich, Gewicht und Wertung der Original-Arbeit
@@ -393,7 +393,7 @@
       overrides: {},
       comments: {},
       note: '',
-      einstufung: 'U', // seit 1.42: 'U' (undifferenziert) | 'G' | 'E' | 'E1' | 'E2'; je Person abweichend in student.einstufung
+      einstufung: { gk: 'GK', lk: 'LK' }[type] || 'U', // seit 1.42: 'U' (undifferenziert) | 'G' | 'E' | 'E1' | 'E2', seit 1.43.1 auch 'GK' | 'LK' (MSS); je Person abweichend in student.einstufung
     };
   }
 
@@ -405,8 +405,18 @@
     ['E', 'E-Kurs'],
     ['E1', 'E1-Kurs'],
     ['E2', 'E2-Kurs'],
+    ['GK', 'Grundkurs'],
+    ['LK', 'Leistungskurs'],
   ];
   const EINSTUFUNG_IDS = EINSTUFUNGEN.map(([k]) => k);
+  // Auswahl je Stufe; undifferenziert gibt es in beiden
+  const EINSTUFUNG_MSS = ['U', 'GK', 'LK'];
+
+  /** Einstufungen zur Auswahl für den Kurs (Sek I: U, G, E, E1, E2; MSS: U, GK, LK); ein schon gesetzter Wert der anderen Stufe bleibt wählbar. */
+  function einstufungenFor(c, current) {
+    const mss = Number(c.jahrgang) >= 11;
+    return EINSTUFUNGEN.filter(([k]) => k === current || (mss ? EINSTUFUNG_MSS.includes(k) : k === 'U' || !EINSTUFUNG_MSS.includes(k)));
+  }
 
   /** Einstufung des Kurses (fehlt oder ungültig → undifferenziert). */
   function courseEinstufung(c) {
@@ -422,6 +432,15 @@
   function setStudentEinstufung(c, s, v) {
     if (!EINSTUFUNG_IDS.includes(v) || v === courseEinstufung(c)) delete s.einstufung;
     else s.einstufung = v;
+  }
+
+  /**
+   * MSS-Kursart (Grund-/Leistungskurs) in die Einstufung des Kurses übernehmen, solange diese
+   * undifferenziert, GK oder LK ist. Abweichungen einzelner Personen bleiben (gemeinsame GK/LK-Kurse).
+   */
+  function einstufungFromType(c) {
+    const v = { gk: 'GK', lk: 'LK' }[c.type];
+    if (v && EINSTUFUNG_MSS.includes(courseEinstufung(c))) setCourseEinstufung(c, v, { keep: true });
   }
 
   /** Einstufung des Kurses setzen: gilt für alle; keep = Abweichungen einzelner Personen behalten. */
@@ -791,6 +810,8 @@
     migrate,
     newCourse,
     EINSTUFUNGEN,
+    einstufungenFor,
+    einstufungFromType,
     courseEinstufung,
     studentEinstufung,
     setStudentEinstufung,

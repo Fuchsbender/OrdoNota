@@ -47,6 +47,7 @@
           const t = G.COURSE_TYPES[course.type];
           course.wKa = t.ka;
           course.wOther = t.other;
+          M.einstufungFromType(course);
           NM.app.commit();
         },
       },
@@ -108,7 +109,7 @@
           h(
             'select',
             { class: 'input', 'data-einstufung': '', title: 'Gilt für alle im Kurs; einzelne Personen lassen sich in der Schülerliste anders einstufen (Spalte „Einst.“)', onchange: (e) => changeEinstufung(course, e.target.value) },
-            M.EINSTUFUNGEN.map(([v, l]) => h('option', { value: v, selected: M.courseEinstufung(course) === v }, l))
+            M.einstufungenFor(course, M.courseEinstufung(course)).map(([v, l]) => h('option', { value: v, selected: M.courseEinstufung(course) === v }, l))
           )
         ),
         field('Notizen zum Kurs', h('textarea', { class: 'input', rows: 2, value: course.note || '', onchange: set('note') }), 'span2')
@@ -161,6 +162,7 @@
     M.setJahrgang(course, j, NM.app.db().settings);
     if (j >= 11 && course.type === 'sek1') {
       course.type = 'lk';
+      M.einstufungFromType(course);
     } else if (j <= 10 && (course.type === 'lk' || course.type === 'gk')) {
       course.type = 'sek1';
       course.wKa = 50;
@@ -216,7 +218,7 @@
                 NM.app.commit();
               },
             },
-            M.EINSTUFUNGEN.map(([v, l]) => h('option', { value: v, selected: M.studentEinstufung(course, s) === v, title: l }, v === 'U' ? 'undiff.' : v))
+            M.einstufungenFor(course, M.studentEinstufung(course, s)).map(([v, l]) => h('option', { value: v, selected: M.studentEinstufung(course, s) === v, title: l }, v === 'U' ? 'undiff.' : v))
           )
         ),
         h(
