@@ -1331,39 +1331,11 @@
 
   // ---------- OrdoScripto ----------
 
-  /**
-   * OrdoScripto kennt nur G und E. Sind Personen undifferenziert eingestuft und ist für die Arbeit noch nichts
-   * festgelegt, wird gefragt. Liefert 'G' | 'E', null (keine Frage nötig) oder false (abgebrochen).
-   */
-  async function askUndiff(course, a) {
-    const S = NM.scripto;
-    if (!S.needsUndiff(course, a)) return null;
-    const n = S.undiffStudents(course).length;
-    const sel = h('select', { class: 'input', 'data-undiff-ask': '' }, h('option', { value: 'G' }, 'als G-Kurs'), h('option', { value: 'E' }, 'als E-Kurs'));
-    const v = await modal({
-      title: 'Undifferenziert eingestufte Personen',
-      body: h(
-        'div',
-        null,
-        h('p', null, `${n === 1 ? '1 Person ist' : n + ' Personen sind'} undifferenziert eingestuft. OrdoScripto kennt nur G- und E-Kurs (E1 und E2 gehen als E). Wie gilt diese Arbeit für sie?`),
-        h('label', { class: 'field' }, h('span', null, 'Undifferenzierte'), sel),
-        h('p', { class: 'muted small' }, 'Gilt für diese Arbeit und ihre Nachschreibtermine und lässt sich in der Karte „OrdoScripto“ ändern. Die Einstufung je Person steht im Reiter „Kurs & Schüler“.')
-      ),
-      buttons: [
-        { label: 'Abbrechen', value: null },
-        { label: 'Übernehmen', value: 'ok', kind: 'primary' },
-      ],
-    });
-    return v === 'ok' ? sel.value : false;
-  }
-
   /** „Für OrdoScripto vorbereiten“: Test-ID und fehlende Schüler-IDs vergeben (bei Nachschreibterminen in der Arbeit). */
   async function scriptoPrepare(course, db, a) {
-    const undiff = await askUndiff(course, a);
-    if (undiff === false) return NM.app.rerender();
     let r;
     try {
-      r = NM.scripto.prepare(db, course, a, new Date(), { undiff });
+      r = NM.scripto.prepare(db, course, a);
     } catch (e) {
       return toast(e.message, 'error', 8000);
     }
@@ -1378,14 +1350,13 @@
     const o = S.owner(course, a);
     const n = Object.keys(d.ids).length;
     const miss = S.missing(course, a);
-    // Spalte „kurs“ der Import-CSV: Anzahl je Wert
+    // Spalte „kurs“ der Import-CSV (Einstufung je Person): Anzahl je Wert
     const counts = {};
     for (const s of M.activeStudents(course)) if (d.ids[s.id]) {
-      const k = S.kursFor(course, a, s) || '?';
+      const k = S.kursFor(course, a, s);
       counts[k] = (counts[k] || 0) + 1;
     }
     const kurs = Object.entries(counts).map(([k, c]) => `${c} × ${k}`).join(', ');
-    const undiffN = S.undiffStudents(course).length;
     return h(
       'div',
       { class: 'card', 'data-scripto-card': '' },
@@ -1393,7 +1364,7 @@
         'div',
         { class: 'card-head' },
         h('h2', null, 'OrdoScripto'),
-        h('span', { class: 'muted small' }, 'Test-ID ', h('strong', { class: 'mono', 'data-scripto-id': '' }, d.testId), ` · ${n} Schüler-IDs · Kurs ${kurs || '–'} · vorbereitet am `, new Date(d.created).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }))
+        h('span', { class: 'muted small' }, 'Test-ID ', h('strong', { class: 'mono', 'data-scripto-id': '' }, d.testId), ` · ${n} Schüler-IDs · Einstufung ${kurs || '–'} · vorbereitet am `, new Date(d.created).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }))
       ),
       h(
         'div',
@@ -1403,39 +1374,14 @@
           {
             class: 'btn btn-sm',
             'data-scripto-csv': '',
-            title: 'Datei für den Import in OrdoScripto: nur Test-ID, Schüler-ID und Kurs, keine Namen',
-            onclick: async () => {
-              const undiff = await askUndiff(course, a);
-              if (undiff === false) return;
-              if (undiff) S.setUndiff(course, a, undiff);
+            title: 'Datei für den Import in OrdoScripto: nur Test-ID, Schüler-ID und Einstufung, keine Namen',
+            onclick: () => {
               const f = S.importCsv(course, a);
-              NM.app.commit({ render: false });
               NM.util.download(f.name, f.text, 'text/csv;charset=utf-8');
             },
           },
           `⬇ Import-CSV: ${d.testId}_import.csv`
         ),
-        undiffN
-          ? h(
-              'label',
-              { class: 'inline small', title: 'OrdoScripto kennt nur G- und E-Kurs. Nach einer Änderung die Import-CSV neu speichern.' },
-              `${undiffN} undifferenziert → `,
-              h(
-                'select',
-                {
-                  class: 'input input-sm',
-                  'data-scripto-undiff': '',
-                  onchange: (e) => {
-                    S.setUndiff(course, a, e.target.value);
-                    NM.app.commit();
-                  },
-                },
-                h('option', { value: '', selected: !d.undiff, disabled: true }, 'noch offen'),
-                h('option', { value: 'G', selected: d.undiff === 'G' }, 'G'),
-                h('option', { value: 'E', selected: d.undiff === 'E' }, 'E')
-              )
-            )
-          : null,
         miss.length ? h('button', { class: 'btn btn-sm', 'data-scripto-add': '', title: 'Neu hinzugekommene Personen bekommen eine Schüler-ID; vergebene IDs bleiben', onclick: () => scriptoPrepare(course, db, a) }, `+ IDs für ${miss.length} ${miss.length === 1 ? 'neue Person' : 'neue Personen'}`) : null
       ),
       h(
