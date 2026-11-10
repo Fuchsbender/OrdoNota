@@ -10,7 +10,7 @@
   // 3 (1.20): Präsentationen (kind "pres") – ältere Versionen kennen diese Leistungsart nicht.
   // 4 (1.23): Gruppenpräsentationen – ältere Versionen würden Gruppenwerte ignorieren und falsche Noten zeigen.
   const SCHEMA = 4;
-  const APP_VERSION = '1.40.0';
+  const APP_VERSION = '1.41.0';
 
   class NewerSchemaError extends Error {}
 
@@ -108,6 +108,7 @@
         tabs: {}, // ausgeschaltete Reiter als Standard für alle Kurse: { "<Reiter>": false }; course.tabs weicht je Kurs ab
         tabOrder: [], // seit 1.34: Reihenfolge der Reiter (leer = Standardreihenfolge)
         pomodoro: Object.assign({}, POMODORO_DEFAULTS),
+        scriptoSeq: 0, // seit 1.41: zuletzt vergebene laufende Nummer der OrdoScripto-Test-IDs (T-<Jahr>-NNNN)
       },
       criteriaPool: pool,
       presTemplates: defaultPresTemplates(pool),
@@ -152,6 +153,8 @@
       // 1.39: Werkzeuge im Reiter „Tools“ je Kurs aus-/umsortieren (leer = alle an, Standardreihenfolge)
       c.tools = Object.assign({}, c.tools && typeof c.tools === 'object' ? c.tools : {});
       for (const k of ['off', 'order']) c.tools[k] = Array.isArray(c.tools[k]) ? c.tools[k].filter((x) => typeof x === 'string') : [];
+      // 1.41: Einstufung G-/E-Kurs (für OrdoScripto), gilt für alle im Kurs
+      if (!['G', 'E'].includes(c.einstufung)) c.einstufung = '';
       // 1.40: Nachschreibtermine übernehmen Halbjahr, Bereich, Gewicht und Wertung der Original-Arbeit
       syncMakeups(c);
       c.overrides = c.overrides || {};
@@ -389,6 +392,7 @@
       overrides: {},
       comments: {},
       note: '',
+      einstufung: '', // seit 1.41: 'G' | 'E' | '' (G-/E-Kurs, für OrdoScripto)
     };
   }
 
@@ -479,6 +483,7 @@
     test.results = {};
     test.note = '';
     delete test.moodle;
+    delete test.scripto; // IDs für OrdoScripto liest der Nachschreibtermin aus der Arbeit (NM.scripto.dataOf)
     for (const part of test.parts || []) delete part.moodle;
     const a = { id: uid(), kind: 'test', half: orig.half, cat: orig.cat, name: orig.name + ' – Nachschreibtermin', date: todayISO(), weight: orig.weight, makeupOf: orig.id, test };
     if (orig.ungraded) a.ungraded = true;

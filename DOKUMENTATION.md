@@ -1,6 +1,6 @@
 # OrdoNota – Dokumentation
 
-Version 1.40.0 · Stand November 2026
+Version 1.41.0 · Stand November 2026
 
 OrdoNota (bis Version 1.11 „Notenmanager“) verwaltet Noten für die Sekundarstufe I (Noten 1–6 mit Tendenz) und die Mainzer Studienstufe (MSS, Punkte 00–15) an Schulen in Rheinland-Pfalz. Die App läuft vollständig lokal im Browser, verschlüsselt alle Daten mit einem Passwort und legt sie in einem Ordner ab, den der Synology Drive Client auf die DiskStation spiegelt.
 
@@ -243,6 +243,7 @@ Technisch schreibt die App dazu die Datei `notenmanager.lock.json` in den Dateno
 | Kursart | Setzt die Standardgewichtung (siehe Tabelle). Kursart und Jahrgang werden passend gehalten: Wählen Sie „MSS-Leistungskurs“ oder „MSS-Grundkurs“ bei Jahrgang 5–10, springt der Jahrgang auf 11 (bzw. 12/13, wenn das unter „Klasse / Stufe“ steht, z. B. „MSS 12“); „Sek I“ bei Jahrgang 11–13 setzt ihn auf 10. Ein Hinweis zeigt die Änderung an. |
 | Gewicht Klassen-/Kursarbeiten (%) | Anteil der schriftlichen Arbeiten. Das andere Feld passt sich automatisch an (Summe 100 %). |
 | Jahresnote: Gewicht 1. HJ : 2. HJ | Nur für Jahrgang 5–11; Standard 1 : 2 (⅓ : ⅔) |
+| Einstufung (G-/E-Kurs) | „G-Kurs“, „E-Kurs“ oder leer. Gilt für alle im Kurs und wird für die Import-Datei von OrdoScripto gebraucht (siehe 7.9); fehlt sie dort, fragt die App nach |
 | Notizen | Freitext zum Kurs |
 
 **Kursarten**
@@ -380,6 +381,7 @@ Der Knopf **„🖨 Drucken …“** öffnet eine Auswahl aller Druckarten des T
 | 📄 Ergebnisliste | Alle Personen mit Punkten je Aufgabe, Σ, %, Note (bei Klassen-/Kursarbeiten mit Spalte „Unterschrift“); darunter Notenspiegel und Schlüssel |
 | 🧩 Ergebnisse nach Teilen | nur bei Arbeiten in Teilen (siehe 7.8): alle Personen mit Punkten, Prozent und (bei getrennter Benotung) Note je Teil, dazu die Gesamtwerte; darunter Notenspiegel und Schlüssel |
 | 📊 Notenschlüssel und Notenspiegel | Punktschwellen je Note und Notenspiegel mit Statistik, ohne Namen (z. B. für das Klassenbuch oder die Fachleitung) |
+| 🔖 Trennblätter für OrdoScripto | nur nach „Für OrdoScripto vorbereiten“ (siehe 7.9): je Person eine A4-Seite mit Name, Klasse, Test, QR-Code und IDs; wahlweise nur für die Nachschreibenden |
 | **Zum Austeilen** | |
 | ✂️ Ergebniszettel zum Ausschneiden | Ein Abschnitt pro Person: erreichte und mögliche Punkte je Aufgabe, Prozent, Note |
 | 💬 Moodle-Rückmeldung je Person | nur bei Tests aus Moodle (siehe 7.7): je Person eine Seite mit Ergebnis (Punkte, Prozent) oben, darunter Frage, gegebene Antwort, Lösung und Punkte; unten die **Note (Zahl und ausgeschrieben) wahlweise** sowie Linien für Datum und Unterschrift |
@@ -437,6 +439,22 @@ Bei getrennter Benotung gilt außerdem:
 **Ausdrucke:** „Ergebnisliste“ und „Ergebniszettel“ zeigen die Aufgaben nach Teilen mit Zwischensumme (bei getrennter Benotung zusätzlich die Teilnoten), „Notenschlüssel und Notenspiegel“ den Schlüssel je Teil, **„🧩 Ergebnisse nach Teilen“** eine kompakte Tabelle aller Personen mit Punkten, Prozent und Note je Teil und gesamt.
 
 > Arbeiten in Teilen brauchen OrdoNota ab Version 1.18 auf allen Geräten (Datenformat 2, siehe 21.10).
+
+### 7.9 OrdoScripto: Trennblätter und Import-CSV
+
+OrdoScripto ist ein eigenes Programm, das handschriftliche Mathe-Arbeiten per lokaler KI liest und Punkte vorschlägt. Es kennt **keine Namen**, nur pseudonyme IDs. OrdoNota vergibt diese IDs, druckt Trennblätter mit QR-Code und schreibt die Import-Datei für OrdoScripto.
+
+1. Test öffnen, in der Karte „Aufgaben“ auf **„🔖 Für OrdoScripto vorbereiten“** klicken. Fehlt dem Kurs die Einstufung (G- oder E-Kurs), fragt die App einmal danach (danach unter „Kurs & Schüler“ änderbar).
+2. Die App vergibt eine **Test-ID** `T-<Jahr der Arbeit>-<laufende Nummer>` (z. B. `T-2026-0007`, laufend über die ganze Datenbank) und jeder aktiven Person eine **Schüler-ID** `S-` plus 6 Zeichen (ohne I, O, 0, 1, z. B. `S-7F3K9Q`). Die IDs sind **je Test neu**, damit OrdoScripto Arbeiten verschiedener Tests nicht derselben Person zuordnen kann. Vergebene IDs ändern sich nie.
+3. Die Karte **„OrdoScripto“** zeigt die Test-ID. **„⬇ Import-CSV“** speichert `<Test-ID>_import.csv` mit genau den Spalten `test_id;schueler_id;kurs`, **ohne Namen**. Diese Datei wird in OrdoScripto beim Anlegen des Tests hochgeladen.
+4. **„🖨 Drucken …“ → „Trennblätter für OrdoScripto“** druckt je Person eine A4-Seite: Name und Klasse groß zum Einsortieren, Titel und Datum des Tests, in der Mitte ein QR-Code (6 cm) mit dem Inhalt `ORDO|<Test-ID>|<Schüler-ID>`, darunter die beiden IDs als Text und der Hinweis „Trennblatt – vor die Arbeit des Schülers legen“. Die Reihenfolge folgt der Schülerliste. Als PDF speichern geht über den Druckdialog des Browsers („Als PDF speichern“).
+5. Je Person das Trennblatt vor die Arbeit legen und den ganzen Stapel scannen. OrdoScripto liest die QR-Codes, ordnet die folgenden Seiten der Schüler-ID zu und verwirft die Trennblattseiten.
+
+**Nachschreibtermin** (siehe 7.3): Er hat dieselbe Test-ID und dieselben Schüler-IDs wie die Arbeit, weil OrdoScripto die Nachschreibarbeiten in denselben Test aufnimmt. Im Nachschreibtermin ist beim Drucken **„Nur Nachschreibende“** vorausgewählt (wer in der Arbeit „fehlt“/„Nachschreiben“ hat oder schon im Nachschreibtermin eingetragen ist).
+
+**Später hinzugekommene Personen** bekommen über **„+ IDs für … neue Personen“** in der Karte eine ID dazu. Danach die Import-CSV neu speichern.
+
+Die Zuordnung ID ↔ Name steht **nur in der verschlüsselten Datenbank**. Das Notfallwerkzeug gibt sie in der CSV-Ausgabe mit aus (siehe 20.1). Die Punkte aus OrdoScripto zurück nach OrdoNota zu übernehmen ist geplant (`PLANUNG.md`, Abschnitt T, Teil 2).
 
 ## 8. Reiter „Mitarbeit/EPO“
 
@@ -735,7 +753,7 @@ In Tests, Mitarbeit/EPO und Notenübersicht fasst je ein Knopf **„🖨 Drucken
 | Notenübersicht | 👤 Leistungsbögen je Person | eine Seite je Person (Auswahl siehe unten) |
 | Notenübersicht | ⬇ CSV/Excel (eigener Knopf) | alle Noten und Ergebnisse des Kurses als CSV (Semikolon, öffnet direkt in Excel) |
 | Kurs & Schüler | ⬇ Excel | Schülerliste als Excel-Datei (.xlsx): Nr., Nachname, Vorname, I-Status, Aktiv (siehe 6.3) |
-| Tests | 📄 Ergebnisliste · 🧩 Ergebnisse nach Teilen · 📊 Notenschlüssel und Notenspiegel · ✂️ Ergebniszettel · 💬 Moodle-Rückmeldung | siehe 7.6, 7.7 und 7.8 |
+| Tests | 📄 Ergebnisliste · 🧩 Ergebnisse nach Teilen · 📊 Notenschlüssel und Notenspiegel · 🔖 Trennblätter für OrdoScripto · ✂️ Ergebniszettel · 💬 Moodle-Rückmeldung | siehe 7.6 bis 7.9 |
 | Tests | ⛶ Beamer (eigener Knopf) | Vollbild ohne Namen: Notenspiegel, Punkteverteilung, Ø je Aufgabe (siehe 7.5) |
 | Sitzplan | 🖨 Drucken | Sitzplan des gewählten Raums mit Vornamen, Fotos und Lehrerpult, A4 (quer, wenn mehr Spalten als Reihen) |
 | Gruppen | 📄 Gruppeneinteilung · 🗂️ Gruppenkarten | siehe 10b; ohne Noten und Regeln |
@@ -1080,7 +1098,7 @@ uv run --with cryptography tools/entschluesseln.py /pfad/zu/notenmanager.nmdb
 | (keine) | fragt nach dem Passwort und schreibt `<datei>_klartext.json` |
 | `-w`, `--wiederherstellung` | fragt nach dem Wiederherstellungsschlüssel statt dem Passwort |
 | `-o DATEI` | Name der Ausgabedatei |
-| `--csv ORDNER` | zusätzlich eine CSV-Datei je Kurs (Excel-kompatibel) mit Einzelnoten, Test-Rohpunkten (bei Arbeiten in Teilen je Teil), Präsentationspunkten, EPO-Kürzeln, gesetzten Noten und Bemerkungen |
+| `--csv ORDNER` | zusätzlich eine CSV-Datei je Kurs (Excel-kompatibel) mit Einzelnoten, Test-Rohpunkten (bei Arbeiten in Teilen je Teil; bei Tests für OrdoScripto mit Test-ID im Spaltenkopf und Schüler-ID in eckigen Klammern), Präsentationspunkten, EPO-Kürzeln, gesetzten Noten und Bemerkungen |
 | `-f` | vorhandene Ausgabedatei überschreiben |
 
 Das Passwort wird verdeckt abgefragt und nirgends gespeichert. Die CSV-Dateien enthalten **Rohdaten**. Berechnete Schnitte und Testnoten erzeugt nur die App.
@@ -1169,6 +1187,8 @@ Reines HTML/CSS/JavaScript ohne Build-Schritt und ohne externe Bibliotheken. Die
 | `js/random.js` | `NM.random` | Zufallswerkzeuge (rein, ohne DOM): `randInt`, `shuffle`, `pickPeople` (ohne Wiederholung), Kartenstapel `deck`, Würfelkörper `solid` (W4–W20, Beschriftung), Drehungen für den Wurf (`rollPlan`, `restQuat`, `frontLabel`); Zufall über `crypto.getRandomValues` |
 | `js/timer.js` | `NM.timer` | Countdown (rein, ohne DOM): Restzeit aus Startzeit und verstrichener Zeit (`create`, `start`, `pause`, `reset`, `add`, `remaining`, `overtime`, `stage` für die Farbe, `format`, `parse` für Eingaben wie `4:30`) |
 | `js/draw.js` | `NM.draw` | Ziehen (rein, ohne DOM): `drawFrom` (klassisch mit Auffüllen, Pool ohne), `newPool`, `drawPool`, `undoPool`, `finished`, `poolRange`, `drawnSets` (für die Notenübersicht), `check` (Ziehfehler), `classicColumns`, `mergeConflicts`, `merge`, `removePool` |
+| `js/qr.js` | `NM.qr` | QR-Code-Erzeuger (rein, ohne Bibliothek): Byte-Modus, Fehlerkorrektur Q, Versionen 1–10, Reed-Solomon über GF(256), alle 8 Masken mit Strafpunkten; `encode(text, { mask, minVersion })` → Modulmatrix, `svg(qr, { quiet: 4, width })` |
+| `js/scripto.js` | `NM.scripto` | Schnittstelle zu OrdoScripto (rein, ohne DOM): Test- und Schüler-IDs vergeben (`prepare`), IDs lesen (`dataOf`, auch für Nachschreibtermine), Personen für die Trennblätter (`sheetStudents`, `makeupStudents`), QR-Inhalt (`qrText`), Import-CSV (`importCsv`) |
 | `js/moodle.js` | `NM.moodle` | Moodle-Import (rein, ohne DOM): CSV zerlegen, Antworten-/Bewertungen-CSV erkennen und zusammenführen, Personen zuordnen, in einen Test oder Teil übernehmen (`applyImport` mit `replace`: bisherige Aufgaben ersetzen, `adopt`: Bezeichnung/Datum übernehmen) |
 | `js/ui.js` | `NM.ui` | Wiederverwendbare Bausteine: Halbjahres-Umschalter, Noten-Eingabezellen, Badges, Leistungs-Dialog, Sortieren (`sorter`, `nameCells`), Druckauswahl (`printButton`), Reiter-Haken (`tabChecks`) |
 | `js/app.js` | `NM.app` | Anwendungskern: Anmeldung, Sitzung, Autosave, Sperre, Layout, Navigation (`TABS`; ausschaltbare Reiter `OPTIONAL_TABS`, `tabOn`, `shownTab`), Neuzeichnen mit Fokus-Erhalt, Tabellen-Tastatur |
@@ -1235,7 +1255,7 @@ Das Startprogramm ist das einzige Teil mit Build-Schritt; die App selbst bleibt 
   "kdf": "PBKDF2-SHA256",
   "savedAt": "2026-10-14T21:57:03.123Z",
   "device": "Laptop Schule",
-  "app": "1.40.0",
+  "app": "1.41.0",
   "pw":   { "salt": "<b64>", "iter": 600000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "rec":  { "salt": "<b64>", "iter": 100000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "data": { "iv": "<b64>", "ct": "<b64: verschlüsseltes JSON des Datenmodells>" }
@@ -1258,12 +1278,13 @@ Entschlüsselter Inhalt (`schema: 4`):
 ```js
 {
   schema: 4,                             // Datenformat (siehe 26.2)
-  savedWith: "1.40.0",                    // App-Version beim letzten Speichern
+  savedWith: "1.41.0",                    // App-Version beim letzten Speichern
   created: "<ISO>", savedAt: "<ISO>",
   settings: { autoLockMin, limitSek1, limitMss, precision, testCat: "ka" | "other" /* seit 1.30 */, keepBackups, backupEveryMin, gradeColors,
               tabs: { "<Reiter>": false },   // seit 1.25: ausgeschaltete Reiter (Standard für alle Kurse)
               tabOrder: [ "<Reiter>" ],       // seit 1.34: Reihenfolge der Reiter (leer = Standard; fehlende Reiter hinter ihren Vorgänger)
-              pomodoro: { enabled, count, work, short, long, tick: "off" | "work" | "always", alarm: "off" | "bell" | "gong" | "beep", volume } },
+              pomodoro: { enabled, count, work, short, long, tick: "off" | "work" | "always", alarm: "off" | "bell" | "gong" | "beep", volume },
+              scriptoSeq },                   // seit 1.41: zuletzt vergebene laufende Nummer der OrdoScripto-Test-IDs
   criteriaPool: [ { id, group, name, desc: { 0, 1, 2, 3 } } ],   // Kriterien für Präsentationen (alle Kurse, seit 1.20)
   presTemplates: [ { id, name, criteria: [ { poolId, group, name, desc, weight } ] } ],   // Vorlagen (seit 1.21; Standardvorlagen seit 1.22)
   years:   [ { id, name: "2026/27" } ],
@@ -1276,6 +1297,7 @@ Course = {
   type: "sek1" | "lk" | "gk" | "noka",
   wKa, wOther,                           // Gewichte in %
   wHalf1, wHalf2,                        // Jahresnote (Standard 1 : 2)
+  einstufung: "G" | "E" | "",            // seit 1.41: G-/E-Kurs für alle im Kurs (Import-CSV für OrdoScripto)
   tabs?: { "<Reiter>": true | false },   // seit 1.25: Abweichung vom Standard settings.tabs (fehlt = wie Standard)
   students: [ { id, last, first, active, iStatus?, photo?, email? } ],   // photo: JPEG als Data-URL, 160×160; email: Moodle-Adresse (Zuordnung beim Import)
   assessments: [ Assessment ],
@@ -1309,7 +1331,8 @@ Assessment = {
              results: { "<sid>": { scores: { "<taskId>": Zahl }, status?, signed?, partStatus? } },   // signed: Datum „Unterschrift gesehen“; partStatus: { "<partId>": "fehlt" | "nachschreiben" }
              moodle?: { importedAt, totalMax,                                     // nur bei Moodle-Import
                         files: [ { name, kind: "answers" | "grades", text } ],    // Original-CSV-Dateien
-                        answers: { "<sid>": { "<taskId>": { q, a, c } } } } },   // Frage, gegebene, richtige Antwort
+                        answers: { "<sid>": { "<taskId>": { q, a, c } } } },   // Frage, gegebene, richtige Antwort
+             scripto?: { testId: "T-2026-0007", ids: { "<sid>": "S-7F3K9Q" }, created: "<ISO>" } },   // seit 1.41: Pseudonyme für OrdoScripto (nie bei Nachschreibterminen, die lesen die der Arbeit)
   epo?:    { limit, points: { "++","+","0","-","--","u","h" },
              table: { strict: bool, mins: [ % je Punktstufe ] },
              lessons: [ { id, date } ],
@@ -1344,12 +1367,14 @@ Das Skript startet einen unsichtbaren Chromium-Browser (Chrome, Edge, Chromium, 
 1. alle Testseiten (siehe 25.2), danach die Datenbanken früherer Versionen (`tests/altdaten/`) in der App: alle Reiter beider Kurse und die Jahresnote ohne Fehler, „Datenbank prüfen“ ohne Probleme,
 2. den Start der App im Demo-Modus und alle Reiter für einen Sek-I- und einen MSS-Kurs ohne JavaScript-Fehler, den Knopf „Demo ansehen“ (öffnet `?demo` im neuen Fenster, eigene Ansicht in `nm.ui` bleibt unberührt),
 3. das Sortieren per Klick auf Spaltenköpfe (Tests, EPO, Notenübersicht; Richtung und leere Werte unten),
-4. den Pomodoro-Timer (Aktivieren, Farben je Zustand, Phasenwechsel, Zurücksetzen, Einstellungsdialog), das Layout des Reiters „Einstellungen“ bei aktivem Timer (keine Lücken zwischen den Karten, Auswahllisten nicht abgeschnitten, bei 1570 und 2560 px) und die Kürzel in der eingeklappten Kursliste, die weichen Übergänge (nur bei Reiter-, Kurs- und Halbjahreswechsel), das Ein-/Ausklappen der Kursliste, das Ein-/Ausschalten von Reitern (Standard in den Einstellungen, Abweichung je Kurs, Ersatzreiter, Sprunglinks, „Wie Standard“), das Umsortieren der Reiter (▲▼, Ziehen in der Reiterleiste, Standardreihenfolge), das Einklappen der Spaltengruppen und Bündeln der Ziehungsspalten in der Notenübersicht (Noten unverändert, Zeitraum, Ausdruck vollständig), den Reiter „Tests“ in voller Breite, die Warnung bei zu wenig Punkten im Notenschlüssel (doppelte Schwellen markiert, Knöpfe „Halbe Punkte“/„Nur ganze Noten“ beheben sie), Arbeiten in Teilen (einschalten, Aufgaben und Punkte je Teil, Teil ausblenden, getrennt benoten, Status je Teil, Schlüssel je Teil, Ausdrucke inkl. „Ergebnisse nach Teilen“, Beamer, Teile aufheben), die Druckauswahl „🖨 Drucken …“ in Tests, EPO und Notenübersicht (Gruppen, Tooltips, Auswahl druckt, Abbrechen nicht) und den Haken „Unterschrift gesehen“ bei Klassenarbeiten (Zähler, Ausdruck), Nachschreibtermine („+ Nachschreibtermin“, nur Fehlende und „Alle zeigen“, eine gemeinsame Spalte in der Notenübersicht mit „N“, Rechnung als eine Leistung, Gewicht folgt der Arbeit, Verknüpfung lösen/setzen, Arbeit löschen), den Moodle-Import (Knopf im Test statt neben „+ Neuer Test“, bisherige Aufgaben ersetzen oder behalten, Dateiauswahl im Dialog, Zuordnung, Status „fehlt“, Ausdruck mit und ohne Note, erneuter Import),
+4. den Pomodoro-Timer (Aktivieren, Farben je Zustand, Phasenwechsel, Zurücksetzen, Einstellungsdialog), das Layout des Reiters „Einstellungen“ bei aktivem Timer (keine Lücken zwischen den Karten, Auswahllisten nicht abgeschnitten, bei 1570 und 2560 px) und die Kürzel in der eingeklappten Kursliste, die weichen Übergänge (nur bei Reiter-, Kurs- und Halbjahreswechsel), das Ein-/Ausklappen der Kursliste, das Ein-/Ausschalten von Reitern (Standard in den Einstellungen, Abweichung je Kurs, Ersatzreiter, Sprunglinks, „Wie Standard“), das Umsortieren der Reiter (▲▼, Ziehen in der Reiterleiste, Standardreihenfolge), das Einklappen der Spaltengruppen und Bündeln der Ziehungsspalten in der Notenübersicht (Noten unverändert, Zeitraum, Ausdruck vollständig), den Reiter „Tests“ in voller Breite, die Warnung bei zu wenig Punkten im Notenschlüssel (doppelte Schwellen markiert, Knöpfe „Halbe Punkte“/„Nur ganze Noten“ beheben sie), Arbeiten in Teilen (einschalten, Aufgaben und Punkte je Teil, Teil ausblenden, getrennt benoten, Status je Teil, Schlüssel je Teil, Ausdrucke inkl. „Ergebnisse nach Teilen“, Beamer, Teile aufheben), die Druckauswahl „🖨 Drucken …“ in Tests, EPO und Notenübersicht (Gruppen, Tooltips, Auswahl druckt, Abbrechen nicht) und den Haken „Unterschrift gesehen“ bei Klassenarbeiten (Zähler, Ausdruck), Nachschreibtermine („+ Nachschreibtermin“, nur Fehlende und „Alle zeigen“, eine gemeinsame Spalte in der Notenübersicht mit „N“, Rechnung als eine Leistung, Gewicht folgt der Arbeit, Verknüpfung lösen/setzen, Arbeit löschen), den Moodle-Import (Knopf im Test statt neben „+ Neuer Test“, bisherige Aufgaben ersetzen oder behalten, Dateiauswahl im Dialog, Zuordnung, Status „fehlt“, Ausdruck mit und ohne Note, erneuter Import), die Schnittstelle zu OrdoScripto (QR-Codes aller Versionen 1–10 und Masken mit `zxing-cpp` zurückgelesen; Vorbereiten mit Einstufungs-Abfrage, Import-CSV ohne Namen, Trennblätter als echtes PDF gedruckt, mit 300 dpi gerastert und jeder Code exakt gelesen; Nachschreibtermin mit denselben IDs, neue Personen, Einstufung im Kurs),
 5. den Excel-Export der Schülerliste (gültiges ZIP/XML, Umlaute und Sonderzeichen), das Kurs-Löschen nur mit „LÖSCHEN“, das Ein-/Ausblenden der Fotos im EPO-Reiter und im Sitzplan (auch im Druck) das Erweitern/Verkleinern des Sitzplan-Rasters an allen vier Seiten sowie das Ziehen (keine Wiederholung bis zum Auffüllen, automatisches Auffüllen, Note, Rückgängig, Abwesende/Herausgenommene) und die benannten Pools (Sammelspalte, eine Runde bis fertig, Rückgängig, Prüfung, Notenübersicht, Zusammenfassen, Löschen ohne Notenverlust), den Reiter „Tools“ (Timer: Start/Pause, läuft beim Reiterwechsel weiter, Ende mit Signal, ± 1 Min., Schnellwahl, vier Designs, Pop-up steuert denselben Timer; Einstellungen aller Werkzeuge werden gemerkt; Zahl im Bereich, Personen ohne Wiederholung und ohne Abwesende, 3D-Würfel mit Summe und gewürfelter Seite oben, Karten 52/32/eigene als Bild, Stapel immer sichtbar, mehrere auf einmal, nichts in der Notenliste) und den Reiter „Präsentationen“ (Bewerten per Knopf und in der Tabelle, Gewicht, Kriterien aus dem Pool und eigene, Vorlage, Ausdrucke, Spalte in der Notenübersicht, Pool bearbeiten, Startbestand ergänzen, Vorlagen speichern/anlegen/verwenden/drucken/löschen, Standardvorlagen vorhanden und ergänzen, Handreichung mit Notenschlüssel) und Gruppenpräsentationen (Gruppenwert für alle Mitglieder, Personenkriterien, Abweichung setzen/zurücksetzen, Tabelle, Gruppen bearbeiten/übernehmen, Druck, Auflösen ohne Notenänderung), den Reiter „Gruppen“ (neue Einteilung, Abwesende, Fixieren, Anklicken/Ziehen, Auftrag, Regel mit Warnung, Beamer ohne Noten mit Schrift passend zum Bildschirm und Umschaltern für Fotos/Nachnamen, Druck, Fotos/Nachnamen in der Einteilung, Gruppenpuzzle mit Expertengruppen unter den Stammgruppen, Anzahl der Teilthemen einstellbar und beim Neu verteilen erhalten, Hinweis nach Änderungen, Beamer-Umschalter Stamm-/Expertengruppen, Übernahme in eine Präsentation),
 6. das Notfallwerkzeug: Eine von der App echt verschlüsselte Datenbank wird mit `tools/entschluesseln.py` per Passwort und per Wiederherstellungsschlüssel entschlüsselt und mit dem Original verglichen. Dazu kommen falsches Passwort, manipulierte Datei und CSV-Ausgabe (auch für die Datenbanken aller früheren Versionen aus `tests/altdaten/`),
 7. das Startprogramm (nur wenn Go installiert ist, sonst übersprungen): `go test` in `launcher/` (Programmsymbol ohne Schriftzug, Zugriffsschutz, nur erlaubte Dateien, Speichern und Konflikt, Sicherungen, Konfliktkopien, Lock, Datenordner wählen, Kennwort, Programmordner finden), dann ein echter Start mit Testordner: Zugriff ohne Kennwort abgelehnt, zweiter Start erkennt das laufende Programm, die App erkennt das Startprogramm, legt eine Datenbank an (ohne Rückfrage), speichert Änderungen in den Ordner (mit dem Notfallwerkzeug geprüft), erkennt eine externe Änderung, überschreibt auf Wunsch, stellt aus einer Datei mit fremdem Passwort wieder her (eigenes Passwort bleibt), wechselt den Datenordner mit Sicherungen (alter Ordner bleibt, neuer gemerkt, danach wird dort gespeichert), übernimmt in einem leeren Ordner eine Datenbank aus einer Datei und gibt den Lock beim Beenden frei.
 
 Am Ende steht `ERGEBNIS: x von y bestanden`. Der Exit-Code ist 0, wenn alles bestanden ist.
+
+Für das Zurücklesen der QR-Codes startet das Skript `tests/qr_lesen.py` in einer eigenen Umgebung (`uv run --with zxing-cpp --with pillow --with pypdfium2`). Ohne `uv` müssen diese drei Pakete im aktuellen Python installiert sein.
 
 > **Regel:** Vor jedem Einspielen einer geänderten Version müssen alle Tests bestehen.
 
@@ -1361,6 +1386,7 @@ Am Ende steht `ERGEBNIS: x von y bestanden`. Der Exit-Code ist 0, wenn alles bes
 | `tests/model.test.html` | Migration älterer Datenbanken (SCHEMA 1 → 4, Bereich neuer Tests, Kriterienpool, Startbestand ergänzen, Vorlagen, Standardvorlagen), neue Präsentation, Ablehnung neuerer Datenformate, Erhalt unbekannter Felder, Reiterauswahl (`settings.tabs`, `course.tabs`), Reihenfolge der Reiter (`orderTabs`, `moveTab`), Werkzeuge je Kurs (`toolList`, `setTools`, Migration von `course.tools`), Namensliste | im Browser öffnen |
 | `tests/update.test.html` | Datenbanken früherer Versionen (Prüfstücke 1.1–1.29 in `tests/altdaten/`, je Datenformat mindestens eins): öffnen, Strukturprüfung ohne Fehler, **gleiche Halbjahres- und Jahresnoten wie in der alten Version**, unbekannte Felder bleiben, zweites Öffnen ändert nichts; `NM.model.check` findet kaputte Halbjahre, Bereiche, fehlende Inhalte, doppelte Personen, fehlende Schuljahre und ändert nichts | im Browser öffnen |
 | `tests/moodle.test.html` | CSV-Zerlegung, Erkennen und Zusammenführen von Antworten-/Bewertungen-CSV, bester Versuch, Textvergleich ohne Bewertungen, Zuordnung (Name, gemerkte E-Mail), Übernahme als Test, Import in einen bestehenden Test (Aufgaben ersetzen/behalten, Bezeichnung und Datum übernehmen), „fehlt“, erneuter Import, skalierte Punkte, Import in einen Teil (auch mit Ersetzen) | im Browser öffnen |
+| `tests/qr.test.html` | QR-Code: Größe und Codewörter je Version 1–10, kleinste passende Version, Format- und Versions-Bits (Normtabellen), Reed-Solomon (Generatorpolynom, Beispiel „HELLO WORLD“, Nullstellen des Codeworts), Such-, Takt- und Ausrichtungsmuster, Format-Information in der Matrix, Masken, SVG; OrdoScripto: Test-ID laufend, Schüler-IDs (Format, eindeutig, bleiben gleich, neue Personen), je Test neue Pseudonyme, Nachschreibtermin übernimmt IDs, nur Nachschreibende, Import-CSV (Spalten, keine Namen, kein BOM), Migration | im Browser öffnen |
 | `tests/groups.test.html` | Gruppengrößen (Rest verteilt), Verteilung (alle genau einmal), Regeln „nicht zusammen“/„zusammen“, leistungsgemischt/-gleich, fehlende Noten, Abwechslung (auch Minimum), Expertengruppen (Standard und einstellbare Anzahl, gleich große Gruppen, kein Thema doppelt), Migration | im Browser öffnen |
 | `tests/random.test.html` | Zufallszahl (Bereich, vertauschte Grenzen), Personenauswahl (ohne Wiederholung, Neubeginn), Kartenstapel 52/32/eigene, Würfelkörper W4–W20 (Flächenzahl, eben, Beschriftung, Gegenseiten n + 1, gewürfelte Seite liegt am Ende genau oben), Migration | im Browser öffnen |
 | `tests/timer.test.html` | Countdown: Start/Pause/Weiter, Restzeit aus der Startzeit, Farbstufen (letzte Minute, letztes Fünftel, letzte 10 s), Ende und Überzeit, Neustart nach dem Ende, ± Minuten (nicht unter 0), Anzeige mm:ss/h:mm:ss, Eingaben `5`, `2,5`, `4:30`, `1:05:00`, `90s` und ungültige | im Browser öffnen |
@@ -1426,6 +1452,7 @@ In `js/model.js` stehen zwei Nummern:
 - **Gruppenbildung (seit 1.24):** Logik in `js/groups.js` (`sizes`, `build` mit Kostenfunktion und Tauschsuche, `check`, `experts`), Reiter `js/view-groups.js` (`roll`, `expertCard`), Druck `NM.print.groups`, Übernahme in Präsentationen `NM.views.pres.applyGroups`. „Heute abwesend“ kommt aus `NM.views.draw.absent` (nur Sitzung). Leistung = gerundete Halbjahresnote (`G.halfResult(...).final`), nie gespeichert. Tests: `tests/groups.test.html`, E2E `run_groups_tab_check`.
 - **Reiter ausschalten (seit 1.25):** `NM.app.OPTIONAL_TABS`, `tabOn(course, id)`, `shownTab(course)` (Ersatz: Notenübersicht, sonst „Kurs & Schüler“), Haken über `NM.ui.tabChecks`. Daten ausgeschalteter Reiter bleiben und zählen weiter. E2E `run_tabs_check`.
 - **Nachschreibtermine (seit 1.40):** `a.makeupOf` an einem Test. Logik in `js/grades.js` (`makeupTarget`, `isMakeup`, `makeupsOf`, `hasTestEntry`, `countingFor`). `assessmentPoints`, `assessmentStatus` und `ungradedFor` nehmen den Kurs als letztes Argument und lesen dann über `countingFor` den zählenden Termin. `halfResult` lässt Nachschreibtermine als eigene Leistung weg. Modell: `NM.model.newMakeup` und `syncMakeups` (bei jedem `NM.app.commit()` und in `migrate`). Oberfläche in `js/view-tests.js` (`metaCard`, Filter `missedIn` in `resultsCard`, `ui.makeupAll`). Spalten in Notenübersicht, Notenliste, Leistungsbogen und CSV-Export ohne Nachschreibtermine (`G.isMakeup`). Wer Leistungen einer Person liest, übergibt den Kurs. Tests: `tests/grades.test.html`, `tests/model.test.html`, E2E `run_makeup_check`.
+- **OrdoScripto (seit 1.41, Plan in `PLANUNG.md` Abschnitt T, Formate in `../07 - OrdoScripto/docs/DESIGN.md`):** QR-Code in `js/qr.js` (`NM.qr`, nur Fehlerkorrektur Q), IDs und CSV in `js/scripto.js` (`NM.scripto`), Datenmodell `test.scripto`, `course.einstufung`, `settings.scriptoSeq`. Nachschreibtermine haben kein eigenes `scripto` (`newMakeup` löscht es), `NM.scripto.dataOf`/`owner` lesen das der Arbeit. Oberfläche in `js/view-tests.js` (`scriptoPrepare`, `askEinstufung`, `scriptoCardFor`, `scriptoPrint`, Knopf in `tasksCard`, Eintrag in `printButton`), Einstufung in `courseCard` (`js/view-course.js`), Druck `NM.print.scripto` (`js/print.js`, CSS `.p-sc-*`). Notfallwerkzeug: Pseudonyme in `schreibe_csv`. Ein Format ändert sich nur nach Absprache in DESIGN.md. Tests: `tests/qr.test.html`, E2E `run_scripto_check` mit `tests/qr_lesen.py`.
 - **Notenschlüssel-Warnung:** `G.unreachableSteps(key)` meldet nicht erreichbare Stufen; Warnung mit Schnellknöpfen in `NM.views.tests.keyCardFor` (Tests, Teile, Präsentationen).
 - **Neue Kursart:** Eintrag in `COURSE_TYPES` in `js/grades.js`.
 - **Farben:** Tokens oben in `css/app.css` (`:root` hell, darunter dunkel).

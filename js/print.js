@@ -378,6 +378,35 @@
     doPrint(`${a.name} – Moodle-Rückmeldung`, h('div', null, pages));
   }
 
+  // ---------- Trennblätter für OrdoScripto ----------
+
+  /** Je Person eine A4-Seite: Name und Klasse groß, Test, QR-Code „ORDO|<testId>|<schuelerId>“ (6 cm) mit den IDs darunter. */
+  function scripto(course, a, { onlyMakeup = false } = {}) {
+    const S = NM.scripto;
+    const d = S.dataOf(course, a);
+    const o = S.owner(course, a);
+    const pages = S.sheetStudents(course, a, { onlyMakeup }).map((s) => {
+      const sid = d.ids[s.id];
+      // Der Code selbst 60 mm breit, die Ruhezone (4 Module je Seite) kommt dazu
+      const code = NM.qr.encode(S.qrText(d.testId, sid));
+      const mm = ((60 * (code.size + 8)) / code.size).toFixed(1) + 'mm';
+      const qr = h('div', { class: 'p-sc-qr', style: `width:${mm};height:${mm}` });
+      qr.innerHTML = NM.qr.svg(code, { width: mm, title: S.qrText(d.testId, sid) });
+      return h(
+        'div',
+        { class: 'p-page p-break p-sc', 'data-scripto-sheet': sid },
+        h('div', { class: 'p-sc-kicker' }, 'Trennblatt · OrdoScripto'),
+        h('div', { class: 'p-sc-name' }, [s.first, s.last].filter(Boolean).join(' ')),
+        h('div', { class: 'p-sc-class' }, M.courseTitle(course)),
+        h('div', { class: 'p-sc-test' }, h('strong', null, o.name), a !== o ? h('span', null, ' · Nachschreibtermin ' + fmtDate(a.date)) : h('span', null, ' · ' + fmtDate(o.date))),
+        qr,
+        h('div', { class: 'p-sc-ids' }, d.testId, h('span', null, ' · '), sid),
+        h('div', { class: 'p-sc-hint' }, 'Trennblatt – vor die Arbeit des Schülers legen')
+      );
+    });
+    doPrint(`${o.name} – Trennblätter`, h('div', null, pages));
+  }
+
   // ---------- Präsentationen ----------
 
   const LEVELS = [0, 1, 2, 3];
@@ -917,5 +946,5 @@
     );
   }
 
-  NM.print = { test, moodle, pres, presGuide, groups, epo, epoSlips, seating, course, studentsDialog };
+  NM.print = { test, moodle, scripto, pres, presGuide, groups, epo, epoSlips, seating, course, studentsDialog };
 })((globalThis.NM = globalThis.NM || {}));

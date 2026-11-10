@@ -142,11 +142,19 @@ def schreibe_csv(daten, ordner):
             spalten.append(a)
         kopf = ["Nachname", "Vorname", "aktiv"]
         namen = {a.get("id"): a.get("name") for a in spalten}
+        nach_id = {a.get("id"): a for a in spalten}
+
+        def scripto(a):
+            # OrdoScripto (1.41): Pseudonyme stehen in der Arbeit, ein Nachschreibtermin nutzt die der Arbeit
+            o = nach_id.get(a.get("makeupOf")) or a
+            return (o.get("test") or {}).get("scripto") or {}
         for a in spalten:
             titel = f'{a.get("half")} {a.get("name")} ({a.get("kind")}, Gewicht {a.get("weight")})'
             # Nachschreibtermin (1.40): zählt in der App mit der Original-Arbeit als eine Note
             if a.get("makeupOf") in namen:
                 titel += f' – Nachschreibtermin zu „{namen[a["makeupOf"]]}“'
+            if a.get("kind") == "test" and scripto(a).get("testId"):
+                titel += f' – OrdoScripto {scripto(a)["testId"]}'
             kopf.append(titel)
         override_keys = sorted(kurs.get("overrides", {}).keys())
         kopf += [f"gesetzt {k}" for k in override_keys] + ["Bemerkung"]
@@ -166,9 +174,11 @@ def schreibe_csv(daten, ordner):
                     if text and t.get("parts"):
                         text = _teilpunkte(t, r) + " = " + text
                     if r.get("status") == "ungewertet":
-                        z.append(f"{text} (nicht gewertet)".strip())
+                        text = f"{text} (nicht gewertet)".strip()
                     else:
-                        z.append(r.get("status") or text)
+                        text = r.get("status") or text
+                    pseudonym = (scripto(a).get("ids") or {}).get(sid)
+                    z.append(f"{text} [{pseudonym}]".strip() if pseudonym else text)
                 elif a.get("kind") == "pres":
                     pr = a.get("pres", {})
                     r = pr.get("results", {}).get(sid, {})

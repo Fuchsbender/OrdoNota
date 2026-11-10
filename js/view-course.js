@@ -103,6 +103,18 @@
               h('div', { class: 'inline' }, weightFn('wHalf1'), h('span', null, ':'), weightFn('wHalf2'), h('span', { class: 'muted small' }, 'Standard 1 : 2 (⅓ zu ⅔)'))
             )
           : null,
+        field(
+          'Einstufung (G-/E-Kurs)',
+          h(
+            'select',
+            { class: 'input', 'data-einstufung': '', title: 'Für den ganzen Kurs, z. B. für die Import-Datei von OrdoScripto', onchange: set('einstufung') },
+            [
+              ['', '– (keine)'],
+              ['G', 'G-Kurs (Grundkurs)'],
+              ['E', 'E-Kurs (Erweiterungskurs)'],
+            ].map(([v, l]) => h('option', { value: v, selected: (course.einstufung || '') === v }, l))
+          )
+        ),
         field('Notizen zum Kurs', h('textarea', { class: 'input', rows: 2, value: course.note || '', onchange: set('note') }), 'span2')
       ),
       h('p', { class: 'muted small' }, 'Halbjahre: ', G.halvesFor(course).join(', '), G.hasYearGrade(course) ? ' · mit Jahresnote' : ' · jedes Halbjahr wird einzeln benotet')
@@ -455,6 +467,7 @@
     copy.wOther = course.wOther;
     copy.wHalf1 = course.wHalf1;
     copy.wHalf2 = course.wHalf2;
+    copy.einstufung = course.einstufung || '';
     if (course.tabs) copy.tabs = Object.assign({}, course.tabs);
     if (withStudents.checked) copy.students = M.activeStudents(course).map((s) => ({ id: uid(), last: s.last, first: s.first, active: true }));
     db.courses.push(copy);

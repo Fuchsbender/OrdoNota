@@ -45,7 +45,8 @@
     }
     const t = cur.test;
     const moodleCards = [t.moodle ? moodleCard(course, db, cur, null) : null, ...(G.hasParts(t) ? t.parts.filter((x) => x.moodle).map((x) => moodleCard(course, db, cur, x)) : [])];
-    view.append(...[metaCard(course, cur, level), ...moodleCards, G.hasParts(t) ? partsCard(course, db, cur, level) : null, tasksCard(course, db, cur), h('div', { class: 'test-layout' }, resultsCard(course, cur, level), keyCard(course, cur, level))].filter(Boolean));
+    const scriptoCard = NM.scripto.dataOf(course, cur) ? scriptoCardFor(course, db, cur) : null;
+    view.append(...[metaCard(course, cur, level), ...moodleCards, scriptoCard, G.hasParts(t) ? partsCard(course, db, cur, level) : null, tasksCard(course, db, cur), h('div', { class: 'test-layout' }, resultsCard(course, cur, level), keyCard(course, cur, level))].filter(Boolean));
   }
 
   function metaCard(course, a, level) {
@@ -242,6 +243,7 @@
       G.hasParts(t) ? { id: 'parts', icon: '🧩', label: 'Ergebnisse nach Teilen', group: 'teacher', tip: 'Kompakt: je Person Punkte, Prozent und (bei getrennter Benotung) Note jedes Teils sowie gesamt; darunter Notenspiegel und Schlüssel.', run: () => NM.print.test(course, a, 'parts') } : null,
       { id: 'key', icon: '📊', label: 'Notenschlüssel und Notenspiegel', group: 'teacher', tip: 'Punktschwellen je Note und Verteilung der Noten mit Statistik und Drittelparagraph – ohne Namen, z. B. für Klassenbuch oder Fachleitung.', run: () => NM.print.test(course, a, 'key') },
       { id: 'students', icon: '✂️', label: 'Ergebniszettel zum Ausschneiden', group: 'students', tip: 'Je Person ein Abschnitt mit erreichten und möglichen Punkten je Aufgabe, Prozent und Note – mehrere pro Blatt.', run: () => NM.print.test(course, a, 'students') },
+      NM.scripto.dataOf(course, a) ? { id: 'scripto', icon: '🔖', label: 'Trennblätter für OrdoScripto', group: 'teacher', tip: 'Je Person eine A4-Seite mit Name, Klasse und QR-Code (Test- und Schüler-ID) – vor die Arbeit legen und mit einscannen; wahlweise nur für die Nachschreibenden.', run: () => scriptoPrint(course, a) } : null,
       NM.moodle.hasData(t) ? { id: 'moodle', icon: '💬', label: 'Moodle-Rückmeldung je Person', group: 'students', tip: 'Je Person eine Seite mit Frage, gegebener Antwort, Lösung und Punkten; Note wahlweise, Felder für Datum und Unterschrift.', run: () => moodlePrint(course, a) } : null,
     ]);
   }
@@ -518,7 +520,11 @@
         // Moodle-Import in den Test (bei Teilen je Teil in der Karte „Teile“, erneut über die Karte „Moodle“)
         G.hasParts(t) || t.moodle
           ? null
-          : h('button', { class: 'btn btn-sm', 'data-focus-key': 'moodle-import', title: 'Moodle-Test aus der Antworten- und Bewertungen-CSV in diesen Test übernehmen: jede Frage wird eine Aufgabe', onclick: () => moodleImport(course, db, a.half, a) }, '⬆ Moodle-CSV')
+          : h('button', { class: 'btn btn-sm', 'data-focus-key': 'moodle-import', title: 'Moodle-Test aus der Antworten- und Bewertungen-CSV in diesen Test übernehmen: jede Frage wird eine Aufgabe', onclick: () => moodleImport(course, db, a.half, a) }, '⬆ Moodle-CSV'),
+        // OrdoScripto: nach dem Vorbereiten weiter über die Karte „OrdoScripto“
+        NM.scripto.dataOf(course, a)
+          ? null
+          : h('button', { class: 'btn btn-sm', 'data-scripto-prepare': '', title: 'Pseudonyme Test- und Schüler-IDs für die KI-Korrektur mit OrdoScripto vergeben; danach Trennblätter mit QR-Code drucken und die Import-CSV (ohne Namen) speichern', onclick: () => scriptoPrepare(course, db, a) }, '🔖 Für OrdoScripto vorbereiten')
       ),
       G.taskGroups(t).map(({ part, tasks }) =>
         h(
@@ -1321,6 +1327,115 @@
     if (v !== 'ok') return;
     if (!withResult.length) return toast('Noch keine Ergebnisse zum Drucken.', 'error');
     NM.print.moodle(course, a, { sid: who.value || null, withGrade: grade.checked });
+  }
+
+  // ---------- OrdoScripto ----------
+
+  /** Einstufung des Kurses erfragen, wenn sie fehlt (gilt danach für den ganzen Kurs). */
+  async function askEinstufung(course) {
+    if (NM.scripto.LEVELS.includes(course.einstufung)) return true;
+    const sel = h('select', { class: 'input', 'data-einstufung-ask': '' }, h('option', { value: 'G' }, 'G-Kurs (Grundkurs)'), h('option', { value: 'E' }, 'E-Kurs (Erweiterungskurs)'));
+    const v = await modal({
+      title: 'Einstufung des Kurses',
+      body: h('div', null, h('p', null, 'OrdoScripto braucht für die Import-Datei die Einstufung. Sie gilt für alle im Kurs und lässt sich im Reiter „Kurs & Schüler“ ändern.'), h('label', { class: 'field' }, h('span', null, 'Kurs ' + M.courseTitle(course)), sel)),
+      buttons: [
+        { label: 'Abbrechen', value: null },
+        { label: 'Übernehmen', value: 'ok', kind: 'primary' },
+      ],
+    });
+    if (v !== 'ok') return false;
+    course.einstufung = sel.value;
+    return true;
+  }
+
+  /** „Für OrdoScripto vorbereiten“: Test-ID und fehlende Schüler-IDs vergeben (bei Nachschreibterminen in der Arbeit). */
+  async function scriptoPrepare(course, db, a) {
+    if (!(await askEinstufung(course))) return NM.app.rerender();
+    let r;
+    try {
+      r = NM.scripto.prepare(db, course, a);
+    } catch (e) {
+      return toast(e.message, 'error', 8000);
+    }
+    NM.app.commit();
+    if (r.created) toast(`Test-ID ${r.data.testId} vergeben, ${r.added.length} Schüler-IDs. Jetzt die Import-CSV speichern und die Trennblätter drucken (🖨 Drucken …).`, 'success', 8000);
+    else toast(r.added.length ? `${r.added.length} ${r.added.length === 1 ? 'Schüler-ID' : 'Schüler-IDs'} ergänzt. Die Import-CSV bitte neu speichern.` : 'Alle haben schon eine Schüler-ID.', 'success', 6000);
+  }
+
+  function scriptoCardFor(course, db, a) {
+    const S = NM.scripto;
+    const d = S.dataOf(course, a);
+    const o = S.owner(course, a);
+    const n = Object.keys(d.ids).length;
+    const miss = S.missing(course, a);
+    return h(
+      'div',
+      { class: 'card', 'data-scripto-card': '' },
+      h(
+        'div',
+        { class: 'card-head' },
+        h('h2', null, 'OrdoScripto'),
+        h('span', { class: 'muted small' }, 'Test-ID ', h('strong', { class: 'mono', 'data-scripto-id': '' }, d.testId), ` · ${n} Schüler-IDs · Kurs ${course.einstufung || '–'} · vorbereitet am `, new Date(d.created).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }))
+      ),
+      h(
+        'div',
+        { class: 'inline wrap' },
+        h(
+          'button',
+          {
+            class: 'btn btn-sm',
+            'data-scripto-csv': '',
+            title: 'Datei für den Import in OrdoScripto: nur Test-ID, Schüler-ID und Kurs, keine Namen',
+            onclick: async () => {
+              if (!(await askEinstufung(course))) return;
+              const f = S.importCsv(course, a);
+              NM.app.commit({ render: false });
+              NM.util.download(f.name, f.text, 'text/csv;charset=utf-8');
+            },
+          },
+          `⬇ Import-CSV: ${d.testId}_import.csv`
+        ),
+        miss.length ? h('button', { class: 'btn btn-sm', 'data-scripto-add': '', title: 'Neu hinzugekommene Personen bekommen eine Schüler-ID; vergebene IDs bleiben', onclick: () => scriptoPrepare(course, db, a) }, `+ IDs für ${miss.length} ${miss.length === 1 ? 'neue Person' : 'neue Personen'}`) : null
+      ),
+      h(
+        'p',
+        { class: 'muted small' },
+        o !== a ? `Gleiche Test-ID wie „${o.name}“: OrdoScripto nimmt die Nachschreibarbeiten in denselben Test auf. ` : '',
+        'Trennblätter mit QR-Code über „🖨 Drucken …“. Die Zuordnung der IDs zu den Namen bleibt nur hier in der verschlüsselten Datenbank.'
+      )
+    );
+  }
+
+  async function scriptoPrint(course, a) {
+    const S = NM.scripto;
+    const all = S.sheetStudents(course, a);
+    const makeup = S.sheetStudents(course, a, { onlyMakeup: true });
+    const isMakeup = S.owner(course, a) !== a;
+    const who = h(
+      'select',
+      { class: 'input', 'data-scripto-who': '' },
+      h('option', { value: 'all', selected: !isMakeup || !makeup.length }, `Alle (${all.length}, je eine Seite)`),
+      h('option', { value: 'makeup', selected: isMakeup && makeup.length > 0, disabled: !makeup.length }, `Nur Nachschreibende (${makeup.length})`)
+    );
+    const miss = S.missing(course, a).length;
+    const v = await modal({
+      title: 'Trennblätter für OrdoScripto',
+      body: h(
+        'div',
+        null,
+        h('label', { class: 'field' }, h('span', null, 'Für wen'), who),
+        h('p', { class: 'muted small' }, 'Je Person eine Seite. Das Trennblatt kommt beim Scannen vor die Arbeit; OrdoScripto liest den QR-Code und verwirft die Seite.'),
+        miss ? h('p', { class: 'small warn-text' }, `${miss} ${miss === 1 ? 'Person hat' : 'Personen haben'} noch keine Schüler-ID (Karte „OrdoScripto“ → „+ IDs“).`) : null
+      ),
+      buttons: [
+        { label: 'Abbrechen', value: null },
+        { label: '🖨 Drucken', value: 'ok', kind: 'primary' },
+      ],
+    });
+    if (v !== 'ok') return;
+    const onlyMakeup = who.value === 'makeup';
+    if (!(onlyMakeup ? makeup : all).length) return toast('Niemand zum Drucken.', 'error');
+    NM.print.scripto(course, a, { onlyMakeup });
   }
 
   NM.views.tests = { render, moodleImport, keyCardFor, gradeStepsSelect, limitInput };

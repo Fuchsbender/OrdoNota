@@ -14,6 +14,7 @@ Geprüft werden:
 
 Ergebnis: Exit-Code 0, wenn alles bestanden ist.
 """
+import base64
 import functools
 import http.server
 import importlib.util
@@ -153,7 +154,7 @@ def report(name, ok, detail=""):
 
 def run_test_pages(br, base):
     print("Testseiten:")
-    for page in ["grades", "model", "update", "moodle", "pomodoro", "groups", "random", "timer", "draw", "crypto", "storage"]:
+    for page in ["grades", "model", "update", "moodle", "qr", "pomodoro", "groups", "random", "timer", "draw", "crypto", "storage"]:
         br.open(f"{base}/tests/{page}.test.html")
         done = br.wait("/^(ALLE TESTS BESTANDEN|\\d+ FEHLGESCHLAGEN|FEHLER)/.test(document.getElementById('out').textContent)")
         text = br.eval("document.getElementById('out').textContent") or ""
@@ -840,6 +841,158 @@ def run_makeup_check(br, base):
            res["created"] and res["info"] and res["rowsMissing"] == 1 and res["rowsAll"] == 12 and res["rowsBack"] == 1 and res["s11"] and res["half"] and res["sync"], str(res))
     report("Verknüpfung lösen/setzen, Original löschen macht eigene Tests",
            res["unlinked"] and res["ownCol"] == 1 and res["relinked"] and res["orphan"] and not br.errors, str(res) + " " + "; ".join(br.errors))
+
+
+def qr_lesen(art, inhalt, endung):
+    """QR-Codes mit zxing-cpp lesen (tests/qr_lesen.py in eigener uv-Umgebung). Liefert (Ergebnis, Fehlertext)."""
+    tmp = tempfile.mkdtemp(prefix="nm-qr-")
+    try:
+        pfad = os.path.join(tmp, "eingabe" + endung)
+        with open(pfad, "wb") as f:
+            f.write(inhalt)
+        skript = os.path.join(ROOT, "tests", "qr_lesen.py")
+        uv = shutil.which("uv")
+        cmd = ([uv, "run", "-q", "--with", "zxing-cpp", "--with", "pillow", "--with", "pypdfium2", "python", "-I", skript]
+               if uv else [sys.executable, "-I", skript])
+        p = subprocess.run(cmd + [art, pfad], capture_output=True, text=True, timeout=300, cwd=tmp)
+        if p.returncode:
+            return None, ("zxing-cpp nicht verfügbar (uv installieren oder pip install zxing-cpp pillow pypdfium2): " if not uv else "") + p.stderr[-400:]
+        return json.loads(p.stdout), ""
+    except Exception as e:  # noqa: BLE001
+        return None, str(e)
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def run_scripto_check(br, base):
+    print("OrdoScripto (IDs, Import-CSV, Trennblätter mit QR-Code, zxing-cpp):")
+    # 1. Modulmatrizen aus der App: mehrere Inhalte, Versionen 1–10, alle Masken
+    br.open(f"{base}/index.html?demo")
+    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.errors = []
+    faelle = br.eval("""(() => {
+        const out = [];
+        const texts = ['S-7F3K9Q', 'ORDO|T-2026-01', 'ORDO|T-2026-0142|S-7F3K9Q', 'ORDO|T-2027-8999|S-ZZ2345', 'Ä ö ü ß – € UTF-8', 'x'.repeat(150)];
+        for (const t of texts) for (let v = 1; v <= 10; v++) for (let m = 0; m < 8; m++) {
+            if (NM.qr.byteCapacity(v) < new TextEncoder().encode(t).length) continue;
+            const q = NM.qr.encode(t, { minVersion: v, mask: m });
+            out.push({ t, v: q.version, m: q.mask, mod: q.modules });
+        }
+        return out; })()""")
+    gelesen, fehler = qr_lesen("matrizen", json.dumps([f["mod"] for f in faelle]).encode(), ".json")
+    falsch = [f"V{f['v']} M{f['m']} {f['t'][:20]!r} → {g!r}" for f, g in zip(faelle, gelesen or [])  if g != f["t"]]
+    versionen = sorted({f["v"] for f in faelle})
+    report(f"zxing-cpp liest {len(faelle)} Codes exakt (Versionen {versionen[0]}–{versionen[-1]}, alle 8 Masken, UTF-8)",
+           gelesen is not None and len(gelesen) == len(faelle) and not falsch and versionen == list(range(1, 11)),
+           fehler or "; ".join(falsch[:5]))
+
+    # 2. Oberfläche: vorbereiten (Einstufung erfragen), Karte, Import-CSV, Druckauswahl
+    res = br.eval("""(async () => {
+        const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
+        window.print = () => {};
+        const db = NM.app.db(), c = db.courses[0], S = NM.scripto, M = NM.model;
+        const out = {};
+        c.einstufung = '';
+        const ka = c.assessments.find((x) => x.kind === 'test' && x.name === 'KA 1 – Terme');
+        NM.app.state.ui.half[c.id] = ka.half; NM.app.state.ui.testId[c.id] = ka.id;
+        NM.app.select({ courseId: c.id, tab: 'tests' }); await wait();
+        const menuHas = async (id) => { document.querySelector('[data-print-menu]').click(); await wait();
+            const has = !!document.querySelector('dialog [data-print="' + id + '"]');
+            [...document.querySelectorAll('dialog button')].find((b) => b.textContent === 'Abbrechen').click(); await wait(); return has; };
+        out.before = [!!document.querySelector('[data-scripto-prepare]'), !document.querySelector('[data-scripto-card]'), await menuHas('scripto')];
+        // Abbrechen bei der Einstufung: nichts passiert
+        document.querySelector('[data-scripto-prepare]').click(); await wait();
+        out.asked = !!document.querySelector('dialog [data-einstufung-ask]');
+        [...document.querySelectorAll('dialog button')].find((b) => b.textContent === 'Abbrechen').click(); await wait();
+        out.cancel = !ka.test.scripto && c.einstufung === '';
+        document.querySelector('[data-scripto-prepare]').click(); await wait();
+        document.querySelector('dialog [data-einstufung-ask]').value = 'E';
+        document.querySelector('dialog .btn-primary').click(); await wait(300);
+        const d = ka.test.scripto;
+        const act = M.activeStudents(c);
+        out.prepared = [c.einstufung, S.TEST_ID.test(d.testId), act.every((s) => S.STUDENT_ID.test(d.ids[s.id])), new Set(Object.values(d.ids)).size === act.length,
+            !!document.querySelector('[data-scripto-card]'), !document.querySelector('[data-scripto-prepare]'), (document.querySelector('[data-scripto-id]') || {}).textContent === d.testId, await menuHas('scripto')];
+        // Import-CSV
+        const dl = []; const origDl = NM.util.download; NM.util.download = (n, t) => dl.push([n, t]);
+        document.querySelector('[data-scripto-csv]').click(); await wait();
+        NM.util.download = origDl;
+        const lines = dl.length ? dl[0][1].split('\\n') : [];
+        out.csv = [dl.length, dl[0] && dl[0][0] === d.testId + '_import.csv', lines[0], lines.length - 2 === act.length, lines.slice(1, -1).every((l) => l.split(';').length === 3 && l.endsWith(';E')),
+            !c.students.some((s) => dl[0][1].includes(s.last) || dl[0][1].includes(s.first))];
+        // Druckauswahl → Trennblätter für alle
+        document.querySelector('[data-print-menu]').click(); await wait();
+        document.querySelector('dialog [data-print="scripto"]').click(); await wait();
+        out.whoKa = document.querySelector('dialog [data-scripto-who]').value;
+        document.querySelector('dialog .btn-primary').click(); await wait(300);
+        const sheets = [...document.querySelectorAll('#print-root [data-scripto-sheet]')];
+        out.sheets = [sheets.length === act.length, sheets.map((x) => x.dataset.scriptoSheet).join() === act.map((s) => d.ids[s.id]).join(),
+            sheets[0].textContent.includes(act[0].first + ' ' + act[0].last), sheets[0].textContent.includes(M.courseTitle(c)), sheets[0].textContent.includes(d.testId + ' · ' + d.ids[act[0].id]),
+            sheets[0].textContent.includes('Trennblatt – vor die Arbeit des Schülers legen'), !!sheets[0].querySelector('.p-sc-qr svg'), document.body.classList.contains('printing')];
+        out.expected = act.map((s) => S.qrText(d.testId, d.ids[s.id]));
+        return out; })()""")
+    report("Vorbereiten: Einstufung erfragt (Abbrechen ändert nichts), Test-ID, eine ID je Person, Karte, Druckauswahl",
+           res["before"] == [True, True, False] and res["asked"] and res["cancel"] and res["prepared"] == ["E", True, True, True, True, True, True, True], str({k: res[k] for k in ("before", "asked", "cancel", "prepared")}))
+    report("Import-CSV: Dateiname, Kopfzeile, eine Zeile je Person, drei Spalten, Kurs E, keine Namen",
+           res["csv"] == [1, True, "test_id;schueler_id;kurs", True, True, True], str(res["csv"]))
+    report("Trennblätter: je Person eine Seite in Listenreihenfolge, Name, Klasse, IDs, Hinweis, QR-Code",
+           res["whoKa"] == "all" and all(res["sheets"]), str(res["sheets"]) + " " + res["whoKa"])
+    # Trennblätter als PDF (wie „Als PDF speichern“) mit 300 dpi rastern und mit zxing-cpp lesen
+    pdf = br.call("Page.printToPDF", preferCSSPageSize=True, printBackground=True).get("result", {}).get("data")
+    seiten, fehler = qr_lesen("pdf", base64.b64decode(pdf or ""), ".pdf")
+    erwartet = [[t] for t in res["expected"]]
+    report(f"PDF der Trennblätter: {len(res['expected'])} Seiten, jeder QR-Code liest sich exakt als ORDO|Test-ID|Schüler-ID",
+           seiten == erwartet, fehler or f"{(seiten or [])[:3]} … erwartet {erwartet[:3]}")
+
+    # 3. Nachschreibtermin, neue Person, Kursdialog
+    res = br.eval("""(async () => {
+        const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
+        window.print = () => {};
+        window.dispatchEvent(new Event('afterprint'));
+        const db = NM.app.db(), c = db.courses[0], S = NM.scripto, G = NM.grades, M = NM.model;
+        const out = {};
+        const ka = c.assessments.find((x) => x.kind === 'test' && x.name === 'KA 1 – Terme');
+        const d = ka.test.scripto, before = JSON.stringify(d.ids), seq = db.settings.scriptoSeq;
+        const ns = G.makeupsOf(c, ka)[0];
+        NM.app.state.ui.testId[c.id] = ns.id; NM.app.rerender(); await wait();
+        out.makeupCard = [(document.querySelector('[data-scripto-id]') || {}).textContent === d.testId, !document.querySelector('[data-scripto-prepare]'), !ns.test.scripto];
+        document.querySelector('[data-print-menu]').click(); await wait();
+        document.querySelector('dialog [data-print="scripto"]').click(); await wait();
+        out.whoNs = document.querySelector('dialog [data-scripto-who]').value;
+        document.querySelector('dialog .btn-primary').click(); await wait(300);
+        const want = S.makeupStudents(c, ns).map((s) => d.ids[s.id]);
+        out.nsSheets = [want.length > 0, [...document.querySelectorAll('#print-root [data-scripto-sheet]')].map((x) => x.dataset.scriptoSheet).join() === want.join(),
+            document.querySelector('#print-root').textContent.includes('Nachschreibtermin')];
+        window.dispatchEvent(new Event('afterprint'));
+        // neuer Nachschreibtermin: kopiert keine IDs, nutzt die der Arbeit
+        const ns2 = M.newMakeup(c, ka);
+        out.copy = ns2.test.scripto === undefined && S.dataOf(c, ns2) === d;
+        // neue Person: Knopf „+ IDs“, vergebene bleiben
+        c.students.push({ id: 'neu-scripto', last: 'Neumann', first: 'Nele', active: true });
+        NM.app.commit(); await wait();
+        const add = document.querySelector('[data-scripto-add]');
+        out.addBtn = !!add && add.textContent.includes('1 neue Person');
+        add.click(); await wait();
+        const old = JSON.parse(before);
+        out.added = [S.STUDENT_ID.test(d.ids['neu-scripto'] || ''), Object.keys(old).every((k) => old[k] === d.ids[k]), !document.querySelector('[data-scripto-add]'), db.settings.scriptoSeq === seq, d.testId === ka.test.scripto.testId];
+        // anderer Test: neue Test-ID, andere Pseudonyme
+        const other = c.assessments.find((x) => x.kind === 'test' && x !== ka && !G.isMakeup(c, x));
+        const r = S.prepare(db, c, other);
+        out.other = [r.data.testId !== d.testId, S.nextSeq(db) === seq + 2, Object.keys(r.data.ids).every((k) => r.data.ids[k] !== d.ids[k])];
+        // Kursdialog: Einstufung als Auswahl
+        NM.app.select({ tab: 'course' }); await wait();
+        const sel = document.querySelector('[data-einstufung]');
+        out.courseField = !!sel && sel.value === 'E';
+        sel.value = 'G'; sel.dispatchEvent(new Event('change')); await wait();
+        out.courseSet = c.einstufung === 'G' && S.importCsv(c, ka).text.split('\\n')[1].endsWith(';G');
+        out.check = M.check(db).filter((x) => x.level === 'fehler').length;
+        NM.app.state.dirty = false;
+        return out; })()""")
+    report("Nachschreibtermin: gleiche Test-ID und IDs, vorausgewählt „nur Nachschreibende“, keine Kopie",
+           all(res["makeupCard"]) and res["whoNs"] == "makeup" and all(res["nsSheets"]) and res["copy"], str(res))
+    report("Neue Person: „+ IDs“ ergänzt, vergebene IDs bleiben; anderer Test bekommt neue Test-ID und Pseudonyme",
+           res["addBtn"] and all(res["added"]) and all(res["other"]), str(res))
+    report("Kurs & Schüler: Einstufung G/E, Import-CSV folgt; Datenbank prüfen ohne Fehler",
+           res["courseField"] and res["courseSet"] and res["check"] == 0 and not br.errors, str(res) + " " + "; ".join(br.errors))
 
 
 def run_unreachable_check(br, base):
@@ -2062,6 +2215,24 @@ def run_decrypt_tool(br, base):
     wa, ga = tool._praes_punkte(gp, "a")
     wb, _ = tool._praes_punkte(gp, "b")
     report("CSV: Gruppenpräsentation (Gruppenwert, Abweichung)", wa == {"i": 3.0, "v": 2.0} and wb == {"i": 1.0} and ga["name"] == "G1", f"{wa} | {wb}")
+    # OrdoScripto (1.41): Test-ID im Spaltenkopf, Pseudonym je Person; Nachschreibtermin mit den IDs der Arbeit
+    tmp = tempfile.mkdtemp(prefix="nm-csv-")
+    try:
+        sc = {"testId": "T-2026-0007", "ids": {"a": "S-7F3K9Q"}, "created": "2026-11-10T08:00:00Z"}
+        kurs = {"id": "k", "klasse": "9a", "fach": "M", "jahrgang": 9, "einstufung": "E",
+                "students": [{"id": "a", "last": "A", "first": "X"}, {"id": "b", "last": "B", "first": "Y"}],
+                "assessments": [{"id": "t1", "kind": "test", "half": "HJ1", "name": "KA", "weight": 1,
+                                 "test": {"tasks": [], "results": {"a": {"scores": {"x": 3}}}, "scripto": sc}},
+                                {"id": "t2", "kind": "test", "half": "HJ1", "name": "NS", "weight": 1, "makeupOf": "t1",
+                                 "test": {"tasks": [], "results": {"a": {"status": "fehlt"}}}}]}
+        pfad = tool.schreibe_csv({"years": [], "courses": [kurs]}, tmp)[0]
+        with open(pfad, encoding="utf-8-sig") as f:
+            zeilen = [z.rstrip("\n").split(";") for z in f]
+        ok = ("OrdoScripto T-2026-0007" in zeilen[0][3] and "OrdoScripto T-2026-0007" in zeilen[0][4]
+              and zeilen[1][3:5] == ["3 Pkt. [S-7F3K9Q]", "fehlt [S-7F3K9Q]"] and zeilen[2][3:5] == ["", ""])
+        report("CSV: Pseudonyme für OrdoScripto (Test-ID im Kopf, Schüler-ID je Person, Nachschreibtermin)", ok, str(zeilen))
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
 
 
 def main():
@@ -2097,6 +2268,7 @@ def main():
         run_group_check(br, base)
         run_groups_tab_check(br, base)
         run_moodle_check(br, base)
+        run_scripto_check(br, base)
         run_decrypt_tool(br, base)
         run_launcher_check(br, base)
     finally:

@@ -126,6 +126,48 @@ Entscheidung des Nutzers: **echte Verknüpfung** (eine Spalte und eine Leistung)
 - Bereich, Gewicht, Halbjahr und „nicht gewertet“ kommen immer von der Arbeit (`syncMakeups`). Notenspiegel und Drittelparagraph bleiben je Test.
 - Datenmodell: `a.makeupOf` (id der Arbeit). Kein neues `SCHEMA`: Ältere Versionen sehen den Nachtermin als eigenen Test mit demselben Gewicht und kommen auf dieselbe Note.
 
+## T) Schnittstelle zu OrdoScripto: Trennblätter mit QR-Code, Import- und Punkte-CSV (Teil 1 umgesetzt in 1.41.0, Teil 2 offen)
+
+Anlass: OrdoScripto (eigenes Projekt, `../07 - OrdoScripto`) liest handschriftliche Mathe-Arbeiten per KI und schlägt Punkte vor. Es kennt **keine Namen**, nur Test-ID, Schüler-ID und Kurs. OrdoNota erzeugt diese Pseudonyme, druckt Trennblätter mit QR-Code und übernimmt am Ende die Punkte. Die Formate legt `docs/DESIGN.md` von OrdoScripto fest (Abschnitt „Schnittstellen zu OrdoNota“). Sie müssen **genau** eingehalten werden.
+
+Ablauf: Test in OrdoNota anlegen → „Für OrdoScripto vorbereiten“ → Trennblätter drucken und Import-CSV speichern → Lehrkraft legt je Schüler das Trennblatt vor die Arbeit und scannt den Stapel → OrdoScripto liest die QR-Codes und verwirft die Trennblattseiten → … → Punkte-CSV zurück nach OrdoNota.
+
+### Teil 1 – wird für OrdoScripto Bauplan-Schritt 3 (Scan-Import) gebraucht – umgesetzt in 1.41.0
+
+Umgesetzt wie unten beschrieben (Doku: `DOKUMENTATION.md` 7.9 und 26.4). Abweichungen im Detail: Ein Nachschreibtermin speichert keine Kopie von `scripto`, sondern liest Test-ID und IDs der Arbeit (`NM.scripto.dataOf`), damit beide nie auseinanderlaufen. Der QR-Erzeuger kann die Versionen 1–10. Die 6 cm gelten für den Code ohne Ruhezone. Der Rundlauf in `run_tests.py` liest zusätzlich die gedruckten Trennblätter als PDF (300 dpi, Graustufen wie der Scan-Import).
+
+
+- **Datenmodell:** `test.scripto?: { testId: "T-2026-0142", ids: { "<sid>": "S-7F3K9Q" }, created: "<ISO>" }`. Optionales Feld, `migrate()` braucht keinen Standardwert, `SCHEMA` bleibt. `tools/entschluesseln.py` gibt die Zuordnung mit aus.
+- **Test-ID** `T-<Jahr>-<NNNN>`: Jahr der Arbeit, `NNNN` vierstellig und laufend aus `settings.scriptoSeq` (eindeutig in der Datenbank).
+- **Schüler-ID** `S-` plus 6 Zeichen aus dem Base32-Alphabet in `js/crypto.js` (`ABCDEFGHJKLMNPQRSTUVWXYZ23456789`, ohne I, O, 0, 1), Zufall über `crypto.getRandomValues`, eindeutig im Test. OrdoScripto prüft `^S-[A-Z0-9]{6}$`, das Alphabet ist eine Teilmenge davon.
+- **Pseudonyme je Test neu**, damit OrdoScripto keine Arbeiten über Tests hinweg einer Person zuordnen kann. Ein Nachschreibtermin (`makeupOf`) übernimmt `testId` und `ids` der Klassenarbeit, weil OrdoScripto Nachschreibarbeiten in denselben Test importiert. Einmal vergebene IDs ändern sich nie. Später hinzugekommene Schüler bekommen beim nächsten Vorbereiten eine ID dazu.
+- **QR-Code-Erzeuger** `js/qr.js` (`NM.qr`), rein und ohne Bibliothek (Projektregel): Byte-Modus, Fehlerkorrektur **Q** (verträgt Knicke und Scanrauschen), kleinste passende Version (der Inhalt `ORDO|T-2026-0142|S-7F3K9Q` hat 25 Zeichen → Version 3), Reed-Solomon über GF(256), alle 8 Masken mit Strafpunkten, Format-Information. Ausgabe als Modulmatrix und als SVG mit 4 Modulen Ruhezone. Unterstützt werden mindestens die Versionen 1–5.
+- **QR-Inhalt:** `ORDO|<testId>|<schuelerId>`, genau so, ohne Leerzeichen oder Zeilenende.
+- **Trennblätter drucken:** neuer Eintrag in der Druckauswahl des Tests (`NM.ui.printButton`), „Trennblätter für OrdoScripto“. Je aktivem Schüler eine A4-Seite mit:
+  - Name und Klasse groß zum Einsortieren,
+  - Titel und Datum des Tests,
+  - QR-Code mittig, etwa 6 cm breit, mit der Test- und Schüler-ID als Text darunter,
+  - dem Hinweis „Trennblatt – vor die Arbeit des Schülers legen“.
+
+  Die Reihenfolge entspricht der Schülerliste. Eine Option druckt nur die Nachschreiber.
+- **Import-CSV speichern:** `<testId>_import.csv`, UTF-8 ohne BOM, Semikolon, Kopfzeile `test_id;schueler_id;kurs`, je Schüler eine Zeile, `kurs` = `course.einstufung` (`G` oder `E`). **Nur diese drei Spalten**, keine Namen (OrdoScripto lehnt weitere Spalten ab).
+- **Tests:** `tests/qr.test.html` (Matrixgröße je Version, Format-Bits, Reed-Solomon gegen bekannte Werte, ID-Format und Eindeutigkeit, Übernahme beim Nachschreibtermin). In `tests/run_tests.py` ein Rundlauf: Matrizen für mehrere Inhalte, Versionen und alle Masken aus der App holen, als Bild rastern und mit `zxing-cpp` lesen (`uv run --with zxing-cpp --with pillow …`). Der gelesene Text muss exakt übereinstimmen. Dieselbe Bibliothek liest die Codes später in OrdoScripto.
+
+### Teil 2 – wird für OrdoScripto Bauplan-Schritt 7 (Export) gebraucht
+
+- **Punkte-CSV importieren:** `<testId>_punkte.csv` mit `test_id;schueler_id;A1a;A1b;…;Summe`. Fremde Test-ID → ablehnen. Schüler-ID über `test.scripto.ids` zurück auf `sid`. Leere Werte → Status `fehlt`. Die Summe gegen die Einzelwerte prüfen, Werte über `max` melden.
+- **Spalten-Zuordnung:** `A<nummer>` gegen die Aufgabennamen des Tests (normalisiert: `1a`, `A1a`, `Aufgabe 1a`). Was nicht passt, ordnet die Lehrkraft in einem Dialog zu. Bei Arbeiten in Teilen über `G.orderedTasks`.
+- Vor dem Überschreiben vorhandener Punkte nachfragen.
+
+### Entscheidungen des Nutzers (09.11.2026)
+
+1. **G/E-Einstufung:** gilt für den ganzen Kurs und wird beim Anlegen des Kurses festgelegt. Es braucht keine Einstufung je Schüler. Die Import-CSV schreibt für alle Schüler den Wert des Kurses. OrdoNota hat dafür noch kein Feld (`G.courseLevel` meint Sek I/MSS). Neues Kursfeld `einstufung: "G" | "E" | ""` im Kursdialog, Standardwert `""` in `migrate()`. „Für OrdoScripto vorbereiten“ fragt nach, wenn es leer ist.
+2. **Pseudonyme:** je Test neu.
+3. **Test-ID:** fortlaufend (`settings.scriptoSeq`).
+4. **Knopf** „Für OrdoScripto vorbereiten“: in der Testansicht neben dem Moodle-Import.
+
+OrdoScripto kann Trennblätter auch selbst als PDF erzeugen, für Nutzer ohne OrdoNota. Für OrdoNota ändert das nichts: Wer OrdoNota nutzt, erzeugt IDs und Trennblätter dort, weil nur OrdoNota die Namen kennt.
+
 ## C) Gamification des Pomodoro-Timers (zurückgestellt, erst auf Nachfrage des Nutzers)
 
 **Vor Beginn die offenen Fragen unten mit dem Nutzer klären.** C ergänzt nur Felder → kein neues `SCHEMA`; `migrate()` und `tools/entschluesseln.py` (CSV-Ausgabe) mitziehen.

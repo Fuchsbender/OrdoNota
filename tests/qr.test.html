@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="de">
+<head><meta charset="utf-8"><title>Tests QR-Code und OrdoScripto</title></head>
+<body>
+<pre id="out"></pre>
+<script src="../js/util.js"></script>
+<script src="../js/grades.js"></script>
+<script src="../js/model.js"></script>
+<script src="../js/qr.js"></script>
+<script src="../js/scripto.js"></script>
+<script>
+  const Q = NM.qr;
+  const X = Q._;
+  const S = NM.scripto;
+  const M = NM.model;
+  const lines = [];
+  let fails = 0;
+  const eq = (name, actual, expected) => {
+    const ok = JSON.stringify(actual) === JSON.stringify(expected);
+    if (!ok) fails++;
+    lines.push((ok ? 'OK   ' : 'FAIL ') + name + (ok ? '' : '  → erhalten ' + JSON.stringify(actual) + ', erwartet ' + JSON.stringify(expected)));
+  };
+  const bin = (x, n) => x.toString(2).padStart(n, '0');
+
+  try {
+    // ---------- QR-Code ----------
+
+    // Größe je Version, Codewörter laut Norm (Tabelle 9: Gesamtzahl; Tabelle 7: Datenwörter bei Q)
+    const TOTAL = [0, 26, 44, 70, 100, 134, 172, 196, 242, 292, 346];
+    const DATA_Q = [0, 13, 22, 34, 48, 62, 76, 88, 110, 132, 154];
+    const BYTES_Q = [0, 11, 20, 32, 46, 60, 74, 86, 108, 130, 151];
+    for (let v = 1; v <= 10; v++) {
+      const q = Q.encode('A', { minVersion: v, mask: 0 });
+      const [ec, b1, d1, b2, d2] = X.Q_BLOCKS[v];
+      eq(`Version ${v}: ${17 + 4 * v}×${17 + 4 * v} Module, ${TOTAL[v]} Codewörter, ${DATA_Q[v]} Daten (Q), ${BYTES_Q[v]} Bytes`,
+        [q.version, q.size, q.modules.length, q.modules[0].length, Math.floor(X.rawModules(v) / 8), (b1 + b2) * ec + X.dataCodewords(v), X.dataCodewords(v), Q.byteCapacity(v)],
+        [v, 17 + 4 * v, 17 + 4 * v, 17 + 4 * v, TOTAL[v], TOTAL[v], DATA_Q[v], BYTES_Q[v]]);
+    }
+    eq('Ausrichtungsmuster V2, V7, V10', [X.alignmentPositions(2), X.alignmentPositions(7), X.alignmentPositions(10)], [[6, 18], [6, 22, 38], [6, 28, 50]]);
+
+    // Kleinste passende Version
+    const sample = 'ORDO|T-2026-0142|S-7F3K9Q';
+    eq('ORDO|T-2026-0142|S-7F3K9Q (25 Zeichen) → Version 3', Q.encode(sample).version, 3);
+    eq('11 Bytes → V1, 12 Bytes → V2', [Q.encode('x'.repeat(11)).version, Q.encode('x'.repeat(12)).version], [1, 2]);
+    let tooLong = null;
+    try { Q.encode('x'.repeat(152)); } catch (e) { tooLong = e.message; }
+    eq('zu lang (über Version 10) → Fehler', /Version 10/.test(tooLong || ''), true);
+
+    // Format-Information (Q, Masken 0–7) laut Norm, Anhang C
+    eq('Format-Bits Q, Masken 0–7', [0, 1, 2, 3, 4, 5, 6, 7].map((m) => bin(X.formatBits(m), 15)),
+      ['011010101011111', '011000001101000', '011111100110001', '011101000000110', '010010010110100', '010000110000011', '010111011011010', '010101111101101']);
+    eq('Versions-Bits 7–10 (Anhang D)', [7, 8, 9, 10].map((v) => X.versionBits(v).toString(16).toUpperCase().padStart(5, '0')), ['07C94', '085BC', '09A99', '0A4D3']);
+
+    // Reed-Solomon
+    eq('GF(256): α^8 = 29, α^255 = 1', [X.EXP[8], X.EXP[255]], [29, 1]);
+    eq('Generatorpolynom Grad 7 (Exponenten)', X.rsGenerator(7).map((c) => X.LOG[c]), [0, 87, 229, 146, 149, 238, 102, 21]);
+    // bekanntes Beispiel „HELLO WORLD“ 1-M (Datenwörter → 10 Fehlerkorrekturwörter)
+    eq('Fehlerkorrektur „HELLO WORLD“ 1-M', X.rsRemainder([32, 91, 11, 120, 209, 114, 220, 77, 67, 64, 236, 17, 236, 17, 236, 17], 10), [196, 35, 39, 119, 235, 215, 231, 226, 93, 23]);
+    // Codewort (Daten + Fehlerkorrektur) hat die Nullstellen α^0 … α^(n−1)
+    const evalAt = (poly, x) => poly.reduce((acc, c) => (acc && x ? X.EXP[X.LOG[acc] + X.LOG[x]] : 0) ^ c, 0);
+    const dat = X.dataBytes(Array.from(new TextEncoder().encode(sample)), 3).slice(0, 17);
+    const cw = dat.concat(X.rsRemainder(dat, 18));
+    eq('Codewort V3-Q: Nullstellen α^0 … α^17', Array.from({ length: 18 }, (_, i) => evalAt(cw, X.EXP[i])), new Array(18).fill(0));
+    eq('Datenwörter: Modus 0100, Länge 25, Auffüllen 0xEC/0x11', (() => { const d = X.dataBytes(Array.from(new TextEncoder().encode(sample)), 3); return [d.length, d[0] >> 4, ((d[0] & 15) << 4) | (d[1] >> 4), d[d.length - 2], d[d.length - 1]]; })(), [34, 4, 25, 0x11, 0xec]);
+
+    // Funktionsmuster
+    const q3 = Q.encode(sample, { mask: 2 });
+    const m3 = q3.modules;
+    const n3 = q3.size;
+    const finderOk = (x0, y0) => [0, 1, 2, 3, 4, 5, 6].every((i) => [0, 1, 2, 3, 4, 5, 6].every((j) => m3[y0 + i][x0 + j] === (Math.max(Math.abs(i - 3), Math.abs(j - 3)) !== 2)));
+    eq('Suchmuster in drei Ecken', [finderOk(0, 0), finderOk(n3 - 7, 0), finderOk(0, n3 - 7)], [true, true, true]);
+    eq('Trennstreifen hell', [m3[7].slice(0, 8).some(Boolean), m3[7].slice(n3 - 8).some(Boolean)], [false, false]);
+    eq('Taktmuster Zeile/Spalte 6', [m3[6].slice(8, n3 - 8).map((b, i) => b === (i % 2 === 0)).every(Boolean), m3.slice(8, n3 - 8).map((r, i) => r[6] === (i % 2 === 0)).every(Boolean)], [true, true]);
+    eq('dunkles Modul (8, n−8)', m3[n3 - 8][8], true);
+    eq('Ausrichtungsmuster V3 bei (22, 22)', [m3[22][22], m3[21][22], m3[20][22], m3[22][24]], [true, false, true, true]);
+    // Format-Information aus der Matrix zurücklesen (erste Kopie)
+    const fmt = [0, 1, 2, 3, 4, 5].map((i) => m3[i][8]).concat([m3[7][8], m3[8][8], m3[8][7]], [9, 10, 11, 12, 13, 14].map((i) => m3[8][14 - i]));
+    eq('Format-Information in der Matrix = Q, Maske 2', fmt.reduce((s, b, i) => s | ((b ? 1 : 0) << i), 0), X.formatBits(2));
+    const fmt2 = [0, 1, 2, 3, 4, 5, 6, 7].map((i) => m3[8][n3 - 1 - i]).concat([8, 9, 10, 11, 12, 13, 14].map((i) => m3[n3 - 15 + i][8]));
+    eq('zweite Kopie der Format-Information gleich', fmt2.reduce((s, b, i) => s | ((b ? 1 : 0) << i), 0), X.formatBits(2));
+    const q7 = Q.encode('x'.repeat(70), { mask: 0, minVersion: 7 });
+    const vb = Array.from({ length: 18 }, (_, i) => q7.modules[Math.floor(i / 3)][q7.size - 11 + (i % 3)]);
+    eq('Versionsinformation V7 oben rechts', [q7.version, vb.reduce((s, b, i) => s | ((b ? 1 : 0) << i), 0)], [7, X.versionBits(7)]);
+
+    // Masken
+    eq('Maske erzwingen 0–7', [0, 1, 2, 3, 4, 5, 6, 7].map((m) => Q.encode(sample, { mask: m }).mask), [0, 1, 2, 3, 4, 5, 6, 7]);
+    const auto = Q.encode(sample);
+    const pens = [0, 1, 2, 3, 4, 5, 6, 7].map((m) => X.penalty(Q.encode(sample, { mask: m }).modules));
+    eq('automatische Maske = wenigste Strafpunkte', X.penalty(auto.modules), Math.min(...pens));
+    eq('gleicher Inhalt → gleiche Matrix', JSON.stringify(Q.encode(sample).modules) === JSON.stringify(auto.modules), true);
+    const svg = Q.svg(auto, { width: '60mm' });
+    eq('SVG: Ruhezone 4 Module, 60 mm, schwarz auf weiß', [/viewBox="0 0 37 37"/.test(svg), /width="60mm" height="60mm"/.test(svg), /fill="#fff"/.test(svg), /fill="#000"/.test(svg)], [true, true, true, true]);
+
+    // ---------- IDs für OrdoScripto ----------
+
+    const db = M.newDb();
+    const c = M.newCourse(db.years[0].id, { klasse: '9a', fach: 'Mathe', jahrgang: 9 });
+    db.courses.push(c);
+    for (let i = 0; i < 30; i++) c.students.push({ id: 's' + i, last: 'Nach' + String(i).padStart(2, '0'), first: 'Vor', active: i !== 29 });
+    const ka = M.newTest(c, 'HJ1', db.settings);
+    ka.date = '2026-11-20';
+    c.assessments.push(ka);
+    eq('Neuer Kurs/neue Datenbank: einstufung leer, scriptoSeq 0', [c.einstufung, db.settings.scriptoSeq], ['', 0]);
+    eq('ohne Vorbereitung: keine Daten, alle aktiv ohne ID', [S.dataOf(c, ka), S.missing(c, ka).length], [null, 29]);
+
+    const r1 = S.prepare(db, c, ka, new Date('2026-11-10T08:00:00Z'));
+    const d = ka.test.scripto;
+    const ids = Object.values(d.ids);
+    eq('Test-ID T-2026-0001 (Jahr der Arbeit, laufend)', [d.testId, db.settings.scriptoSeq, r1.created], ['T-2026-0001', 1, true]);
+    eq('Schüler-IDs: je aktive Person eine, Format S-XXXXXX', [ids.length, ids.every((x) => S.STUDENT_ID.test(x)), ids.every((x) => /^S-[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(x)), d.ids.s29], [29, true, true, undefined]);
+    eq('Schüler-IDs eindeutig im Test', new Set(ids).size, 29);
+    // Eindeutigkeit auch bei vielen IDs (Kollisionen werden neu gezogen)
+    const taken = new Set();
+    for (let i = 0; i < 2000; i++) taken.add(S.newStudentId(taken));
+    eq('2000 IDs ohne Doppelte', taken.size, 2000);
+
+    const before = JSON.stringify(d.ids);
+    const r2 = S.prepare(db, c, ka);
+    eq('erneut vorbereiten: nichts ändert sich', [JSON.stringify(d.ids) === before, r2.added.length, r2.created, d.testId], [true, 0, false, 'T-2026-0001']);
+    c.students.push({ id: 'neu', last: 'Zuletzt', first: 'Neu', active: true });
+    eq('neue Person ohne ID', S.missing(c, ka).map((s) => s.id), ['neu']);
+    const r3 = S.prepare(db, c, ka);
+    eq('neue Person bekommt eine ID dazu, vergebene bleiben', [r3.added, Object.keys(d.ids).length, JSON.parse(before).s3 === d.ids.s3, ids.includes(d.ids.neu)], [['neu'], 30, true, false]);
+
+    // Zweiter Test: neue laufende Nummer, neue Pseudonyme
+    const ha = M.newTest(c, 'HJ1', db.settings);
+    ha.date = '2027-02-01';
+    c.assessments.push(ha);
+    S.prepare(db, c, ha);
+    eq('zweiter Test: T-2027-0002, andere Pseudonyme', [ha.test.scripto.testId, Object.keys(ha.test.scripto.ids).every((k) => ha.test.scripto.ids[k] !== d.ids[k])], ['T-2027-0002', true]);
+    db.settings.scriptoSeq = 0; // zurückgesetzt (z. B. von Hand): vergebene IDs zählen trotzdem
+    eq('laufende Nummer nie doppelt', S.nextSeq(db), 3);
+
+    // Nachschreibtermin übernimmt Test-ID und IDs der Arbeit
+    ka.test.results.s4 = { scores: {}, status: 'nachschreiben' };
+    ka.test.results.s7 = { scores: {}, status: 'fehlt' };
+    const ns = M.newMakeup(c, ka);
+    c.assessments.push(ns);
+    eq('Nachschreibtermin: keine eigene Kopie, gleiche Daten wie die Arbeit', [ns.test.scripto, S.dataOf(c, ns) === d, S.owner(c, ns) === ka], [undefined, true, true]);
+    c.students.push({ id: 'spaet', last: 'Später', first: 'Hinzu', active: true });
+    const r4 = S.prepare(db, c, ns);
+    eq('Vorbereiten im Nachschreibtermin ergänzt in der Arbeit', [r4.created, r4.added, !!d.ids.spaet, ns.test.scripto], [false, ['spaet'], true, undefined]);
+    ns.test.results.s11 = { scores: { [ns.test.tasks[0].id]: 2 } };
+    eq('nur Nachschreibende: fehlt/nachschreiben in der Arbeit oder Eintrag im Termin', S.sheetStudents(c, ns, { onlyMakeup: true }).map((s) => s.id), ['s4', 's7', 's11']);
+    eq('alle: Reihenfolge der Schülerliste, nur aktive', (() => { const l = S.sheetStudents(c, ka); return [l.length, l[0].id, l[l.length - 1].id, l.some((s) => s.id === 's29')]; })(), [31, 's0', 'neu', false]);
+    eq('QR-Inhalt', S.qrText('T-2026-0142', 'S-7F3K9Q'), 'ORDO|T-2026-0142|S-7F3K9Q');
+
+    // Import-CSV
+    let noLevel = null;
+    try { S.importCsv(c, ka); } catch (e) { noLevel = e.message; }
+    eq('Import-CSV ohne Einstufung → Fehler', /Einstufung/.test(noLevel || ''), true);
+    c.einstufung = 'E';
+    const csv = S.importCsv(c, ns);
+    const rows = csv.text.split('\n');
+    eq('Import-CSV: Name, Kopfzeile, eine Zeile je Person, Zeilenende \\n', [csv.name, rows[0], rows.length, rows[rows.length - 1]], ['T-2026-0001_import.csv', 'test_id;schueler_id;kurs', 1 + 31 + 1, '']);
+    eq('Import-CSV: genau drei Spalten, Kurs E, Test-ID in jeder Zeile', rows.slice(1, -1).every((r) => { const f = r.split(';'); return f.length === 3 && f[0] === 'T-2026-0001' && S.STUDENT_ID.test(f[1]) && f[2] === 'E'; }), true);
+    eq('Import-CSV: keine Namen, kein BOM', [/Nach|Vor|Zuletzt|Später/.test(csv.text), csv.text.charCodeAt(0) === 0xfeff], [false, false]);
+
+    // Migration
+    const old = { schema: 4, settings: {}, years: [{ id: 'y' }], courses: [{ id: 'c', students: [], assessments: [], einstufung: 'X' }, { id: 'd', students: [], assessments: [], einstufung: 'G' }, { id: 'e', students: [], assessments: [] }] };
+    M.migrate(old);
+    eq('Migration: einstufung G/E bleibt, sonst leer; scriptoSeq 0', [old.courses.map((x) => x.einstufung), old.settings.scriptoSeq], [['', 'G', ''], 0]);
+  } catch (e) {
+    fails++;
+    lines.push('FAIL Ausnahme: ' + (e && e.stack ? e.stack : e));
+  }
+
+  document.getElementById('out').textContent = (fails ? fails + ' FEHLGESCHLAGEN' : 'ALLE TESTS BESTANDEN') + '\n\n' + lines.join('\n');
+</script>
+</body>
+</html>

@@ -535,6 +535,7 @@ body.grp-dragging, body.grp-dragging * { cursor: grabbing !important; }
 .tab-order-list .icon-btn:disabled { opacity: 0.3; }
 .tools-list li .check { flex: 1; margin: 0; }
 .tools-list li .check::before { content: counter(tabpos) ". "; color: var(--muted); }
+.warn-text { color: var(--warn); }
 .key-warn { font-size: 13px; display: grid; gap: 6px; }
 .key-warn-fixes { display: flex; flex-wrap: wrap; gap: 6px; }
 .dist { display: flex; align-items: stretch; gap: 6px; height: 130px; margin: 16px 0 10px; padding: 0 4px; }
@@ -823,6 +824,17 @@ body.no-grade-colors .p-grade[style*='--g-hue'] { background: none; }
 .p-slip-result { font-size: 10pt; }
 .p-big { font-size: 14pt; }
 /* Moodle-Ergebnisse: je Person eine Seite */
+/* Trennblätter für OrdoScripto: eine Seite je Person, QR-Code 6 cm */
+.p-sc { text-align: center; padding-top: 18mm; }
+.p-sc-kicker { font-size: 10pt; letter-spacing: 0.08em; text-transform: uppercase; color: #555; }
+.p-sc-name { font-size: 30pt; font-weight: 700; line-height: 1.15; margin: 8mm 0 2mm; }
+.p-sc-class { font-size: 20pt; font-weight: 600; }
+.p-sc-test { font-size: 12pt; margin-top: 6mm; }
+.p-sc-qr { margin: 8mm auto 0; }
+.p-sc-qr svg { display: block; width: 100%; height: 100%; }
+.p-sc-ids { font-family: var(--mono); font-size: 13pt; letter-spacing: 0.04em; }
+.p-sc-ids span { color: #777; }
+.p-sc-hint { margin: 18mm auto 0; padding: 4mm 6mm; border: 1pt dashed #000; display: inline-block; font-size: 12pt; }
 .p-mr { --mr-ok: #2e7d32; --mr-ok-bg: #e8f5e9; --mr-part: #b26a00; --mr-part-bg: #fff4e0; --mr-wrong: #c62828; --mr-wrong-bg: #fdecea; --mr-none: #757575; --mr-none-bg: #f1f1f1; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 .p-mr-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; padding-bottom: 8px; border-bottom: 1.5pt solid #000; }
 .p-mr-kicker { font-size: 8pt; letter-spacing: 0.08em; text-transform: uppercase; color: #666; }
