@@ -10,7 +10,7 @@
   // 3 (1.20): Präsentationen (kind "pres") – ältere Versionen kennen diese Leistungsart nicht.
   // 4 (1.23): Gruppenpräsentationen – ältere Versionen würden Gruppenwerte ignorieren und falsche Noten zeigen.
   const SCHEMA = 4;
-  const APP_VERSION = '1.43.1';
+  const APP_VERSION = '1.44.0';
 
   class NewerSchemaError extends Error {}
 
@@ -665,7 +665,7 @@
     for (let l = 0; l < 6; l++) e.epo.lessons.push({ id: 'l' + l, date: `2026-09-${String(8 + l * 3).padStart(2, '0')}` });
     c8.students.forEach((s, i) => {
       e.epo.entries[s.id] = {};
-      e.epo.lessons.forEach((l, j) => (e.epo.entries[s.id][l.id] = { r: syms[(i + j) % syms.length], hw: (i + j) % 9 === 0 ? 'h' : '' }));
+      e.epo.lessons.forEach((l, j) => (e.epo.entries[s.id][l.id] = Object.assign({ r: syms[(i + j) % syms.length], hw: (i + j) % 9 === 0 ? 'h' : '' }, (i + 2 * j) % 13 === 5 ? { m: 1 } : {})));
     });
     c8.assessments.push(e);
     // Präsentationen im 2. Halbjahr (Kriterien aus dem Startbestand)

@@ -392,6 +392,68 @@ def run_course_check(br, base):
     report("EPO: Fotos ein-/ausblenden (Foto bzw. Platzhalter je Person)", bool(res) and res["before"] == 0 and res["empty"] == 1 and res["imgs"] == res["rows"] - 1 and not br.errors, str(res) + "; ".join(br.errors))
 
 
+def run_epo_material_check(br, base):
+    """EPO: Zusatz m (Material vergessen) per Eingabe und Schnellwahl, Spalte M, Punkte-Einstellung, Ausdruck."""
+    br.open(f"{base}/index.html?demo")
+    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.errors = []
+    res = br.eval("""(async () => {
+        const wait = () => new Promise((r) => setTimeout(r, 150));
+        const G = NM.grades, M = NM.model;
+        const c = NM.app.db().courses[0];
+        NM.app.state.ui.epoQuick = true;
+        NM.app.select({ courseId: c.id, tab: 'epo' }); await wait();
+        const blocks = c.assessments.filter((x) => x.kind === 'epo' && x.half === NM.app.currentHalf(c));
+        const a = blocks.find((x) => x.id === (NM.app.state.ui.epoId || {})[c.id]) || blocks[blocks.length - 1];
+        if (!a) return { noBlock: true };
+        const lessons = a.epo.lessons.slice().sort((x, y) => (x.date || '').localeCompare(y.date || ''));
+        const last = lessons[lessons.length - 1];
+        const s = M.activeStudents(c)[1];
+        const out = {};
+        const cell = () => document.querySelector('[data-focus-key="epo-' + s.id + '-' + last.id + '"]');
+        if (!cell()) return { noCell: true };
+        out.head = [...document.querySelectorAll('.epo-table thead th')].some((th) => th.textContent.trim().startsWith('M'));
+        out.legend = [...document.querySelectorAll('.legend .chip')].some((x) => x.textContent.startsWith('m = Material'));
+        cell().value = '+hm'; cell().dispatchEvent(new Event('change')); await wait();
+        out.typed = JSON.stringify(a.epo.entries[s.id][last.id]) === JSON.stringify({ r: '+', hw: 'h', m: 1 }) && cell().value === '+hm';
+        cell().value = '+mm'; cell().dispatchEvent(new Event('change')); await wait();
+        out.invalid = cell().classList.contains('invalid') && a.epo.entries[s.id][last.id].m === 1;
+        NM.app.rerender(); await wait();
+        // Schnellwahl: m aus, dann wieder an; nur m → Eintrag bleibt
+        const row = cell().closest('tr');
+        const mBtn = () => [...row.querySelectorAll('.quick-btn')].find((b) => b.textContent === 'm');
+        out.btnActive = mBtn().classList.contains('active');
+        mBtn().click(); await wait();
+        out.off = !('m' in a.epo.entries[s.id][last.id]) && a.epo.entries[s.id][last.id].hw === 'h';
+        [...cell().closest('tr').querySelectorAll('.quick-btn')].find((b) => b.textContent === 'm').click(); await wait();
+        out.on = a.epo.entries[s.id][last.id].m === 1;
+        cell().value = 'm'; cell().dispatchEvent(new Event('change')); await wait();
+        out.onlyM = JSON.stringify(a.epo.entries[s.id][last.id]) === JSON.stringify({ r: '', hw: '', m: 1 });
+        const r = G.epoResult(a.epo, s.id, G.courseLevel(c));
+        const mCell = cell().closest('tr').querySelectorAll('td.num.muted');
+        out.count = r.m >= 1 && [...mCell].some((td) => td.textContent === String(r.m));
+        // Punkte für m in den Einstellungen: −1 senkt die Summe um die Anzahl
+        const before = r.sum;
+        a.epo.points.m = -1; NM.app.commit(); await wait();
+        out.points = G.epoResult(a.epo, s.id, G.courseLevel(c)).sum === before - r.m;
+        out.cfg = [...document.querySelectorAll('label.field span')].some((x) => x.textContent === 'm (Material)');
+        a.epo.points.m = 0; NM.app.commit(); await wait();
+        // Ausdruck: Zettel und Leistungsbogen nennen Material
+        const origPrint = window.print; window.print = () => {};
+        try {
+            NM.print.epoSlips(c, a);
+            const t = document.getElementById('print-root').textContent;
+            out.slips = t.includes('m = Material vergessen') && t.includes('Material vergessen: ' + r.m);
+            NM.print.epo(c, a);
+            out.list = document.getElementById('print-root').textContent.includes('m = Material vergessen');
+        } finally { window.print = origPrint; }
+        NM.app.state.dirty = false;
+        return out; })()""")
+    report("EPO: Material vergessen (m) per Eingabe und Schnellwahl, Spalte M, Punkte einstellbar, Ausdrucke",
+           bool(res) and all(res.get(k) for k in ["head", "legend", "typed", "invalid", "btnActive", "off", "on", "onlyM", "count", "points", "cfg", "slips", "list"])
+           and not br.errors, str(res) + "; ".join(br.errors))
+
+
 def run_draw_check(br, base):
     print("Ziehen (Pool, Auffüllen, Noten, Rückgängig):")
     br.open(f"{base}/index.html?demo")
@@ -2349,6 +2411,7 @@ def main():
         run_app_smoke(br, base)
         run_sort_check(br, base)
         run_course_check(br, base)
+        run_epo_material_check(br, base)
         run_draw_check(br, base)
         run_draw_pools_check(br, base)
         run_random_check(br, base)

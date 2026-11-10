@@ -181,7 +181,7 @@
     for (const s of M.activeStudents(course)) {
       const row = (a.epo.entries[s.id] = a.epo.entries[s.id] || {});
       const c = row[l.id] || { r: '', hw: '' };
-      if (!c.r) row[l.id] = { r: sel.value, hw: c.hw || '' };
+      if (!c.r) row[l.id] = Object.assign({}, c, { r: sel.value, hw: c.hw || '' });
     }
     NM.app.commit();
   }
@@ -202,6 +202,7 @@
       pct: { get: (s) => res(s).pct, first: 'desc' },
       absent: { get: (s) => res(s).absent, first: 'desc' },
       hw: { get: (s) => -(res(s).u * pts.u + res(s).h * pts.h), first: 'desc' },
+      mat: { get: (s) => res(s).m, first: 'desc' },
       grade: { get: (s) => res(s).p, first: 'desc' },
     });
     const students = sort.rows(all);
@@ -224,6 +225,7 @@
       h('th', { class: 'num' }, sort.head('pct', '%')),
       h('th', { class: 'num' }, sort.head('absent', 'k', 'Abwesend – sortieren')),
       h('th', { class: 'num' }, sort.head('hw', 'HA', 'Hausaufgaben unvollständig / vergessen – sortieren nach Abzug')),
+      h('th', { class: 'num' }, sort.head('mat', 'M', 'Material vergessen – sortieren')),
       h('th', { class: 'center' }, sort.head('grade', 'Note'))
     );
     const rows = students.map((s, ri) => {
@@ -248,16 +250,16 @@
               'data-select-all': '',
               autocomplete: 'off',
               spellcheck: 'false',
-              title: '++ + 0 - --, k = abwesend; u/h = Hausaufgaben (z. B. „+h“)',
+              title: '++ + 0 - --, k = abwesend; u/h = Hausaufgaben, m = Material vergessen (z. B. „+h“, „0m“)',
               onfocus: (e) => e.target.select(),
               onchange: (e) => {
                 const v = G.parseEpoCell(e.target.value);
                 if (v === undefined) {
                   e.target.classList.add('invalid');
-                  return toast('Erlaubt: ++, +, 0, -, --, k – optional mit u oder h (z. B. „0u“).', 'error');
+                  return toast('Erlaubt: ++, +, 0, -, --, k – optional mit u oder h und m (z. B. „0u“, „+hm“).', 'error');
                 }
                 epo.entries[s.id] = epo.entries[s.id] || {};
-                if (!v.r && !v.hw) delete epo.entries[s.id][l.id];
+                if (G.epoCellEmpty(v)) delete epo.entries[s.id][l.id];
                 else epo.entries[s.id][l.id] = v;
                 NM.app.commit();
               },
@@ -270,6 +272,7 @@
         h('td', { class: 'num muted' }, res.pct === null ? '' : fmtNum(res.pct, 0)),
         h('td', { class: 'num muted' }, res.absent || ''),
         h('td', { class: 'num muted' }, res.u || res.h ? `${res.u}/${res.h}` : ''),
+        h('td', { class: 'num muted' }, res.m || ''),
         h('td', { class: 'center' }, UI.gradeBadge(res.p, level))
       );
     });
@@ -300,7 +303,8 @@
           ].map(([k, v]) => h('span', { class: 'chip r-' + ratingClass({ r: k }) }, `${k} = ${v}`)),
           h('span', { class: 'chip' }, 'k = abwesend'),
           h('span', { class: 'chip' }, `u = HA unvollst. (${pts.u})`),
-          h('span', { class: 'chip' }, `h = HA vergessen (${pts.h})`)
+          h('span', { class: 'chip' }, `h = HA vergessen (${pts.h})`),
+          h('span', { class: 'chip' }, `m = Material vergessen (${pts.m})`)
         )
       ),
       lessons.length === 0
@@ -308,7 +312,7 @@
         : students.length === 0
           ? h('p', { class: 'muted' }, 'Bitte zuerst im Reiter „Kurs & Schüler“ Namen eintragen.')
           : h('div', { class: 'table-wrap', 'data-scroll-key': 'epo-grid' }, h('table', { class: 'table grid-table epo-table' + (ui.epoPhotos ? ' with-photos' : '') }, h('thead', null, head), h('tbody', null, rows))),
-      h('p', { class: 'muted small' }, 'Höchstpunktzahl = anwesende Stunden × ', pts['++'], '. Hausaufgaben-Vermerke werden abgezogen. Enter/↓ springt zur nächsten Person.')
+      h('p', { class: 'muted small' }, 'Höchstpunktzahl = anwesende Stunden × ', pts['++'], '. Hausaufgaben-Vermerke werden abgezogen, Material-Vermerke (m) nur gezählt, solange ihre Punkte 0 sind. Enter/↓ springt zur nächsten Person.')
     );
   }
 
@@ -335,16 +339,18 @@
     if (!c) return null;
     let v = G.EPO_RATINGS.includes(c.r) ? pts[c.r] : null;
     if (c.hw) v = (v || 0) + pts[c.hw];
+    if (c.m && pts.m) v = (v || 0) + pts.m;
     return v;
   }
 
   /** Schaltflächen zum Bewerten einer Stunde; erneuter Klick auf die aktive Auswahl hebt sie auf. */
   function quickButtons(epo, sid, lid) {
     const c = (epo.entries[sid] || {})[lid] || { r: '', hw: '' };
-    const set = (r, hw) => {
+    const set = (r, hw, m = c.m) => {
       epo.entries[sid] = epo.entries[sid] || {};
-      if (!r && !hw) delete epo.entries[sid][lid];
-      else epo.entries[sid][lid] = { r, hw };
+      const v = m ? { r, hw, m: 1 } : { r, hw };
+      if (G.epoCellEmpty(v)) delete epo.entries[sid][lid];
+      else epo.entries[sid][lid] = v;
       NM.app.commit();
     };
     const btn = (label, active, cls, title, onclick) =>
@@ -357,7 +363,8 @@
       ),
       h('span', { class: 'quick-sep' }),
       btn('u', c.hw === 'u', 'hw', 'Hausaufgaben unvollständig', () => set(c.r || '', c.hw === 'u' ? '' : 'u')),
-      btn('h', c.hw === 'h', 'hw', 'Hausaufgaben vergessen', () => set(c.r || '', c.hw === 'h' ? '' : 'h'))
+      btn('h', c.hw === 'h', 'hw', 'Hausaufgaben vergessen', () => set(c.r || '', c.hw === 'h' ? '' : 'h')),
+      btn('m', !!c.m, 'hw', 'Material vergessen', () => set(c.r || '', c.hw || '', !c.m))
     );
   }
 
@@ -370,11 +377,11 @@
     const epo = a.epo;
     epo.points = Object.assign({}, G.EPO_DEFAULT_POINTS, epo.points);
     epo.table = epo.table || G.epoDefaultTable(level, epo.limit);
-    const ptsInputs = ['++', '+', '0', '-', '--', 'u', 'h'].map((k) =>
+    const ptsInputs = ['++', '+', '0', '-', '--', 'u', 'h', 'm'].map((k) =>
       h(
         'label',
         { class: 'field narrow' },
-        h('span', null, k === 'u' ? 'u (HA unvollst.)' : k === 'h' ? 'h (HA vergessen)' : k),
+        h('span', null, { u: 'u (HA unvollst.)', h: 'h (HA vergessen)', m: 'm (Material)' }[k] || k),
         h('input', {
           class: 'input',
           type: 'number',

@@ -1,6 +1,6 @@
 # OrdoNota – Dokumentation
 
-Version 1.43.1 · Stand November 2026
+Version 1.44.0 · Stand November 2026
 
 OrdoNota (bis Version 1.11 „Notenmanager“) verwaltet Noten für die Sekundarstufe I (Noten 1–6 mit Tendenz) und die Mainzer Studienstufe (MSS, Punkte 00–15) an Schulen in Rheinland-Pfalz. Die App läuft vollständig lokal im Browser, verschlüsselt alle Daten mit einem Passwort und legt sie in einem Ordner ab, den der Synology Drive Client auf die DiskStation spiegelt.
 
@@ -482,22 +482,23 @@ In jede Zelle wird ein Kürzel getippt:
 | `k` | abwesend (zählt nicht) | – |
 | `u` (Zusatz) | Hausaufgaben unvollständig | −1 |
 | `h` (Zusatz) | Hausaufgaben vergessen | −2 |
+| `m` (Zusatz, seit 1.44) | Material vergessen | 0 (nur gezählt) |
 
-Kombinationen sind möglich, z. B. `+h` (gute Mitarbeit, Hausaufgaben vergessen) oder `0u`. Ein einzelnes `h` ist ebenfalls erlaubt. Groß- und Kleinschreibung spielt keine Rolle. Eine leere Zelle bedeutet „nicht bewertet“.
+Kombinationen sind möglich, z. B. `+h` (gute Mitarbeit, Hausaufgaben vergessen), `0u` oder `+hm` (zusätzlich Material vergessen). Je Zelle höchstens ein Hausaufgaben-Zusatz (u oder h) und ein `m`, die Reihenfolge der Zusätze ist egal. Ein einzelnes `h` oder `m` ist ebenfalls erlaubt. Groß- und Kleinschreibung spielt keine Rolle. Eine leere Zelle bedeutet „nicht bewertet“.
 
 **Hilfen**
 
-- **Schnellwahl** (Knopf „▸ Schnellwahl einblenden“ neben der Überschrift; standardmäßig ausgeblendet, der Zustand wird auf diesem Gerät gemerkt): Eine zusätzliche Spalte rechts neben den Stunden. Für die neueste Stunde lässt sich je Person per Klick `++`, `+`, `0`, `-`, `--` oder `k` sowie `u`/`h` setzen. Ein erneuter Klick auf die markierte Schaltfläche hebt die Auswahl wieder auf. Tippen in die Zellen funktioniert weiterhin.
+- **Schnellwahl** (Knopf „▸ Schnellwahl einblenden“ neben der Überschrift; standardmäßig ausgeblendet, der Zustand wird auf diesem Gerät gemerkt): Eine zusätzliche Spalte rechts neben den Stunden. Für die neueste Stunde lässt sich je Person per Klick `++`, `+`, `0`, `-`, `--` oder `k` sowie `u`/`h` und `m` setzen. Ein erneuter Klick auf die markierte Schaltfläche hebt die Auswahl wieder auf. Tippen in die Zellen funktioniert weiterhin.
 - **Fotos** (Knopf „▸ Fotos einblenden“ neben „Schnellwahl“; Zustand wird auf diesem Gerät gemerkt): zeigt vor jedem Nachnamen das Schülerfoto, damit Sie Gesichter und Namen schneller zuordnen. Wer noch kein Foto hat, bekommt ein blasses Personensymbol als Platzhalter. Fotos werden im Reiter „Sitzplan“ hinzugefügt (siehe 10.4).
 - **füllen** (unter dem Datum): setzt alle noch leeren Zellen dieser Stunde auf einen Wert, z. B. `0`. Danach tragen Sie nur noch die Abweichungen ein.
 - **Datum anklicken:** Datum ändern oder Stunde löschen.
-- Rechts stehen je Person: Σ Punkte, Max, %, Fehlstunden (k), Hausaufgaben-Vermerke (u/h) und die **Note**.
+- Rechts stehen je Person: Σ Punkte, Max, %, Fehlstunden (k), Hausaufgaben-Vermerke (u/h), Material vergessen (M) und die **Note**.
 
 ### 8.3 Einstellungen des Blocks
 
 Unter **„Einstellungen dieses EPO-Blocks“** (aufklappen):
 
-- **Punkte je Symbol** ändern (z. B. `h` = −1).
+- **Punkte je Symbol** ändern (z. B. `h` = −1 oder `m` = −1, wenn vergessenes Material die Mitarbeit senken soll).
 - **Umrechnung Prozent → Note/Punkte** je Stufe anpassen.
 - **„Schwelle muss überschritten werden“**: „mehr als 25 %“ statt „ab 25 %“.
 - Sek I: **LIMIT 4-** setzen. Die Tabelle wird dann aus dem Sek-I-Schlüssel neu berechnet.
@@ -770,7 +771,7 @@ In Tests, Mitarbeit/EPO und Notenübersicht fasst je ein Knopf **„🖨 Drucken
 - Halbjahres- und Jahresnote (gerechnet und gesetzt, mit Begründung)
 - Test-Details je Aufgabe
 - Präsentationen je Kriterium (mit Thema und Bemerkung)
-- EPO-Zusammenfassung (Anzahl ++/+/0/-/--, Fehlstunden, Hausaufgaben-Vermerke)
+- EPO-Zusammenfassung (Anzahl ++/+/0/-/--, Fehlstunden, Hausaufgaben-Vermerke, Material vergessen)
 - Bemerkung
 
 So eignet sich derselbe Bogen für Elterngespräche (z. B. ohne Bemerkung) und für die eigenen Unterlagen.
@@ -950,12 +951,12 @@ Je Kriterium 0–3 Punkte, multipliziert mit dem Gewicht des Kriteriums (×1, ×
 Für jede Person und jeden EPO-Block:
 
 ```
-Summe   = Σ Punkte der Bewertungen (++ … --)  +  Σ Hausaufgaben-Abzüge (u, h)
+Summe   = Σ Punkte der Bewertungen (++ … --)  +  Σ Hausaufgaben-Abzüge (u, h)  +  Σ Material (m, Standard 0)
 Max     = Anzahl anwesender Stunden (mit Bewertung ++ … --) × Punkte für ++
 Prozent = Summe / Max × 100
 ```
 
-Stunden mit `k` oder ohne Eintrag zählen nicht zu Max. Hausaufgaben-Vermerke werden immer abgezogen.
+Stunden mit `k` oder ohne Eintrag zählen nicht zu Max. Hausaufgaben-Vermerke werden immer abgezogen, ebenso `m`, falls dafür Punkte eingestellt sind (Standard 0: nur gezählt).
 
 **Umrechnung in Punkte/Note (Standard)**
 
@@ -1261,7 +1262,7 @@ Das Startprogramm ist das einzige Teil mit Build-Schritt; die App selbst bleibt 
   "kdf": "PBKDF2-SHA256",
   "savedAt": "2026-10-14T21:57:03.123Z",
   "device": "Laptop Schule",
-  "app": "1.43.1",
+  "app": "1.44.0",
   "pw":   { "salt": "<b64>", "iter": 600000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "rec":  { "salt": "<b64>", "iter": 100000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "data": { "iv": "<b64>", "ct": "<b64: verschlüsseltes JSON des Datenmodells>" }
@@ -1284,7 +1285,7 @@ Entschlüsselter Inhalt (`schema: 4`):
 ```js
 {
   schema: 4,                             // Datenformat (siehe 26.2)
-  savedWith: "1.43.1",                    // App-Version beim letzten Speichern
+  savedWith: "1.44.0",                    // App-Version beim letzten Speichern
   created: "<ISO>", savedAt: "<ISO>",
   settings: { autoLockMin, limitSek1, limitMss, precision, testCat: "ka" | "other" /* seit 1.30 */, keepBackups, backupEveryMin, gradeColors,
               tabs: { "<Reiter>": false },   // seit 1.25: ausgeschaltete Reiter (Standard für alle Kurse)
@@ -1339,10 +1340,10 @@ Assessment = {
                         files: [ { name, kind: "answers" | "grades", text } ],    // Original-CSV-Dateien
                         answers: { "<sid>": { "<taskId>": { q, a, c } } } },   // Frage, gegebene, richtige Antwort
              scripto?: { testId: "T-2026-0007", ids: { "<sid>": "S-7F3K9Q" }, created: "<ISO>" } },   // seit 1.41: Pseudonyme für OrdoScripto (nie bei Nachschreibterminen, die lesen die der Arbeit)
-  epo?:    { limit, points: { "++","+","0","-","--","u","h" },
+  epo?:    { limit, points: { "++","+","0","-","--","u","h","m" },   // m fehlt bei älteren Blöcken → 0
              table: { strict: bool, mins: [ % je Punktstufe ] },
              lessons: [ { id, date } ],
-             entries: { "<sid>": { "<lessonId>": { r: "++"|"+"|"0"|"-"|"--"|"k"|"", hw: "u"|"h"|"" } } } },
+             entries: { "<sid>": { "<lessonId>": { r: "++"|"+"|"0"|"-"|"--"|"k"|"", hw: "u"|"h"|"", m?: 1 } } } },   // m: Material vergessen (seit 1.44)
   pres?:   { limit, custom: { "<p>": Mindestpunktzahl }, wholeGrades?,
              criteria: [ { id, poolId, group, name, desc: { 0, 1, 2, 3 }, weight, scope?: "person" } ],   // Kopie aus dem Pool
              groupMode?: "mixed" | "group",   // seit 1.23: Gruppenpräsentation (fehlt = einzeln)
@@ -1372,7 +1373,7 @@ Das Skript startet einen unsichtbaren Chromium-Browser (Chrome, Edge, Chromium, 
 
 1. alle Testseiten (siehe 25.2), danach die Datenbanken früherer Versionen (`tests/altdaten/`) in der App: alle Reiter beider Kurse und die Jahresnote ohne Fehler, „Datenbank prüfen“ ohne Probleme,
 2. den Start der App im Demo-Modus und alle Reiter für einen Sek-I- und einen MSS-Kurs ohne JavaScript-Fehler, den Knopf „Demo ansehen“ (öffnet `?demo` im neuen Fenster, eigene Ansicht in `nm.ui` bleibt unberührt),
-3. das Sortieren per Klick auf Spaltenköpfe (Tests, EPO, Notenübersicht; Richtung und leere Werte unten),
+3. das Sortieren per Klick auf Spaltenköpfe (Tests, EPO, Notenübersicht; Richtung und leere Werte unten), im EPO-Reiter den Zusatz m (Material vergessen: Eingabe, ungültige Eingabe, Schnellwahl, Spalte M, eigene Punkte, Legende in Bewertungsliste und Mitarbeitszetteln),
 4. den Pomodoro-Timer (Aktivieren, Farben je Zustand, Phasenwechsel, Zurücksetzen, Einstellungsdialog), das Layout des Reiters „Einstellungen“ bei aktivem Timer (keine Lücken zwischen den Karten, Auswahllisten nicht abgeschnitten, bei 1570 und 2560 px), die sechs Designs (Kontrast von Schrift, Akzent-, Status- und Notenfarben nach WCAG, Vorschaukacheln, Wahl bleibt nach dem Neuladen, ☾ schaltet nur hell/dunkel, „Wie das System“ folgt dem System, Timer-Pop-up übernimmt das Design) und die Kürzel in der eingeklappten Kursliste, die weichen Übergänge (nur bei Reiter-, Kurs- und Halbjahreswechsel), das Ein-/Ausklappen der Kursliste, das Ein-/Ausschalten von Reitern (Standard in den Einstellungen, Abweichung je Kurs, Ersatzreiter, Sprunglinks, „Wie Standard“), das Umsortieren der Reiter (▲▼, Ziehen in der Reiterleiste, Standardreihenfolge), das Einklappen der Spaltengruppen und Bündeln der Ziehungsspalten in der Notenübersicht (Noten unverändert, Zeitraum, Ausdruck vollständig), den Reiter „Tests“ in voller Breite, die Warnung bei zu wenig Punkten im Notenschlüssel (doppelte Schwellen markiert, Knöpfe „Halbe Punkte“/„Nur ganze Noten“ beheben sie), Arbeiten in Teilen (einschalten, Aufgaben und Punkte je Teil, Teil ausblenden, getrennt benoten, Status je Teil, Schlüssel je Teil, Ausdrucke inkl. „Ergebnisse nach Teilen“, Beamer, Teile aufheben), die Druckauswahl „🖨 Drucken …“ in Tests, EPO und Notenübersicht (Gruppen, Tooltips, Auswahl druckt, Abbrechen nicht) und den Haken „Unterschrift gesehen“ bei Klassenarbeiten (Zähler, Ausdruck), Nachschreibtermine („+ Nachschreibtermin“, nur Fehlende und „Alle zeigen“, eine gemeinsame Spalte in der Notenübersicht mit „N“, Rechnung als eine Leistung, Gewicht folgt der Arbeit, Verknüpfung lösen/setzen, Arbeit löschen), den Moodle-Import (Knopf im Test statt neben „+ Neuer Test“, bisherige Aufgaben ersetzen oder behalten, Dateiauswahl im Dialog, Zuordnung, Status „fehlt“, Ausdruck mit und ohne Note, erneuter Import), die Schnittstelle zu OrdoScripto (QR-Codes aller Versionen 1–10 und Masken mit `zxing-cpp` zurückgelesen; Vorbereiten mit Einstufungs-Abfrage, Import-CSV ohne Namen, Trennblätter als echtes PDF gedruckt, mit 300 dpi gerastert und jeder Code exakt gelesen; Nachschreibtermin mit denselben IDs, neue Personen; Einstufung des Kurses und je Person mit Rückfrage, Spalte `kurs` mit der Einstufung je Person, Oberstufe mit GK/LK),
 5. den Excel-Export der Schülerliste (gültiges ZIP/XML, Umlaute und Sonderzeichen), das Kurs-Löschen nur mit „LÖSCHEN“, das Ein-/Ausblenden der Fotos im EPO-Reiter und im Sitzplan (auch im Druck) das Erweitern/Verkleinern des Sitzplan-Rasters an allen vier Seiten sowie das Ziehen (keine Wiederholung bis zum Auffüllen, automatisches Auffüllen, Note, Rückgängig, Abwesende/Herausgenommene) und die benannten Pools (Sammelspalte, eine Runde bis fertig, Rückgängig, Prüfung, Notenübersicht, Zusammenfassen, Löschen ohne Notenverlust), den Reiter „Tools“ (Timer: Start/Pause, läuft beim Reiterwechsel weiter, Ende mit Signal, ± 1 Min., Schnellwahl, vier Designs, Pop-up steuert denselben Timer; Einstellungen aller Werkzeuge werden gemerkt; Zahl im Bereich, Personen ohne Wiederholung und ohne Abwesende, 3D-Würfel mit Summe und gewürfelter Seite oben, Karten 52/32/eigene als Bild, Stapel immer sichtbar, mehrere auf einmal, nichts in der Notenliste) und den Reiter „Präsentationen“ (Bewerten per Knopf und in der Tabelle, Gewicht, Kriterien aus dem Pool und eigene, Vorlage, Ausdrucke, Spalte in der Notenübersicht, Pool bearbeiten, Startbestand ergänzen, Vorlagen speichern/anlegen/verwenden/drucken/löschen, Standardvorlagen vorhanden und ergänzen, Handreichung mit Notenschlüssel) und Gruppenpräsentationen (Gruppenwert für alle Mitglieder, Personenkriterien, Abweichung setzen/zurücksetzen, Tabelle, Gruppen bearbeiten/übernehmen, Druck, Auflösen ohne Notenänderung), den Reiter „Gruppen“ (neue Einteilung, Abwesende, Fixieren, Anklicken/Ziehen, Auftrag, Regel mit Warnung, Beamer ohne Noten mit Schrift passend zum Bildschirm und Umschaltern für Fotos/Nachnamen, Druck, Fotos/Nachnamen in der Einteilung, Gruppenpuzzle mit Expertengruppen unter den Stammgruppen, Anzahl der Teilthemen einstellbar und beim Neu verteilen erhalten, Hinweis nach Änderungen, Beamer-Umschalter Stamm-/Expertengruppen, Übernahme in eine Präsentation),
 6. das Notfallwerkzeug: Eine von der App echt verschlüsselte Datenbank wird mit `tools/entschluesseln.py` per Passwort und per Wiederherstellungsschlüssel entschlüsselt und mit dem Original verglichen. Dazu kommen falsches Passwort, manipulierte Datei und CSV-Ausgabe (auch für die Datenbanken aller früheren Versionen aus `tests/altdaten/`),
@@ -1388,7 +1389,7 @@ Für das Zurücklesen der QR-Codes startet das Skript `tests/qr_lesen.py` in ein
 
 | Datei | Prüft | Ausführen |
 |---|---|---|
-| `tests/grades.test.html` | Skalen, Eingabe-Parser, Rundung, Notenschlüssel (Vergleich mit Excel-Formeln), Bonus/Kappung, Status, Drittelparagraph, EPO (Werte aus der bisherigen EPO-Liste), Halbjahres-/Jahresnote, GK-Gewichtung, nicht erreichbare Stufen (zu wenig Punkte, eigene Schwellen, Präsentationen), Präsentationen (Gewicht, Status, Schlüssel, Halbjahresnote, Gruppen: Gruppenwert, Abweichung, Personenkriterium, Modus „alles als Gruppe“), Arbeiten in Teilen (gemeinsam/getrennt, Gewichte, fehlender Teil, Status je Teil, ganze Noten je Teil, MSS) | im Browser öffnen |
+| `tests/grades.test.html` | Skalen, Eingabe-Parser, Rundung, Notenschlüssel (Vergleich mit Excel-Formeln), Bonus/Kappung, Status, Drittelparagraph, EPO (Werte aus der bisherigen EPO-Liste; Zusatz m: Parser, Zelltext, Zählung, eigene Punkte), Halbjahres-/Jahresnote, GK-Gewichtung, nicht erreichbare Stufen (zu wenig Punkte, eigene Schwellen, Präsentationen), Präsentationen (Gewicht, Status, Schlüssel, Halbjahresnote, Gruppen: Gruppenwert, Abweichung, Personenkriterium, Modus „alles als Gruppe“), Arbeiten in Teilen (gemeinsam/getrennt, Gewichte, fehlender Teil, Status je Teil, ganze Noten je Teil, MSS) | im Browser öffnen |
 | `tests/model.test.html` | Migration älterer Datenbanken (SCHEMA 1 → 4, Bereich neuer Tests, Kriterienpool, Startbestand ergänzen, Vorlagen, Standardvorlagen), neue Präsentation, Ablehnung neuerer Datenformate, Erhalt unbekannter Felder, Reiterauswahl (`settings.tabs`, `course.tabs`), Reihenfolge der Reiter (`orderTabs`, `moveTab`), Werkzeuge je Kurs (`toolList`, `setTools`, Migration von `course.tools`), Namensliste | im Browser öffnen |
 | `tests/update.test.html` | Datenbanken früherer Versionen (Prüfstücke 1.1–1.29 in `tests/altdaten/`, je Datenformat mindestens eins): öffnen, Strukturprüfung ohne Fehler, **gleiche Halbjahres- und Jahresnoten wie in der alten Version**, unbekannte Felder bleiben, zweites Öffnen ändert nichts; `NM.model.check` findet kaputte Halbjahre, Bereiche, fehlende Inhalte, doppelte Personen, fehlende Schuljahre und ändert nichts | im Browser öffnen |
 | `tests/moodle.test.html` | CSV-Zerlegung, Erkennen und Zusammenführen von Antworten-/Bewertungen-CSV, bester Versuch, Textvergleich ohne Bewertungen, Zuordnung (Name, gemerkte E-Mail), Übernahme als Test, Import in einen bestehenden Test (Aufgaben ersetzen/behalten, Bezeichnung und Datum übernehmen), „fehlt“, erneuter Import, skalierte Punkte, Import in einen Teil (auch mit Ersetzen) | im Browser öffnen |
@@ -1449,6 +1450,7 @@ In `js/model.js` stehen zwei Nummern:
 - **Arbeit in Teilen (seit 1.18):** Logik in `js/grades.js` (`hasParts`, `separateParts`, `taskGroups`, `partAsTest`, `keyForPart`, `partStats`; `testResult()` liefert `parts`), Oberfläche in `js/view-tests.js` (`partsCard`, Teilspalten, Schlüssel je Teil), Druck `NM.print.test(…, 'parts')`.
 - **Präsentationen (seit 1.20):** Logik in `js/grades.js` (`presAsTest`, `presResult`, `presStats`, `keyForPres`; Präsentation = Test mit Kriterien als Aufgaben, 3 × Gewicht), Modell `NM.model.newPres`/`presCriterion`/`defaultCriteriaPool`/`newPresTemplate`, Standardvorlagen `PRES_TEMPLATES` mit `defaultPresTemplates(pool)` und `missingDefaultTemplates`, Reiter `js/view-pres.js`, Druck `NM.print.pres(course, a, 'list' | 'key' | 'blank' | 'sheets')` und `NM.print.presGuide`. Die Schlüsselkarte teilt sich der Reiter mit den Tests (`NM.views.tests.keyCardFor`).
 - **Gruppenpräsentationen (seit 1.23):** Logik in `js/grades.js` (`presGroupOf`, `presCritIsGroup`, `presScores`, `presDeviation`, `presTopic`), Oberfläche in `js/view-pres.js` (`setGroupMode`, `groupsCard`, `groupRateCard`, `personRateCard`).
+- **Mitarbeit/EPO, Zusätze:** Kürzel und Rechnung in `js/grades.js` (`EPO_DEFAULT_POINTS`, `parseEpoCell`, `epoCellText`, `epoCellEmpty`, `epoResult`), Reiter `js/view-epo.js` (`gridCard`, `quickButtons`, `configCard`, `fillLesson`), Ausdrucke `NM.print.epo`/`epoSlips`/`studentSheet`. Ein neuer Zusatz (wie `m` seit 1.44) braucht Parser, Zelltext, Leer-Prüfung, Punkte-Standard, Zählung in `epoResult`, Schnellwahl, Spalte, Legende, Einstellungen, Ausdrucke und `tools/entschluesseln.py`. Tests: `tests/grades.test.html`, E2E `run_epo_material_check`.
 - **Tools (seit 1.29 als „Zufall“, seit 1.36 „Tools“ mit Timer):** Timer-Logik in `js/timer.js` (`NM.timer`), Anzeige `timerTool`/`timerFace` (Designs ring, digits, bar, hourglass) und Pop-up `openTimerPopup` in `js/view-random.js`; ein Timer für die ganze App (`clock`), alle Anzeigen in `clock.faces`, Signal über `NM.pomodoro.alarm`. Zufalls-Logik in `js/random.js` (`NM.random`), Reiter `js/view-random.js` (`numberTool`, `peopleTool`, `diceTool` mit eigenem Canvas-3D-Zeichner `paintDie`, `cardTool` mit `flyIn`). Kartenbilder in `cards/` (`<Farbe C/D/H/S><Wert 2–10/B/D/K/A>.svg`, `back.svg`, CC0); ein neuer App-Ordner muss auch in `staticAllowed` (`launcher/server.go`) und in `launcher/build.sh`. Ergebnisse und Stapel nur in der Sitzung (`NM.views.random.session`), Einstellungen pro Gerät in `nm.ui` (`ui.random`), eigene Karten in `course.randomCards`. „Heute abwesend“ aus `NM.views.draw.absent`. Werkzeuge je Kurs (seit 1.39): `course.tools`, reine Logik `NM.model.TOOL_IDS`/`toolList`/`setTools`, Kacheln über die Tabelle `TOOLS` und Fenster `toolsMenu` in `js/view-random.js`; ein neues Werkzeug kommt in `TOOL_IDS` und `TOOLS`. Tests: `tests/random.test.html`, `tests/model.test.html`, E2E `run_random_check`, `run_tools_layout_check`, `run_tools_menu_check`.
 - **Demo öffnen (seit 1.31):** `NM.app.openDemo()` (`js/app.js`) öffnet die eigene Adresse mit `?demo` in einem neuen Fenster; Knöpfe über `demoLink()` auf den Startseiten (`renderStart`, `renderCreate`) und in `infoCard` (`js/view-settings.js`). Die Demo speichert ihre Ansicht unter `nm.ui.demo` (`UI_KEY`). E2E `run_demo_link_check`.
 - **Update-Sicherheit (seit 1.33):** Strukturprüfung `NM.model.check(db)` (`js/model.js`, rein, liefert `{ level: 'fehler' | 'hinweis', where, text }`), Aufruf nach dem Entsperren in `unlock` (`js/app.js`, nur Meldung) und im Dialog `checkDialog` (`js/view-settings.js`). Prüfstücke früherer Versionen in `tests/altdaten/` (erzeugt mit `erzeugen.js` aus dem Git-Verlauf), geprüft in `tests/update.test.html`, E2E `run_old_db_check` und in `run_decrypt_tool`. Neue Felder in `check` aufnehmen, wenn ein fehlerhafter Wert die Rechnung stören würde.

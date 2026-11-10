@@ -626,7 +626,7 @@
           h('thead', null, h('tr', null, h('th', null, 'Nr.'), h('th', null, 'Name'), lessons.map((l) => h('th', null, NM.util.fmtDateShort(l.date))), h('th', null, 'Pkt.'), h('th', null, '%'), h('th', null, 'Note'))),
           h('tbody', null, rows)
         ),
-        h('p', { class: 'p-note' }, '++ / + / 0 / - / -- = Bewertung der Stunde · k = abwesend · u = Hausaufgaben unvollständig · h = Hausaufgaben vergessen')
+        h('p', { class: 'p-note' }, '++ / + / 0 / - / -- = Bewertung der Stunde · k = abwesend · u = Hausaufgaben unvollständig · h = Hausaufgaben vergessen · m = Material vergessen')
       ),
       { landscape: lessons.length > 12 }
     );
@@ -640,7 +640,7 @@
     const pts = Object.assign({}, G.EPO_DEFAULT_POINTS, e.points);
     const signed = (v) => (v > 0 ? '+' : '') + fmtScore(v).replace('-', '−');
     const period = lessons.length ? `${fmtDate(lessons[0].date)} – ${fmtDate(lessons[lessons.length - 1].date)}` : 'keine Stunden';
-    const legend = [...G.EPO_RATINGS.map((k) => `${k} = ${fmtScore(pts[k])}`), 'k = abwesend', `u = HA unvollständig (${signed(pts.u)})`, `h = HA vergessen (${signed(pts.h)})`].join(' · ');
+    const legend = [...G.EPO_RATINGS.map((k) => `${k} = ${fmtScore(pts[k])}`), 'k = abwesend', `u = HA unvollständig (${signed(pts.u)})`, `h = HA vergessen (${signed(pts.h)})`, `m = Material vergessen${pts.m ? ` (${signed(pts.m)})` : ''}`].join(' · ');
     // Bei vielen Stunden umbrechen, damit die Tabelle auf A4 hochkant passt
     const PER_ROW = 16;
     const chunks = [];
@@ -665,7 +665,7 @@
           'div',
           { class: 'p-slip-result' },
           res.attended ? `Punkte ${fmtScore(res.sum)} von ${fmtScore(res.max)} (${fmtNum(res.pct, 0)} %) · ` : 'Noch keine Bewertung · ',
-          `abwesend: ${res.absent} · HA unvollständig: ${res.u} · HA vergessen: ${res.h}`,
+          `abwesend: ${res.absent} · HA unvollständig: ${res.u} · HA vergessen: ${res.h} · Material vergessen: ${res.m}`,
           res.p === null ? null : [' · Note ', h('strong', { class: 'p-big' }, G.label(res.p, level))]
         ),
         h('div', { class: 'p-sign' }, h('span', null, 'Datum'), h('span', null, 'Unterschrift'))
@@ -784,7 +784,7 @@
     ['final', 'Halbjahres- und Jahresnote (gerechnet und gesetzt)', true],
     ['tests', 'Test-Details je Aufgabe', true],
     ['pres', 'Präsentationen je Kriterium (mit Bemerkung)', true],
-    ['epo', 'EPO-Zusammenfassung (Bewertungen, Hausaufgaben, Fehlstunden)', true],
+    ['epo', 'EPO-Zusammenfassung (Bewertungen, Hausaufgaben, Material, Fehlstunden)', true],
     ['comment', 'Bemerkung', true],
   ];
 
@@ -898,7 +898,7 @@
                 'p',
                 null,
                 G.EPO_RATINGS.map((k) => `${k}: ${r2.counts[k]}`).join(' · '),
-                ` · abwesend: ${r2.absent} · HA unvollständig: ${r2.u} · HA vergessen: ${r2.h}`,
+                ` · abwesend: ${r2.absent} · HA unvollständig: ${r2.u} · HA vergessen: ${r2.h} · Material vergessen: ${r2.m}`,
                 r2.pct !== null ? ` · ${r2.sum}/${r2.max} Punkte (${fmtNum(r2.pct, 0)} %) → ` : ' · ',
                 badge(r2.p, level)
               )

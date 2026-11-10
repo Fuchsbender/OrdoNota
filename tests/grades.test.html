@@ -116,6 +116,17 @@
   eq('EPO Zelle "++u"', G.parseEpoCell('++u'), { r: '++', hw: 'u' });
   eq('EPO Zelle "h"', G.parseEpoCell('h'), { r: '', hw: 'h' });
   eq('EPO Zelle "x" ungültig', G.parseEpoCell('x'), undefined);
+  // Material vergessen (1.44): Zusatz m, Standard 0 Punkte, nur gezählt
+  eq('EPO Zelle "+hm" und "+mh"', [G.parseEpoCell('+hm'), G.parseEpoCell('+mh')], [{ r: '+', hw: 'h', m: 1 }, { r: '+', hw: 'h', m: 1 }]);
+  eq('EPO Zelle "m", "KM", "0um"', [G.parseEpoCell('m'), G.parseEpoCell('KM'), G.parseEpoCell('0um')], [{ r: '', hw: '', m: 1 }, { r: 'k', hw: '', m: 1 }, { r: '0', hw: 'u', m: 1 }]);
+  eq('EPO Zelle "+mm", "+uh", "m+" ungültig', [G.parseEpoCell('+mm'), G.parseEpoCell('+uh'), G.parseEpoCell('m+')], [undefined, undefined, undefined]);
+  eq('EPO Zelltext mit m', [G.epoCellText({ r: '0', hw: 'u', m: 1 }), G.epoCellText({ r: '+', hw: '' })], ['0um', '+']);
+  eq('EPO leer', [G.epoCellEmpty({ r: '', hw: '' }), G.epoCellEmpty({ r: '', hw: '', m: 1 }), G.epoCellEmpty(undefined)], [true, false, true]);
+  const em = { lessons: [{ id: 'l1' }, { id: 'l2' }, { id: 'l3' }], entries: { s: { l1: { r: '+', hw: '', m: 1 }, l2: { r: '0', hw: 'h', m: 1 }, l3: { r: 'k', hw: '', m: 1 } } } };
+  const rm = G.epoResult(em, 's', 'mss');
+  eq('EPO m: gezählt, 0 Punkte (Standard)', [rm.m, rm.sum, rm.max, rm.absent], [3, 3 + 2 - 2, 8, 1]);
+  eq('EPO m mit eigenen Punkten', G.epoResult(Object.assign({ points: { m: -1 } }, em), 's', 'mss').sum, 3 + 2 - 2 - 3);
+  eq('EPO ohne m: Anzahl 0', G.epoResult({ lessons: [{ id: 'l1' }], entries: { s: { l1: { r: '+', hw: '' } } } }, 's', 'mss').m, 0);
   eq('EPO Sek I nutzt Sek-I-Schlüssel', G.label(G.epoResult(Object.assign({ limit: 50 }, epo), 'sa', 'sek1').p, 'sek1'), '3-');
 
   // Kursrechnung

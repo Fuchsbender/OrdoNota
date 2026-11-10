@@ -217,7 +217,7 @@ Für alle sechs gilt:
 
 Schon vorhanden und Grundlage für alle drei: die Schnellwahl im EPO-Reiter (neueste Stunde, ++ … --, k, u/h), die Hausaufgaben-Zusätze u/h und die Zählung von k je EPO-Block.
 
-### V) Material vergessen als Zusatz „m“ (1.44.0)
+### V) Material vergessen als Zusatz „m“ – umgesetzt in 1.44.0
 - Ein Zellwert bekommt zusätzlich zu `r` und `hw` das Feld `m: 1` (Material vergessen). Eingabe z. B. `+m`, `0hm`, `m`, `km`; die Reihenfolge von h/u und m ist beliebig. `G.parseEpoCell`/`epoCellText` ziehen mit.
 - Punkte: `epo.points.m`, Standard **0**, also nur gezählt; in den Block-Einstellungen änderbar wie u/h. `epoResult` liefert zusätzlich `m` (Anzahl).
 - Anzeige: Knopf „m“ in der Schnellwahl, Legende, Spalte „HA“ wird zu „HA/M“ (u/h/m). Ausdrucke (EPO-Zusammenfassung, Leistungsbogen) nennen „Material vergessen: n“.

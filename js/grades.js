@@ -531,7 +531,8 @@
   // ---------- EPO / Mitarbeit ----------
 
   const EPO_RATINGS = ['++', '+', '0', '-', '--'];
-  const EPO_DEFAULT_POINTS = { '--': 0, '-': 1, '0': 2, '+': 3, '++': 4, u: -1, h: -2 };
+  // m = Material vergessen (seit 1.44), Standard 0: wird nur gezählt
+  const EPO_DEFAULT_POINTS = { '--': 0, '-': 1, '0': 2, '+': 3, '++': 4, u: -1, h: -2, m: 0 };
 
   /** Standardtabelle %→Punkte. MSS: 5-%-Schritte („mehr als“). Sek I: wie Test-Schlüssel („ab“). */
   function epoDefaultTable(level, limit) {
@@ -543,18 +544,32 @@
     return { strict: false, mins: keyPercents('sek1', limit) };
   }
 
-  /** Zelleingabe "++u", "0h", "k", "+" → {r, hw}; undefined = ungültig. */
+  /**
+   * Zelleingabe "++u", "0h", "k", "+", "+hm", "m" → {r, hw[, m: 1]}; undefined = ungültig.
+   * Zusätze: höchstens eines von u/h (Hausaufgaben) und m (Material vergessen), Reihenfolge beliebig.
+   */
   function parseEpoCell(input) {
     const s = String(input || '').trim().toLowerCase().replace(/\s+/g, '');
     if (s === '') return { r: '', hw: '' };
-    const m = /^(\+\+|\+|0|--|-|k)?([uh])?$/.exec(s);
-    if (!m || (!m[1] && !m[2])) return undefined;
-    return { r: m[1] || '', hw: m[2] || '' };
+    const x = /^(\+\+|\+|0|--|-|k)?([uhm]*)$/.exec(s);
+    if (!x) return undefined;
+    const add = x[2];
+    const hw = add.replace(/m/g, '');
+    const mat = add.length - hw.length;
+    if (hw.length > 1 || mat > 1 || (!x[1] && !add)) return undefined;
+    const out = { r: x[1] || '', hw };
+    if (mat) out.m = 1;
+    return out;
   }
 
   function epoCellText(c) {
     if (!c) return '';
-    return (c.r || '') + (c.hw || '');
+    return (c.r || '') + (c.hw || '') + (c.m ? 'm' : '');
+  }
+
+  /** Zelle ohne Bewertung und ohne Zusatz (wird dann gelöscht). */
+  function epoCellEmpty(c) {
+    return !c || (!c.r && !c.hw && !c.m);
   }
 
   function epoResult(epo, sid, level) {
@@ -566,6 +581,7 @@
     let absent = 0;
     let u = 0;
     let hcount = 0;
+    let mcount = 0;
     const counts = { '++': 0, '+': 0, '0': 0, '-': 0, '--': 0 };
     for (const lesson of epo.lessons || []) {
       const c = row[lesson.id];
@@ -578,9 +594,10 @@
       }
       if (c.hw === 'u') { u++; sum += pts.u; }
       if (c.hw === 'h') { hcount++; sum += pts.h; }
+      if (c.m) { mcount++; sum += pts.m; }
     }
     const max = attended * pts['++'];
-    if (attended === 0 || max <= 0) return { sum, max, attended, absent, u, h: hcount, counts, pct: null, p: null };
+    if (attended === 0 || max <= 0) return { sum, max, attended, absent, u, h: hcount, m: mcount, counts, pct: null, p: null };
     const pct = (sum / max) * 100;
     let p = 0;
     const top = maxPoints(level);
@@ -588,7 +605,7 @@
       const ok = table.strict ? pct > table.mins[i] + 1e-9 : pct >= table.mins[i] - 1e-9;
       if (ok) p = i;
     }
-    return { sum, max, attended, absent, u, h: hcount, counts, pct, p };
+    return { sum, max, attended, absent, u, h: hcount, m: mcount, counts, pct, p };
   }
 
   // ---------- Kurse ----------
@@ -734,6 +751,7 @@
     epoDefaultTable,
     parseEpoCell,
     epoCellText,
+    epoCellEmpty,
     epoResult,
     COURSE_TYPES,
     courseLevel,

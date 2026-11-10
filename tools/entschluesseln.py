@@ -196,7 +196,7 @@ def schreibe_csv(daten, ordner):
                     z.append(r.get("status") or (f"{text} ({thema})" if text and thema else text))
                 else:
                     e = a.get("epo", {}).get("entries", {}).get(sid, {})
-                    z.append(" ".join((c.get("r", "") + c.get("hw", "")) for c in e.values()))
+                    z.append(" ".join((c.get("r", "") + c.get("hw", "") + ("m" if c.get("m") else "")) for c in e.values()))
             for k in override_keys:
                 z.append(_label(kurs["overrides"][k].get(sid, {}).get("p"), mss))
             z.append(kurs.get("comments", {}).get(sid, ""))
