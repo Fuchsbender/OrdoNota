@@ -128,7 +128,7 @@ Entscheidung des Nutzers: **echte Verknüpfung** (eine Spalte und eine Leistung)
 
 ## T) Schnittstelle zu OrdoScripto: Trennblätter mit QR-Code, Import- und Punkte-CSV (Teil 1 umgesetzt in 1.41.0, Teil 2 offen)
 
-Anlass: OrdoScripto (eigenes Projekt, `../07 - OrdoScripto`) liest handschriftliche Mathe-Arbeiten per KI und schlägt Punkte vor. Es kennt **keine Namen**, nur Test-ID, Schüler-ID und Kurs. OrdoNota erzeugt diese Pseudonyme, druckt Trennblätter mit QR-Code und übernimmt am Ende die Punkte. Die Formate legt `docs/DESIGN.md` von OrdoScripto fest (Abschnitt „Schnittstellen zu OrdoNota“). Sie müssen **genau** eingehalten werden.
+Anlass: OrdoScripto (eigenes Projekt, `../OrdoScripto`) liest handschriftliche Mathe-Arbeiten per KI und schlägt Punkte vor. Es kennt **keine Namen**, nur Test-ID, Schüler-ID und Kurs. OrdoNota erzeugt diese Pseudonyme, druckt Trennblätter mit QR-Code und übernimmt am Ende die Punkte. Die Formate legt `docs/DESIGN.md` von OrdoScripto fest (Abschnitt „Schnittstellen zu OrdoNota“). Sie müssen **genau** eingehalten werden.
 
 Ablauf: Test in OrdoNota anlegen → „Für OrdoScripto vorbereiten“ → Trennblätter drucken und Import-CSV speichern → Lehrkraft legt je Schüler das Trennblatt vor die Arbeit und scannt den Stapel → OrdoScripto liest die QR-Codes und verwirft die Trennblattseiten → … → Punkte-CSV zurück nach OrdoNota.
 
