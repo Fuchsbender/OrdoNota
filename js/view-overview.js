@@ -1,7 +1,7 @@
 /* OrdoNota – Reiter „Notenübersicht“: alle Noten, Gewichtung, Halbjahres- und Jahresnote. */
 (function (NM) {
   'use strict';
-  const { h, toast, modal, fmtNum, gradeStyle, csv, download, safeFilename } = NM.util;
+  const { h, icon, toast, modal, fmtNum, gradeStyle, csv, download, safeFilename } = NM.util;
   const G = NM.grades;
   const M = NM.model;
   const UI = NM.ui;
@@ -30,11 +30,11 @@
           'div',
           { class: 'inline' },
           UI.printButton('Drucken: ' + M.courseTitle(course), [
-            { id: 'course', icon: '📄', label: half === 'Jahr' ? 'Notenliste der Jahresnoten' : `Notenliste ${half}`, group: 'teacher', tip: half === 'Jahr' ? 'Alle Personen mit beiden Halbjahresnoten, gerechneter Jahresnote und Jahresnote; gesetzte Noten mit *.' : 'Alle Personen mit allen Leistungen des Halbjahres, Schnitten und Halbjahresnote; gesetzte Noten mit *.', run: () => NM.print.course(course, half) },
-            half !== 'Jahr' && NM.attendance.dates(course, half).length ? { id: 'attendance', icon: '🗓️', label: `Fehlzeiten ${half}`, group: 'teacher', tip: 'Alle Unterrichtstage des Halbjahres mit A/E/U je Person und den Summen in Unterrichtsstunden.', run: () => NM.print.attendance(course, half) } : null,
-            { id: 'sheets', icon: '👤', label: 'Leistungsbögen je Person', group: 'students', tip: 'Eine Seite je Person mit Einzelnoten, Schnitten und Zeugnisnote, z. B. für Elterngespräche. Personen, Zeitraum und Inhalt wählen Sie im nächsten Schritt.', run: () => NM.print.studentsDialog(course) },
+            { id: 'course', icon: 'file-text', label: half === 'Jahr' ? 'Notenliste der Jahresnoten' : `Notenliste ${half}`, group: 'teacher', tip: half === 'Jahr' ? 'Alle Personen mit beiden Halbjahresnoten, gerechneter Jahresnote und Jahresnote; gesetzte Noten mit *.' : 'Alle Personen mit allen Leistungen des Halbjahres, Schnitten und Halbjahresnote; gesetzte Noten mit *.', run: () => NM.print.course(course, half) },
+            half !== 'Jahr' && NM.attendance.dates(course, half).length ? { id: 'attendance', icon: 'calendar', label: `Fehlzeiten ${half}`, group: 'teacher', tip: 'Alle Unterrichtstage des Halbjahres mit A/E/U je Person und den Summen in Unterrichtsstunden.', run: () => NM.print.attendance(course, half) } : null,
+            { id: 'sheets', icon: 'user', label: 'Leistungsbögen je Person', group: 'students', tip: 'Eine Seite je Person mit Einzelnoten, Schnitten und Zeugnisnote, z. B. für Elterngespräche. Personen, Zeitraum und Inhalt wählen Sie im nächsten Schritt.', run: () => NM.print.studentsDialog(course) },
           ]),
-          h('button', { class: 'btn', onclick: () => exportCsv(course) }, '⬇ CSV/Excel')
+          h('button', { class: 'btn', onclick: () => exportCsv(course) }, icon('download'), ' CSV/Excel')
         )
       )
     );
@@ -132,7 +132,7 @@
       h(
         'button',
         { class: 'link fold-btn', 'data-fold': k, 'aria-expanded': fold[k] ? 'false' : 'true', title: fold[k] ? label + ' einblenden' : label + ' einklappen (nur Ø bleibt)', onclick: () => toggleFold(k) },
-        (fold[k] ? '▸ ' : '▾ ') + label + (fold[k] && n ? ` (${n})` : '')
+        icon(fold[k] ? 'chevron-right' : 'chevron-down'), ' ' + label + (fold[k] && n ? ` (${n})` : '')
       );
 
     const th = (a) =>
@@ -353,7 +353,7 @@
           NM.app.commit();
         },
       },
-      '✎'
+      icon('pencil')
     );
   }
 
@@ -381,7 +381,7 @@
           NM.app.commit();
         },
       },
-      '💬'
+      icon('message')
     );
   }
 

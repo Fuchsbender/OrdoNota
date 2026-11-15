@@ -1,7 +1,7 @@
 /* OrdoNota – wiederverwendbare Bausteine für die Ansichten. */
 (function (NM) {
   'use strict';
-  const { h, toast, modal, gradeStyle, parseNum, fmtDate } = NM.util;
+  const { h, icon, toast, modal, gradeStyle, parseNum, fmtDate } = NM.util;
   const G = NM.grades;
 
   /** Halbjahres-Umschalter. allowYear: zusätzlich "Jahr". */
@@ -219,7 +219,7 @@
       NM.app.saveUi();
       NM.app.rerender();
     };
-    const ind = (key) => (st.key === key ? (st.dir === 'asc' ? '▲' : '▼') : '');
+    const ind = (key) => (st.key === key ? (st.dir === 'asc' ? icon('arrow-up') : icon('arrow-down')) : '');
     const empty = (v) => v === null || v === undefined || v === '';
 
     /** Schülerliste (bereits alphabetisch) nach der gewählten Spalte ordnen. */
@@ -242,7 +242,7 @@
 
     /** Kleine Sortier-Schaltfläche für Köpfe, die schon eigene Schaltflächen haben. */
     function toggle(key) {
-      return h('button', { class: 'sort-btn sort-toggle' + (st.key === key ? ' active' : ''), title: 'Nach dieser Spalte sortieren', 'aria-label': 'Sortieren', onclick: () => set(key) }, ind(key) || '⇅');
+      return h('button', { class: 'sort-btn sort-toggle' + (st.key === key ? ' active' : ''), title: 'Nach dieser Spalte sortieren', 'aria-label': 'Sortieren', onclick: () => set(key) }, ind(key) || icon('arrows-sort'));
     }
 
     /** Köpfe der beiden Namensspalten (passend zu nameCells); attrs z. B. { rowspan: 2 }. */
@@ -284,11 +284,11 @@
   ];
 
   /**
-   * Ein Knopf „🖨 Drucken …“ statt vieler Druckknöpfe: öffnet eine Auswahl aller Druckarten.
+   * Ein Knopf „Drucken …“ statt vieler Druckknöpfe: öffnet eine Auswahl aller Druckarten.
    * options: [{ id, icon, label, tip, group: 'teacher' | 'students', run }]; null-Einträge werden übersprungen.
    */
   function printButton(title, options) {
-    return h('button', { class: 'btn', title: 'Druckart wählen', 'aria-haspopup': 'dialog', 'data-print-menu': '', onclick: () => printMenu(title, options) }, '🖨 Drucken …');
+    return h('button', { class: 'btn', title: 'Druckart wählen', 'aria-haspopup': 'dialog', 'data-print-menu': '', onclick: () => printMenu(title, options) }, icon('printer'), ' Drucken …');
   }
 
   async function printMenu(title, options) {
@@ -308,7 +308,7 @@
                 h(
                   'button',
                   { type: 'button', class: 'print-option', title: o.tip, 'data-print': o.id, onclick: () => close(o) },
-                  h('span', { class: 'print-option-icon', 'aria-hidden': 'true' }, o.icon),
+                  h('span', { class: 'print-option-icon', 'aria-hidden': 'true' }, icon(o.icon)),
                   h('span', null, o.label)
                 )
               )

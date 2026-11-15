@@ -513,7 +513,7 @@ def run_attendance_check(br, base):
           && [...document.querySelectorAll('.overview-table tbody tr')].some((tr) => tr.textContent.includes(p.last) && tr.querySelector('td.att-col').textContent === pt.hours + ' (' + pt.u + ' U)');
         document.querySelector('[data-print-menu]').click(); await wait();
         out.menu = !!document.querySelector('[data-print="attendance"]');
-        document.querySelector('dialog [data-print="attendance"]') && [...document.querySelectorAll('dialog button')].find((b) => /Abbrechen|Schließen|✕/.test(b.textContent)) ? [...document.querySelectorAll('dialog button')].find((b) => /Abbrechen|Schließen|✕/.test(b.textContent)).click() : null;
+        document.querySelector('dialog [data-print="attendance"]') && [...document.querySelectorAll('dialog button')].find((b) => /Abbrechen|Schließen/.test(b.textContent + ' ' + (b.getAttribute('aria-label') || ''))) ? [...document.querySelectorAll('dialog button')].find((b) => /Abbrechen|Schließen/.test(b.textContent + ' ' + (b.getAttribute('aria-label') || ''))).click() : null;
         await wait();
         const origPrint = window.print; window.print = () => {};
         try {
@@ -1498,9 +1498,9 @@ def run_timer_check(br, base):
         const inp = q('[data-tmr-input]'); inp.value = '0:03'; inp.dispatchEvent(new Event('change')); await wait();
         out.set = [digits(), stage()];
         q('[data-tmr-go]').click(); await wait(1200);
-        out.run = [digits(), stage(), q('[data-tmr-go]').textContent];
+        out.run = [digits(), stage(), q('[data-tmr-go]').textContent.trim()];
         q('[data-tmr-go]').click(); const paused = digits(); await wait(1100);
-        out.pause = [digits() === paused, stage(), q('.tmr-over').textContent, q('[data-tmr-go]').textContent];
+        out.pause = [digits() === paused, stage(), q('.tmr-over').textContent, q('[data-tmr-go]').textContent.trim()];
         // Reiterwechsel: läuft weiter
         q('[data-tmr-go]').click(); await wait(200);
         NM.app.select({ tab: 'overview' }); await wait(2600);
@@ -1510,7 +1510,7 @@ def run_timer_check(br, base):
         [...document.querySelectorAll('.tmr-buttons button')].find((b) => b.textContent === '+ 1 Min.').click(); await wait(300);
         out.plus = [digits(), stage()];
         q('[data-tmr-reset]').click(); await wait();
-        out.reset = [stage(), q('[data-tmr-go]').textContent];
+        out.reset = [stage(), q('[data-tmr-go]').textContent.trim()];
         // Schnellwahl
         q('[data-tmr-quick="10"]').click(); await wait();
         out.quick = [digits(), q('[data-tmr-input]').value, NM.app.state.ui.random.timerMs];
@@ -1540,10 +1540,10 @@ def run_timer_check(br, base):
     res2 = r.get("result", {}).get("result", {}).get("value") or {}
     if res: res.update(res2)
     ok = bool(res) and res["label"] == "Tools" and res["head"] == "Tools" and res["set"] == ["00:03", "idle"] \
-        and res["run"][0] in ("00:02", "00:01") and res["run"][1] == "end" and res["run"][2] == "⏸ Pause" \
-        and res["pause"] == [True, "paused", "angehalten", "▶ Weiter"] \
+        and res["run"][0] in ("00:02", "00:01") and res["run"][1] == "end" and res["run"][2] == "Pause" \
+        and res["pause"] == [True, "paused", "angehalten", "Weiter"] \
         and res["done"][:3] == ["00:00", "done", True] and res["done"][3] == "gong" \
-        and res["plus"][0] in ("01:00", "00:59") and res["plus"][1] in ("run", "warn") and res["reset"] == ["idle", "▶ Start"] \
+        and res["plus"][0] in ("01:00", "00:59") and res["plus"][1] in ("run", "warn") and res["reset"] == ["idle", "Start"] \
         and res["quick"] == ["10:00", "10:00", 600000] and res["designs"] == [True] * 4 \
         and res.get("popup") and res["popup"][:2] == [True, True] and res["popupRun"] == ["run", "run", True] and res["noGrades"] and res["saved"] == [3, "ring"]
     report("Timer: Zeit setzen, Start/Pause, läuft beim Reiterwechsel weiter, Ende mit Signal, ±1 Min., Schnellwahl, 4 Designs, Pop-up steuert denselben Timer", ok and not br.errors, str(res) + "; ".join(br.errors))
@@ -1618,7 +1618,7 @@ def run_demo_link_check(br, base):
     res = br.eval("""(async () => {
         const opened = [];
         window.open = (u, t) => { opened.push([u, t]); return null; };
-        const btn = [...document.querySelectorAll('.auth-links button')].find((b) => b.textContent === 'Demo ansehen');
+        const btn = [...document.querySelectorAll('.auth-links button')].find((b) => b.textContent.trim() === 'Demo ansehen');
         if (btn) btn.click();
         return { btn: !!btn, url: opened.length ? new URL(opened[0][0]).search : null, target: opened.length ? opened[0][1] : null }; })()""")
     br.eval("localStorage.setItem('nm.ui', JSON.stringify({ tab: 'tests', marker: 'echt' }))")
@@ -1820,7 +1820,7 @@ def run_parts_check(br, base):
         document.querySelector('[data-print-menu]').click(); await wait();
         out.btn = !!document.querySelector('dialog .print-option[data-print="parts"]');
         document.querySelector('dialog .modal-actions .btn').click(); await wait();
-        [...document.querySelectorAll('.btn')].find((b) => b.textContent === '⛶ Beamer').click(); await wait();
+        [...document.querySelectorAll('.btn')].find((b) => b.textContent.trim() === 'Beamer').click(); await wait();
         out.beamer = document.querySelectorAll('.beamer h2').length;
         document.querySelector('.beamer-close').click(); await wait();
         // Teile aufheben: Aufgaben bleiben, Teilfelder weg
@@ -1860,7 +1860,7 @@ def run_print_menu_check(br, base):
             return info;
         };
         NM.app.select({ courseId: c.id, tab: 'tests' }); await wait();
-        out.oldButtons = [...document.querySelectorAll('.btn')].filter((b) => b.textContent.startsWith('🖨') && !b.hasAttribute('data-print-menu')).length;
+        out.oldButtons = [...document.querySelectorAll('.btn')].filter((b) => b.textContent.trim().startsWith('Drucken') && !b.hasAttribute('data-print-menu')).length;
         out.tests = await pick('list');
         NM.app.select({ tab: 'epo' }); await wait();
         out.epo = await pick('slips');
@@ -1973,7 +1973,7 @@ def run_pres_check(br, base):
         out.restore = [noBtn, label, db.criteriaPool.some((x) => x.name === 'Lesbarkeit'), !restore()];
         // Vorlagen: aus der Bewertung speichern (zweimal gleicher Name → ersetzen), aus dem Pool anlegen, verwenden, drucken, löschen
         const saveTpl = async (name, replace) => {
-            [...document.querySelectorAll('.btn-ghost')].find((b) => b.textContent === '💾 Als Vorlage speichern').click(); await wait();
+            [...document.querySelectorAll('.btn-ghost')].find((b) => b.textContent.trim() === 'Als Vorlage speichern').click(); await wait();
             document.querySelector('dialog input').value = name; document.querySelector('dialog .btn-primary').click(); await wait();
             if (replace) { document.querySelector('dialog .btn-primary').click(); await wait(); }
         };
@@ -2245,7 +2245,7 @@ def run_groups_tab_check(br, base):
         const ex = c.groupSets[c.groupSets.length - 1];
         const exCard = document.querySelector('.grp-experts');
         out.puzzle = [ex.homeId === set.id, ex.groups.length === Math.max(...set.groups.map((g) => g.members.length)), ex.groups[0].members.length === set.groups.length, !!exCard && exCard.querySelectorAll('.grp-box').length === ex.groups.length, document.querySelectorAll('.picker-item:not(.picker-add)').length === pickers, !q('gs-experts'), !!document.querySelector('.grp-set .grp-letter')];
-        // Stammgruppen ändern → Hinweis, „↻ Neu bilden“ passt an (Teilthema bleibt)
+        // Stammgruppen ändern → Hinweis, „Neu verteilen“ passt an (Teilthema bleibt)
         q('gb-task-' + ex.groups[0].id).value = 'Text A'; q('gb-task-' + ex.groups[0].id).dispatchEvent(new Event('change')); await wait();
         const [h0, h1] = [set.groups[0], set.groups[1]];
         [h0.members[0], h1.members[1]] = [h1.members[1], h0.members[0]]; NM.app.commit(); await wait();
@@ -2405,7 +2405,7 @@ def run_launcher_check(br, base):
         return f"[...document.querySelectorAll('dialog.modal h2')].some((x) => x.textContent.includes({json.dumps(title)}))"
 
     def click_modal(label):
-        br.eval(f"(() => {{ const d = [...document.querySelectorAll('dialog.modal')].pop(); [...d.querySelectorAll('button')].find((b) => b.textContent === {json.dumps(label)}).click(); return 1; }})()")
+        br.eval(f"(() => {{ const d = [...document.querySelectorAll('dialog.modal')].pop(); [...d.querySelectorAll('button')].find((b) => b.textContent.trim() === {json.dumps(label)}).click(); return 1; }})()")
     try:
         url = proc.stdout.readline().strip()
         report("Server startet", url.startswith(f"http://127.0.0.1:{port}/start?t="), url)

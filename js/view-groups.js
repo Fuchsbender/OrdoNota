@@ -1,7 +1,7 @@
 /* OrdoNota – Reiter „Gruppen“: Gruppen bilden (zufällig, leistungsgemischt/-gleich, mit Regeln), Gruppenpuzzle, Beamer, Druck. */
 (function (NM) {
   'use strict';
-  const { h, modal, toast, confirmDialog, fmtDate, todayISO, uid } = NM.util;
+  const { h, icon, modal, toast, confirmDialog, fmtDate, todayISO, uid } = NM.util;
   const G = NM.grades;
   const M = NM.model;
   const UI = NM.ui;
@@ -190,7 +190,7 @@
         },
         label
       );
-    return h('div', { class: 'inline grp-view-toggles' }, t('photos', '📷 Fotos', 'Fotos (bzw. Personensymbol) bei den Namen zeigen'), t('last', 'Nachnamen', 'Nachnamen zeigen oder ausblenden (bei gleichen Vornamen bleibt die Initiale)'));
+    return h('div', { class: 'inline grp-view-toggles' }, t('photos', [icon('camera'), ' Fotos'], 'Fotos (bzw. Personensymbol) bei den Namen zeigen'), t('last', 'Nachnamen', 'Nachnamen zeigen oder ausblenden (bei gleichen Vornamen bleibt die Initiale)'));
   }
 
   /**
@@ -364,7 +364,7 @@
                     NM.app.commit();
                   },
                 },
-                g.locked ? '🔒' : '🔓'
+                icon(g.locked ? 'lock' : 'lock-open')
               )
             : null,
           h(
@@ -379,7 +379,7 @@
                 NM.app.commit();
               },
             },
-            '✕'
+            icon('x')
           )
         ),
         h('input', {
@@ -445,13 +445,13 @@
 
   function printMenu(course, set) {
     return UI.printButton('Drucken: ' + set.name, [
-      { id: 'list', icon: '📄', label: 'Gruppeneinteilung', group: 'students', tip: 'Alle Gruppen mit Auftrag und Mitgliedern auf einer Seite – zum Aushängen. Ohne Noten und Regeln.', run: () => printSet(course, set, 'list') },
-      { id: 'cards', icon: '🗂️', label: 'Gruppenkarten', group: 'students', tip: 'Je Gruppe eine Karte mit Name, Auftrag und Mitgliedern zum Ausschneiden und Austeilen.', run: () => printSet(course, set, 'cards') },
+      { id: 'list', icon: 'file-text', label: 'Gruppeneinteilung', group: 'students', tip: 'Alle Gruppen mit Auftrag und Mitgliedern auf einer Seite – zum Aushängen. Ohne Noten und Regeln.', run: () => printSet(course, set, 'list') },
+      { id: 'cards', icon: 'folders', label: 'Gruppenkarten', group: 'students', tip: 'Je Gruppe eine Karte mit Name, Auftrag und Mitgliedern zum Ausschneiden und Austeilen.', run: () => printSet(course, set, 'cards') },
     ]);
   }
 
   function beamerButton(course, set, key, which) {
-    return h('button', { class: 'btn', 'data-focus-key': key, title: 'Im Vollbild für den Beamer zeigen – große Schrift, ohne Noten; Fotos und Nachnamen umschaltbar', onclick: () => beamer(course, set, which) }, '📽 Beamer');
+    return h('button', { class: 'btn', 'data-focus-key': key, title: 'Im Vollbild für den Beamer zeigen – große Schrift, ohne Noten; Fotos und Nachnamen umschaltbar', onclick: () => beamer(course, set, which) }, icon('presentation'), ' Beamer');
   }
 
   function setCard(course, set) {
@@ -485,7 +485,7 @@
             'div',
             { class: 'inline wrap' },
             h('button', { class: 'btn', 'data-focus-key': 'gs-roll', title: 'Alle nicht fixierten Gruppen neu mischen (anwesende Personen)', onclick: () => (roll(course, set), NM.app.commit()) }, '🎲 Neu würfeln'),
-            h('button', { class: 'btn btn-ghost', 'data-focus-key': 'gs-opts', onclick: () => editOptions(course, set) }, '⚙ Verfahren'),
+            h('button', { class: 'btn btn-ghost', 'data-focus-key': 'gs-opts', onclick: () => editOptions(course, set) }, icon('settings'), ' Verfahren'),
             beamerButton(course, set, 'gs-beamer', 'home'),
             printMenu(course, set),
             h(
@@ -500,7 +500,7 @@
                   NM.app.commit();
                 },
               },
-              '🗑'
+              icon('trash')
             )
           )
         )
@@ -511,18 +511,18 @@
         h(
           'p',
           { class: 'small muted' },
-          `${(MODES.find(([v]) => v === (set.opts || {}).mode) || MODES[0])[1]} · ${set.opts && set.opts.by === 'count' ? set.opts.n + ' Gruppen' : 'je ' + ((set.opts && set.opts.n) || 4) + ' Personen'}${set.opts && set.opts.vary ? ' · Abwechslung' : ''} · Personen ziehen oder anklicken, um sie zu verschieben oder zu tauschen; 🔒 fixiert eine Gruppe beim Neuwürfeln.` + (expertSet ? ' Buchstabe = Teilthema im Gruppenpuzzle.' : '')
+          `${(MODES.find(([v]) => v === (set.opts || {}).mode) || MODES[0])[1]} · ${set.opts && set.opts.by === 'count' ? set.opts.n + ' Gruppen' : 'je ' + ((set.opts && set.opts.n) || 4) + ' Personen'}${set.opts && set.opts.vary ? ' · Abwechslung' : ''} · Personen ziehen oder anklicken, um sie zu verschieben oder zu tauschen; das Schloss fixiert eine Gruppe beim Neuwürfeln.` + (expertSet ? ' Buchstabe = Teilthema im Gruppenpuzzle.' : '')
         ),
         viewToggles()
       ),
-      warn.length ? h('div', { class: 'notice warn' }, warn.map((w) => h('div', null, '⚠ ' + w))) : null,
+      warn.length ? h('div', { class: 'notice warn' }, warn.map((w) => h('div', null, icon('alert-triangle'), ' ' + w))) : null,
       issues.repeats && set.opts && set.opts.vary ? h('p', { class: 'small muted' }, `${issues.repeats} Paar${issues.repeats === 1 ? '' : 'e'} wie in „${prev.name}“.`) : null,
       ...board(course, set, { sc, letters: expertSet ? topicLetters(expertSet) : null }),
       h(
         'div',
         { class: 'inline wrap' },
         addGroupButton(set, 'gs-add'),
-        expertSet ? null : h('button', { class: 'btn btn-ghost', 'data-focus-key': 'gs-experts', title: 'Gruppenpuzzle: Diese Gruppen sind die Stammgruppen. Daraus werden darunter Expertengruppen (je Teilthema eine) gebildet.', onclick: () => makeExperts(course, set) }, '🧩 Expertengruppen bilden'),
+        expertSet ? null : h('button', { class: 'btn btn-ghost', 'data-focus-key': 'gs-experts', title: 'Gruppenpuzzle: Diese Gruppen sind die Stammgruppen. Daraus werden darunter Expertengruppen (je Teilthema eine) gebildet.', onclick: () => makeExperts(course, set) }, icon('puzzle'), ' Expertengruppen bilden'),
         pres.length && NM.app.tabOn(course, 'pres')
           ? h(
               'select',
@@ -562,12 +562,12 @@
       h(
         'div',
         { class: 'card-head' },
-        h('h2', null, '🧩 Expertengruppen'),
+        h('h2', null, icon('puzzle'), ' Expertengruppen'),
         h(
           'div',
           { class: 'inline wrap' },
           h('label', { class: 'inline small', title: 'Anzahl der Teilthemen = Anzahl der Expertengruppen; Personen werden neu verteilt, Namen und Teilthemen bleiben' }, 'Teilthemen ', count),
-          h('button', { class: 'btn btn-ghost', 'data-focus-key': 'ex-rebuild', title: 'Expertengruppen aus den aktuellen Stammgruppen neu verteilen (Anzahl, Namen und Teilthemen bleiben)', onclick: () => makeExperts(course, home) }, '↻ Neu verteilen'),
+          h('button', { class: 'btn btn-ghost', 'data-focus-key': 'ex-rebuild', title: 'Expertengruppen aus den aktuellen Stammgruppen neu verteilen (Anzahl, Namen und Teilthemen bleiben)', onclick: () => makeExperts(course, home) }, icon('rotate-clockwise'), ' Neu verteilen'),
           beamerButton(course, home, 'ex-beamer', 'experts'),
           printMenu(course, ex),
           h(
@@ -582,12 +582,12 @@
                 NM.app.commit();
               },
             },
-            '🗑'
+            icon('trash')
           )
         )
       ),
       h('p', { class: 'small muted' }, 'Die Teilthemen A, B, C … werden reihum in den Stammgruppen verteilt; alle mit A bilden die Expertengruppe A usw. Anzahl der Teilthemen oben einstellen, Personen bei Bedarf von Hand verschieben. Nach der Expertenphase kehren alle in ihre Stammgruppe zurück.'),
-      stale ? h('div', { class: 'notice warn' }, '⚠ Die Stammgruppen wurden seitdem geändert. „↻ Neu verteilen“ passt die Expertengruppen an.') : null,
+      stale ? h('div', { class: 'notice warn' }, icon('alert-triangle'), ' Die Stammgruppen wurden seitdem geändert. „Neu verteilen“ passt die Expertengruppen an.') : null,
       ...board(course, ex, { lockable: false, taskHint: 'Teilthema (z. B. Text A, Station B)' }),
       h('div', { class: 'inline wrap' }, addGroupButton(ex, 'ex-add', expertName))
     );
@@ -736,7 +736,7 @@
       'details',
       { class: 'card pool-card grp-rules', open: !!NM.app.state.ui.groupRulesOpen, ontoggle: (e) => ((NM.app.state.ui.groupRulesOpen = e.target.open), NM.app.saveUi()) },
       h('summary', null, h('h2', null, 'Regeln'), h('span', { class: 'muted small' }, ` ${r.apart.length + r.together.length} · gelten für alle Einteilungen dieses Kurses`)),
-      h('p', { class: 'muted small' }, '🔒 Regeln sind vertraulich: Sie werden verschlüsselt im Kurs gespeichert und nur hier angezeigt – nie auf dem Beamer oder im Ausdruck.'),
+      h('p', { class: 'muted small' }, icon('lock'), ' Regeln sind vertraulich: Sie werden verschlüsselt im Kurs gespeichert und nur hier angezeigt – nie auf dem Beamer oder im Ausdruck.'),
       h('div', { class: 'grp-rule-cols' }, section('apart', 'Nicht zusammen', 'Diese Paare kommen nie in dieselbe Gruppe.'), section('together', 'Zusammen', 'Diese Paare bleiben in einer Gruppe (z. B. Unterstützung).'))
     );
   }
@@ -843,7 +843,7 @@
       : null;
     const draw = () => {
       const set = shown();
-      title.replaceChildren(set === ex ? '🧩 Expertengruppen' : home.name, h('span', { class: 'muted' }, ' · ' + M.courseTitle(course)));
+      title.replaceChildren(set === ex ? [icon('puzzle'), ' Expertengruppen'] : home.name, h('span', { class: 'muted' }, ' · ' + M.courseTitle(course)));
       grid.replaceChildren(...groupTiles(course, set, 'grp-tile', opt));
       fit();
       // Fotos laden nachträglich und ändern die Höhe
@@ -869,9 +869,9 @@
           'div',
           { class: 'grp-beamer-bar' },
           switcher,
-          toggle('photos', '📷 Fotos', 'Fotos (bzw. Personensymbol) vor den Namen zeigen'),
+          toggle('photos', [icon('camera'), ' Fotos'], 'Fotos (bzw. Personensymbol) vor den Namen zeigen'),
           toggle('last', 'Nachnamen', 'Nachnamen zeigen oder ausblenden (bei gleichen Vornamen bleibt die Initiale)'),
-          h('button', { class: 'btn', 'data-beamer-close': '', onclick: close, title: 'Schließen (Esc)' }, '✕ Schließen')
+          h('button', { class: 'btn', 'data-beamer-close': '', onclick: close, title: 'Schließen (Esc)' }, icon('x'), ' Schließen')
         )
       ),
       grid

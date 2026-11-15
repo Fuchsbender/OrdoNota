@@ -1,7 +1,7 @@
 /* OrdoNota – Reiter „Kurs & Schüler“. */
 (function (NM) {
   'use strict';
-  const { h, toast, confirmDialog, modal, parseNum, uid, download, safeFilename } = NM.util;
+  const { h, icon, toast, confirmDialog, modal, parseNum, uid, download, safeFilename } = NM.util;
   const G = NM.grades;
   const M = NM.model;
   const UI = NM.ui;
@@ -249,7 +249,7 @@
             },
           })
         ),
-        h('td', { class: 'center' }, h('button', { class: 'icon-btn danger', title: 'Entfernen', 'aria-label': 'Entfernen', onclick: () => removeStudent(course, s) }, '✕'))
+        h('td', { class: 'center' }, h('button', { class: 'icon-btn danger', title: 'Entfernen', 'aria-label': 'Entfernen', onclick: () => removeStudent(course, s) }, icon('x')))
       );
     });
     const paste = h('textarea', {
@@ -264,7 +264,7 @@
         'div',
         { class: 'card-head' },
         h('h2', null, 'Schülerinnen und Schüler ', h('span', { class: 'muted' }, `(${active.length})`)),
-        course.students.length ? h('button', { class: 'btn btn-sm', title: 'Schülerliste als Excel-Datei (.xlsx) herunterladen', onclick: () => exportStudents(course) }, '⬇ Excel') : null
+        course.students.length ? h('button', { class: 'btn btn-sm', title: 'Schülerliste als Excel-Datei (.xlsx) herunterladen', onclick: () => exportStudents(course) }, icon('download'), ' Excel') : null
       ),
       course.students.length
         ? h(
@@ -452,7 +452,7 @@
         UI.halfSwitch(course, false),
         h('div', { class: 'spacer' }),
         h('button', { class: 'btn btn-sm', 'data-att-add': '', onclick: () => addDay(course, half) }, '+ Tag'),
-        days.length ? UI.printButton('Drucken: Fehlzeiten', [{ id: 'attendance', icon: '🗓️', label: `Fehlzeiten ${half}`, group: 'teacher', tip: 'Alle Tage des Halbjahres mit A/E/U je Person und den Summen.', run: () => NM.print.attendance(course, half) }]) : null
+        days.length ? UI.printButton('Drucken: Fehlzeiten', [{ id: 'attendance', icon: 'calendar', label: `Fehlzeiten ${half}`, group: 'teacher', tip: 'Alle Tage des Halbjahres mit A/E/U je Person und den Summen.', run: () => NM.print.attendance(course, half) }]) : null
       ),
       days.length && students.length
         ? h('div', { class: 'table-wrap', 'data-scroll-key': 'att-grid' }, h('table', { class: 'table grid-table att-table' }, h('thead', null, head), h('tbody', null, rows)))

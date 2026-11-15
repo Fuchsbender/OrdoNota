@@ -1,7 +1,7 @@
 /* OrdoNota – Reiter „Sitzplan“: Namenskarten auf einem Raster per Ziehen anordnen. */
 (function (NM) {
   'use strict';
-  const { h, confirmDialog, promptDialog, toast, uid } = NM.util;
+  const { h, icon, confirmDialog, promptDialog, toast, uid } = NM.util;
   const M = NM.model;
   const UI = NM.ui;
 
@@ -158,7 +158,7 @@
                     NM.app.rerender();
                   },
                 },
-                ui.seatEdit ? `✓ Raster fertig (${st.cols} × ${st.rows})` : `✎ Raster bearbeiten (${st.cols} × ${st.rows})`
+                ui.seatEdit ? `✓ Raster fertig (${st.cols} × ${st.rows})` : [icon('pencil'), ` Raster bearbeiten (${st.cols} × ${st.rows})`]
               ),
               h('button', { class: 'btn', title: 'Noch nicht platzierte Personen auf freie Plätze verteilen (zufällig)', onclick: () => fillRandom(course) }, '🎲 Freie Plätze füllen'),
               h('button', { class: 'btn', onclick: () => clearAll(course) }, 'Alle abräumen'),
@@ -174,10 +174,10 @@
                     NM.app.rerender();
                   },
                 },
-                ui.seatHidePhotos ? '▸ Fotos einblenden' : '▾ Fotos ausblenden'
+                ui.seatHidePhotos ? [icon('chevron-right'), ' Fotos einblenden'] : [icon('chevron-down'), ' Fotos ausblenden']
               ),
-              h('button', { class: 'btn', onclick: () => NM.print.seating(course) }, '🖨 Drucken'),
-              plans(course).length > 1 ? h('button', { class: 'icon-btn danger', title: 'Diesen Raum löschen', 'aria-label': 'Diesen Raum löschen', onclick: () => deleteRoom(course, st) }, '🗑') : null
+              h('button', { class: 'btn', onclick: () => NM.print.seating(course) }, icon('printer'), ' Drucken'),
+              plans(course).length > 1 ? h('button', { class: 'icon-btn danger', title: 'Diesen Raum löschen', 'aria-label': 'Diesen Raum löschen', onclick: () => deleteRoom(course, st) }, icon('trash')) : null
             )
           )
         )
@@ -237,7 +237,7 @@
       'div',
       { class: 'card' },
       h('h2', { class: 'seat-tray-title' }, 'Gespeicherte Stände'),
-      h('button', { class: 'btn btn-sm', onclick: () => savePlan(course, st) }, '💾 Stand speichern …'),
+      h('button', { class: 'btn btn-sm', onclick: () => savePlan(course, st) }, icon('device-floppy'), ' Stand speichern …'),
       list.length
         ? h(
             'ul',
@@ -248,7 +248,7 @@
                 null,
                 h('div', { class: 'grow' }, h('strong', null, p.name), h('div', { class: 'muted small' }, [p.room, p.savedAt ? new Date(p.savedAt).toLocaleDateString('de-DE') : '', `${Object.keys(p.pos || {}).length} Plätze`].filter(Boolean).join(' · '))),
                 h('button', { class: 'btn btn-sm', onclick: () => loadPlan(course, p) }, 'Laden'),
-                h('button', { class: 'icon-btn danger', title: 'Löschen', 'aria-label': 'Gespeicherten Plan löschen', onclick: () => deletePlan(course, p) }, '✕')
+                h('button', { class: 'icon-btn danger', title: 'Löschen', 'aria-label': 'Gespeicherten Plan löschen', onclick: () => deletePlan(course, p) }, icon('x'))
               )
             )
           )

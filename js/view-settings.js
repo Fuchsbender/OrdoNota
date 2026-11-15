@@ -1,7 +1,7 @@
 /* OrdoNota – Reiter „Einstellungen“. */
 (function (NM) {
   'use strict';
-  const { h, toast, modal, confirmDialog, parseNum, promptDialog } = NM.util;
+  const { h, icon, toast, modal, confirmDialog, parseNum, promptDialog } = NM.util;
   const S = NM.storage;
 
   function render(view, { db }) {
@@ -556,7 +556,7 @@
         }),
         ' Pomodoro-Timer in der Kopfzeile anzeigen'
       ),
-      h('p', { class: 'muted small' }, 'Arbeitsphasen (rot) und Pausen (grün) im Wechsel; pausiert ist der Timer gelb. Bedienung in der Kopfzeile neben dem Schuljahr: ▶ Start, ⏸ Pause, ↺ Zurücksetzen, ⚙ Einstellungen. Der Timer läuft auch weiter, wenn die App gesperrt wird.'),
+      h('p', { class: 'muted small' }, 'Arbeitsphasen (rot) und Pausen (grün) im Wechsel; pausiert ist der Timer gelb. Bedienung in der Kopfzeile neben dem Schuljahr: Start, Pause, Zurücksetzen und Einstellungen. Der Timer läuft auch weiter, wenn die App gesperrt wird.'),
       p.enabled ? NM.pomodoro.settingsForm(db.settings) : null
     );
   }
@@ -583,7 +583,7 @@
     );
   }
 
-  /** Reihenfolge der Reiter mit ▲▼ (alternativ in der Reiterleiste ziehen); gilt für alle Kurse. */
+  /** Reihenfolge der Reiter mit Pfeilen (alternativ in der Reiterleiste ziehen); gilt für alle Kurse. */
   function tabOrderList(db) {
     const tabs = NM.app.orderedTabs();
     const ids = tabs.map((t) => t.id);
@@ -601,8 +601,8 @@
             'li',
             { 'data-tab-order': t.id },
             h('span', null, t.label),
-            h('button', { class: 'icon-btn', disabled: i === 0, 'aria-label': 'Nach vorn: ' + t.label, title: 'Nach vorn', onclick: () => move(t.id, -1) }, '▲'),
-            h('button', { class: 'icon-btn', disabled: i === tabs.length - 1, 'aria-label': 'Nach hinten: ' + t.label, title: 'Nach hinten', onclick: () => move(t.id, 1) }, '▼')
+            h('button', { class: 'icon-btn', disabled: i === 0, 'aria-label': 'Nach vorn: ' + t.label, title: 'Nach vorn', onclick: () => move(t.id, -1) }, icon('chevron-up')),
+            h('button', { class: 'icon-btn', disabled: i === tabs.length - 1, 'aria-label': 'Nach hinten: ' + t.label, title: 'Nach hinten', onclick: () => move(t.id, 1) }, icon('chevron-down'))
           )
         )
       ),
@@ -719,7 +719,7 @@
         : h(
             'p',
             null,
-            h('button', { class: 'btn', onclick: NM.app.openDemo, title: 'Beispieldaten in einem neuen Fenster; Ihre Datenbank bleibt offen und unverändert' }, '▶ Demo ansehen'),
+            h('button', { class: 'btn', onclick: NM.app.openDemo, title: 'Beispieldaten in einem neuen Fenster; Ihre Datenbank bleibt offen und unverändert' }, icon('player-play'), ' Demo ansehen'),
             ' ',
             h('span', { class: 'muted small' }, 'Öffnet die Beispieldaten in einem neuen Fenster. Dort wird nichts gespeichert.')
           ),

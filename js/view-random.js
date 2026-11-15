@@ -2,7 +2,7 @@
    Nur Werkzeug für den Unterricht: Es wird nichts in die Notenliste eingetragen. Ergebnisse gelten nur für die Sitzung. */
 (function (NM) {
   'use strict';
-  const { h, clear, toast, parseNum } = NM.util;
+  const { h, icon, clear, toast, parseNum } = NM.util;
   const M = NM.model;
   const R = NM.random;
   const UI = NM.ui;
@@ -27,7 +27,7 @@
 
   // Werkzeuge in der Standardreihenfolge (NM.model.TOOL_IDS): Name und Aufbau der Kachel
   const TOOLS = {
-    timer: { label: '⏱ Timer', make: () => timerTool() },
+    timer: { label: 'Timer', make: () => timerTool() },
     number: { label: 'Zufallszahl', make: (c) => numberTool(c) },
     people: { label: 'Personen auswählen', make: (c) => peopleTool(c) },
     dice: { label: 'Würfel', make: (c) => diceTool(c) },
@@ -35,17 +35,17 @@
   };
 
   function render(view, { course }) {
-    const menu = h('button', { class: 'btn btn-sm', 'data-tools-menu': '', 'aria-haspopup': 'dialog', title: 'Werkzeuge in diesem Kurs ein-/ausschalten und sortieren', onclick: () => toolsMenu(course) }, '⚙ Werkzeuge …');
+    const menu = h('button', { class: 'btn btn-sm', 'data-tools-menu': '', 'aria-haspopup': 'dialog', title: 'Werkzeuge in diesem Kurs ein-/ausschalten und sortieren', onclick: () => toolsMenu(course) }, icon('settings'), ' Werkzeuge …');
     view.append(h('div', { class: 'view-head' }, h('h1', null, 'Tools'), h('span', { class: 'muted small' }, 'Werkzeuge für den Unterricht – es wird nichts in die Notenliste eingetragen.'), h('span', { class: 'spacer' }), menu));
     const shown = M.toolList(course).filter((x) => x.on && TOOLS[x.id]);
     if (!shown.length) {
-      view.appendChild(UI.emptyState('Alle Werkzeuge sind ausgeschaltet', 'Über „⚙ Werkzeuge …“ lassen sich die Werkzeuge für diesen Kurs wieder einschalten.', h('button', { class: 'btn btn-primary', onclick: () => toolsMenu(course) }, '⚙ Werkzeuge …')));
+      view.appendChild(UI.emptyState('Alle Werkzeuge sind ausgeschaltet', 'Über „Werkzeuge …“ lassen sich die Werkzeuge für diesen Kurs wieder einschalten.', h('button', { class: 'btn btn-primary', onclick: () => toolsMenu(course) }, icon('settings'), ' Werkzeuge …')));
       return;
     }
     view.appendChild(h('div', { class: 'rnd-grid' }, shown.map((x) => TOOLS[x.id].make(course))));
   }
 
-  /** Fenster: Werkzeuge des Kurses ein-/ausschalten (Haken) und sortieren (▲▼); gilt sofort. */
+  /** Fenster: Werkzeuge des Kurses ein-/ausschalten (Haken) und sortieren (Pfeile); gilt sofort. */
   function toolsMenu(course) {
     const list = h('ol', { class: 'tab-order-list tools-list' });
     const apply = (items) => {
@@ -66,8 +66,8 @@
               h('input', { type: 'checkbox', checked: x.on, 'data-tool-check': x.id, onchange: (e) => apply(items.map((y) => (y.id === x.id ? { id: y.id, on: e.target.checked } : y))) }),
               ' ' + TOOLS[x.id].label
             ),
-            h('button', { type: 'button', class: 'icon-btn', disabled: i === 0, 'aria-label': 'Nach vorn: ' + TOOLS[x.id].label, title: 'Nach vorn', onclick: () => apply(M.moveTab(items.map((y) => y.id), x.id, -1).map((id) => items.find((y) => y.id === id))) }, '▲'),
-            h('button', { type: 'button', class: 'icon-btn', disabled: i === items.length - 1, 'aria-label': 'Nach hinten: ' + TOOLS[x.id].label, title: 'Nach hinten', onclick: () => apply(M.moveTab(items.map((y) => y.id), x.id, 1).map((id) => items.find((y) => y.id === id))) }, '▼')
+            h('button', { type: 'button', class: 'icon-btn', disabled: i === 0, 'aria-label': 'Nach vorn: ' + TOOLS[x.id].label, title: 'Nach vorn', onclick: () => apply(M.moveTab(items.map((y) => y.id), x.id, -1).map((id) => items.find((y) => y.id === id))) }, icon('chevron-up')),
+            h('button', { type: 'button', class: 'icon-btn', disabled: i === items.length - 1, 'aria-label': 'Nach hinten: ' + TOOLS[x.id].label, title: 'Nach hinten', onclick: () => apply(M.moveTab(items.map((y) => y.id), x.id, 1).map((id) => items.find((y) => y.id === id))) }, icon('chevron-down'))
           )
         )
       );
@@ -94,10 +94,10 @@
           if (card.requestFullscreen) card.requestFullscreen().catch(() => toast('Vollbild ist hier nicht möglich.', 'warn'));
         },
       },
-      '⛶ Vollbild'
+      icon('arrows-maximize'), ' Vollbild'
     );
     card.addEventListener('fullscreenchange', () => {
-      full.textContent = document.fullscreenElement === card ? '✕ Vollbild beenden' : '⛶ Vollbild';
+      full.replaceChildren(...(document.fullscreenElement === card ? [icon('x'), ' Vollbild beenden'] : [icon('arrows-maximize'), ' Vollbild']));
       if (onResize) setTimeout(onResize, 50);
     });
     card.append(h('div', { class: 'card-head' }, h('h2', null, title), full), h('div', { class: 'rnd-controls' }, controls), stage);
@@ -248,18 +248,22 @@
     };
   }
 
-  /** Knöpfe Start/Pause, ↺, −1/+1 (im Reiter und im Pop-up). */
+  /** Knöpfe Start/Pause, Zurücksetzen, −1/+1 (im Reiter und im Pop-up). */
   function timerButtons(doc) {
     const go = el(doc, 'button', { class: 'btn btn-primary', 'data-tmr-go': '', onclick: () => timerAct.toggle() });
+    let shown = '';
     const sync = () => {
       const t = timerState(), now = Date.now();
-      go.textContent = T.running(t) && !T.finished(t, now) ? '⏸ Pause' : T.elapsed(t, now) > 0 && !T.finished(t, now) ? '▶ Weiter' : '▶ Start';
+      const [sym, text] = T.running(t) && !T.finished(t, now) ? ['player-pause', 'Pause'] : T.elapsed(t, now) > 0 && !T.finished(t, now) ? ['player-play', 'Weiter'] : ['player-play', 'Start'];
+      if (shown === text) return;   // nur bei Wechsel neu setzen (sync läuft jede Sekunde)
+      shown = text;
+      go.replaceChildren(icon(sym), ' ' + text);   // das Symbol kommt aus dem Hauptdokument und wird beim Einfügen ins Pop-up übernommen
     };
     const wrap = el(doc, 'div', { class: 'tmr-buttons' },
       go,
       el(doc, 'button', { class: 'btn', title: 'Eine Minute weniger', onclick: () => timerAct.add(-1) }, '− 1 Min.'),
       el(doc, 'button', { class: 'btn', title: 'Eine Minute mehr', onclick: () => timerAct.add(1) }, '+ 1 Min.'),
-      el(doc, 'button', { class: 'btn', 'data-tmr-reset': '', title: 'Zurück auf die eingestellte Zeit', onclick: () => timerAct.reset() }, '↺'));
+      el(doc, 'button', { class: 'btn', 'data-tmr-reset': '', title: 'Zurück auf die eingestellte Zeit', 'aria-label': 'Zurücksetzen', onclick: () => timerAct.reset() }, icon('rotate')));
     return { el: wrap, gone: goneCheck(wrap), update: sync };
   }
 
@@ -276,7 +280,7 @@
       d = null;
     }
     if (!d) {
-      toast('Das Pop-up-Fenster wurde blockiert. Bitte Pop-ups für OrdoNota erlauben oder „⛶ Vollbild“ verwenden.', 'warn');
+      toast('Das Pop-up-Fenster wurde blockiert. Bitte Pop-ups für OrdoNota erlauben oder „Vollbild“ verwenden.', 'warn');
       return null;
     }
     // Dieselben Dateien in derselben Reihenfolge wie in index.html (gemeinsames Design vor app.css)
@@ -329,9 +333,9 @@
       h('label', { class: 'field narrow' }, h('span', null, 'Zeit'), input),
       h('label', { class: 'field' }, h('span', null, 'Design'), select(o.timerDesign, TIMER_DESIGNS, (v) => ((o.timerDesign = v), NM.app.saveUi(), NM.app.rerender(), clock.popup && !clock.popup.closed && (clock.popup.close(), openTimerPopup())), { 'data-tmr-design': '' })),
       h('label', { class: 'field' }, h('span', null, 'Signal'), select(o.timerAlarm, [['gong', 'Gong'], ['bell', 'Wecker'], ['beep', 'Piepen'], ['off', 'aus']], (v) => ((o.timerAlarm = v), NM.app.saveUi()))),
-      h('button', { class: 'btn', 'data-tmr-popup': '', title: 'Eigenes Fenster, z. B. zum Verschieben auf den Beamer; der Timer läuft im Hauptfenster weiter', onclick: openTimerPopup }, '⧉ Pop-up'),
+      h('button', { class: 'btn', 'data-tmr-popup': '', title: 'Eigenes Fenster, z. B. zum Verschieben auf den Beamer; der Timer läuft im Hauptfenster weiter', onclick: openTimerPopup }, icon('external-link'), ' Pop-up'),
     ];
-    const card = tool('timer', '⏱ Timer', controls, h('div', { class: 'rnd-stage tmr-stage' }, face.el, btns.el, quick));
+    const card = tool('timer', [icon('stopwatch'), ' Timer'], controls, h('div', { class: 'rnd-stage tmr-stage' }, face.el, btns.el, quick));
     refreshFaces();
     return card;
   }
@@ -407,7 +411,7 @@
       if (o.noRepeat && ses.used.size)
         info.append(
           ' ',
-          h('button', { class: 'link', onclick: () => (ses.used.clear(), showInfo()) }, '↺ alle wieder aufnehmen')
+          h('button', { class: 'link', onclick: () => (ses.used.clear(), showInfo()) }, icon('rotate'), ' alle wieder aufnehmen')
         );
     };
     const personCard = (s, names, cls = '') =>
@@ -840,7 +844,7 @@
           toast('Neu gemischt – alle Karten sind wieder im Stapel.', 'info', 2500);
         },
       },
-      '↺ Neu mischen'
+      icon('rotate'), ' Neu mischen'
     );
     const area = h('textarea', { class: 'input', rows: 6, 'data-rnd-cards': '', placeholder: 'z. B.\nThema 1: Bruchrechnung\nThema 2: Prozent\nRolle: Zeitwächter', value: (course.randomCards || []).join('\n') });
     const edit = h(

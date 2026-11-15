@@ -1,7 +1,7 @@
 /* OrdoNota – Reiter „Mitarbeit/EPO“: Bewertung über eine feste Zahl von Unterrichtsstunden. */
 (function (NM) {
   'use strict';
-  const { h, toast, confirmDialog, modal, parseNum, uid, fmtNum, fmtDate, fmtDateShort, todayISO } = NM.util;
+  const { h, icon, toast, confirmDialog, modal, parseNum, uid, fmtNum, fmtDate, fmtDateShort, todayISO } = NM.util;
   const G = NM.grades;
   const M = NM.model;
   const UI = NM.ui;
@@ -96,8 +96,8 @@
             { class: 'inline' },
             h('button', { class: 'btn btn-primary', onclick: () => addLesson(a) }, '+ Stunde'),
             UI.printButton('Drucken: ' + a.name, [
-              { id: 'list', icon: '📄', label: 'Bewertungsliste', group: 'teacher', tip: 'Bewertungsraster aller Stunden mit Summe, Prozent, Fehlstunden, Hausaufgaben-Vermerken und Note je Person.', run: () => NM.print.epo(course, a) },
-              { id: 'slips', icon: '✂️', label: 'Mitarbeitszettel zum Ausschneiden', group: 'students', tip: 'Ein Zettel pro Person mit Punktelegende, Bewertungen je Stunde, Ergebnis und Note sowie Feldern für Datum und Unterschrift – mehrere pro Blatt.', run: () => NM.print.epoSlips(course, a) },
+              { id: 'list', icon: 'file-text', label: 'Bewertungsliste', group: 'teacher', tip: 'Bewertungsraster aller Stunden mit Summe, Prozent, Fehlstunden, Hausaufgaben-Vermerken und Note je Person.', run: () => NM.print.epo(course, a) },
+              { id: 'slips', icon: 'scissors', label: 'Mitarbeitszettel zum Ausschneiden', group: 'students', tip: 'Ein Zettel pro Person mit Punktelegende, Bewertungen je Stunde, Ergebnis und Note sowie Feldern für Datum und Unterschrift – mehrere pro Blatt.', run: () => NM.print.epoSlips(course, a) },
             ]),
             h(
               'button',
@@ -111,7 +111,7 @@
                   NM.app.commit();
                 },
               },
-              '🗑'
+              icon('trash')
             )
           )
         )
@@ -293,9 +293,9 @@
           ? h(
               'span',
               { class: 'head-toggles' },
-              toggleBtn(ui, 'epoQuick', ui.epoQuick ? '▾ Schnellwahl ausblenden' : '▸ Schnellwahl einblenden', 'Schaltflächen zum Bewerten der neuesten Stunde ein-/ausblenden'),
-              toggleBtn(ui, 'epoPhotos', ui.epoPhotos ? '▾ Fotos ausblenden' : '▸ Fotos einblenden', 'Schülerfotos vor dem Namen ein-/ausblenden (Fotos werden im Reiter „Sitzplan“ hinzugefügt)'),
-              h('button', { class: 'btn btn-sm', 'data-tiles-open': '', title: 'Kachelansicht für das Tablet: eine Kachel je Person nach Sitzplan, Tippen bewertet die Stunde', onclick: () => tilesView(course, a) }, '▦ Kacheln')
+              toggleBtn(ui, 'epoQuick', ui.epoQuick ? [icon('chevron-down'), ' Schnellwahl ausblenden'] : [icon('chevron-right'), ' Schnellwahl einblenden'], 'Schaltflächen zum Bewerten der neuesten Stunde ein-/ausblenden'),
+              toggleBtn(ui, 'epoPhotos', ui.epoPhotos ? [icon('chevron-down'), ' Fotos ausblenden'] : [icon('chevron-right'), ' Fotos einblenden'], 'Schülerfotos vor dem Namen ein-/ausblenden (Fotos werden im Reiter „Sitzplan“ hinzugefügt)'),
+              h('button', { class: 'btn btn-sm', 'data-tiles-open': '', title: 'Kachelansicht für das Tablet: eine Kachel je Person nach Sitzplan, Tippen bewertet die Stunde', onclick: () => tilesView(course, a) }, icon('layout-grid'), ' Kacheln')
             )
           : null,
         h(
@@ -424,7 +424,7 @@
             plans.map((p) => h('option', { value: p.id, selected: p.id === (ui.seatingId || {})[course.id] }, p.name))
           )
         : null;
-    const photoBtn = h('button', { class: 'btn grp-beamer-toggle' + (ui.epoPhotos ? ' active' : ''), 'aria-pressed': String(!!ui.epoPhotos), 'data-tiles-photos': '', title: 'Fotos ein-/ausblenden', onclick: () => ((ui.epoPhotos = !ui.epoPhotos), NM.app.saveUi(), draw()) }, '📷 Fotos');
+    const photoBtn = h('button', { class: 'btn grp-beamer-toggle' + (ui.epoPhotos ? ' active' : ''), 'aria-pressed': String(!!ui.epoPhotos), 'data-tiles-photos': '', title: 'Fotos ein-/ausblenden', onclick: () => ((ui.epoPhotos = !ui.epoPhotos), NM.app.saveUi(), draw()) }, icon('camera'), ' Fotos');
 
     const tile = (s, names) => {
       const c = (a.epo.entries[s.id] || {})[lesson.id];
@@ -486,7 +486,7 @@
       sheet.replaceChildren();
       if (ps)
         sheet.append(
-          h('div', { class: 'tiles-sheet-head' }, h('strong', null, M.studentName(ps)), h('button', { class: 'btn', 'data-tiles-sheet-close': '', onclick: () => ((picked = null), draw()) }, '✕')),
+          h('div', { class: 'tiles-sheet-head' }, h('strong', null, M.studentName(ps)), h('button', { class: 'btn', 'data-tiles-sheet-close': '', 'aria-label': 'Schließen', title: 'Schließen', onclick: () => ((picked = null), draw()) }, icon('x'))),
           quickButtons(course, a, ps.id, lesson, {
             big: true,
             onDone: (kind) => {
@@ -511,7 +511,7 @@
     const overlay = h(
       'div',
       { class: 'beamer grp-beamer epo-tiles', role: 'dialog', 'aria-label': 'Kachelansicht' },
-      h('div', { class: 'grp-beamer-head' }, title, h('div', { class: 'grp-beamer-bar' }, lessonSel, roomSel, photoBtn, h('button', { class: 'btn', 'data-tiles-close': '', onclick: close, title: 'Schließen (Esc)' }, '✕ Schließen'))),
+      h('div', { class: 'grp-beamer-head' }, title, h('div', { class: 'grp-beamer-bar' }, lessonSel, roomSel, photoBtn, h('button', { class: 'btn', 'data-tiles-close': '', onclick: close, title: 'Schließen (Esc)' }, icon('x'), ' Schließen'))),
       grid,
       extra,
       sheet

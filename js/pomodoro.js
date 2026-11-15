@@ -1,7 +1,7 @@
 /* OrdoNota – Pomodoro-Timer in der Kopfzeile: Ablauf, Anzeige, Töne (Web Audio, ohne Dateien), Einstellungen. */
 (function (NM) {
   'use strict';
-  const { h, modal, toast, parseNum } = NM.util;
+  const { h, icon, modal, toast, parseNum } = NM.util;
 
   const TICKS = [
     ['off', 'aus'],
@@ -251,10 +251,10 @@
       wrap: h('div', { class: 'pomo', role: 'timer' }),
       label: h('span', { class: 'pomo-label' }),
       time: h('span', { class: 'pomo-time', 'aria-live': 'off' }),
-      start: btn('▶', 'Start', start),
-      pause: btn('⏸', 'Pause', pause),
-      reset: btn('↺', 'Zurücksetzen', reset),
-      settings: btn('⚙', 'Pomodoro-Einstellungen', openSettings),
+      start: btn(icon('player-play'), 'Start', start),
+      pause: btn(icon('player-pause'), 'Pause', pause),
+      reset: btn(icon('rotate'), 'Zurücksetzen', reset),
+      settings: btn(icon('settings'), 'Pomodoro-Einstellungen', openSettings),
     };
     ui.wrap.append(ui.label, ui.time, ui.start, ui.pause, ui.reset, ui.settings);
     runLoop();
@@ -284,7 +284,7 @@
 
   // ---------- Einstellungen ----------
 
-  /** Formular für die Pomodoro-Einstellungen (im Reiter Einstellungen und im Dialog hinter ⚙). */
+  /** Formular für die Pomodoro-Einstellungen (im Reiter Einstellungen und im Dialog hinter dem Zahnrad). */
   function settingsForm(settings) {
     if (!settings.pomodoro) settings.pomodoro = config(settings);
     const p = settings.pomodoro;
@@ -335,7 +335,7 @@
             },
             options.map(([v, l]) => h('option', { value: v, selected: p[key] === v }, l))
           ),
-          h('button', { type: 'button', class: 'btn btn-sm', title: testLabel, onclick: test }, '▶ Probe')
+          h('button', { type: 'button', class: 'btn btn-sm', title: testLabel, onclick: test }, icon('player-play'), ' Probe')
         )
       );
     return h(

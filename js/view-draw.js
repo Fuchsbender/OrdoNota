@@ -2,7 +2,7 @@
    Klassischer Pool (je Ziehung eine Spalte) und benannte Pools (eine Sammelspalte, eine Runde); Logik in js/draw.js. */
 (function (NM) {
   'use strict';
-  const { h, toast, confirmDialog, promptDialog, modal, parseNum, fmtDate, fmtDateShort, todayISO, uid } = NM.util;
+  const { h, icon, toast, confirmDialog, promptDialog, modal, parseNum, fmtDate, fmtDateShort, todayISO, uid } = NM.util;
   const G = NM.grades;
   const M = NM.model;
   const UI = NM.ui;
@@ -129,7 +129,7 @@
                     NM.app.commit();
                   },
                 },
-                '↺ Pool auffüllen'
+                icon('rotate'), ' Pool auffüllen'
               )
             )
           ),
@@ -175,8 +175,8 @@
         h('span', { class: 'muted small' }, 'Pool:'),
         h('div', { class: 'segmented wrap' }, seg('', 'Klassisch', 'Je Ziehung eine eigene Spalte, füllt sich automatisch wieder auf'), pools.map((p) => seg(p.id, p.name + (D.finished(course, p) ? ' ✓' : ''), `Sammelspalte „${p.name}“`))),
         h('button', { class: 'btn btn-ghost', 'data-draw-new': '', onclick: () => newPoolDialog(course, half) }, '+ Neuer Pool'),
-        pool ? h('button', { class: 'btn btn-ghost', title: 'Pool umbenennen (die Spalte heißt dann genauso)', onclick: () => renamePool(course, pool) }, '✎ Umbenennen') : null,
-        pool ? h('button', { class: 'btn btn-ghost', 'data-draw-del': '', title: 'Pool löschen; die Spalte mit den Noten bleibt', onclick: () => deletePool(course, pool) }, '🗑 Löschen') : null
+        pool ? h('button', { class: 'btn btn-ghost', title: 'Pool umbenennen (die Spalte heißt dann genauso)', onclick: () => renamePool(course, pool) }, icon('pencil'), ' Umbenennen') : null,
+        pool ? h('button', { class: 'btn btn-ghost', 'data-draw-del': '', title: 'Pool löschen; die Spalte mit den Noten bleibt', onclick: () => deletePool(course, pool) }, icon('trash'), ' Löschen') : null
       )
     );
   }
@@ -291,7 +291,7 @@
     return h(
       'details',
       { class: 'card details-card draw-check', open: other.length > 0 },
-      h('summary', null, h('h2', null, other.length ? '⚠ Prüfung' : 'Prüfung'), h('span', { class: 'muted small' }, [other.length ? `${other.length} mögliche Ziehfehler` : null, missing.length ? `${missing.length} Gezogene noch ohne Note` : null].filter(Boolean).join(' · '))),
+      h('summary', null, h('h2', null, other.length ? [icon('alert-triangle'), ' Prüfung'] : 'Prüfung'), h('span', { class: 'muted small' }, [other.length ? `${other.length} mögliche Ziehfehler` : null, missing.length ? `${missing.length} Gezogene noch ohne Note` : null].filter(Boolean).join(' · '))),
       h('ul', { class: 'check-list' }, [...other, ...missing].map((p) => h('li', { class: p.kind === 'ohneNote' ? 'muted' : '' }, p.text)))
     );
   }
@@ -364,7 +364,7 @@
         { class: 'card-head' },
         h('h2', null, 'Gezogen am ', fmtDate(entry.date)),
         h('span', { class: 'muted small' }, a ? `Note in „${a.name}“ (${a.half}, Sonstige)` : 'Notenspalte wurde gelöscht'),
-        h('button', { class: 'btn btn-sm', title: 'Ziehung zurücknehmen: Pool wie vorher', onclick: onUndo }, '↶ Rückgängig')
+        h('button', { class: 'btn btn-sm', title: 'Ziehung zurücknehmen: Pool wie vorher', onclick: onUndo }, icon('arrow-back-up'), ' Rückgängig')
       ),
       h(
         'div',

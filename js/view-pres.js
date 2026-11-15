@@ -1,7 +1,7 @@
 /* OrdoNota – Reiter „Präsentationen“: Kriterien aus dem Kriterienpool zusammenstellen, je Kriterium 0–3 Punkte, Note wie bei Tests. */
 (function (NM) {
   'use strict';
-  const { h, modal, toast, confirmDialog, fmtNum, fmtScore, fmtDate } = NM.util;
+  const { h, icon, modal, toast, confirmDialog, fmtNum, fmtScore, fmtDate } = NM.util;
   const G = NM.grades;
   const M = NM.model;
   const UI = NM.ui;
@@ -235,7 +235,7 @@
                   NM.app.commit();
                 },
               },
-              '🗑'
+              icon('trash')
             )
           )
         )
@@ -245,11 +245,11 @@
 
   function printButton(course, a) {
     return UI.printButton('Drucken: ' + a.name, [
-      { id: 'list', icon: '📄', label: 'Bewertungsliste', group: 'teacher', tip: 'Alle Personen mit Thema, Punkten je Kriterium, Summe, Prozent und Note; darunter Notenspiegel und Notenschlüssel.', run: () => NM.print.pres(course, a, 'list') },
-      { id: 'key', icon: '📊', label: 'Notenschlüssel und Notenspiegel', group: 'teacher', tip: 'Punktschwellen je Note und Verteilung der Noten mit Statistik – ohne Namen.', run: () => NM.print.pres(course, a, 'key') },
-      { id: 'blank', icon: '📝', label: 'Leere Bewertungsbögen', group: 'teacher', tip: 'Je aktive Person ein Bogen mit Name, Kriterien und Kästchen 0–3 samt Stufenbeschreibung – zum Ankreuzen während der Präsentation.', run: () => NM.print.pres(course, a, 'blank') },
-      { id: 'guide', icon: '📋', label: 'Bewertungskriterien (Handreichung)', group: 'students', tip: 'Eine Seite für alle vorab: Kriterien mit Gewicht und der Beschreibung jeder Stufe 0–3, ohne Namen und Noten; Notenschlüssel wahlweise.', run: () => guideDialog(course, a) },
-      { id: 'sheets', icon: '🗒️', label: 'Bewertungsbogen je Person', group: 'students', tip: 'Je Person eine Seite mit Thema, Punkten je Kriterium samt Beschreibung der erreichten Stufe, Summe, Prozent, Bemerkung; Note wahlweise, Felder für Datum und Unterschrift.', run: () => sheetsDialog(course, a) },
+      { id: 'list', icon: 'file-text', label: 'Bewertungsliste', group: 'teacher', tip: 'Alle Personen mit Thema, Punkten je Kriterium, Summe, Prozent und Note; darunter Notenspiegel und Notenschlüssel.', run: () => NM.print.pres(course, a, 'list') },
+      { id: 'key', icon: 'chart-bar', label: 'Notenschlüssel und Notenspiegel', group: 'teacher', tip: 'Punktschwellen je Note und Verteilung der Noten mit Statistik – ohne Namen.', run: () => NM.print.pres(course, a, 'key') },
+      { id: 'blank', icon: 'notes', label: 'Leere Bewertungsbögen', group: 'teacher', tip: 'Je aktive Person ein Bogen mit Name, Kriterien und Kästchen 0–3 samt Stufenbeschreibung – zum Ankreuzen während der Präsentation.', run: () => NM.print.pres(course, a, 'blank') },
+      { id: 'guide', icon: 'clipboard', label: 'Bewertungskriterien (Handreichung)', group: 'students', tip: 'Eine Seite für alle vorab: Kriterien mit Gewicht und der Beschreibung jeder Stufe 0–3, ohne Namen und Noten; Notenschlüssel wahlweise.', run: () => guideDialog(course, a) },
+      { id: 'sheets', icon: 'notes', label: 'Bewertungsbogen je Person', group: 'students', tip: 'Je Person eine Seite mit Thema, Punkten je Kriterium samt Beschreibung der erreichten Stufe, Summe, Prozent, Bemerkung; Note wahlweise, Felder für Datum und Unterschrift.', run: () => sheetsDialog(course, a) },
     ]);
   }
 
@@ -261,7 +261,7 @@
       body: h('div', null, h('p', { class: 'small' }, 'Handreichung für die Klasse: alle Kriterien mit Gewicht und Beschreibung der Stufen 0–3.'), h('label', { class: 'check' }, withKey, ' Notenschlüssel mit abdrucken (Punkte ab … für jede Note)')),
       buttons: [
         { label: 'Abbrechen', value: null },
-        { label: '🖨 Drucken', value: 'ok', kind: 'primary' },
+        { label: [icon('printer'), ' Drucken'], value: 'ok', kind: 'primary' },
       ],
     });
     if (v === 'ok') NM.print.presGuide({ title: a.name, course, criteria: a.pres.criteria, key: withKey.checked ? G.keyForPres(a.pres, level) : null, level, groupMode: a.pres.groupMode || null });
@@ -278,7 +278,7 @@
       body: h('div', null, h('label', { class: 'field' }, h('span', null, 'Wer'), who), h('label', { class: 'check' }, grade, ' Note mit ausdrucken')),
       buttons: [
         { label: 'Abbrechen', value: null },
-        { label: '🖨 Drucken', value: 'ok', kind: 'primary' },
+        { label: [icon('printer'), ' Drucken'], value: 'ok', kind: 'primary' },
       ],
     });
     if (v === 'ok') NM.print.pres(course, a, 'sheets', { sid: who.value || null, withGrade: grade.checked });
@@ -346,7 +346,7 @@
             { class: 'inline' },
             h('button', { class: 'icon-btn', title: 'Nach oben', 'aria-label': 'Nach oben: ' + c.name, disabled: i === 0, onclick: () => move(p, i, -1) }, '↑'),
             h('button', { class: 'icon-btn', title: 'Nach unten', 'aria-label': 'Nach unten: ' + c.name, disabled: i === p.criteria.length - 1, onclick: () => move(p, i, 1) }, '↓'),
-            h('button', { class: 'icon-btn', title: 'Bezeichnung und Stufen bearbeiten', 'aria-label': 'Bearbeiten: ' + c.name, onclick: () => editCriterion(db, c) }, '✎'),
+            h('button', { class: 'icon-btn', title: 'Bezeichnung und Stufen bearbeiten', 'aria-label': 'Bearbeiten: ' + c.name, onclick: () => editCriterion(db, c) }, icon('pencil')),
             h(
               'button',
               {
@@ -360,7 +360,7 @@
                   NM.app.commit();
                 },
               },
-              '✕'
+              icon('x')
             )
           )
         )
@@ -376,7 +376,7 @@
         { class: 'inline wrap' },
         h('button', { class: 'btn btn-ghost', onclick: () => addFromPool(db, a) }, '+ aus dem Pool'),
         h('button', { class: 'btn btn-ghost', onclick: () => addOwn(db, a) }, '+ eigenes Kriterium'),
-        p.criteria.length ? h('button', { class: 'btn btn-ghost', title: 'Kriterien mit Reihenfolge und Gewichten als Vorlage für spätere Bewertungen speichern (alle Kurse)', onclick: () => saveAsTemplate(db, a) }, '💾 Als Vorlage speichern') : null
+        p.criteria.length ? h('button', { class: 'btn btn-ghost', title: 'Kriterien mit Reihenfolge und Gewichten als Vorlage für spätere Bewertungen speichern (alle Kurse)', onclick: () => saveAsTemplate(db, a) }, icon('device-floppy'), ' Als Vorlage speichern') : null
       )
     );
   }
@@ -556,7 +556,7 @@
               NM.app.commit();
             },
           },
-          '✕'
+          icon('x')
         )
       )
     );
@@ -821,7 +821,7 @@
                       NM.app.commit();
                     },
                   },
-                  '↺ Gruppenwert'
+                  icon('rotate'), ' Gruppenwert'
                 )
               : null
           )
@@ -991,7 +991,7 @@
                 if (card) card.scrollIntoView({ block: 'start', behavior: 'smooth' });
               },
             },
-            '✎'
+            icon('pencil')
           )
         )
       );
@@ -1036,7 +1036,7 @@
         },
       },
       h('summary', null, h('h2', null, 'Vorlagen'), h('span', { class: 'muted small' }, ` ${list.length} ${list.length === 1 ? 'Vorlage' : 'Vorlagen'} · gelten für alle Kurse`)),
-      h('p', { class: 'muted small' }, 'Eine Vorlage ist ein benannter Satz von Kriterien mit Reihenfolge und Gewichten, z. B. „Referat“ oder „Plakatpräsentation“. Sie steht beim Anlegen einer Bewertung unter „Kriterien übernehmen von“ zur Auswahl. Speichern auch über „💾 Als Vorlage speichern“ in der Karte „Kriterien“.'),
+      h('p', { class: 'muted small' }, 'Eine Vorlage ist ein benannter Satz von Kriterien mit Reihenfolge und Gewichten, z. B. „Referat“ oder „Plakatpräsentation“. Sie steht beim Anlegen einer Bewertung unter „Kriterien übernehmen von“ zur Auswahl. Speichern auch über „Als Vorlage speichern“ in der Karte „Kriterien“.'),
       list.length
         ? h(
             'div',
@@ -1056,7 +1056,7 @@
                     h(
                       'div',
                       { class: 'inline' },
-                      h('button', { class: 'btn btn-sm', title: 'Bewertungskriterien dieser Vorlage als Handreichung für die Klasse drucken', 'data-tpl-print': t.id, onclick: () => NM.print.presGuide({ title: t.name, course, criteria: t.criteria, level: G.courseLevel(course) }) }, '🖨 Handreichung'),
+                      h('button', { class: 'btn btn-sm', title: 'Bewertungskriterien dieser Vorlage als Handreichung für die Klasse drucken', 'data-tpl-print': t.id, onclick: () => NM.print.presGuide({ title: t.name, course, criteria: t.criteria, level: G.courseLevel(course) }) }, icon('printer'), ' Handreichung'),
                       h(
                         'button',
                         {
@@ -1070,7 +1070,7 @@
                             NM.app.commit();
                           },
                         },
-                        '✎'
+                        icon('pencil')
                       ),
                       h(
                         'button',
@@ -1084,7 +1084,7 @@
                             NM.app.commit();
                           },
                         },
-                        '✕'
+                        icon('x')
                       )
                     )
                   )
@@ -1118,7 +1118,7 @@
     const v = await modal({
       title: 'Neue Vorlage',
       wide: true,
-      body: h('div', null, h('label', { class: 'field' }, h('span', null, 'Name der Vorlage'), name), h('p', { class: 'small' }, 'Kriterien wählen (Gewichte und Reihenfolge lassen sich in einer Bewertung anpassen und mit „💾 Als Vorlage speichern“ übernehmen).'), pick.el),
+      body: h('div', null, h('label', { class: 'field' }, h('span', null, 'Name der Vorlage'), name), h('p', { class: 'small' }, 'Kriterien wählen (Gewichte und Reihenfolge lassen sich in einer Bewertung anpassen und mit „Als Vorlage speichern“ übernehmen).'), pick.el),
       buttons: [
         { label: 'Abbrechen', value: null },
         { label: 'Anlegen', value: 'ok', kind: 'primary', validate: () => (!name.value.trim() ? (toast('Bitte einen Namen eingeben.', 'error'), false) : !pick.selected().length ? (toast('Bitte mindestens ein Kriterium wählen.', 'error'), false) : true) },
@@ -1172,7 +1172,7 @@
                       NM.app.commit();
                     },
                   },
-                  '✎'
+                  icon('pencil')
                 ),
                 h(
                   'button',
@@ -1186,7 +1186,7 @@
                       NM.app.commit();
                     },
                   },
-                  '✕'
+                  icon('x')
                 )
               )
             )

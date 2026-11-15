@@ -292,7 +292,7 @@ Jede Etappe endet mit `ERGEBNIS: x von x bestanden` und einem Commit auf dem Zwe
 - [x] 3. px → rem in `app.css`. Kriterium: Fotos vorher und nachher sind bei normaler Schrift gleich.
 - [x] 4. Gerüst: Kopfzeile mit Logo, Modus-Schalter, große Schrift, Reiter, Kursleiste.
 - [x] 5. Knöpfe, Felder, Dialoge, Meldungen, Anmeldung, Einstellungen (mit den Vorschaukacheln der Designs).
-- [ ] 6. Symbole statt Emoji.
+- [x] 6. Symbole statt Emoji.
 - [ ] 7. Fachansichten Reiter für Reiter: Tokens, Überschriften in Josefin Sans, Inline-Stile entfernen (berechnete Werte wie Notenfarben und Sitzpositionen bleiben), Timer-Fenster, Beamer-Ansichten.
 - [ ] 8. Abschluss: Prüfung auf Bedienbarkeit, Kontrast und schmale Bildschirme, Importe härten, Chromium, Firefox und WebKit, unter `file://` und über das Startprogramm, Doku (`DOKUMENTATION.md`, `README.md`), Version 2.0.0, Prüfung auf private Angaben vor dem Push.
 

@@ -1,7 +1,7 @@
 /* OrdoNota – Reiter „Tests“: Rohpunkte erfassen, Notenschlüssel, Notenspiegel. */
 (function (NM) {
   'use strict';
-  const { h, clear, modal, toast, confirmDialog, parseNum, uid, fmtNum, fmtScore, fmtDate, todayISO, gradeStyle } = NM.util;
+  const { h, icon, clear, modal, toast, confirmDialog, parseNum, uid, fmtNum, fmtScore, fmtDate, todayISO, gradeStyle } = NM.util;
   const G = NM.grades;
   const M = NM.model;
   const UI = NM.ui;
@@ -210,7 +210,7 @@
                   },
                   '+ Nachschreibtermin'
                 ),
-            h('button', { class: 'btn', title: 'Notenspiegel und Punkteverteilung ohne Namen im Vollbild', onclick: () => beamerView(course, a, level) }, '⛶ Beamer'),
+            h('button', { class: 'btn', title: 'Notenspiegel und Punkteverteilung ohne Namen im Vollbild', onclick: () => beamerView(course, a, level) }, icon('arrows-maximize'), ' Beamer'),
             printButton(course, a),
             h(
               'button',
@@ -225,7 +225,7 @@
                   NM.app.commit();
                 },
               },
-              '🗑'
+              icon('trash')
             )
           )
         )
@@ -239,12 +239,12 @@
     const t = a.test;
     const ka = a.cat === 'ka';
     return UI.printButton('Drucken: ' + a.name, [
-      { id: 'list', icon: '📄', label: 'Ergebnisliste', group: 'teacher', tip: 'Alle Personen mit Punkten je Aufgabe, Summe, Prozent und Note' + (ka ? ', mit Spalte „Unterschrift“' : '') + '; darunter Notenspiegel und Notenschlüssel.', run: () => NM.print.test(course, a, 'list') },
-      G.hasParts(t) ? { id: 'parts', icon: '🧩', label: 'Ergebnisse nach Teilen', group: 'teacher', tip: 'Kompakt: je Person Punkte, Prozent und (bei getrennter Benotung) Note jedes Teils sowie gesamt; darunter Notenspiegel und Schlüssel.', run: () => NM.print.test(course, a, 'parts') } : null,
-      { id: 'key', icon: '📊', label: 'Notenschlüssel und Notenspiegel', group: 'teacher', tip: 'Punktschwellen je Note und Verteilung der Noten mit Statistik und Drittelparagraph – ohne Namen, z. B. für Klassenbuch oder Fachleitung.', run: () => NM.print.test(course, a, 'key') },
-      { id: 'students', icon: '✂️', label: 'Ergebniszettel zum Ausschneiden', group: 'students', tip: 'Je Person ein Abschnitt mit erreichten und möglichen Punkten je Aufgabe, Prozent und Note – mehrere pro Blatt.', run: () => NM.print.test(course, a, 'students') },
-      NM.scripto.dataOf(course, a) ? { id: 'scripto', icon: '🔖', label: 'Trennblätter für OrdoScripto', group: 'teacher', tip: 'Je Person eine A4-Seite mit Name, Klasse und QR-Code (Test- und Schüler-ID) – vor die Arbeit legen und mit einscannen; wahlweise nur für die Nachschreibenden.', run: () => scriptoPrint(course, a) } : null,
-      NM.moodle.hasData(t) ? { id: 'moodle', icon: '💬', label: 'Moodle-Rückmeldung je Person', group: 'students', tip: 'Je Person eine Seite mit Frage, gegebener Antwort, Lösung und Punkten; Note wahlweise, Felder für Datum und Unterschrift.', run: () => moodlePrint(course, a) } : null,
+      { id: 'list', icon: 'file-text', label: 'Ergebnisliste', group: 'teacher', tip: 'Alle Personen mit Punkten je Aufgabe, Summe, Prozent und Note' + (ka ? ', mit Spalte „Unterschrift“' : '') + '; darunter Notenspiegel und Notenschlüssel.', run: () => NM.print.test(course, a, 'list') },
+      G.hasParts(t) ? { id: 'parts', icon: 'puzzle', label: 'Ergebnisse nach Teilen', group: 'teacher', tip: 'Kompakt: je Person Punkte, Prozent und (bei getrennter Benotung) Note jedes Teils sowie gesamt; darunter Notenspiegel und Schlüssel.', run: () => NM.print.test(course, a, 'parts') } : null,
+      { id: 'key', icon: 'chart-bar', label: 'Notenschlüssel und Notenspiegel', group: 'teacher', tip: 'Punktschwellen je Note und Verteilung der Noten mit Statistik und Drittelparagraph – ohne Namen, z. B. für Klassenbuch oder Fachleitung.', run: () => NM.print.test(course, a, 'key') },
+      { id: 'students', icon: 'scissors', label: 'Ergebniszettel zum Ausschneiden', group: 'students', tip: 'Je Person ein Abschnitt mit erreichten und möglichen Punkten je Aufgabe, Prozent und Note – mehrere pro Blatt.', run: () => NM.print.test(course, a, 'students') },
+      NM.scripto.dataOf(course, a) ? { id: 'scripto', icon: 'bookmark', label: 'Trennblätter für OrdoScripto', group: 'teacher', tip: 'Je Person eine A4-Seite mit Name, Klasse und QR-Code (Test- und Schüler-ID) – vor die Arbeit legen und mit einscannen; wahlweise nur für die Nachschreibenden.', run: () => scriptoPrint(course, a) } : null,
+      NM.moodle.hasData(t) ? { id: 'moodle', icon: 'message', label: 'Moodle-Rückmeldung je Person', group: 'students', tip: 'Je Person eine Seite mit Frage, gegebener Antwort, Lösung und Punkten; Note wahlweise, Felder für Datum und Unterschrift.', run: () => moodlePrint(course, a) } : null,
     ]);
   }
 
@@ -450,8 +450,8 @@
           h(
             'div',
             { class: 'inline' },
-            h('button', { class: 'btn btn-sm', title: `Moodle-Test in den Teil „${part.name}“ übernehmen`, onclick: () => moodleImport(course, db, a.half, a, part.id) }, '⬆ Moodle'),
-            h('button', { class: 'icon-btn', title: 'Teil entfernen', 'aria-label': 'Teil entfernen: ' + part.name, onclick: () => removePart(a, part) }, '✕')
+            h('button', { class: 'btn btn-sm', title: `Moodle-Test in den Teil „${part.name}“ übernehmen`, onclick: () => moodleImport(course, db, a.half, a, part.id) }, icon('upload'), ' Moodle'),
+            h('button', { class: 'icon-btn', title: 'Teil entfernen', 'aria-label': 'Teil entfernen: ' + part.name, onclick: () => removePart(a, part) }, icon('x'))
           )
         )
       );
@@ -520,11 +520,11 @@
         // Moodle-Import in den Test (bei Teilen je Teil in der Karte „Teile“, erneut über die Karte „Moodle“)
         G.hasParts(t) || t.moodle
           ? null
-          : h('button', { class: 'btn btn-sm', 'data-focus-key': 'moodle-import', title: 'Moodle-Test aus der Antworten- und Bewertungen-CSV in diesen Test übernehmen: jede Frage wird eine Aufgabe', onclick: () => moodleImport(course, db, a.half, a) }, '⬆ Moodle-CSV'),
+          : h('button', { class: 'btn btn-sm', 'data-focus-key': 'moodle-import', title: 'Moodle-Test aus der Antworten- und Bewertungen-CSV in diesen Test übernehmen: jede Frage wird eine Aufgabe', onclick: () => moodleImport(course, db, a.half, a) }, icon('upload'), ' Moodle-CSV'),
         // OrdoScripto: nach dem Vorbereiten weiter über die Karte „OrdoScripto“
         NM.scripto.dataOf(course, a)
           ? null
-          : h('button', { class: 'btn btn-sm', 'data-scripto-prepare': '', title: 'Pseudonyme Test- und Schüler-IDs für die KI-Korrektur mit OrdoScripto vergeben; danach Trennblätter mit QR-Code drucken und die Import-CSV (ohne Namen) speichern', onclick: () => scriptoPrepare(course, db, a) }, '🔖 Für OrdoScripto vorbereiten')
+          : h('button', { class: 'btn btn-sm', 'data-scripto-prepare': '', title: 'Pseudonyme Test- und Schüler-IDs für die KI-Korrektur mit OrdoScripto vergeben; danach Trennblätter mit QR-Code drucken und die Import-CSV (ohne Namen) speichern', onclick: () => scriptoPrepare(course, db, a) }, icon('bookmark'), ' Für OrdoScripto vorbereiten')
       ),
       G.taskGroups(t).map(({ part, tasks }) =>
         h(
@@ -591,7 +591,7 @@
             NM.app.commit();
           },
         },
-        '✕'
+        icon('x')
       )
     );
   }
@@ -777,7 +777,7 @@
                     title: hidden.has(part.id) ? `Aufgaben von „${part.name}“ einblenden` : `Aufgaben von „${part.name}“ ausblenden (Summe und Note bleiben sichtbar)`,
                     onclick: () => toggle(part),
                   },
-                  (hidden.has(part.id) ? '▸ ' : '▾ ') + part.name
+                  icon(hidden.has(part.id) ? 'chevron-right' : 'chevron-down'), ' ' + part.name
                 )
               )
             : null,
@@ -912,7 +912,7 @@
     return h(
       'div',
       { class: 'notice warn key-warn' },
-      h('div', null, `⚠ ${ownCustom ? 'Schwellen prüfen' : 'Zu wenig Punkte'}: ${lostText} ${lost.length > 1 ? 'sind' : 'ist'} nicht erreichbar (${ownCustom ? 'Schwelle nicht höher als bei' : 'gleiche Schwelle wie'} ${byText}).`),
+      h('div', null, icon('alert-triangle'), ` ${ownCustom ? 'Schwellen prüfen' : 'Zu wenig Punkte'}: ${lostText} ${lost.length > 1 ? 'sind' : 'ist'} nicht erreichbar (${ownCustom ? 'Schwelle nicht höher als bei' : 'gleiche Schwelle wie'} ${byText}).`),
       hint ? h('div', { class: 'muted small' }, hint) : null,
       fixes.length ? h('div', { class: 'key-warn-fixes' }, fixes) : null
     );
@@ -933,7 +933,7 @@
         h(
           'tr',
           { class: [k.custom ? 'custom' : '', lostP.has(k.p) ? 'unreachable' : ''].filter(Boolean).join(' ') },
-          h('td', { title: lostP.has(k.p) ? 'Nicht erreichbar: gleiche Schwelle wie eine bessere Note' : null }, UI.gradeBadge(k.p, level), lostP.has(k.p) ? ' ⚠' : null),
+          h('td', { title: lostP.has(k.p) ? 'Nicht erreichbar: gleiche Schwelle wie eine bessere Note' : null }, UI.gradeBadge(k.p, level), lostP.has(k.p) ? [' ', icon('alert-triangle')] : null),
           level === 'mss' ? h('td', { class: 'muted small' }, G.wholeGrade(k.p) + G.tendency(k.p)) : null,
           h(
             'td',
@@ -1118,7 +1118,7 @@
     const overlay = h(
       'div',
       { class: 'beamer', role: 'dialog', 'aria-label': 'Beamer-Ansicht' },
-      h('button', { class: 'btn beamer-close', onclick: close, title: 'Schließen (Esc)' }, '✕ Schließen'),
+      h('button', { class: 'btn beamer-close', onclick: close, title: 'Schließen (Esc)' }, icon('x'), ' Schließen'),
       h('h1', null, a.name || 'Test', h('span', { class: 'muted' }, ' · ' + fmtDate(a.date))),
       h(
         'div',
@@ -1170,8 +1170,8 @@
       h(
         'div',
         { class: 'inline wrap' },
-        (mo.files || []).map((f) => h('button', { class: 'btn btn-sm', title: 'Gespeicherte Originaldatei herunterladen', onclick: () => NM.util.download(f.name, f.text, 'text/csv;charset=utf-8') }, `⬇ ${kindLabel[f.kind] || 'CSV'}: ${f.name}`)),
-        h('button', { class: 'btn btn-sm', title: 'z. B. nach Korrekturen in Moodle: Punkte neu übernehmen, eigene Aufgaben und Einstellungen bleiben', onclick: () => moodleImport(course, db, a.half, a, part ? part.id : null) }, '⬆ Erneut importieren')
+        (mo.files || []).map((f) => h('button', { class: 'btn btn-sm', title: 'Gespeicherte Originaldatei herunterladen', onclick: () => NM.util.download(f.name, f.text, 'text/csv;charset=utf-8') }, icon('download'), ` ${kindLabel[f.kind] || 'CSV'}: ${f.name}`)),
+        h('button', { class: 'btn btn-sm', title: 'z. B. nach Korrekturen in Moodle: Punkte neu übernehmen, eigene Aufgaben und Einstellungen bleiben', onclick: () => moodleImport(course, db, a.half, a, part ? part.id : null) }, icon('upload'), ' Erneut importieren')
       ),
       (mo.files || []).some((f) => f.kind === 'grades')
         ? null
@@ -1321,7 +1321,7 @@
       body: h('div', null, h('label', { class: 'field' }, h('span', null, 'Wer'), who), h('label', { class: 'check' }, grade, ' Note mit ausdrucken')),
       buttons: [
         { label: 'Abbrechen', value: null },
-        { label: '🖨 Drucken', value: 'ok', kind: 'primary' },
+        { label: [icon('printer'), ' Drucken'], value: 'ok', kind: 'primary' },
       ],
     });
     if (v !== 'ok') return;
@@ -1340,7 +1340,7 @@
       return toast(e.message, 'error', 8000);
     }
     NM.app.commit();
-    if (r.created) toast(`Test-ID ${r.data.testId} vergeben, ${r.added.length} Schüler-IDs. Jetzt die Import-CSV speichern und die Trennblätter drucken (🖨 Drucken …).`, 'success', 8000);
+    if (r.created) toast(`Test-ID ${r.data.testId} vergeben, ${r.added.length} Schüler-IDs. Jetzt die Import-CSV speichern und die Trennblätter drucken („Drucken …“).`, 'success', 8000);
     else toast(r.added.length ? `${r.added.length} ${r.added.length === 1 ? 'Schüler-ID' : 'Schüler-IDs'} ergänzt. Die Import-CSV bitte neu speichern.` : 'Alle haben schon eine Schüler-ID.', 'success', 6000);
   }
 
@@ -1380,7 +1380,8 @@
               NM.util.download(f.name, f.text, 'text/csv;charset=utf-8');
             },
           },
-          `⬇ Import-CSV: ${d.testId}_import.csv`
+          icon('download'),
+          ` Import-CSV: ${d.testId}_import.csv`
         ),
         miss.length ? h('button', { class: 'btn btn-sm', 'data-scripto-add': '', title: 'Neu hinzugekommene Personen bekommen eine Schüler-ID; vergebene IDs bleiben', onclick: () => scriptoPrepare(course, db, a) }, `+ IDs für ${miss.length} ${miss.length === 1 ? 'neue Person' : 'neue Personen'}`) : null
       ),
@@ -1388,7 +1389,7 @@
         'p',
         { class: 'muted small' },
         o !== a ? `Gleiche Test-ID wie „${o.name}“: OrdoScripto nimmt die Nachschreibarbeiten in denselben Test auf. ` : '',
-        'Trennblätter mit QR-Code über „🖨 Drucken …“. Die Zuordnung der IDs zu den Namen bleibt nur hier in der verschlüsselten Datenbank.'
+        'Trennblätter mit QR-Code über „Drucken …“. Die Zuordnung der IDs zu den Namen bleibt nur hier in der verschlüsselten Datenbank.'
       )
     );
   }
@@ -1416,7 +1417,7 @@
       ),
       buttons: [
         { label: 'Abbrechen', value: null },
-        { label: '🖨 Drucken', value: 'ok', kind: 'primary' },
+        { label: [icon('printer'), ' Drucken'], value: 'ok', kind: 'primary' },
       ],
     });
     if (v !== 'ok') return;
