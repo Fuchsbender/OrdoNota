@@ -255,6 +255,7 @@
               'data-row': ri,
               'data-col': ci,
               'data-focus-key': `epo-${s.id}-${l.id}`,
+              'aria-label': `${fmtDateShort(l.date)}: ${M.studentName(s)}`,
               'data-select-all': '',
               autocomplete: 'off',
               spellcheck: 'false',
@@ -566,6 +567,7 @@
               value: NM.util.fmtScore(epo.table.mins[p]),
               inputmode: 'decimal',
               'data-focus-key': `epo-table-${p}`,
+              'aria-label': `Grenze in Prozent für ${G.label(p, level)}`,
               onchange: (e) => {
                 const v = parseNum(e.target.value);
                 if (v === null || v === undefined || v < 0 || v > 100) return toast('Bitte 0–100 eingeben.', 'error');

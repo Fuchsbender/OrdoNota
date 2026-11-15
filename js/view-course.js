@@ -76,6 +76,7 @@
         type: 'number',
         min: 0,
         step: 1,
+        'aria-label': k === 'wHalf1' ? 'Gewicht 1. Halbjahr' : 'Gewicht 2. Halbjahr',
         value: course[k],
         onchange: (e) => {
           const v = parseNum(e.target.value);
@@ -193,6 +194,7 @@
           'data-row': i,
           'data-col': col,
           'data-focus-key': `st-${s.id}-${k}`,
+          'aria-label': `${k === 'last' ? 'Nachname' : 'Vorname'}, Zeile ${i + 1}`,
           onchange: (e) => {
             s[k] = e.target.value.trim();
             NM.app.commit();
@@ -255,6 +257,7 @@
     const paste = h('textarea', {
       class: 'input',
       rows: 4,
+      'aria-label': 'Namen einfügen, eine Zeile pro Person',
       placeholder: 'Namen einfügen – eine Zeile pro Person:\nMüller, Anna\nSchmidt\tJonas   (aus Excel kopiert)\nLena Weber',
     });
     return h(

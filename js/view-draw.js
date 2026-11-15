@@ -165,7 +165,7 @@
       NM.app.saveUi();
       NM.app.rerender();
     };
-    const seg = (id, label, title) => h('button', { class: 'seg' + ((pool ? pool.id : '') === id ? ' active' : ''), 'data-draw-pool': id || 'classic', title, onclick: () => pick(id) }, label);
+    const seg = (id, label, title) => h('button', { class: 'seg' + ((pool ? pool.id : '') === id ? ' active' : ''), 'data-draw-pool': id || 'classic', 'aria-pressed': (pool ? pool.id : '') === id ? 'true' : 'false', title, onclick: () => pick(id) }, label);
     return h(
       'div',
       { class: 'card draw-pools' },
@@ -467,6 +467,7 @@
       row,
       col: 0,
       key: `draw-${a.id}-${s.id}`,
+      label: `Note: ${M.studentName(s)}`,
       placeholder: 'Note',
       onSet: (v) => {
         if (v === null) delete a.manual.grades[s.id];

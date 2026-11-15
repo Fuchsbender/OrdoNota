@@ -42,7 +42,7 @@
    * Eingabezelle für eine Note.
    * onSet(p|null) wird bei gültiger Eingabe aufgerufen.
    */
-  function gradeInput({ p, level, grid, row, col, key, onSet, placeholder, title }) {
+  function gradeInput({ p, level, grid, row, col, key, onSet, placeholder, title, label }) {
     const el = h('input', {
       class: 'cell-input grade-input',
       value: p === null || p === undefined ? '' : G.label(p, level),
@@ -53,6 +53,7 @@
       'data-focus-key': key,
       'data-select-all': '',
       placeholder: placeholder || '',
+      'aria-label': label || null,
       title: title || (level === 'mss' ? 'Punkte 00–15' : 'Note 1 bis 6 mit + oder -, z. B. 2-'),
       inputmode: level === 'mss' ? 'numeric' : 'text',
       autocomplete: 'off',
@@ -73,7 +74,7 @@
   }
 
   /** Zahleneingabe (Punkte in Tests). */
-  function numberInput({ value, grid, row, col, key, onSet, max, cls }) {
+  function numberInput({ value, grid, row, col, key, onSet, max, cls, label }) {
     return h('input', {
       class: 'cell-input num-input' + (cls ? ' ' + cls : ''),
       value: value === null || value === undefined ? '' : NM.util.fmtScore(value),
@@ -82,6 +83,7 @@
       'data-col': col,
       'data-focus-key': key,
       'data-select-all': '',
+      'aria-label': label || null,
       inputmode: 'decimal',
       autocomplete: 'off',
       onfocus: (e) => e.target.select(),
@@ -237,12 +239,12 @@
 
     /** Ganzer Spaltenkopf als Sortier-Schaltfläche. */
     function head(key, content, title) {
-      return h('button', { class: 'sort-btn' + (st.key === key ? ' active' : ''), title: title || 'Sortieren', onclick: () => set(key) }, content, h('span', { class: 'sort-ind' }, ind(key)));
+      return h('button', { class: 'sort-btn' + (st.key === key ? ' active' : ''), title: title || 'Sortieren', 'data-sort-dir': st.key === key ? st.dir : null, onclick: () => set(key) }, content, h('span', { class: 'sort-ind' }, ind(key)));
     }
 
     /** Kleine Sortier-Schaltfläche für Köpfe, die schon eigene Schaltflächen haben. */
     function toggle(key) {
-      return h('button', { class: 'sort-btn sort-toggle' + (st.key === key ? ' active' : ''), title: 'Nach dieser Spalte sortieren', 'aria-label': 'Sortieren', onclick: () => set(key) }, ind(key) || icon('arrows-sort'));
+      return h('button', { class: 'sort-btn sort-toggle' + (st.key === key ? ' active' : ''), title: 'Nach dieser Spalte sortieren', 'aria-label': 'Sortieren', 'data-sort-dir': st.key === key ? st.dir : null, onclick: () => set(key) }, ind(key) || icon('arrows-sort'));
     }
 
     /** Köpfe der beiden Namensspalten (passend zu nameCells); attrs z. B. { rowspan: 2 }. */

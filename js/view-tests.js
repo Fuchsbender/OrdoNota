@@ -696,6 +696,7 @@
                 row: ri,
                 col: ci++,
                 key: `ts-${s.id}-${task.id}`,
+                label: `${task.name || 'Aufgabe'}: ${M.studentName(s)}`,
                 max: task.max,
                 cls: task.bonus ? 'bonus' : '',
                 onSet: (v) => {
@@ -944,6 +945,7 @@
                   class: 'cell-input num-input' + (k.custom ? ' custom' : ''),
                   value: fmtScore(k.min),
                   title: k.custom ? 'Von Hand gesetzt' : 'Berechnet – zum Anpassen überschreiben',
+                  'aria-label': `Mindestpunkte für ${G.label(k.p, level)}`,
                   'data-focus-key': `key-${focusId}-${k.p}`,
                   'data-select-all': '',
                   inputmode: 'decimal',

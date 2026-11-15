@@ -951,6 +951,7 @@
               row: ri,
               col: ci,
               key: `ps-${s.id}-${c.id}`,
+              label: `${c.name}: ${M.studentName(s)}`,
               max: 3,
               onSet: (v) => {
                 if (v !== null && (v !== Math.round(v) || v > 3)) {

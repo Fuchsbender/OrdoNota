@@ -305,12 +305,14 @@ Jede Etappe endet mit `ERGEBNIS: x von x bestanden` und einem Commit auf dem Zwe
 
 - **Firefox (Etappe 8):** Die Grundregel nimmt SVG über den Namensraum aus (`svg|*`), sonst verlieren in Firefox die per `<use>` eingebundenen Teile des Logos ihre Füllung. Schriftstärke 520 → 500, weil Firefox Zwischenstärken ohne passende Schrift auf fett rundet.
 - **Geprüft:** Chromium (Thorium) und Firefox 160 unter `file://`, über das Startprogramm im Testlauf. **Noch offen: Safari/iOS** (auf dem Entwicklungsrechner nicht verfügbar) – vor dem Veröffentlichen an einem iPad oder Mac ansehen.
+- **Audit und Härtung (15.11.2026):** `/impeccable audit` ergab 16 von 20 Punkten. Behoben: Eingabefelder der Tabellen haben einen Namen (`aria-label`, Muster „Spalte: Name“); die Reiter haben nur noch einen Tab-Halt, Pfeiltasten, Pos1 und Ende bewegen den Fokus, Eingabe- oder Leertaste wählt, der Fokus bleibt beim Wechsel auf dem Reiter; die Ansicht ist `role="tabpanel"`; Tabellenköpfe bekommen nach dem Zeichnen `scope` und `aria-sort` (`tableSemantics()` in `js/app.js`); die Anmeldeseite hat ein `main`.
 
 ### Offen
 
 - Safari/iOS ansehen (siehe oben), danach Zweig `design` nach `main` übernehmen, pushen und Release 2.0.0 – nur auf Ansage.
 - Der Löschknopf für Sitzplan-Fotos erscheint nur beim Überfahren mit der Maus und ist mit Touch nicht erreichbar (war schon vor 2.0 so).
 - Die Kursleiste nimmt auf dem Handy viel Höhe ein.
+- Aus dem Audit noch offen: Sitzplan ohne Tastaturweg (Plätze nur per Ziehen); Kontrast in der Variante Nord auf erhöhten Flächen knapp unter 4,5 : 1 (Kursangabe, Bonus-Häkchen, Fehlerhinweis); sehr kleine Tippflächen in den Tabellen bei Touch (Sortierknöpfe, Kontrollkästchen, Kreuz an Gruppen-Chips).
 - Titel der Ausdrucke in Josefin Sans: eigener kleiner Schritt nach 2.0.0, falls gewünscht.
 
 ## C) Gamification des Pomodoro-Timers (zurückgestellt, erst auf Nachfrage des Nutzers)

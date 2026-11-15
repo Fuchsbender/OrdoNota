@@ -143,7 +143,7 @@
 
   function authCard(title, ...content) {
     return h(
-      'div',
+      'main',
       { class: 'auth' },
       h('div', { class: 'auth-card' }, h('div', { class: 'auth-logo', html: NM.logo.full(44) }), h('h1', null, title), content, h('p', { class: 'auth-version' }, 'Version ' + M.APP_VERSION))
     );
@@ -680,7 +680,16 @@
   function select(patch) {
     Object.assign(state.ui, patch);
     saveUi();
+    keepTabFocus = focusedTab(); // renderShell baut auch die Reiter neu
     renderShell();
+    keepTabFocus = null;
+  }
+
+  let keepTabFocus = null;
+  /** Kennung des Reiters, auf dem der Tastaturfokus steht (sonst null). */
+  function focusedTab() {
+    const el = document.activeElement;
+    return el && el.classList && el.classList.contains('tab') ? el.dataset.tab : null;
   }
 
   /** Designs je Modus (Tokens in css/app.css, Selektor [data-theme][data-variant]); das erste ist der Standard. */
@@ -872,6 +881,8 @@
   function renderMain() {
     const main = document.getElementById('main');
     if (!main) return;
+    // Tastatur: Wer einen Reiter per Eingabetaste wählt, behält den Fokus auf dem Reiter
+    const focusTab = keepTabFocus || focusedTab();
     clear(main);
     const course = currentCourse();
     const tab = shownTab(course);
@@ -882,7 +893,7 @@
     lastTab = tab;
     const tabs = h(
       'div',
-      { class: 'tabs sd-tabs', role: 'tablist', 'aria-label': 'Ansichten' },
+      { class: 'tabs sd-tabs', role: 'tablist', 'aria-label': 'Ansichten', onkeydown: tabKey },
       orderedTabs()
         .filter((t) => tabOn(course, t.id))
         .map((t) =>
@@ -890,8 +901,11 @@
             'button',
             {
               role: 'tab',
+              id: 'tab-' + t.id,
               class: 'tab' + (tab === t.id ? ' active' : ''),
               'aria-selected': tab === t.id ? 'true' : 'false',
+              'aria-controls': 'view',
+              tabindex: tab === t.id ? '0' : '-1',
               disabled: !course && t.id !== 'settings',
               draggable: 'true',
               'data-tab': t.id,
@@ -930,7 +944,11 @@
     );
     main.appendChild(tabs);
     placeTabInk(tabs, tabChanged);
-    const view = h('section', { class: 'view view-' + tab + (viewChanged ? ' view-enter' : ''), id: 'view' });
+    if (focusTab) {
+      const again = tabs.querySelector(`.tab[data-tab="${focusTab}"]`);
+      if (again) again.focus({ preventScroll: true });
+    }
+    const view = h('section', { class: 'view view-' + tab + (viewChanged ? ' view-enter' : ''), id: 'view', role: 'tabpanel', 'aria-labelledby': 'tab-' + tab });
     main.appendChild(view);
     if (!course && tab !== 'settings') {
       view.appendChild(
@@ -945,6 +963,29 @@
     }
     const v = NM.views[tab];
     if (v) v.render(view, { course, db: state.db });
+    tableSemantics(view);
+  }
+
+  /** Pfeiltasten, Pos1 und Ende bewegen den Fokus in der Reiterleiste; Eingabe- oder Leertaste wählt. */
+  function tabKey(e) {
+    const step = { ArrowRight: 1, ArrowLeft: -1, Home: 'first', End: 'last' }[e.key];
+    if (!step || e.altKey || e.ctrlKey || e.metaKey) return;
+    const list = [...e.currentTarget.querySelectorAll('.tab:not(:disabled)')];
+    const at = list.indexOf(document.activeElement);
+    if (at < 0) return;
+    e.preventDefault();
+    const to = step === 'first' ? 0 : step === 'last' ? list.length - 1 : (at + step + list.length) % list.length;
+    list[to].focus();
+  }
+
+  /** Tabellenköpfe für Vorleseprogramme: Spaltenbezug und Sortierrichtung. */
+  function tableSemantics(root) {
+    for (const th of root.querySelectorAll('thead th')) {
+      if (!th.hasAttribute('scope')) th.setAttribute('scope', th.colSpan > 1 ? 'colgroup' : 'col');
+      if (!th.querySelector('.sort-btn')) continue;
+      const act = th.querySelector('.sort-btn.active');
+      th.setAttribute('aria-sort', act ? (act.dataset.sortDir === 'desc' ? 'descending' : 'ascending') : 'none');
+    }
   }
 
   /** Unterstrich des aktiven Reiters; gleitet beim Reiterwechsel von der alten zur neuen Position. */
