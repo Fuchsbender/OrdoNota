@@ -254,6 +254,52 @@ Schon vorhanden und Grundlage für alle drei: die Schnellwahl im EPO-Reiter (neu
 3. **Fehlzeiten:** eigene Liste je Kurs; „Heute abwesend“ und EPO-k schreiben hinein bzw. werden daraus vorbelegt.
 4. **Druckkopf:** für alle Ausdrucke; Inhalt Schullogo, Schulname, Lehrkraft, Kurs, Schuljahr und Datum; gespeichert in der (verschlüsselten) Datenbank, damit auf allen Geräten gleich.
 
+## Z) Gemeinsames Design der Ordo-Apps (solagio-design) – geplant, Ziel Version 2.0.0
+
+Anlass: Alle Ordo-Apps bekommen dasselbe Erscheinungsbild. Das Design (Tokens, Blades, Bausteine mit der Vorsilbe `sd-`, Symbole aus Tabler Icons, Schrift Josefin Sans) liegt im Projekt `../Design` und kommt per Verteilskript als feste Kopie in die App. Geklärt mit dem Nutzer am 14.11.2026. **Einbau erst nach Freigabe dieses Plans.**
+
+### Ausgangsstand (1.47.0)
+
+- `css/app.css`: 1126 Zeilen, rund 500 Klassen, durchgehend px. Die Oberfläche entsteht in JS (`h()`), `index.html` ist nur die Hülle.
+- Eigene Token-Namen (`--surface`, `--surface-2`, `--muted`, `--danger`, `--warn`, `--font`), kühle Grundfarbe, 14 px Schrift, Bedienelemente 34 bzw. 28 px.
+- Rund 45 Emoji und Zeichen als Symbole. 24 Inline-Stile im JS. Dialoge sind schon `<dialog>`.
+- Der End-to-End-Test hängt mit rund 500 Selektoren an den Klassennamen und prüft die Kontraste der sechs Designs.
+
+### Entscheidungen
+
+1. **Reihenfolge:** OrdoNota wird vor OrdoScripto umgebaut.
+2. **Tiefe:** Mittelweg. Das Gerüst (Kopfzeile, Knöpfe, Felder, Dialoge, Meldungen, Anmeldung, Einstellungen) folgt dem gemeinsamen Design. Die Fachansichten (Notentabellen, Sitzplan, Gruppen, Zufall, Auslosung, Timer) behalten ihr eigenes CSS und bekommen nur die neuen Tokens und die Schrift der Überschriften.
+3. **Dichte:** Gerüst im Design-Maß (16 px, Bedienelemente 40 px). Tabellen und Raster der Fachansichten bleiben dicht wie heute. Bei Touch-Bedienung überall 44 px.
+4. **Farben und Namen:** Das Standard-Design übernimmt die warme Grundfarbe des gemeinsamen Designs. Die Variablennamen werden in einem Zug umgestellt, ohne Alias-Schicht: `--surface` → `--bg-card`, `--surface-2` → `--bg-raised`, `--muted` → `--text-dim`, `--danger` → `--bad`, `--warn` → `--gold`, `--font` → `--sans`. Salbei, Lavendel, Nord und Aubergine bleiben mit eigenem Akzent. Die Notenfarben (`--g-l`, `--g-s`, `--g-text`, `--bar-l`, `--override`) bleiben Zusatz der App. Akzent: `#2f6f8f` hell, `#6bb3d6` dunkel (wie bisher).
+5. **Modus:** `applyTheme()` bleibt die einzige Stelle, die `data-theme` und `data-variant` setzt (wegen der sechs Designs und des Timer-Fensters). In der Kopfzeile ersetzt ein Dreifach-Schalter Hell/Dunkel/System im Aussehen von `sd-theme` das Mond-Symbol. Die Knöpfe tragen kein `data-sd-theme`, damit `solagio-design.js` nicht mitschaltet. Die Designs wählt man weiter in den Einstellungen.
+6. **Symbole:** Bedienknöpfe bekommen Tabler-Symbole mit Beschriftung für Vorlesehilfen. Zeichen mit Inhalt bleiben: Pfeile im Text, Haken, Kartenfarben, 🍅 beim Pomodoro, 🎲 beim Zufall.
+7. **Aufbau:** Kopfzeile, einklappbare Kursleiste und Reiter bleiben. Kopfzeile als `sd-header` mit Logo, Kursleiste eigenes CSS und optisch angeglichen, Reiter mit dem neuen Baustein `sd-tabs`.
+8. **Ausdrucke** (`print.js`) bleiben unverändert. Die Beamer-Ansichten bekommen nur Tokens und Schrift.
+9. **Veröffentlichung:** Zweig `design`, je Etappe ein Commit mit vollem Testlauf, am Ende eine Version 2.0.0. Push und Release nur auf Ansage.
+10. **Lizenzen:** Die verteilten Dateien werden mit dem Repo öffentlich (Blades und Tabler Icons MIT, Josefin Sans OFL). Lizenzhinweise kommen in die Doku und ins Release-ZIP.
+11. **Klassennamen:** Die heutigen Klassen (`btn`, `input`, `modal`, `tab` …) bleiben als Anker für JS und Tests. Der Gerüst-Teil von `app.css` wird mit den Tokens und Maßen des Designs neu geschrieben. Blades liefert die Grundlage für native Elemente. `sd-`-Bausteine kommen dort, wo neues Markup entsteht: Kopfzeile, Modus-Schalter, Reiter, Meldungen, leere Zustände, Hochladen bei den Importen.
+12. **Große Schrift:** Schalter in der Kopfzeile (125 %, für Beamer und Tafel). Damit er auch in den Fachansichten wirkt, wird `app.css` von px auf rem umgestellt (Rahmenbreiten bleiben px).
+13. **Browser:** Mindeststand etwa Chrome/Edge 120, Firefox 117, Safari/iOS 17.2 (Blades braucht `@layer`, verschachteltes CSS und `light-dark()`). Hinweis in README und Doku.
+14. **`PRODUCT.md` und `DESIGN.md`** (für Impeccable) bleiben lokal und kommen in `.gitignore`.
+
+### Etappen
+
+Jede Etappe endet mit `ERGEBNIS: x von x bestanden` und einem Commit auf dem Zweig `design`.
+
+- [ ] 0. Design-Projekt 0.3.0: Baustein `sd-tabs`, rund 30 neue Symbole, Musterseite ergänzen.
+- [ ] 1. Vorbereitung: Zweig, `PRODUCT.md`, Vergleichsfotos aller Ansichten im Demo-Modus (hell, dunkel, 1280 und 390 px), Design-Dateien verteilen (`css/blades.min.css`, `css/solagio-design.css`, `js/solagio-design.js`, `schrift/`), `data-app="ordonota"` in `index.html`, `launcher/build.sh` und die Dateiliste des Servers um `schrift/` erweitern, Lizenzhinweise.
+- [ ] 2. Tokens: Namen umstellen, warme Grundfarbe, vier Varianten umschreiben, Kontrasttest anpassen. Das Timer-Fenster lädt die neuen CSS-Dateien mit.
+- [ ] 3. px → rem in `app.css`. Kriterium: Fotos vorher und nachher sind bei normaler Schrift gleich.
+- [ ] 4. Gerüst: Kopfzeile mit Logo, Modus-Schalter, große Schrift, Reiter, Kursleiste.
+- [ ] 5. Knöpfe, Felder, Dialoge, Meldungen, Anmeldung, Einstellungen (mit den Vorschaukacheln der Designs).
+- [ ] 6. Symbole statt Emoji.
+- [ ] 7. Fachansichten Reiter für Reiter: Tokens, Überschriften in Josefin Sans, Inline-Stile entfernen (berechnete Werte wie Notenfarben und Sitzpositionen bleiben), Timer-Fenster, Beamer-Ansichten.
+- [ ] 8. Abschluss: Prüfung auf Bedienbarkeit, Kontrast und schmale Bildschirme, Importe härten, Chromium, Firefox und WebKit, unter `file://` und über das Startprogramm, Doku (`DOKUMENTATION.md`, `README.md`), Version 2.0.0, Prüfung auf private Angaben vor dem Push.
+
+### Offen
+
+- Titel der Ausdrucke in Josefin Sans: eigener kleiner Schritt nach 2.0.0, falls gewünscht.
+
 ## C) Gamification des Pomodoro-Timers (zurückgestellt, erst auf Nachfrage des Nutzers)
 
 **Vor Beginn die offenen Fragen unten mit dem Nutzer klären.** C ergänzt nur Felder → kein neues `SCHEMA`; `migrate()` und `tools/entschluesseln.py` (CSV-Ausgabe) mitziehen.

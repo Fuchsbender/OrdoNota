@@ -33,3 +33,8 @@ Thumbs.db
 /.OrdoNota.neu
 /launcher/webapp/
 /launcher/launcher
+
+# Impeccable (nur lokal)
+PRODUCT.md
+DESIGN.md
+.impeccable/
