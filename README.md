@@ -30,7 +30,7 @@ Ausprobieren ohne echte Daten: **„Demo ansehen“** auf dem Startbildschirm od
 | `notenmanager.nmdb` (im Datenordner) | die verschlüsselte Datenbank |
 | `notenmanager.lock.json` | zeigt, auf welchem Gerät die App gerade offen ist |
 | `Sicherungen/` | rollierende Sicherungskopien (Standard: 10, höchstens alle 10 Min.) |
-| `index.html`, `css/`, `js/`, `logo/`, `cards/` | die App selbst – kann überall liegen, auch im Synology-Ordner (`cards/`: gemeinfreie Kartenbilder, CC0) |
+| `index.html`, `css/`, `js/`, `logo/`, `cards/`, `schrift/` | die App selbst – kann überall liegen, auch im Synology-Ordner (`cards/`: gemeinfreie Kartenbilder, CC0; `schrift/`: Josefin Sans für Überschriften) |
 | `launcher/` | Startprogramm (Go); Einstellungen in `~/.config/OrdoNota/` bzw. `%AppData%\OrdoNota\` |
 
 ## Regeln, die die App umsetzt
@@ -118,3 +118,5 @@ Copyright © 2026 Thomas Faßbender
 OrdoNota ist freie Software unter der **GNU Affero General Public License, Version 3** (AGPL-3.0, Datei `LICENSE`). Sie dürfen das Programm nutzen, ändern und weitergeben. Jede weitergegebene oder im Netz betriebene Fassung muss wieder unter der AGPL-3.0 stehen und ihren vollständigen Quelltext mitliefern. Das Programm wird ohne Gewährleistung bereitgestellt.
 
 Ausgenommen sind die Kartenbilder in `cards/`. Sie sind gemeinfrei (CC0), siehe `cards/LIZENZ.txt`.
+
+Das gemeinsame Design der Ordo-Apps bringt fremde Bestandteile mit eigenen Lizenzen mit, die Texte liegen in `lizenzen/`: Blades (`css/blades.min.css`, MIT), Tabler Icons (Symbole in `js/solagio-design.js`, MIT) und die Schrift Josefin Sans (`schrift/`, SIL Open Font License 1.1).

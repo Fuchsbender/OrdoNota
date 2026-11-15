@@ -1,0 +1,1148 @@
+/*! solagio-design 0.3.0 (Commit 5e1853d, 2026-11-15) – Kopie für ordonota.
+ * Nicht hier ändern: Quelle ist das Repo solagio-design (Projekte/Design),
+ * verteilt mit werkzeuge/verteile.py.
+ * Reihenfolge: Tokens · Akzent · Brücke zu Blades · Bausteine.
+ * Daneben laden: blades.min.css (Blades, MIT). Schrift: Josefin Sans (OFL 1.1). */
+
+/* solagio-design – Tokens: Farben, Schrift, Abstände, Radien.
+ * Gemeinsame Grundlage der Ordo-Apps und von solagio.de.
+ *
+ * Die Namen und Farbwerte stammen aus LearningApps/web/shared/solagio.css
+ * (--bg, --bg-raised, --bg-card, --border, --text, --accent, --ok, --bad …).
+ * Neu hier: --border-strong, --display, --space-*, --radius*.
+ *
+ * Modus: hell als Standard, dunkel nach System (prefers-color-scheme) oder per Schalter.
+ *   <html>                      folgt dem System
+ *   <html data-theme="light">   immer hell
+ *   <html data-theme="dark">    immer dunkel
+ * js/design.js setzt das Attribut und merkt die Wahl in localStorage (solagio_theme).
+ * Die dunklen Werte stehen zweimal: für die Systemeinstellung und für den Schalter.
+ *
+ * Akzent: css/akzente.css setzt --accent je App über <html data-app="ordovota">.
+ *
+ * Kontrast (WCAG 2.1 AA, geprüft von werkzeuge/baue_akzente.py):
+ *   Text, --text-dim, --text-faint, --ok, --bad, --gold: mindestens 4,5 : 1
+ *   auf --bg, --bg-raised und --bg-card. --border-strong: mindestens 3 : 1.
+ * Zustände nie nur über Farbe zeigen: immer Text oder Zeichen dazu. */
+
+@font-face {
+  font-family: "Josefin Sans";
+  src: url("../schrift/JosefinSans-ordo.woff2") format("woff2");
+  font-weight: 100 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ---------- Heller Modus (Standard) ---------- */
+:root {
+  color-scheme: light;
+
+  --bg: #f6f4ef;
+  --bg-raised: #ece9e2;
+  --bg-card: #ffffff;
+  --border: #d5d0c5;
+  --border-soft: #e4e0d7;
+  --border-strong: #8a8478;   /* Rand von Eingabefeldern, mindestens 3 : 1 */
+  --text: #1c1f24;
+  --text-dim: #4a515c;
+  --text-faint: #5f6570;
+
+  --ok: #146f53;
+  --ok-soft: rgba(20, 111, 83, 0.12);
+  --on-ok: #ffffff;
+  --bad: #ad4034;
+  --bad-soft: rgba(173, 64, 52, 0.10);
+  --on-bad: #ffffff;
+  --gold: #85600f;
+  --gold-soft: rgba(133, 96, 15, 0.12);
+  --on-gold: #ffffff;
+
+  --shadow: 0 6px 20px rgba(30, 30, 20, 0.16);
+  --shadow-soft: 0 1px 2px rgba(30, 30, 20, 0.08);
+  --backdrop: rgba(20, 20, 15, 0.45);
+
+  /* Ohne data-app ist der Akzent die Textfarbe (wie in solagio.css). */
+  --accent: var(--text);
+  --accent-strong: var(--text);
+  --accent-dim: var(--border);
+  --accent-soft: var(--bg-raised);
+  --on-accent: var(--bg);
+
+  /* Schrift */
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "Cascadia Mono", "Segoe UI Mono", Menlo, Consolas, monospace;
+  --display: "Josefin Sans", var(--sans);   /* Überschriften und App-Name */
+
+  /* Abstände */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+
+  /* Radien */
+  --radius-s: 4px;
+  --radius: 8px;
+  --radius-l: 12px;
+
+  /* Breite des Inhalts und Höhe von Bedienelementen */
+  --wrap: 72rem;
+  --control: 2.5rem;
+}
+
+/* Bei Touch-Bedienung größere Tippflächen. */
+@media (pointer: coarse) {
+  :root { --control: 2.75rem; }
+}
+
+/* ---------- Dunkler Modus ---------- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #12151a;
+    --bg-raised: #1a1f27;
+    --bg-card: #1c222b;
+    --border: #2a323d;
+    --border-soft: #232a33;
+    --border-strong: #687382;
+    --text: #e9e6dd;
+    --text-dim: #9aa3b0;
+    --text-faint: #808a97;
+    --ok: #5fc9a0;
+    --ok-soft: rgba(95, 201, 160, 0.16);
+    --on-ok: #0d1912;
+    --bad: #e0806f;
+    --bad-soft: rgba(224, 128, 111, 0.12);   /* 0.16 wie in solagio.css ergäbe nur 4,46 : 1 */
+    --on-bad: #2a0f0a;
+    --gold: #d9b46a;
+    --gold-soft: rgba(217, 180, 106, 0.16);
+    --on-gold: #241a08;
+    --shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+    --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --backdrop: rgba(0, 0, 0, 0.6);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #12151a;
+  --bg-raised: #1a1f27;
+  --bg-card: #1c222b;
+  --border: #2a323d;
+  --border-soft: #232a33;
+  --border-strong: #687382;
+  --text: #e9e6dd;
+  --text-dim: #9aa3b0;
+  --text-faint: #808a97;
+  --ok: #5fc9a0;
+  --ok-soft: rgba(95, 201, 160, 0.16);
+  --on-ok: #0d1912;
+  --bad: #e0806f;
+  --bad-soft: rgba(224, 128, 111, 0.12);   /* 0.16 wie in solagio.css ergäbe nur 4,46 : 1 */
+  --on-bad: #2a0f0a;
+  --gold: #d9b46a;
+  --gold-soft: rgba(217, 180, 106, 0.16);
+  --on-gold: #241a08;
+  --shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --backdrop: rgba(0, 0, 0, 0.6);
+}
+
+/* ---------- Druck: immer schwarz auf weiß, auch im dunklen Modus ---------- */
+@media print {
+  /* :not(#_) hebt die Regel über jeden Akzent in akzente.css (zählt wie eine ID, trifft immer). */
+  :root:not(#_) {
+    color-scheme: light;
+    --bg: #ffffff;
+    --bg-raised: #ffffff;
+    --bg-card: #ffffff;
+    --border: #000000;
+    --border-soft: #000000;
+    --border-strong: #000000;
+    --text: #000000;
+    --text-dim: #000000;
+    --text-faint: #333333;
+    --accent: #000000;
+    --accent-strong: #000000;
+    --accent-dim: #000000;
+    --accent-soft: transparent;
+    --on-accent: #ffffff;
+    --ok: #000000;
+    --ok-soft: transparent;
+    --on-ok: #ffffff;
+    --bad: #000000;
+    --bad-soft: transparent;
+    --on-bad: #ffffff;
+    --gold: #000000;
+    --gold-soft: transparent;
+    --on-gold: #ffffff;
+    --shadow: none;
+    --shadow-soft: none;
+  }
+}
+
+/* ---------- Akzent der App ---------- */
+/* ordonota: Blaugrau (bisher) */
+:root[data-app="ordonota"] {
+  --accent: #2f6f8f;
+  --accent-strong: #2b5d77;
+  --accent-dim: #a8c3d0;
+  --accent-soft: rgba(47, 111, 143, 0.10);
+  --on-accent: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-app="ordonota"]:not([data-theme="light"]) {
+    --accent: #6bb3d6;
+    --accent-strong: #87bed8;
+    --accent-dim: #3d5f73;
+    --accent-soft: rgba(107, 179, 214, 0.16);
+    --on-accent: #12151a;
+  }
+}
+:root[data-app="ordonota"][data-theme="dark"] {
+  --accent: #6bb3d6;
+  --accent-strong: #87bed8;
+  --accent-dim: #3d5f73;
+  --accent-soft: rgba(107, 179, 214, 0.16);
+  --on-accent: #12151a;
+}
+
+/* solagio-design – Brücke: leitet die Variablen von Blades (--pico-…) aus den Tokens ab.
+ *
+ * css/blades.min.css ist die geschichtete Fassung (@layer blades). Alles hier steht
+ * außerhalb einer Schicht und gewinnt deshalb immer, unabhängig von der Reihenfolge
+ * der <link>-Zeilen und von der Spezifität.
+ *
+ * Blades rechnet seine Farben mit light-dark(). Hier wird jede dieser Farben durch
+ * ein Token ersetzt; die Tokens selbst kommen ohne light-dark() und color-mix() aus.
+ *
+ * Nur <html> trägt data-theme. Ein data-theme auf inneren Elementen wird nicht unterstützt. */
+
+:root {
+  /* Schrift und Maße: kompakt, feste Größe (Blades vergrößert sonst bis 131 %) */
+  --pico-font-family-sans-serif: var(--sans);
+  --pico-font-family-monospace: var(--mono);
+  --pico-font-family: var(--sans);
+  --pico-font-size: 100%;   /* große Schrift: siehe unten, [data-size="large"] */
+  --pico-line-height: 1.5;
+  --pico-border-radius: var(--radius);
+  --pico-outline-width: 0.125rem;
+  --pico-spacing: var(--space-4);
+  --pico-typography-spacing-vertical: var(--space-4);
+  --pico-block-spacing-vertical: var(--space-5);
+  --pico-block-spacing-horizontal: var(--space-5);
+  --pico-form-element-spacing-vertical: 0.4375rem;
+  --pico-form-element-spacing-horizontal: 0.75rem;
+  --pico-nav-element-spacing-vertical: var(--space-2);
+  --pico-nav-link-spacing-vertical: var(--space-2);
+  --pico-nav-link-spacing-horizontal: var(--space-3);
+  --pico-form-label-font-weight: 600;
+  --pico-button-font-weight: 600;
+  --pico-transition: 0.15s ease-out;
+
+  /* Grundfarben */
+  --pico-background-color: var(--bg);
+  --pico-color: var(--text);
+  --pico-text-selection-color: var(--accent-soft);
+  --pico-muted-color: var(--text-faint);
+  --pico-muted-border-color: var(--border);
+
+  /* Hauptfarbe = Akzent der App */
+  --pico-primary: var(--accent);
+  --pico-primary-background: var(--accent);
+  --pico-primary-border: var(--accent);
+  --pico-primary-underline: var(--accent-dim);
+  --pico-primary-hover: var(--accent-strong);
+  --pico-primary-hover-background: var(--accent-strong);
+  --pico-primary-hover-border: var(--accent-strong);
+  --pico-primary-hover-underline: var(--accent-strong);
+  --pico-primary-focus: var(--accent-dim);
+  --pico-primary-inverse: var(--on-accent);
+
+  /* Nebenfarbe: ruhige Knöpfe (Abbrechen, Werkzeuge) */
+  --pico-secondary: var(--text-dim);
+  --pico-secondary-background: var(--bg-raised);
+  --pico-secondary-border: var(--border-strong);
+  --pico-secondary-underline: var(--border-strong);
+  --pico-secondary-hover: var(--text);
+  --pico-secondary-hover-background: var(--border-soft);
+  --pico-secondary-hover-border: var(--text-faint);
+  --pico-secondary-hover-underline: var(--text);
+  --pico-secondary-focus: var(--border);
+  --pico-secondary-inverse: var(--text);
+
+  /* Kontrastfarbe: Textfarbe als Fläche */
+  --pico-contrast: var(--text);
+  --pico-contrast-background: var(--text);
+  --pico-contrast-border: var(--text);
+  --pico-contrast-underline: var(--border-strong);
+  --pico-contrast-hover: var(--text-dim);
+  --pico-contrast-hover-background: var(--text-dim);
+  --pico-contrast-hover-border: var(--text-dim);
+  --pico-contrast-hover-underline: var(--text-dim);
+  --pico-contrast-focus: var(--border-strong);
+  --pico-contrast-inverse: var(--bg);
+
+  --pico-box-shadow: var(--shadow);
+  --pico-button-box-shadow: 0 0 0 transparent;
+  --pico-button-hover-box-shadow: 0 0 0 transparent;
+
+  /* Text */
+  --pico-h1-color: var(--text);
+  --pico-h2-color: var(--text);
+  --pico-h3-color: var(--text);
+  --pico-h4-color: var(--text);
+  --pico-h5-color: var(--text-dim);
+  --pico-h6-color: var(--text-dim);
+  --pico-mark-background-color: var(--gold-soft);
+  --pico-mark-color: var(--text);
+  --pico-ins-color: var(--ok);
+  --pico-del-color: var(--bad);
+  --pico-blockquote-border-color: var(--border);
+  --pico-blockquote-footer-color: var(--text-faint);
+  --pico-code-background-color: var(--bg-raised);
+  --pico-code-color: var(--text-dim);
+  --pico-code-kbd-background-color: var(--text);
+  --pico-code-kbd-color: var(--bg);
+
+  /* Tabellen */
+  --pico-table-border-color: var(--border-soft);
+  --pico-table-row-stripped-background-color: var(--bg);
+
+  /* Formulare */
+  --pico-form-element-background-color: var(--bg-card);
+  --pico-form-element-selected-background-color: var(--accent-soft);
+  --pico-form-element-border-color: var(--border-strong);
+  --pico-form-element-color: var(--text);
+  --pico-form-element-placeholder-color: var(--text-faint);
+  --pico-form-element-active-background-color: var(--bg-card);
+  --pico-form-element-active-border-color: var(--accent);
+  --pico-form-element-focus-color: var(--accent);
+  --pico-form-element-disabled-opacity: 0.55;
+  --pico-form-element-invalid-border-color: var(--bad);
+  --pico-form-element-invalid-active-border-color: var(--bad);
+  --pico-form-element-invalid-focus-color: var(--bad);
+  --pico-form-element-valid-border-color: var(--ok);
+  --pico-form-element-valid-active-border-color: var(--ok);
+  --pico-form-element-valid-focus-color: var(--ok);
+
+  --pico-switch-background-color: var(--border-strong);
+  --pico-switch-checked-background-color: var(--accent);
+  --pico-switch-color: var(--bg-card);
+
+  --pico-range-border-color: var(--border);
+  --pico-range-active-border-color: var(--border-strong);
+  --pico-range-thumb-border-color: var(--bg);
+  --pico-range-thumb-color: var(--text-dim);
+  --pico-range-thumb-active-color: var(--accent);
+
+  /* Bauteile */
+  --pico-accordion-border-color: var(--border);
+  --pico-accordion-active-summary-color: var(--accent-strong);
+  --pico-accordion-close-summary-color: var(--text);
+  --pico-accordion-open-summary-color: var(--text-dim);
+
+  --pico-card-background-color: var(--bg-card);
+  --pico-card-border-color: var(--border);
+  --pico-card-box-shadow: 0 0 0 1px var(--border), var(--shadow-soft);
+  --pico-card-sectioning-background-color: var(--bg-card);
+
+  --pico-dropdown-background-color: var(--bg-card);
+  --pico-dropdown-border-color: var(--border);
+  --pico-dropdown-box-shadow: var(--shadow);
+  --pico-dropdown-color: var(--text);
+  --pico-dropdown-hover-background-color: var(--bg-raised);
+
+  --pico-modal-overlay-background-color: var(--backdrop);
+  --pico-modal-overlay-backdrop-filter: none;
+
+  --pico-progress-background-color: var(--border);
+  --pico-progress-color: var(--accent);
+
+  --pico-tooltip-background-color: var(--text);
+  --pico-tooltip-color: var(--bg);
+
+  --blades-token-primary: var(--accent);
+  --blades-token-secondary: var(--text-dim);
+}
+
+/* Große Schrift für Beamer und Tafel: <html data-size="large">. Alle Maße stehen in rem
+ * und wachsen mit. Schalter: <button data-sd-size>, gemerkt von js/design.js. */
+:root[data-size="large"] { --pico-font-size: 125%; }
+
+/* solagio-design – Bausteine: Grundlage und eigene Bauteile über Blades.
+ * Alle eigenen Klassen beginnen mit „sd-“, damit sie sich nicht mit den Klassen
+ * einer App beißen. Farben nur aus den Tokens (css/tokens.css).
+ *
+ * Inhalt: Grundlage · Knöpfe · Symbole · Kopfzeile · Modus-Schalter · Seite ·
+ *         Seitenleiste · Reiter · Werkzeugleiste · Tabelle · Marken · Meldungen · Formular · Hochladen ·
+ *         Ring · leerer Zustand · Dialog · Bewegung */
+
+/* ---------- Grundlage ---------- */
+html {
+  background: var(--bg);
+  scrollbar-color: var(--border-strong) transparent;
+  accent-color: var(--accent);
+}
+body {
+  font-family: var(--sans);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+::selection { background: var(--accent); color: var(--on-accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+[hidden] { display: none !important; }
+input, textarea, select { caret-color: var(--accent); }
+a { text-underline-offset: 0.15em; text-decoration-thickness: 1px; }
+table { font-variant-numeric: tabular-nums; }
+
+h1, h2, h3, h4 {
+  font-family: var(--display);
+  font-weight: 600;
+  text-wrap: balance;
+}
+h1 { --pico-font-size: 1.875rem; --pico-line-height: 1.15; }
+h2 { --pico-font-size: 1.4375rem; --pico-line-height: 1.2; }
+h3 { --pico-font-size: 1.1875rem; --pico-line-height: 1.25; }
+h4 { --pico-font-size: 1.0625rem; --pico-line-height: 1.3; }
+/* Blades setzt den Abstand über Überschriften nur nach Absätzen und Listen. */
+:is(h2, h3, h4):not(:first-child) { margin-top: var(--space-6); }
+[type="search"] { --pico-border-radius: var(--radius); }
+p, li { max-width: 72ch; }
+small { color: var(--text-faint); }
+
+/* Beschriftungen sind kräftig; der Text neben Kästchen und Wahlknöpfen bleibt normal. */
+label:has(> [type="checkbox"], > [type="radio"]) { font-weight: 400; }
+/* Bei Touch-Bedienung ist die ganze Zeile aus Kästchen und Text so hoch wie ein Knopf. */
+@media (pointer: coarse) {
+  label:has(> [type="checkbox"], > [type="radio"]) { padding-block: calc((var(--control) - 1.5rem) / 2); }
+  summary { padding-block: calc((var(--control) - 1.5rem) / 2); }
+  input[type="file"] { min-height: var(--control); }
+}
+
+.sd-visually-hidden {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+/* Sprunglink: erstes Element im <body>, sichtbar erst mit Tastaturfokus. */
+.sd-skip {
+  position: absolute;
+  left: var(--space-2);
+  top: var(--space-2);
+  z-index: 10;
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-card);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-s);
+  font-weight: 600;
+  transform: translateY(-200%);
+}
+.sd-skip:focus { transform: none; }
+.sd-muted { color: var(--text-faint); }
+.sd-lead { color: var(--text-dim); font-size: 1.0625rem; }
+
+/* Felder so hoch wie Knöpfe, auch auf Touch-Geräten (dort ist --control größer). */
+input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"]),
+select:not([multiple], [size]) { height: var(--control); }
+
+/* ---------- Knöpfe ---------- */
+/* Blades: <button> = Hauptknopf (Akzent), .secondary = ruhig, .outline = nur Rand. */
+button, [type="submit"], [type="button"], [type="reset"], [role="button"] {
+  width: auto;
+  min-height: var(--control);
+  margin-bottom: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  white-space: nowrap;
+}
+.sd-danger {
+  --pico-background-color: var(--bad);
+  --pico-border-color: var(--bad);
+  --pico-color: var(--on-bad);
+}
+.sd-danger:is(:hover, :active, :focus) { filter: brightness(0.92); }
+.sd-danger:focus-visible { outline-color: var(--bad); }
+
+/* Knopf nur mit Symbol; braucht aria-label. */
+.sd-icon-btn {
+  --pico-background-color: transparent;
+  --pico-border-color: transparent;
+  --pico-color: var(--text-dim);
+  width: var(--control);
+  padding: 0;
+  border-radius: var(--radius);
+}
+.sd-icon-btn:is(:hover, :focus-visible) {
+  --pico-background-color: var(--bg-raised);
+  --pico-color: var(--text);
+}
+.sd-icon-btn.sd-danger-quiet:is(:hover, :focus-visible) { --pico-color: var(--bad); }
+.sd-icon-btn[aria-pressed="true"] {
+  --pico-background-color: var(--accent);
+  --pico-color: var(--on-accent);
+}
+
+/* Kleiner Textknopf für Tabellenzeilen: <button class="secondary sd-btn-small">Neues Passwort</button>.
+ * Für Aktionen, die ein Symbol allein nicht klar genug sagt. */
+.sd-btn-small {
+  min-height: 2rem;
+  padding: var(--space-1) var(--space-3);
+  font-size: 0.875rem;
+}
+@media (pointer: coarse) { .sd-btn-small { min-height: var(--control); } }
+.sd-row-actions > * { vertical-align: middle; }
+/* Mehrere Textknöpfe in einer Zeile: <td class="sd-row-actions sd-row-actions-wide">.
+ * Die Knöpfe dürfen umbrechen, damit die Tabelle nicht quer rollt; in der Kartenliste stehen sie
+ * unter den Angaben. */
+.sd-row-actions.sd-row-actions-wide { white-space: normal; width: auto; }
+.sd-row-actions-wide > * { margin: var(--space-1) 0 var(--space-1) var(--space-2); }
+
+/* ---------- Symbole ---------- */
+/* <span data-sd-icon="upload"></span> – js/design.js setzt das SVG ein. */
+.sd-icon {
+  display: inline-flex;
+  flex: none;
+  width: 1.25em;
+  height: 1.25em;
+  vertical-align: -0.22em;
+}
+.sd-icon svg { width: 100%; height: 100%; display: block; }
+
+/* ---------- Kopfzeile ---------- */
+.sd-header {
+  background: linear-gradient(var(--accent-soft), var(--accent-soft)), var(--bg-raised);
+  border-bottom: 1px solid var(--border);
+}
+.sd-header-inner {
+  max-width: var(--wrap);
+  margin: 0 auto;
+  padding: var(--space-2) var(--space-4);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--space-5);
+  row-gap: var(--space-1);
+}
+.sd-brand {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control);
+  color: var(--text);
+  text-decoration: none;
+  border-radius: var(--radius-s);
+}
+.sd-brand img { height: 2.5rem; width: auto; }
+.sd-brand-text {
+  font-family: var(--display);
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1;
+  padding-top: 0.2em;   /* Josefin Sans sitzt hoch in der Zeile */
+}
+/* Zwei Logo-Dateien je App: -hell für hellen, -dunkel für dunklen Grund. */
+.sd-logo-light { display: block; }
+.sd-logo-dark { display: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .sd-logo-light { display: none; }
+  :root:not([data-theme="light"]) .sd-logo-dark { display: block; }
+}
+:root[data-theme="dark"] .sd-logo-light { display: none; }
+:root[data-theme="dark"] .sd-logo-dark { display: block; }
+
+.sd-nav { flex: 1 1 auto; min-width: 0; display: block; }
+.sd-nav ul {
+  display: flex;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.sd-nav li { margin: 0; padding: 0; display: block; max-width: none; }
+.sd-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control);
+  margin: 0;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-s);
+  color: var(--text-dim);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.sd-nav a:hover { color: var(--text); background: var(--accent-soft); }
+.sd-nav a[aria-current="page"],
+.sd-nav a[aria-current="true"] {
+  color: var(--text);   /* Akzent als Schrift reicht auf der getönten Kopfzeile nicht (unter 4,5 : 1) */
+  box-shadow: inset 0 -2px 0 var(--accent);
+  border-radius: var(--radius-s) var(--radius-s) 0 0;
+}
+@media (max-width: 44rem) {
+  .sd-header-inner { justify-content: space-between; }
+  .sd-nav { order: 3; flex-basis: 100%; }
+  .sd-nav ul { margin: 0 calc(var(--space-3) * -1); }
+}
+
+/* Rechts in der Kopfzeile: Schalter für große Schrift und Modus. */
+.sd-header-tools { display: flex; flex: none; align-items: center; gap: var(--space-2); }
+
+/* ---------- Modus-Schalter: Hell, Dunkel, System ---------- */
+.sd-theme {
+  display: inline-flex;
+  flex: none;
+  width: auto;
+  margin: 0;
+  box-shadow: none;
+  padding: 2px;
+  gap: 2px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--bg-card);
+}
+.sd-theme button {
+  flex: none;
+  margin: 0;
+  --pico-background-color: transparent;
+  --pico-border-color: transparent;
+  --pico-color: var(--text-dim);
+  width: calc(var(--control) - 6px);
+  min-height: calc(var(--control) - 6px);
+  padding: 0;
+  border-radius: calc(var(--radius) - 3px) !important;   /* Blades rundet in Gruppen nur außen */
+}
+/* Bei Touch-Bedienung volle Zielgröße; der Rahmen der Gruppe wächst mit. */
+@media (pointer: coarse) {
+  .sd-theme button { width: var(--control); min-height: var(--control); }
+}
+.sd-theme button:hover { --pico-color: var(--text); --pico-background-color: var(--bg-raised); }
+.sd-theme button[aria-pressed="true"] {
+  --pico-background-color: var(--accent);
+  --pico-color: var(--on-accent);
+}
+
+/* ---------- Seite ---------- */
+.sd-main {
+  max-width: var(--wrap);
+  margin: 0 auto;
+  padding: var(--space-5) var(--space-4) var(--space-8);
+}
+.sd-main > :first-child { margin-top: 0; }
+.sd-section { margin-top: var(--space-7); }
+.sd-section > h2:first-child { margin-top: 0; }
+.sd-footer {
+  max-width: var(--wrap);
+  margin: 0 auto;
+  padding: var(--space-5) var(--space-4) var(--space-6);
+  border-top: 1px solid var(--border-soft);
+  color: var(--text-faint);
+  font-size: 0.875rem;
+}
+
+/* ---------- Seitenleiste (Verwaltungsbereiche mit vielen Seiten) ---------- */
+/* <header class="sd-header sd-header-wide"> … in .sd-header-tools zuerst der Menüknopf:
+ *   <button class="sd-icon-btn sd-side-toggle" data-sd-open="menue" aria-label="Menü">
+ * <div class="sd-shell">
+ *   <nav class="sd-side" aria-label="Bereiche">
+ *     <ul><li><a href="…" aria-current="page">Übersicht</a></li></ul>
+ *     <p class="sd-side-title" id="g-daten">Daten</p><ul aria-labelledby="g-daten"><li><a href="…">Import</a></li></ul>
+ *     (Gruppentitel sind keine Überschriften: sie stünden sonst vor der <h1> der Seite)
+ *   </nav>
+ *   <main class="sd-main"> … </main>
+ * </div>
+ * <dialog class="sd-side-dialog" id="menue" aria-label="Menü">   (ohne closedby: das Fenster füllt
+ *   den Bildschirm, design.js schließt beim Klick daneben)
+ *   <article><nav class="sd-side" aria-label="Bereiche"> … dieselbe Liste … </nav></article></dialog>
+ * Breit: die Leiste steht links und bleibt beim Rollen stehen. Schmal (unter 60rem): die Leiste
+ * ist weg, der Menüknopf öffnet dieselbe Liste als Fenster vom linken Rand. */
+.sd-header-wide .sd-header-inner { max-width: calc(var(--wrap) + 16rem); }
+.sd-shell {
+  max-width: calc(var(--wrap) + 16rem);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 14rem minmax(0, 1fr);
+  column-gap: var(--space-5);
+  padding-left: var(--space-4);
+}
+.sd-shell > .sd-main { max-width: none; margin: 0; }
+.sd-shell > .sd-side {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  max-height: 100vh;
+  overflow-y: auto;
+  padding: var(--space-5) 0 var(--space-6);
+}
+.sd-side-title {
+  margin: var(--space-5) 0 var(--space-1);
+  padding: 0 var(--space-3);
+  font-family: var(--sans);
+  --pico-font-size: 0.8125rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--text-faint);
+}
+/* Blades stellt <nav> und seine Listen nebeneinander; hier stehen sie untereinander. */
+.sd-side { display: block; }
+.sd-side ul, .sd-side ul:first-of-type { display: block; margin: 0; padding: 0; list-style: none; }
+.sd-side li { margin: 0; padding: 0; display: block; max-width: none; }
+/* Eine Liste ohne Gruppentitel nach einer Gruppe (z. B. „Einstellungen“ am Ende) steht für sich. */
+.sd-side ul + ul { margin-top: var(--space-5); }
+.sd-side a {
+  display: flex;
+  align-items: center;
+  min-height: var(--control);
+  margin: 1px 0;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-s);
+  color: var(--text-dim);
+  text-decoration: none;
+  line-height: 1.3;
+}
+.sd-side a:hover { color: var(--text); background: var(--bg-raised); }
+.sd-side a[aria-current="page"] {
+  color: var(--text);
+  font-weight: 600;
+  background: var(--accent-soft);
+}
+.sd-side-toggle { display: none; }
+.sd-side-dialog { justify-content: flex-start; align-items: stretch; padding: 0; max-width: none; max-height: none; }
+.sd-side-dialog > article {
+  width: min(19rem, 86vw);
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: var(--space-4) var(--space-3) var(--space-6);
+  border-radius: 0;
+  overflow-y: auto;
+  box-shadow: var(--shadow);
+}
+.sd-side-dialog .sd-side > :first-child { margin-top: 0; }
+@media (max-width: 60rem) {
+  .sd-shell { display: block; padding-left: 0; }
+  .sd-shell > .sd-side { display: none; }
+  .sd-side-toggle { display: inline-flex; }
+}
+@media print {
+  .sd-shell { display: block; padding-left: 0; }
+  .sd-side { display: none; }
+}
+
+/* ---------- Reiter (Ansichten eines Bereichs) ---------- */
+/* Direkt unter der Kopfzeile, vor dem Inhalt. Bleibt beim Rollen oben stehen, rollt quer,
+ * wenn die Reiter nicht in die Breite passen.
+ * Ansichten ohne neue Seite (das Skript der App schaltet aria-selected um):
+ *   <div class="sd-tabs" role="tablist" aria-label="Ansichten des Kurses" data-sd-tabs>
+ *     <button type="button" role="tab" aria-selected="true">Übersicht</button>
+ *     <button type="button" role="tab" aria-selected="false">Noten</button>
+ *     <button type="button" role="tab" aria-selected="false" disabled>Sitzplan</button>
+ *   </div>
+ * Eigene Seiten:
+ *   <nav class="sd-tabs" aria-label="Bereiche der Arbeit" data-sd-tabs>
+ *     <a href="…" aria-current="page">Aufgaben</a><a href="…">Abgaben</a>
+ *   </nav>
+ * Mit data-sd-tabs setzt js/design.js einen Strich ein, der zum aktiven Reiter wandert, und
+ * (bei role="tablist") die Pfeiltasten. Ohne das Attribut zeichnet der aktive Reiter den
+ * Strich selbst. Abstand zum Rand: --sd-tabs-pad. */
+.sd-tabs {
+  --sd-tabs-pad: var(--space-4);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0 var(--sd-tabs-pad);
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+.sd-tabs > :is(button, a) {
+  --pico-background-color: transparent;
+  --pico-border-color: transparent;
+  --pico-color: var(--text-dim);
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control);
+  margin: 0;
+  padding: 0 var(--space-3);
+  border-radius: 0;
+  box-shadow: none;
+  color: var(--text-dim);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.sd-tabs > :is(button, a):hover:not(:disabled) { --pico-color: var(--text); color: var(--text); }
+.sd-tabs > :is([aria-selected="true"], [aria-current="page"], [aria-current="true"]) {
+  --pico-color: var(--text);
+  color: var(--text);   /* Akzent als Schrift reicht nicht in jedem Design (unter 4,5 : 1) */
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+.sd-tabs > :disabled { opacity: 0.5; cursor: default; }
+/* Die Leiste schneidet ab: der Fokusrahmen liegt innen. */
+.sd-tabs > :focus-visible { outline-offset: -2px; border-radius: var(--radius-s); }
+.sd-tabs-ink {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 0;
+  height: 2px;
+  background: var(--accent);
+  pointer-events: none;
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), width 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.sd-tabs:has(> .sd-tabs-ink) > :is([aria-selected="true"], [aria-current="page"], [aria-current="true"]) {
+  box-shadow: none;
+}
+
+/* Fläche für zusammengehörige Inhalte (statt verschachtelter Karten). */
+.sd-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-l);
+  padding: var(--space-5);
+}
+.sd-panel > :first-child { margin-top: 0; }
+.sd-panel > :last-child { margin-bottom: 0; }
+
+/* ---------- Werkzeugleiste über Listen ---------- */
+.sd-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+.sd-toolbar :is(input, select) { width: auto; margin-bottom: 0; }
+.sd-toolbar .sd-search { flex: 1 1 14rem; max-width: 22rem; }
+.sd-toolbar .sd-toolbar-end { margin-left: auto; }
+.sd-count { color: var(--text-faint); font-size: 0.875rem; }
+
+/* ---------- Tabelle ---------- */
+/* Schmale Bildschirme: die Tabelle rollt im Rahmen. Der Rahmen bekommt dann im HTML
+ * tabindex="0", role="region" und einen Namen. Eine Kante am Rand zeigt, dass es weitergeht. */
+.sd-table-wrap {
+  overflow-x: auto;
+  background:
+    linear-gradient(to right, var(--bg-card) 40%, transparent) left / 2.5rem 100% no-repeat local,
+    linear-gradient(to left, var(--bg-card) 40%, transparent) right / 2.5rem 100% no-repeat local,
+    linear-gradient(to right, var(--border-strong), transparent) left / 0.625rem 100% no-repeat scroll,
+    linear-gradient(to left, var(--border-strong), transparent) right / 0.625rem 100% no-repeat scroll,
+    var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-l);
+}
+.sd-table-wrap table { margin: 0; min-width: 40rem; }
+.sd-table-wrap :is(th, td) {
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  vertical-align: middle;
+}
+.sd-table-wrap thead th {
+  --pico-border-width: 1px;
+  position: sticky;
+  top: 0;
+  background: var(--bg-raised);
+  color: var(--text-dim);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+.sd-table-wrap tbody tr:last-child :is(th, td) { border-bottom: 0; }
+.sd-table-wrap tbody tr:hover :is(th, td) { background: var(--accent-soft); }
+.sd-table-wrap tbody th { font-weight: 600; }
+.sd-num { text-align: right; }
+.sd-row-actions { text-align: right; white-space: nowrap; width: 1%; }
+
+/* Spaltenkopf zum Sortieren: <th aria-sort="…"><button class="sd-sort">…</button></th> */
+.sd-sort {
+  --pico-background-color: transparent;
+  --pico-border-color: transparent;
+  --pico-color: inherit;
+  min-height: 1.5rem;   /* Zielgröße mindestens 24 px */
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  gap: var(--space-1);
+  border-radius: var(--radius-s);
+}
+.sd-sort:hover { --pico-color: var(--text); }
+@media (pointer: coarse) {
+  .sd-sort { min-height: var(--control); }
+}
+.sd-sort .sd-icon { opacity: 0.35; transition: transform 0.15s ease-out; }
+th[aria-sort="ascending"] .sd-sort,
+th[aria-sort="descending"] .sd-sort { --pico-color: var(--accent); }
+th[aria-sort="ascending"] .sd-sort .sd-icon { opacity: 1; transform: rotate(180deg); }
+th[aria-sort="descending"] .sd-sort .sd-icon { opacity: 1; }
+
+/* Kartenliste auf schmalen Bildschirmen: <div class="sd-table-wrap sd-table-cards">.
+ * Jede Zeile wird eine Karte, die Zellen stehen untereinander, die Aktionen rechts oben.
+ * Zellen, die ohne Spaltenkopf unklar sind, bekommen data-label="Projekte".
+ * Vom Tabellenkopf bleiben nur die Sortierknöpfe. */
+@media (max-width: 40rem) {
+  .sd-table-cards { background: var(--bg-card); }
+  .sd-table-cards :is(table, thead, tbody) { display: block; min-width: 0; }
+  .sd-table-cards thead tr {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1) var(--space-4);
+    padding: var(--space-1) var(--space-3);
+    background: var(--bg-raised);
+    border-bottom: 1px solid var(--border);
+  }
+  .sd-table-cards thead th { position: static; padding: 0; border: 0; background: transparent; }
+  .sd-table-cards thead th:not(:has(.sd-sort)) { display: none; }
+  .sd-table-cards thead:not(:has(.sd-sort)) { display: none; }   /* sonst bleibt ein leerer Streifen */
+  .sd-table-cards tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: var(--space-3);
+    row-gap: var(--space-1);
+    padding: var(--space-3);
+    border-bottom: 1px solid var(--border);
+  }
+  .sd-table-cards tbody tr[hidden] { display: none; }
+  .sd-table-cards tbody tr:last-child { border-bottom: 0; }
+  .sd-table-cards tbody :is(th, td) {
+    display: block;
+    grid-column: 1;
+    padding: 0;
+    border: 0;
+    text-align: left;
+    overflow-wrap: anywhere;
+  }
+  .sd-table-cards tbody td[data-label]::before { content: attr(data-label) ": "; color: var(--text-dim); }
+  .sd-table-cards tbody .sd-row-actions {
+    grid-column: 2;
+    grid-row: 1 / span 3;
+    width: auto;
+    align-self: start;
+  }
+  .sd-table-cards tbody .sd-row-actions-wide {
+    grid-column: 1 / -1;
+    grid-row: auto;
+    margin-top: var(--space-2);
+  }
+  .sd-table-cards tbody .sd-row-actions-wide > * { margin: var(--space-1) var(--space-2) var(--space-1) 0; }
+}
+
+/* ---------- Marken (Status in Listen) ---------- */
+/* Immer mit Text, nie nur Farbe. */
+.sd-badge {
+  --sd-tone: var(--text-dim);
+  --sd-tone-soft: var(--bg-raised);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0.0625rem var(--space-2);
+  border-radius: 999px;
+  background: linear-gradient(var(--sd-tone-soft), var(--sd-tone-soft)), var(--bg-card);
+  color: var(--sd-tone);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.sd-badge .sd-icon { width: 1em; height: 1em; }
+.sd-badge-ok { --sd-tone: var(--ok); --sd-tone-soft: var(--ok-soft); }
+.sd-badge-bad { --sd-tone: var(--bad); --sd-tone-soft: var(--bad-soft); }
+.sd-badge-warn { --sd-tone: var(--gold); --sd-tone-soft: var(--gold-soft); }
+
+/* ---------- Meldungen ---------- */
+/* <div class="sd-notice sd-notice-ok" role="status"> Symbol + Text. Fehler: role="alert". */
+.sd-notice {
+  --sd-tone: var(--text-dim);          /* ohne Zusatz: sachlicher Hinweis */
+  --sd-tone-soft: var(--bg-raised);
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-3);
+  align-items: start;
+  margin: 0 0 var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--sd-tone);
+  border-radius: var(--radius);
+  background: linear-gradient(var(--sd-tone-soft), var(--sd-tone-soft)), var(--bg-card);
+}
+.sd-notice > .sd-icon { color: var(--sd-tone); width: 1.375rem; height: 1.375rem; margin-top: 0.0625rem; }
+.sd-notice p { margin: 0; }
+.sd-notice strong { display: block; }
+.sd-notice-ok { --sd-tone: var(--ok); --sd-tone-soft: var(--ok-soft); }
+.sd-notice-bad { --sd-tone: var(--bad); --sd-tone-soft: var(--bad-soft); }
+.sd-notice-warn { --sd-tone: var(--gold); --sd-tone-soft: var(--gold-soft); }
+
+/* ---------- Zugangsdaten ---------- */
+/* Kasten mit Daten, die nur jetzt zu sehen sind (Passwort, Code). Zum Abschreiben und Drucken.
+ * <section class="sd-credentials"> <h2>…</h2> <dl><dt>Passwort:</dt><dd>…</dd></dl>
+ *   <p class="sd-hint">…</p> <div class="sd-actions">…</div> </section>
+ * .sd-credentials-warn: wenn danach etwas verloren geht (z. B. alte Passwörter gelten nicht mehr). */
+.sd-credentials {
+  --sd-tone: var(--ok);
+  --sd-tone-soft: var(--ok-soft);
+  margin: var(--space-4) 0;
+  padding: var(--space-4) var(--space-5);
+  border: 2px solid var(--sd-tone);
+  border-radius: var(--radius);
+  background: linear-gradient(var(--sd-tone-soft), var(--sd-tone-soft)), var(--bg-card);
+}
+.sd-credentials-warn { --sd-tone: var(--gold); --sd-tone-soft: var(--gold-soft); }
+.sd-credentials > :first-child { margin-top: 0; }
+.sd-credentials > :last-child { margin-bottom: 0; }
+.sd-credentials dl {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--space-2) var(--space-4);
+  margin: var(--space-3) 0;
+}
+.sd-credentials dt { font-weight: 600; }
+.sd-credentials dd {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 1.3em;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 36rem) {
+  .sd-credentials dl { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .sd-credentials dd { margin-bottom: var(--space-2); }
+}
+.sd-hint { font-size: 0.875rem; color: var(--text-dim); }
+
+/* ---------- Formular ---------- */
+.sd-form { max-width: 42rem; }
+.sd-form-row { display: grid; gap: 0 var(--space-4); }
+@media (min-width: 36rem) {
+  .sd-form-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sd-form-row.sd-form-row-short { grid-template-columns: 10rem minmax(0, 1fr); }
+}
+.sd-form label > .sd-optional { color: var(--text-faint); font-weight: 400; }
+.sd-form :is(input, select, textarea) + small { color: var(--text-faint); }
+.sd-form [aria-invalid="true"] + small { color: var(--bad); font-weight: 600; }
+.sd-form fieldset { margin-bottom: var(--space-4); }
+.sd-form legend { font-weight: 600; }
+.sd-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+/* Meldung nach dem Abschicken: <div aria-live="polite"> direkt unter den Knöpfen. */
+.sd-actions + [aria-live]:not(:empty) { margin-top: var(--space-4); }
+
+/* ---------- Hochladen ---------- */
+/* <div class="sd-dropzone" data-sd-dropzone> … <input type="file" aria-labelledby="…"> </div>
+ * Das Feld liegt unsichtbar über der ganzen Fläche: Klicken und Ablegen gehen direkt an den
+ * Browser. Kein <label> mit <span> darin – Blades macht daraus eine schwebende Beschriftung. */
+.sd-dropzone {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-4);
+  padding: var(--space-6) var(--space-4);
+  border: 2px dashed var(--border-strong);
+  border-radius: var(--radius-l);
+  background: var(--bg-card);
+  color: var(--text);
+  text-align: center;
+  transition: border-color 0.15s ease-out, background-color 0.15s ease-out;
+}
+.sd-dropzone input[type="file"] {
+  position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0;
+  opacity: 0; cursor: pointer;
+}
+.sd-dropzone:hover { border-color: var(--accent); }
+.sd-dropzone:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sd-dropzone-over {
+  border-color: var(--accent);
+  background: linear-gradient(var(--accent-soft), var(--accent-soft)), var(--bg-card);
+}
+.sd-dropzone-filled { border-style: solid; border-color: var(--accent); }
+.sd-dropzone-title { font-weight: 600; }
+.sd-dropzone-title u { color: var(--accent); text-underline-offset: 0.15em; }
+.sd-dropzone-hint { color: var(--text-faint); font-size: 0.875rem; }
+.sd-dropzone-file { font-weight: 600; overflow-wrap: anywhere; }
+.sd-dropzone-file:empty { display: none; }
+
+/* ---------- Ring: das O aus den Ordo-Logos ---------- */
+/* Trägt ein Symbol; für leere Zustände und das Hochladen. */
+.sd-ring {
+  --sd-ring-ground: var(--bg-card);
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 4.375rem;
+  height: 4.5rem;
+  border-radius: 50%;
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+.sd-ring::before {
+  content: "";
+  position: absolute;
+  inset: 4.6% 13.5%;
+  border-radius: 50%;
+  background: var(--sd-ring-ground);
+}
+.sd-ring > * { position: relative; }
+.sd-ring .sd-icon { width: 1.625rem; height: 1.625rem; }
+
+/* ---------- Leerer Zustand ---------- */
+.sd-empty {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  padding: var(--space-7) var(--space-4);
+  text-align: center;
+}
+.sd-empty :is(h3, h4) { margin: var(--space-3) 0 0; }
+.sd-empty p { margin: 0; color: var(--text-dim); max-width: 44ch; }
+.sd-empty .sd-actions { margin-top: var(--space-3); justify-content: center; }
+
+/* ---------- Dialog ---------- */
+/* <dialog id="…" closedby="any" aria-labelledby="…"><article><header><h2>…</h2></header>
+ *   … <footer><button class="secondary" data-sd-close>…</button><button>…</button></footer>
+ * </article></dialog> */
+dialog > article { box-shadow: var(--shadow); }
+dialog > article > header :is(h2, h3) { margin: 0; --pico-font-size: 1.25rem; }
+dialog > article > footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+dialog > article > footer :is(button, [role="button"]):not(:first-of-type) { margin-left: 0; }
+dialog::backdrop { background: var(--backdrop); }
+
+/* ---------- Druck ---------- */
+/* Gedruckt wird immer schwarz auf weiß (Farben: Druck-Block in tokens.css).
+ * .sd-no-print: nicht drucken. .sd-print-only: nur drucken.
+ * <body class="sd-print-solo"> + ein Element mit .sd-print-this: nur dieses Element drucken
+ * (Zettel mit Zugangsdaten). */
+.sd-print-only { display: none; }
+@media print {
+  .sd-no-print, .sd-header, .sd-tabs, .sd-skip { display: none !important; }
+  .sd-print-only { display: block; }
+  .sd-print-solo * { visibility: hidden; }
+  .sd-print-solo .sd-print-this, .sd-print-solo .sd-print-this * { visibility: visible; }
+  .sd-print-solo .sd-print-this { position: absolute; left: 0; top: 0; width: 100%; margin: 0; }
+  .sd-credentials { border: 1px dashed var(--text); background: none; }
+}
+
+/* ---------- Bewegung ---------- */
+/* Blades schaltet bei prefers-reduced-motion Übergänge und Animationen selbst ab und
+ * lässt die Ladeanzeige (aria-busy) laufen. Eigene Übergänge hier ebenfalls abschalten. */
+@media (prefers-reduced-motion: reduce) {
+  .sd-dropzone, .sd-sort .sd-icon, .sd-tabs-ink { transition: none; }
+}

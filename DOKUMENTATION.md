@@ -1248,7 +1248,7 @@ Das Startprogramm ist das einzige Teil mit Build-Schritt; die App selbst bleibt 
 | Datei | Aufgabe |
 |---|---|
 | `main.go` | Ablauf: Einstellungen laden, App-Dateien finden (`--app-dir`, sonst `index.html` neben dem Programm oder bis zu 4 Ordner darüber, sonst eingebaut), Server starten, Fenster öffnen, beenden, wenn das Fenster zu ist (Browserprozess beendet und 15 s ohne Lebenszeichen; beim Standardbrowser 5 min ohne Lebenszeichen); legt unter Linux das Programmsymbol `logo/ordonota-icon.svg` (nur das Zeichen) als `ordonota-icon.svg` in den Einstellungsordner (`writeIcon`) |
-| `server.go` | HTTP: `/start?t=…` setzt das Zugriffs-Cookie, statische Dateien nur aus `index.html`, `css/`, `js/`, `logo/`, `demo/`, `cards/` (nie `ref/` o. Ä.), Schnittstelle `/api/…` |
+| `server.go` | HTTP: `/start?t=…` setzt das Zugriffs-Cookie, statische Dateien nur aus `index.html`, `css/`, `js/`, `logo/`, `demo/`, `cards/`, `schrift/` (nie `ref/` o. Ä.), Schnittstelle `/api/…` |
 | `store.go` | Datenordner: nur `notenmanager.nmdb`, `notenmanager.lock.json`, `Sicherungen/notenmanager_*.nmdb`; Schreiben über Hilfsdatei und Umbenennen; Konfliktprüfung über die Änderungszeit |
 | `desktop_linux.go` | Startmenü-Eintrag `OrdoNota.desktop` (Name = Fensterklasse, sonst ordnet KWin das Fenster nicht zu), versteckte Einträge `<Präfix>-127.0.0.1__start-Default.desktop` für die Wayland-app_id (`waylandAppIDs`; hängt am Pfad `/start` der Start-Adresse), alten `ordonota.desktop` entfernen, Menü-Cache erneuern |
 | `config.go`, `browser.go`, `dialog.go` | Einstellungen und Kennwort, Browsersuche (`--app`, eigenes Profil), Ordner-Dialog und Fehlermeldungen mit Bordmitteln (zenity/kdialog, osascript, PowerShell) |

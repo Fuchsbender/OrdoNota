@@ -24,7 +24,7 @@ const (
 )
 
 // Nur diese Teile des Programmordners werden ausgeliefert (nie z. B. ref/ mit echten Namen).
-var staticAllowed = []string{"index.html", "css/", "js/", "logo/", "demo/", "cards/"}
+var staticAllowed = []string{"index.html", "css/", "js/", "logo/", "demo/", "cards/", "schrift/"}
 
 type server struct {
 	files   fs.FS // App-Dateien: Programmordner oder ins Programm eingebaut

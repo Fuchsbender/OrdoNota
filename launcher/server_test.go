@@ -18,13 +18,14 @@ func testServer(t *testing.T) (*server, string, string) {
 	t.Helper()
 	app := t.TempDir()
 	for p, c := range map[string]string{
-		"index.html":    "<!doctype html>",
-		"js/app.js":     "// app",
-		"js/model.js":   "const APP_VERSION = '9.9.9';",
-		"css/app.css":   "body{}",
-		"cards/HD.svg":  "<svg/>",
-		"ref/noten.csv": "Echte Namen",
-		"secret.nmdb":   "x",
+		"index.html":                     "<!doctype html>",
+		"js/app.js":                      "// app",
+		"js/model.js":                    "const APP_VERSION = '9.9.9';",
+		"css/app.css":                    "body{}",
+		"cards/HD.svg":                   "<svg/>",
+		"schrift/JosefinSans-ordo.woff2": "wOF2",
+		"ref/noten.csv":                  "Echte Namen",
+		"secret.nmdb":                    "x",
 	} {
 		os.MkdirAll(filepath.Join(app, filepath.Dir(p)), 0o755)
 		os.WriteFile(filepath.Join(app, p), []byte(c), 0o644)
@@ -97,14 +98,15 @@ func TestZugriffsschutz(t *testing.T) {
 func TestStatischeDateien(t *testing.T) {
 	s, _, _ := testServer(t)
 	for path, want := range map[string]int{
-		"/index.html":      200,
-		"/js/app.js":       200,
-		"/css/app.css?v=1": 200,
-		"/cards/HD.svg":    200,
-		"/ref/noten.csv":   404,
-		"/secret.nmdb":     404,
-		"/js/":             404,
-		"/":                303,
+		"/index.html":                     200,
+		"/js/app.js":                      200,
+		"/css/app.css?v=1":                200,
+		"/cards/HD.svg":                   200,
+		"/schrift/JosefinSans-ordo.woff2": 200,
+		"/ref/noten.csv":                  404,
+		"/secret.nmdb":                    404,
+		"/js/":                            404,
+		"/":                               303,
 	} {
 		if w := do(t, s, call{method: "GET", path: path}); w.Code != want {
 			t.Errorf("%s: %d statt %d", path, w.Code, want)
