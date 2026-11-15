@@ -1,5 +1,8 @@
 /* OrdoNota – Gestaltung */
 
+/* Für die Grundlage unten: svg|* trifft alle SVG-Elemente, auch die Kopien hinter <use> (Firefox). */
+@namespace svg url(http://www.w3.org/2000/svg);
+
 /* Farben und Maße kommen aus dem gemeinsamen Design der Ordo-Apps (css/solagio-design.css, wird vor
    dieser Datei geladen): --bg, --bg-raised, --bg-card, --border, --border-soft, --border-strong, --text,
    --text-dim, --text-faint, --accent…, --ok, --bad, --gold (je mit -soft), --shadow, --shadow-soft,
@@ -198,13 +201,13 @@
    einer Klasse „sd-…“ samt Inhalt: Dort gelten Blades und die Bausteine. Der Inhalt der Kopfzeile
    (.sd-header) gehört wieder OrdoNota, bis auf die Bausteine darin. */
 @layer ordonota-grund {
-  :not(:root, svg, svg *, img, canvas, [class*='sd-'], [class*='sd-']:not(.sd-header) *),
-  :not(:root, svg, svg *, img, canvas, [class*='sd-'], [class*='sd-']:not(.sd-header) *)::before,
-  :not(:root, svg, svg *, img, canvas, [class*='sd-'], [class*='sd-']:not(.sd-header) *)::after,
-  :not(:root, svg, svg *, img, canvas, [class*='sd-'], [class*='sd-']:not(.sd-header) *)::placeholder,
-  :not(:root, svg, svg *, img, canvas, [class*='sd-'], [class*='sd-']:not(.sd-header) *)::marker,
-  :not(:root, svg, svg *, img, canvas, [class*='sd-'], [class*='sd-']:not(.sd-header) *)::backdrop,
-  :not(:root, svg, svg *, img, canvas, [class*='sd-'], [class*='sd-']:not(.sd-header) *)::file-selector-button { all: revert; }
+  :not(:root, svg|*, img, canvas, [class*='sd-'], [class*='sd-']:not(.sd-header) *),
+  :not(:root, svg|*, img, canvas, [class*='sd-'], [class*='sd-']:not(.sd-header) *)::before,
+  :not(:root, svg|*, img, canvas, [class*='sd-'], [class*='sd-']:not(.sd-header) *)::after,
+  :not(:root, svg|*, img, canvas, [class*='sd-'], [class*='sd-']:not(.sd-header) *)::placeholder,
+  :not(:root, svg|*, img, canvas, [class*='sd-'], [class*='sd-']:not(.sd-header) *)::marker,
+  :not(:root, svg|*, img, canvas, [class*='sd-'], [class*='sd-']:not(.sd-header) *)::backdrop,
+  :not(:root, svg|*, img, canvas, [class*='sd-'], [class*='sd-']:not(.sd-header) *)::file-selector-button { all: revert; }
 }
 
 * { box-sizing: border-box; }
@@ -245,7 +248,7 @@ ul.plain li { display: flex; align-items: center; gap: 0.625rem; padding: 0.375r
   height: var(--control); padding: 0 1rem;
   border: 1px solid var(--border-strong); border-radius: var(--radius);
   background: var(--bg-card); color: var(--text);
-  font: inherit; font-weight: 520; cursor: pointer; white-space: nowrap;
+  font: inherit; font-weight: 500; cursor: pointer; white-space: nowrap;
 }
 .btn:hover { background: var(--bg-raised); }
 .btn:focus-visible, .icon-btn:focus-visible, .seg:focus-visible, .link:focus-visible, .course-item:focus-visible, .picker-item:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -257,7 +260,7 @@ ul.plain li { display: flex; align-items: center; gap: 0.625rem; padding: 0.375r
 .btn-danger:disabled { color: var(--text-dim); border-color: var(--border); background: transparent; }
 .btn-ghost { border-style: dashed; background: transparent; color: var(--accent); }
 .btn-ghost:hover { background: var(--accent-soft); }
-.btn-sm { height: 1.75rem; padding: 0 0.625rem; font-size: 0.8125rem; font-weight: 520; border-radius: var(--radius-s); }
+.btn-sm { height: 1.75rem; padding: 0 0.625rem; font-size: 0.8125rem; font-weight: 500; border-radius: var(--radius-s); }
 .btn-block { width: 100%; }
 .icon-btn {
   display: inline-flex; align-items: center; justify-content: center;
@@ -450,7 +453,7 @@ details.details-card[open] > summary { margin-bottom: 0.75rem; }
 .table .sticky-col { position: sticky; left: 0; z-index: 1; background: var(--bg-card); border-right: 1px solid var(--border); }
 .table th.sticky-col { z-index: 3; background: var(--bg-raised); }
 .table tbody tr:hover td.sticky-col { background: var(--bg-raised); }
-.name-cell { font-weight: 520; }
+.name-cell { font-weight: 500; }
 /* Name und Vorname als zwei feste Spalten; die Breite bestimmt den Versatz der zweiten (150 px = 134 + 2 × 8 Polster) */
 .name-clip, .name-text { display: block; overflow: hidden; text-overflow: ellipsis; }
 .name-last .name-clip { width: 8.375rem; }
@@ -685,7 +688,7 @@ body.grp-dragging, body.grp-dragging * { cursor: grabbing !important; }
 .theme-prev-row { display: flex; gap: 0.1875rem; align-items: center; }
 .theme-prev-accent { flex: 1; height: 0.625rem; border-radius: 0.1875rem; background: var(--accent); }
 .theme-prev-grade { width: 0.75rem; height: 0.625rem; border-radius: 2px; background: hsl(var(--g-hue) var(--g-s) var(--g-l)); }
-.theme-name { font-weight: 520; }
+.theme-name { font-weight: 500; }
 .level-own { border-color: var(--gold); background: var(--gold-soft); }
 .key-warn { font-size: 0.8125rem; display: grid; gap: 0.375rem; }
 .key-warn-fixes { display: flex; flex-wrap: wrap; gap: 0.375rem; }

@@ -294,7 +294,7 @@ Jede Etappe endet mit `ERGEBNIS: x von x bestanden` und einem Commit auf dem Zwe
 - [x] 5. Knöpfe, Felder, Dialoge, Meldungen, Anmeldung, Einstellungen (mit den Vorschaukacheln der Designs).
 - [x] 6. Symbole statt Emoji.
 - [x] 7. Fachansichten Reiter für Reiter: Tokens, Überschriften in Josefin Sans, Inline-Stile entfernen (berechnete Werte wie Notenfarben und Sitzpositionen bleiben), Timer-Fenster, Beamer-Ansichten.
-- [ ] 8. Abschluss: Prüfung auf Bedienbarkeit, Kontrast und schmale Bildschirme, Importe härten, Chromium, Firefox und WebKit, unter `file://` und über das Startprogramm, Doku (`DOKUMENTATION.md`, `README.md`), Version 2.0.0, Prüfung auf private Angaben vor dem Push.
+- [x] 8. Abschluss: Prüfung auf Bedienbarkeit, Kontrast und schmale Bildschirme, Importe härten, Chromium, Firefox und WebKit, unter `file://` und über das Startprogramm, Doku (`DOKUMENTATION.md`, `README.md`), Version 2.0.0, Prüfung auf private Angaben vor dem Push.
 
 ### Aus der Umsetzung
 
@@ -303,8 +303,14 @@ Jede Etappe endet mit `ERGEBNIS: x von x bestanden` und einem Commit auf dem Zwe
 - Die Farben des Standard-Designs stehen in `app.css` noch einmal (`[data-theme='light']`, `[data-theme='dark']`), weil die Vorschaukacheln der Einstellungen ihr Design an einem inneren Element tragen. Ändern sich die Werte im Design-Projekt, hier nachziehen.
 - Vergleichsfotos: `.claude/design-fotos/fotos.py <Ordner>` (nur lokal), Stand vorher in `.claude/design-fotos/vorher/`.
 
+- **Firefox (Etappe 8):** Die Grundregel nimmt SVG über den Namensraum aus (`svg|*`), sonst verlieren in Firefox die per `<use>` eingebundenen Teile des Logos ihre Füllung. Schriftstärke 520 → 500, weil Firefox Zwischenstärken ohne passende Schrift auf fett rundet.
+- **Geprüft:** Chromium (Thorium) und Firefox 160 unter `file://`, über das Startprogramm im Testlauf. **Noch offen: Safari/iOS** (auf dem Entwicklungsrechner nicht verfügbar) – vor dem Veröffentlichen an einem iPad oder Mac ansehen.
+
 ### Offen
 
+- Safari/iOS ansehen (siehe oben), danach Zweig `design` nach `main` übernehmen, pushen und Release 2.0.0 – nur auf Ansage.
+- Der Löschknopf für Sitzplan-Fotos erscheint nur beim Überfahren mit der Maus und ist mit Touch nicht erreichbar (war schon vor 2.0 so).
+- Die Kursleiste nimmt auf dem Handy viel Höhe ein.
 - Titel der Ausdrucke in Josefin Sans: eigener kleiner Schritt nach 2.0.0, falls gewünscht.
 
 ## C) Gamification des Pomodoro-Timers (zurückgestellt, erst auf Nachfrage des Nutzers)

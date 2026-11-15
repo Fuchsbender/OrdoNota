@@ -609,7 +609,7 @@ Name │ Klassen-/Kursarbeiten │ Ø │ Sonstige Leistungen          │ Ø �
 
 | Spalte | Bedeutung |
 |---|---|
-| Spalten aus Tests bzw. EPO-Blöcken | Ergebnisse aus Tests bzw. EPO-Blöcken; nur anzeigen, bearbeitet wird im jeweiligen Reiter („Test ›“ / „EPO ›“ springt dorthin) |
+| Spalten mit ✎ bzw. ◷ | Ergebnisse aus Tests bzw. EPO-Blöcken; nur anzeigen, bearbeitet wird im jeweiligen Reiter („Test ›“ / „EPO ›“ springt dorthin) |
 | Spalten ohne Symbol | direkt eingetragene Einzelnoten (bearbeitbar) |
 | ausgegraute Spalte | Test mit Haken „nicht gewertet“ (siehe 7.1); wird angezeigt, zählt aber nicht |
 | Spalten mit ◉ | Ergebnisse aus dem Reiter „Präsentationen“ (Sprung über „Präs. ›“) |
