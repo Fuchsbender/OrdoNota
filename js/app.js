@@ -1,7 +1,7 @@
 /* OrdoNota – Anwendungskern: Anmeldung, Speichern, Sperren, Layout, Navigation. */
 (function (NM) {
   'use strict';
-  const { h, clear, toast, modal, confirmDialog, fmtTime } = NM.util;
+  const { h, icon, clear, toast, modal, confirmDialog, fmtTime } = NM.util;
   const { Vault } = NM.crypto;
   const S = NM.storage;
   const M = NM.model;
@@ -707,12 +707,14 @@
     const mode = themeMode();
     document.documentElement.setAttribute('data-theme', mode);
     document.documentElement.setAttribute('data-variant', themeVariant(mode));
+    const chosen = state.ui.theme === 'light' || state.ui.theme === 'dark' ? state.ui.theme : 'auto';
+    for (const b of document.querySelectorAll('[data-theme-mode]')) b.setAttribute('aria-pressed', String(b.dataset.themeMode === chosen));
   }
   if (systemDark) systemDark.addEventListener('change', () => (state.ui.theme || 'auto') === 'auto' && applyTheme());
 
-  /** Mond-Symbol: nur hell ↔ dunkel, jeweils im gewählten Design. */
-  function toggleTheme() {
-    state.ui.theme = themeMode() === 'dark' ? 'light' : 'dark';
+  /** Schalter in der Kopfzeile: hell, dunkel oder wie das System, jeweils im gewählten Design. */
+  function setThemeMode(mode) {
+    state.ui.theme = mode;
     saveUi();
     applyTheme();
   }
@@ -735,16 +737,25 @@
       state.db.years.map((y) => h('option', { value: y.id, selected: y.id === currentYear().id }, 'Schuljahr ' + y.name)),
       h('option', { value: '__new' }, '+ Neues Schuljahr …')
     );
+    const chosenMode = state.ui.theme === 'light' || state.ui.theme === 'dark' ? state.ui.theme : 'auto';
+    const modeBtn = (mode, label, sym) => h('button', { type: 'button', 'data-theme-mode': mode, 'aria-pressed': String(mode === chosenMode), 'aria-label': label, title: label, onclick: () => setThemeMode(mode) }, icon(sym));
     const top = h(
       'header',
-      { class: 'topbar' },
+      { class: 'topbar sd-header' },
       h('div', { class: 'brand' }, h('span', { class: 'brand-full', html: NM.logo.full(32) }), h('span', { class: 'brand-mark', html: NM.logo.mark(28) })),
       yearSel,
       NM.pomodoro.widget(),
       h('div', { class: 'spacer' }),
       h('span', { id: 'save-status', class: 'save-status' }),
-      h('button', { class: 'icon-btn', title: 'Hell/Dunkel umschalten', 'aria-label': 'Hell/Dunkel umschalten', onclick: toggleTheme, html: '<svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z"/></svg>' }),
-      h('button', { class: 'btn btn-sm', onclick: () => lockApp('Gesperrt.'), title: 'Datenbank sperren' }, '🔒 Sperren')
+      // Große Schrift schaltet js/solagio-design.js (data-sd-size); danach die Reiterleiste neu vermessen
+      h(
+        'button',
+        { type: 'button', class: 'sd-icon-btn', 'data-sd-size': true, 'aria-pressed': String(document.documentElement.getAttribute('data-size') === 'large'), 'aria-label': 'Große Schrift', title: 'Große Schrift (für Beamer und Tafel)', onclick: () => setTimeout(renderMain, 0) },
+        icon('text-size')
+      ),
+      // Sieht aus wie der Modus-Schalter des gemeinsamen Designs, schaltet aber über applyTheme() (ohne data-sd-theme)
+      h('div', { class: 'sd-theme', role: 'group', 'aria-label': 'Farbschema' }, modeBtn('light', 'Hell', 'sun'), modeBtn('dark', 'Dunkel', 'moon'), modeBtn('auto', 'Wie das System', 'device-desktop')),
+      h('button', { class: 'btn btn-sm', onclick: () => lockApp('Gesperrt.'), title: 'Datenbank sperren', 'aria-label': 'Sperren' }, icon('lock'), h('span', { class: 'btn-label' }, 'Sperren'))
     );
     const side = h('aside', { class: 'sidebar' + (state.ui.sideCollapsed ? ' collapsed' : '') }, renderCourseList());
     const main = h('main', { class: 'main', id: 'main' });
@@ -777,7 +788,7 @@
     const toggle = h(
       'button',
       { class: 'icon-btn side-toggle', title: collapsed ? 'Kursauswahl ausklappen' : 'Kursauswahl einklappen', 'aria-label': collapsed ? 'Kursauswahl ausklappen' : 'Kursauswahl einklappen', 'aria-expanded': String(!collapsed), onclick: toggleSidebar },
-      collapsed ? '»' : '«'
+      icon(collapsed ? 'chevron-right' : 'chevron-left')
     );
     if (collapsed) {
       // Schmale Leiste: Kürzel je Kurs (Klasse und Fach), voller Name als Tooltip
@@ -871,7 +882,7 @@
     lastTab = tab;
     const tabs = h(
       'div',
-      { class: 'tabs', role: 'tablist' },
+      { class: 'tabs sd-tabs', role: 'tablist', 'aria-label': 'Ansichten' },
       orderedTabs()
         .filter((t) => tabOn(course, t.id))
         .map((t) =>
@@ -941,7 +952,7 @@
   function placeTabInk(tabs, animate) {
     const act = tabs.querySelector('.tab.active');
     if (!act) return;
-    const ink = h('span', { class: 'tab-ink', 'aria-hidden': 'true' });
+    const ink = h('span', { class: 'tab-ink sd-tabs-ink', 'aria-hidden': 'true' });
     tabs.appendChild(ink);
     const to = { left: act.offsetLeft, width: act.offsetWidth };
     const put = (p) => {

@@ -195,15 +195,16 @@
 /* Grundlage: Was diese Datei nicht selbst festlegt, sieht aus wie ohne Blades (Vorgabe des Browsers).
    So bleiben die dichten Fachansichten, wie sie sind. Ausgenommen sind das Wurzelelement (Schriftgröße,
    große Schrift), Bilder und SVG (die Regel nähme ihnen sonst Attribute wie fill und width) und alles mit
-   einer Klasse „sd-…“ samt Inhalt: Dort gelten Blades und die Bausteine. */
+   einer Klasse „sd-…“ samt Inhalt: Dort gelten Blades und die Bausteine. Der Inhalt der Kopfzeile
+   (.sd-header) gehört wieder OrdoNota, bis auf die Bausteine darin. */
 @layer ordonota-grund {
-  :not(:root, svg, svg *, img, canvas, [class*='sd-'], [class*='sd-'] *),
-  :not(:root, svg, svg *, img, canvas, [class*='sd-'], [class*='sd-'] *)::before,
-  :not(:root, svg, svg *, img, canvas, [class*='sd-'], [class*='sd-'] *)::after,
-  :not(:root, svg, svg *, img, canvas, [class*='sd-'], [class*='sd-'] *)::placeholder,
-  :not(:root, svg, svg *, img, canvas, [class*='sd-'], [class*='sd-'] *)::marker,
-  :not(:root, svg, svg *, img, canvas, [class*='sd-'], [class*='sd-'] *)::backdrop,
-  :not(:root, svg, svg *, img, canvas, [class*='sd-'], [class*='sd-'] *)::file-selector-button { all: revert; }
+  :not(:root, svg, svg *, img, canvas, [class*='sd-'], [class*='sd-']:not(.sd-header) *),
+  :not(:root, svg, svg *, img, canvas, [class*='sd-'], [class*='sd-']:not(.sd-header) *)::before,
+  :not(:root, svg, svg *, img, canvas, [class*='sd-'], [class*='sd-']:not(.sd-header) *)::after,
+  :not(:root, svg, svg *, img, canvas, [class*='sd-'], [class*='sd-']:not(.sd-header) *)::placeholder,
+  :not(:root, svg, svg *, img, canvas, [class*='sd-'], [class*='sd-']:not(.sd-header) *)::marker,
+  :not(:root, svg, svg *, img, canvas, [class*='sd-'], [class*='sd-']:not(.sd-header) *)::backdrop,
+  :not(:root, svg, svg *, img, canvas, [class*='sd-'], [class*='sd-']:not(.sd-header) *)::file-selector-button { all: revert; }
 }
 
 * { box-sizing: border-box; }
@@ -244,7 +245,7 @@ ul.plain li { display: flex; align-items: center; gap: 0.625rem; padding: 0.375r
   font: inherit; font-weight: 520; cursor: pointer; white-space: nowrap;
 }
 .btn:hover { background: var(--bg-raised); }
-.btn:focus-visible, .icon-btn:focus-visible, .tab:focus-visible, .seg:focus-visible, .link:focus-visible, .course-item:focus-visible, .picker-item:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn:focus-visible, .icon-btn:focus-visible, .seg:focus-visible, .link:focus-visible, .course-item:focus-visible, .picker-item:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .btn:disabled { opacity: 0.55; cursor: default; }
 .btn-primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 .btn-primary:hover { background: var(--accent-strong); border-color: var(--accent-strong); }
@@ -308,11 +309,18 @@ select.input { padding-right: 0.25rem; }
 /* ---------- Layout ---------- */
 
 #app { height: 100%; display: flex; flex-direction: column; }
+/* Kopfzeile: Baustein sd-header des gemeinsamen Designs (getönter Grund, Linie unten), Anordnung von hier.
+   Schrift und Bedienelemente im Maß des Designs (16 px, 40 px). */
 .topbar {
-  display: flex; align-items: center; gap: 0.75rem; height: 3.25rem; padding: 0 1rem;
-  background: var(--bg-card); border-bottom: 1px solid var(--border); flex-shrink: 0;
+  display: flex; align-items: center; gap: 0.75rem; min-height: 3.5rem; padding: 0.375rem 1rem;
+  flex-shrink: 0; font-size: 1rem;
 }
+.topbar .btn-sm, .topbar .input-sm { height: var(--control); font-size: 1rem; }
+.topbar .btn-sm { padding: 0 0.875rem; background: var(--bg-card); }
+.topbar .btn-sm:hover { background: var(--bg-raised); }
 .brand { display: flex; align-items: center; color: var(--text); }
+.brand-full svg { height: 2rem; width: auto; }
+.brand-mark svg { height: 1.75rem; width: 1.75rem; }
 .brand-mark { display: none; }
 .topbar select.input { width: auto; }
 /* Pomodoro-Timer in der Kopfzeile */
@@ -333,7 +341,7 @@ select.input { padding-right: 0.25rem; }
 .layout { flex: 1; display: flex; min-height: 0; }
 .sidebar { width: 14.375rem; flex-shrink: 0; background: var(--bg-card); border-right: 1px solid var(--border); overflow-y: auto; padding: 0.875rem 0.625rem; }
 .nav-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.25rem; }
-.side-toggle { height: 1.375rem; min-width: 1.375rem; margin-top: -4px; font-size: 0.9375rem; line-height: 1; }
+.side-toggle { height: 1.75rem; min-width: 1.75rem; margin-top: -2px; }
 .sidebar { transition: width 0.22s ease, padding 0.22s ease; overflow-x: hidden; }
 .sidebar.collapsed { width: 3.75rem; padding: 0.625rem 0.375rem; }
 .sidebar.sliding .course-nav { white-space: nowrap; }
@@ -352,7 +360,7 @@ select.input { padding-right: 0.25rem; }
 .course-chip.active { background: var(--accent-soft); }
 .course-chip.active .course-name { color: var(--accent-strong); }
 .course-chip:focus-visible, .side-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.nav-title { font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); font-weight: 650; padding: 0 0.5rem 0.5rem; }
+.nav-title { font-size: 0.8125rem; color: var(--text-faint); font-weight: 600; padding: 0.25rem 0.5rem 0.5rem; }
 .course-item {
   display: flex; flex-direction: column; align-items: flex-start; width: 100%;
   padding: 0.5rem 0.625rem; margin-bottom: 2px; border: 0; border-radius: var(--radius-s);
@@ -365,19 +373,16 @@ select.input { padding-right: 0.25rem; }
 .course-meta { font-size: 0.75rem; color: var(--text-dim); }
 .add-course { margin-top: 0.625rem; }
 .main { flex: 1; min-width: 0; overflow: auto; }
-.tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 2px; padding: 0 1.25rem; background: var(--bg); border-bottom: 1px solid var(--border); overflow-x: auto; }
-.tab { padding: 0.75rem 0.875rem 0.625rem; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--text-dim); font: inherit; font-weight: 560; cursor: pointer; white-space: nowrap; }
-.tab:hover:not(:disabled) { color: var(--text); }
-.tab.active { color: var(--accent-strong); }
-.tab-ink { position: absolute; left: 0; bottom: 0; height: 2px; background: var(--accent); pointer-events: none; }
-.tab-ink.moving { transition: transform 0.2s ease, width 0.2s ease; }
+/* Reiter: Baustein sd-tabs des gemeinsamen Designs (klebt oben, rollt quer, aktiver Reiter mit Strich).
+   Den Strich setzt placeTabInk() in js/app.js; er gleitet nur beim Reiterwechsel (.moving). */
+.tabs { --sd-tabs-pad: 0.75rem; gap: 2px; font-size: 0.9375rem; }   /* bis zu zehn Reiter: etwas enger als der Baustein */
+.tabs > .tab { padding: 0 0.375rem; cursor: pointer; }
+.tab-ink:not(.moving) { transition: none; }
 .view-enter { animation: view-in 0.18s ease-out; }
 @keyframes view-in { from { opacity: 0; transform: translateY(0.375rem); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) {
-  .tab-ink.moving { transition: none; }
   .view-enter { animation: none; }
 }
-.tab:disabled { opacity: 0.4; cursor: default; }
 .tab.dragging { opacity: 0.5; }
 .tab.drop-before { box-shadow: inset 2px 0 0 var(--accent); }
 .tab.drop-after { box-shadow: inset -2px 0 0 var(--accent); }
@@ -800,7 +805,10 @@ dialog.modal h2 { font-size: 1.0625rem; margin-bottom: 0.875rem; }
   .view { padding: 1rem; }
   .form-grid { grid-template-columns: 1fr; }
   .grid-2 { grid-template-columns: 1fr; }
-  .topbar { gap: 0.5rem; padding: 0 0.625rem; }
+  .topbar { gap: 0.5rem; padding: 0.375rem 0.625rem; flex-wrap: wrap; }
+  .topbar select.input { flex: 0 1 auto; min-width: 0; }
+  .topbar .btn-label, .topbar [data-sd-size] { display: none; }   /* große Schrift ist für Beamer und Tafel */
+  .topbar .btn-sm { width: var(--control); padding: 0; }
   .pomo-label { display: none; }
   .brand-full { display: none; }
   .brand-mark { display: block; }

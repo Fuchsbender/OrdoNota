@@ -1722,9 +1722,12 @@ def run_theme_check(br, base):
         const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
         const at = () => [document.documentElement.dataset.theme, document.documentElement.dataset.variant];
         const out = { reload: at() };
-        // Mond-Symbol: nur hell ↔ dunkel, das gewählte Design bleibt
-        const moon = document.querySelector('.topbar [aria-label="Hell/Dunkel umschalten"]');
-        moon.click(); await wait(); out.moon1 = at(); moon.click(); await wait(); out.moon2 = at();
+        // Schalter in der Kopfzeile: hell, dunkel, wie das System – das gewählte Design bleibt
+        const mode = (m) => document.querySelector('.topbar .sd-theme [data-theme-mode="' + m + '"]');
+        const pressed = () => [...document.querySelectorAll('.topbar .sd-theme [aria-pressed="true"]')].map((b) => b.dataset.themeMode).join();
+        const from = at()[0], other = from === 'dark' ? 'light' : 'dark';
+        mode(other).click(); await wait(); out.moon1 = at(); out.pressed1 = pressed() === other;
+        mode(from).click(); await wait(); out.moon2 = at(); out.pressed2 = pressed() === from;
         // „Wie das System“
         NM.app.select({ tab: 'settings' }); await wait(300);
         const sel = [...document.querySelectorAll('select')].find((s) => [...s.options].some((o) => o.value === 'auto' && o.text === 'Wie das System'));
@@ -1755,7 +1758,7 @@ def run_theme_check(br, base):
         and res["tileBgs"] == 6 and res["pickLight"] == ["light", "lavendel"] and res["pickDark"] == ["dark", "nord", "true"] \
         and res["saved"] == ["dark", "lavendel", "nord"]
     report("Einstellungen: Vorschaukacheln je Modus, Wahl wirkt sofort und wird gespeichert", ok_s and not br.errors, str(res and {k: res[k] for k in ("tiles", "tileBgs", "pickLight", "pickDark", "saved")}))
-    ok_r = bool(res2) and res2["reload"] == ["dark", "nord"] and res2["moon1"] == ["light", "lavendel"] and res2["moon2"] == ["dark", "nord"] \
+    ok_r = bool(res2) and res2["reload"] == ["dark", "nord"] and res2["moon1"] == ["light", "lavendel"] and res2["moon2"] == ["dark", "nord"] and res2["pressed1"] and res2["pressed2"] \
         and res2["auto"] == ["light", "lavendel"] and res3 == ["dark", "nord"] and popup == ["dark", "nord", True]
     report("Design bleibt nach dem Neuladen, Mond-Symbol schaltet nur hell/dunkel, „Wie das System“ folgt dem System, Timer-Fenster übernimmt das Design", ok_r and not br.errors, str(res2) + str(res3) + str(popup) + "; ".join(br.errors))
 

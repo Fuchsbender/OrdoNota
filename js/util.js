@@ -23,6 +23,12 @@
     return el;
   }
 
+  /** Symbol aus dem gemeinsamen Design (Tabler Icons, Namen in js/solagio-design.js): <span class="sd-icon"><svg>. Rein schmückend; der Knopf braucht Text oder aria-label. */
+  function icon(name) {
+    const svg = window.SolagioDesign && window.SolagioDesign.symbol(name);
+    return h('span', { class: 'sd-icon', 'aria-hidden': 'true' }, svg || null);
+  }
+
   function append(el, children) {
     for (const c of children) {
       if (c === null || c === undefined || c === false) continue;
@@ -227,6 +233,7 @@
   }
 
   NM.util = {
+    icon,
     h,
     clear,
     uid,
