@@ -289,7 +289,7 @@ Jede Etappe endet mit `ERGEBNIS: x von x bestanden` und einem Commit auf dem Zwe
 - [x] 0. Design-Projekt 0.3.0: Baustein `sd-tabs`, rund 30 neue Symbole, Musterseite ergänzen.
 - [x] 1. Vorbereitung: Zweig, `PRODUCT.md`, Vergleichsfotos aller Ansichten im Demo-Modus (hell, dunkel, 1280 und 390 px), Design-Dateien verteilen (`css/blades.min.css`, `css/solagio-design.css`, `js/solagio-design.js`, `schrift/`), `data-app="ordonota"` in `index.html`, `launcher/build.sh` und die Dateiliste des Servers um `schrift/` erweitern, Lizenzhinweise.
 - [x] 2. Tokens: Namen umstellen, warme Grundfarbe, vier Varianten umschreiben, Kontrasttest anpassen. Das Timer-Fenster lädt die neuen CSS-Dateien mit.
-- [ ] 3. px → rem in `app.css`. Kriterium: Fotos vorher und nachher sind bei normaler Schrift gleich.
+- [x] 3. px → rem in `app.css`. Kriterium: Fotos vorher und nachher sind bei normaler Schrift gleich.
 - [ ] 4. Gerüst: Kopfzeile mit Logo, Modus-Schalter, große Schrift, Reiter, Kursleiste.
 - [ ] 5. Knöpfe, Felder, Dialoge, Meldungen, Anmeldung, Einstellungen (mit den Vorschaukacheln der Designs).
 - [ ] 6. Symbole statt Emoji.
