@@ -98,7 +98,7 @@ index.html        ← die App (per Doppelklick öffnen)
 OrdoNota          ← Startprogramm für Linux (nach dem Bauen, siehe 3.6)
 css/              ← Gestaltung (gemeinsames Design der Ordo-Apps, siehe 22.2)
 js/               ← Programmlogik
-schrift/          ← Schrift Josefin Sans für Überschriften
+schrift/          ← Schrift für Überschriften („Ordo Josefin“, gekürzte Fassung von Josefin Sans)
 lizenzen/         ← Lizenztexte der Bestandteile des gemeinsamen Designs
 launcher/         ← Quelltext des Startprogramms (Go)
 tests/            ← automatische Tests (nur für Entwicklung)
@@ -1287,7 +1287,7 @@ Seit 2.0 teilt OrdoNota das Aussehen mit den anderen Ordo-Apps. Es sind weiterhi
 | `css/blades.min.css` | Grundlage (Blades, MIT) |
 | `css/solagio-design.css` | Tokens, Bausteine und Größen des gemeinsamen Designs |
 | `js/solagio-design.js` | Symbole (Tabler Icons, MIT), Modus-Schalter, „Große Schrift“, Hochladen-Fläche |
-| `schrift/JosefinSans-ordo.woff2` | Schrift für Überschriften (OFL 1.1) |
+| `schrift/JosefinSans-ordo.woff2` | Schrift für Überschriften: „Ordo Josefin“, eine gekürzte Fassung von Josefin Sans (OFL 1.1; der Name „Josefin Sans“ ist dem Original vorbehalten) |
 | `lizenzen/` | Lizenztexte der drei Bestandteile |
 
 **Quelle und Verteilen:** Die Quelle ist das Projekt `../../Design` (Design-Repo). Verteilt wird mit `python3 werkzeuge/verteile.py ../OrdoScola/OrdoNota --app ordonota --ebene solagio`; Kontrolle mit `--pruefen --ebene solagio`. Die verteilten Dateien werden **nie von Hand geändert**, Änderungen gehören ins Design-Repo.

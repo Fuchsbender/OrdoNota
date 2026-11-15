@@ -125,4 +125,4 @@ OrdoNota ist freie Software unter der **GNU Affero General Public License, Versi
 
 Ausgenommen sind die Kartenbilder in `cards/`. Sie sind gemeinfrei (CC0), siehe `cards/LIZENZ.txt`.
 
-Das gemeinsame Design der Ordo-Apps bringt fremde Bestandteile mit eigenen Lizenzen mit, die Texte liegen in `lizenzen/`: Blades (`css/blades.min.css`, MIT), Tabler Icons (Symbole in `js/solagio-design.js`, MIT) und die Schrift Josefin Sans (`schrift/`, SIL Open Font License 1.1).
+Das gemeinsame Design der Ordo-Apps bringt fremde Bestandteile mit eigenen Lizenzen mit, die Texte liegen in `lizenzen/`: Blades (`css/blades.min.css`, MIT), Tabler Icons (Symbole in `js/solagio-design.js`, MIT) und die Schrift „Ordo Josefin“, eine gekürzte Fassung von Josefin Sans (`schrift/`, SIL Open Font License 1.1).

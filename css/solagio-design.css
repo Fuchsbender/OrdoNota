@@ -1,8 +1,8 @@
-/*! solagio-design 0.3.1 (Commit 6d7f802, 2026-11-15) – Kopie für ordonota.
+/*! solagio-design 0.3.2 (Commit a58d7ab, 2026-11-15) – Kopie für ordonota.
  * Nicht hier ändern: Quelle ist das Repo solagio-design (Projekte/Design),
  * verteilt mit werkzeuge/verteile.py.
  * Reihenfolge: Tokens · Akzent · Brücke zu Blades · Bausteine.
- * Daneben laden: blades.min.css (Blades, MIT). Schrift: Josefin Sans (OFL 1.1).
+ * Daneben laden: blades.min.css (Blades, MIT). Schrift: Ordo Josefin, gekürzte Fassung von Josefin Sans (OFL 1.1).
  * Alles steht in der CSS-Ebene „solagio“: CSS der App ohne Ebene gewinnt immer. */
 
 @layer solagio {
@@ -28,7 +28,7 @@
  * Zustände nie nur über Farbe zeigen: immer Text oder Zeichen dazu. */
 
 @font-face {
-  font-family: "Josefin Sans";
+  font-family: "Ordo Josefin";   /* gekürzte Fassung von Josefin Sans; der Name ist laut OFL dem Original vorbehalten */
   src: url("../schrift/JosefinSans-ordo.woff2") format("woff2");
   font-weight: 100 700;
   font-style: normal;
@@ -73,7 +73,7 @@
   /* Schrift */
   --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --mono: ui-monospace, "Cascadia Mono", "Segoe UI Mono", Menlo, Consolas, monospace;
-  --display: "Josefin Sans", var(--sans);   /* Überschriften und App-Name */
+  --display: "Ordo Josefin", var(--sans);   /* Überschriften und App-Name */
 
   /* Abstände */
   --space-1: 0.25rem;

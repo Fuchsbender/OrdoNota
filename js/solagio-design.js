@@ -1,4 +1,4 @@
-/*! solagio-design 0.3.1 (Commit 6d7f802, 2026-11-15) – Kopie für ordonota.
+/*! solagio-design 0.3.2 (Commit a58d7ab, 2026-11-15) – Kopie für ordonota.
  * Nicht hier ändern: Quelle ist das Repo solagio-design (Projekte/Design),
  * verteilt mit werkzeuge/verteile.py.
  * Symbole: Tabler Icons (MIT). */
