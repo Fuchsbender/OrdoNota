@@ -5,6 +5,7 @@ OrdoNota läuft auf Ihrem Rechner. Ihre Daten liegen verschlüsselt in einem Ord
 Ihrer Wahl (z. B. in Ihrem Synology-Drive- oder OneDrive-Ordner) und werden nirgends
 hochgeladen. Sie brauchen Google Chrome oder Microsoft Edge (unter Windows immer
 vorhanden). Andere Browser gehen auch, dann aber ohne eigenes Programmfenster.
+Mindestens nötig: Chrome/Edge 120, Firefox 117 oder Safari 17.2.
 
 
 Starten
@@ -48,4 +49,5 @@ Gut zu wissen
 - Das Programm ist nur auf diesem Rechner erreichbar (127.0.0.1), nicht im Netz.
 - Neue Version: die alte Datei durch die neue ersetzen. Die Daten bleiben unberührt.
 - Notfall ohne App: entschluesseln.py (braucht Python, siehe Kopf der Datei).
+- Im Ordner lizenzen/ liegen die Lizenztexte der Bestandteile des Designs (Blades, Tabler Icons, Josefin Sans).
 - Lizenz: GNU AGPL-3.0 (Datei LICENSE). Quelltext: https://github.com/Fuchsbender/OrdoNota

@@ -1,6 +1,6 @@
 # OrdoNota – Dokumentation
 
-Version 1.47.0 · Stand November 2026
+Version 2.0.0 · Stand November 2026
 
 OrdoNota (bis Version 1.11 „Notenmanager“) verwaltet Noten für die Sekundarstufe I (Noten 1–6 mit Tendenz) und die Mainzer Studienstufe (MSS, Punkte 00–15) an Schulen in Rheinland-Pfalz. Die App läuft vollständig lokal im Browser, verschlüsselt alle Daten mit einem Passwort und legt sie in einem Ordner ab, den der Synology Drive Client auf die DiskStation spiegelt.
 
@@ -81,6 +81,7 @@ Ergebnisse aus Tests und EPO-Blöcken erscheinen **automatisch** in der Notenüb
 | Bereich | Anforderung |
 |---|---|
 | Browser | Google Chrome, Microsoft Edge, Brave, Thorium oder ein anderer Chromium-Browser (aktuelle Version) |
+| Mindeststand der Browser (seit 2.0) | Chrome/Edge 120, Firefox 117, Safari/iOS 17.2. Das gemeinsame Design braucht CSS-Ebenen (`@layer`), verschachteltes CSS und `light-dark()`; ältere Browser zeigen die App falsch an. |
 | Firefox und Safari | Nur mit dem Startprogramm (3.6). Per Doppelklick auf `index.html` können sie nicht direkt in einen Ordner schreiben; die App zeigt dann einen Hinweis. |
 | Betriebssystem | Windows, Linux oder macOS (Desktop/Laptop) |
 | Synchronisation | Synology Drive Client, der einen lokalen Ordner mit der DiskStation synchronisiert |
@@ -95,8 +96,10 @@ Der Programmordner enthält:
 ```
 index.html        ← die App (per Doppelklick öffnen)
 OrdoNota          ← Startprogramm für Linux (nach dem Bauen, siehe 3.6)
-css/              ← Gestaltung
+css/              ← Gestaltung (gemeinsames Design der Ordo-Apps, siehe 22.2)
 js/               ← Programmlogik
+schrift/          ← Schrift Josefin Sans für Überschriften
+lizenzen/         ← Lizenztexte der Bestandteile des gemeinsamen Designs
 launcher/         ← Quelltext des Startprogramms (Go)
 tests/            ← automatische Tests (nur für Entwicklung)
 tools/            ← Notfall-Entschlüsselung ohne App (siehe 20.1)
@@ -203,10 +206,10 @@ Technisch schreibt die App dazu die Datei `notenmanager.lock.json` in den Dateno
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
-│ OrdoNota      [Schuljahr 2026/27 ▾]      Gespeichert 10:14  ☾  🔒   │  ← Kopfzeile
+│ OrdoNota      [Schuljahr 2026/27 ▾]      Gespeichert 10:14 [Hell Dunkel Auto] Sperren │ ← Kopfzeile
 ├─────────────┬────────────────────────────────────────────────────────┤
 │ KURSE       │ Kurs & Schüler | Tests | Mitarbeit/EPO | Notenübersicht │  ← Reiter
-│ ▸ 8b Mathe  │                                                        │
+│   8b Mathe  │                                                        │
 │   MSS 12 LK │   … Inhalt des Reiters …                               │
 │ + Kurs      │                                                        │
 └─────────────┴────────────────────────────────────────────────────────┘
@@ -216,13 +219,16 @@ Technisch schreibt die App dazu die Datei `notenmanager.lock.json` in den Dateno
 |---|---|
 | **Schuljahr-Auswahl** | Wechselt das Schuljahr. „+ Neues Schuljahr …“ legt ein neues an. |
 | **Speicherstatus** | „Speichert …“, „Gespeichert 10:14“, „Ungespeicherte Änderungen“ oder rot „Nicht gespeichert!“ |
-| **☾** | Hell/Dunkel umschalten, jeweils im gewählten Design (Einstellungen → Darstellung) |
-| **🔒 Sperren** | Speichert, entfernt den Geräte-Hinweis und sperrt die Datenbank |
-| **Reiter** | Kurs & Schüler, Tests, Mitarbeit/EPO, Präsentationen, Ziehen, Tools, Gruppen, Notenübersicht, Sitzplan, Einstellungen (in der Skizze aus Platzgründen gekürzt). Beim Wechsel von Reiter, Kurs oder Halbjahr blendet der Inhalt weich ein und der Unterstrich gleitet zum neuen Reiter; beim Eintragen von Werten gibt es keine Animation. Bei „Bewegung reduzieren“ im Betriebssystem entfällt beides. Nicht benötigte Reiter lassen sich ausschalten (Einstellungen → Reiter, je Kurs in „Kurs & Schüler“, siehe 6.4). **Reihenfolge ändern:** einen Reiter mit der Maus an eine andere Stelle der Reiterleiste ziehen (eine farbige Linie zeigt, wo er landet) oder unter Einstellungen → Reiter → Reihenfolge mit ▲▼. Die Reihenfolge gilt für alle Kurse und alle Geräte; „Standardreihenfolge“ stellt sie zurück. |
-| **Kursliste** | Kurse des gewählten Schuljahres, sortiert nach Jahrgang. Zeigt Stufe (Sek I/MSS) und Zahl der aktiven Schüler/innen. **«** neben „Kurse“ klappt die Liste gleitend nach links ein (ohne Animation, wenn im Betriebssystem „Bewegung reduzieren“ eingestellt ist): Es bleibt eine schmale Leiste mit Kürzeln (Klasse und Fach, voller Name beim Darüberfahren), über die sich weiter Kurse wechseln lassen; **»** klappt sie wieder aus. Der Zustand wird auf diesem Gerät gemerkt. |
+| **Schalter Hell / Dunkel / Wie das System** | Drei Knöpfe mit Sonne, Mond und Bildschirm (ersetzt das frühere Mond-Symbol). Sie wechseln den Modus, jeweils im gewählten Design; „Wie das System“ folgt der Einstellung des Betriebssystems. Die sechs Designs wählen Sie weiter in den Einstellungen (Einstellungen → Darstellung). |
+| **Schalter „Große Schrift“** | Ein Knopf mit zwei Buchstaben (Symbol „Textgröße“) vergrößert die ganze Oberfläche auf 125 %, für Beamer und Tafel. Die Wahl wird auf dem Gerät gemerkt. Auf schmalen Bildschirmen (Handy) ist der Schalter ausgeblendet. |
+| **Sperren** | Speichert, entfernt den Geräte-Hinweis und sperrt die Datenbank |
+| **Reiter** | Kurs & Schüler, Tests, Mitarbeit/EPO, Präsentationen, Ziehen, Tools, Gruppen, Notenübersicht, Sitzplan, Einstellungen (in der Skizze aus Platzgründen gekürzt). Beim Wechsel von Reiter, Kurs oder Halbjahr blendet der Inhalt weich ein und der Unterstrich gleitet zum neuen Reiter; beim Eintragen von Werten gibt es keine Animation. Bei „Bewegung reduzieren“ im Betriebssystem entfällt beides. Nicht benötigte Reiter lassen sich ausschalten (Einstellungen → Reiter, je Kurs in „Kurs & Schüler“, siehe 6.4). **Reihenfolge ändern:** einen Reiter mit der Maus an eine andere Stelle der Reiterleiste ziehen (eine farbige Linie zeigt, wo er landet) oder unter Einstellungen → Reiter → Reihenfolge mit den Pfeilen nach oben und unten. Die Reihenfolge gilt für alle Kurse und alle Geräte; „Standardreihenfolge“ stellt sie zurück. |
+| **Kursliste** | Kurse des gewählten Schuljahres, sortiert nach Jahrgang. Zeigt Stufe (Sek I/MSS) und Zahl der aktiven Schüler/innen. der **Pfeil nach links** neben „Kurse“ klappt die Liste gleitend nach links ein (ohne Animation, wenn im Betriebssystem „Bewegung reduzieren“ eingestellt ist): Es bleibt eine schmale Leiste mit Kürzeln (Klasse und Fach, voller Name beim Darüberfahren), über die sich weiter Kurse wechseln lassen; der **Pfeil nach rechts** klappt sie wieder aus. Der Zustand wird auf diesem Gerät gemerkt. |
 | **Halbjahres-Umschalter** | In Tests, EPO und Notenübersicht: HJ1/HJ2 bzw. 11/1, 11/2, 12/1, 12/2, 13; in der Notenübersicht zusätzlich „Jahresnote“ |
 
-**Sortieren:** Alle Schülertabellen (Kurs & Schüler, Tests, Mitarbeit/EPO, Notenübersicht, Jahresnote) lassen sich nach jeder Spalte sortieren. Ein Klick auf den Spaltenkopf sortiert, ein zweiter dreht die Richtung um; ▲/▼ zeigt die aktive Spalte. Name und Vorname stehen in eigenen Spalten, die beim seitlichen Scrollen stehen bleiben (zu lange Namen werden mit „…“ gekürzt, der volle Name erscheint beim Darüberfahren). Ein Klick auf „Name“ stellt die alphabetische Reihenfolge wieder her. Wo der Spaltenkopf schon eine Funktion hat (Stunden im EPO, Leistungen in der Notenübersicht), sortiert das kleine **⇅** darunter.
+**Aussehen seit 2.0:** Die Oberfläche folgt dem gemeinsamen Design der Ordo-Apps. Der Standard hat eine warme, helle Grundfarbe (im dunklen Modus bleibt er dunkel). Knöpfe und Eingabefelder sind 40 px hoch, auf Touch-Bildschirmen (Tablet) 44 px, damit man sie gut trifft. Die Reiter stehen in einer eigenen Leiste, der aktive Reiter ist unterstrichen. Knöpfe tragen kleine Symbole statt Emoji; wo ein Knopf nur ein Symbol hat, steht der Name im Tooltip (Maus darüberhalten). Leere Ansichten zeigen einen kurzen Hinweis mit einem Knopf für den nächsten Schritt.
+
+**Sortieren:** Alle Schülertabellen (Kurs & Schüler, Tests, Mitarbeit/EPO, Notenübersicht, Jahresnote) lassen sich nach jeder Spalte sortieren. Ein Klick auf den Spaltenkopf sortiert, ein zweiter dreht die Richtung um; ein kleiner Pfeil nach oben oder unten zeigt die aktive Spalte. Name und Vorname stehen in eigenen Spalten, die beim seitlichen Scrollen stehen bleiben (zu lange Namen werden mit „…“ gekürzt, der volle Name erscheint beim Darüberfahren). Ein Klick auf „Name“ stellt die alphabetische Reihenfolge wieder her. Wo der Spaltenkopf schon eine Funktion hat (Stunden im EPO, Leistungen in der Notenübersicht), sortiert das kleine Sortier-Symbol (zwei Pfeile) darunter.
 - Beim ersten Klick stehen die besten Werte oben (meiste Punkte, beste Note); Namen und Status von A bis Z.
 - Leere Zellen (nichts eingetragen, fehlt, abwesend) stehen immer unten.
 - Die Sortierung gilt live: Ändert sich ein Wert, rutscht die Zeile an ihren neuen Platz. Enter/↓ springt dabei zur nächsten Zeile in der angezeigten Reihenfolge. Zum reinen Eintragen ist die Sortierung nach Name meist angenehmer.
@@ -286,13 +292,13 @@ Doppelte Namen werden übersprungen. Die Liste wird alphabetisch sortiert.
 
 **Einstufung je Person:** Die Spalte **„Einst.“** zeigt die Einstufung jeder Person (Sek I: undiff., G, E, E1, E2; Oberstufe: undiff., GK, LK). Standard ist die Einstufung des Kurses (6.1). Wer abweichend eingestuft ist, etwa ein E2-Kurs mit einzelnen E1-Personen oder ein gemeinsam unterrichteter LK mit GK-Personen, bekommt hier einen anderen Wert. Abweichungen sind farbig umrandet. Wählt man wieder den Wert des Kurses, gilt die Person als „wie der Kurs“ und folgt späteren Änderungen am Kurs.
 
-**Zu- und Abgänge:** Bei einem Abgang den Haken **„Aktiv“** entfernen. Die Person bleibt mit allen Noten gespeichert, erscheint aber nicht mehr in Eingabetabellen, Ausdrucken und Exporten. **✕** löscht die Person samt aller Noten endgültig.
+**Zu- und Abgänge:** Bei einem Abgang den Haken **„Aktiv“** entfernen. Die Person bleibt mit allen Noten gespeichert, erscheint aber nicht mehr in Eingabetabellen, Ausdrucken und Exporten. das **Kreuz** am Zeilenende löscht die Person samt aller Noten endgültig.
 
 ### 6.3 Kurs verwalten
 
 - **Kurs kopieren:** Übernimmt Kursdaten, Gewichtung und optional die aktiven Schüler/innen in ein (neues) Schuljahr, mit Jahrgang + 1 als Vorschlag. Noten werden nicht kopiert. Typischer Ablauf zum Schuljahreswechsel: oben „+ Neues Schuljahr …“ anlegen, dann jeden Kurs dorthin kopieren.
 - **Kurs löschen:** Löscht den Kurs mit allen Schüler/innen, Noten und Sitzplänen. Zur Sicherheit muss im Dialog das Wort **LÖSCHEN** (in Großbuchstaben) eingetippt werden; vorher bleibt „Endgültig löschen“ gesperrt. Rückgängig machen geht nur über eine Sicherung.
-- **Schülerliste als Excel:** Der Knopf **⬇ Excel** neben der Überschrift „Schülerinnen und Schüler“ speichert eine `.xlsx`-Datei mit den Spalten Nr., Nachname, Vorname, I-Status, Aktiv – zuerst die aktiven Personen alphabetisch und nummeriert, darunter die nicht mehr aktiven. Die Datei ist **nicht verschlüsselt** (siehe 11).
+- **Schülerliste als Excel:** Der Knopf **Excel** neben der Überschrift „Schülerinnen und Schüler“ speichert eine `.xlsx`-Datei mit den Spalten Nr., Nachname, Vorname, I-Status, Aktiv – zuerst die aktiven Personen alphabetisch und nummeriert, darunter die nicht mehr aktiven. Die Datei ist **nicht verschlüsselt** (siehe 11).
 
 ### 6.4 Reiter in diesem Kurs
 
@@ -311,7 +317,7 @@ Die Karte **„Fehlzeiten“** (seit 1.45) führt die Abwesenheiten des Kurses j
 - **Zellen:** Ein Klick schaltet reihum **A** (abwesend, Entschuldigung noch offen) → **E** (entschuldigt) → **U** (unentschuldigt) → anwesend.
 - **Summen** je Person in Unterrichtsstunden: **Σ** gesamt, davon **E**, **U** und **offen**. Sie werden immer neu berechnet. Jede Spalte lässt sich sortieren.
 - **Automatisch eingetragen:** Der Haken **„Heute abwesend“** (Reiter „Ziehen“ und „Gruppen“) trägt heute **A** ein; entfernt man ihn, verschwindet der Eintrag von heute. Ein **k** in einer EPO-Stunde trägt für deren Datum **A** ein. Umgekehrt bekommt eine Person, die hier als abwesend steht, in EPO-Stunden desselben Datums ein **k** (eine neue EPO-Stunde übernimmt die Abwesenden dieses Datums). Wird das k in EPO durch eine Bewertung ersetzt, war die Person da, und die Fehlzeit entfällt. Wird das k nur gelöscht, verschwindet ein offenes **A**; **E** und **U** bleiben, weil sie bewusst eingetragen wurden. Ein gelöschter Tag nimmt die k dieses Datums mit.
-- **Ausdruck:** **🖨 Drucken … → Fehlzeiten** (hier oder in der Notenübersicht) druckt alle Tage mit A/E/U und den Summen. Im Leistungsbogen steht die Zeile „Fehlzeiten“ (abwählbar). Die Notenübersicht zeigt die Spalte **„Fehlst.“** (siehe 9.1).
+- **Ausdruck:** **Drucken … → Fehlzeiten** (hier oder in der Notenübersicht) druckt alle Tage mit A/E/U und den Summen. Im Leistungsbogen steht die Zeile „Fehlzeiten“ (abwählbar). Die Notenübersicht zeigt die Spalte **„Fehlst.“** (siehe 9.1).
 - Beim Ändern der Jahrgangsstufe wandern die Fehlzeiten wie die Noten auf die neuen Halbjahre. Ein kopierter Kurs startet ohne Fehlzeiten.
 
 ## 7. Reiter „Tests“
@@ -336,7 +342,7 @@ Die Karte **„Fehlzeiten“** (seit 1.45) führt die Abwesenheiten des Kurses j
 
 ### 7.2 Aufgaben
 
-Jede Aufgabe hat eine **Bezeichnung** (z. B. „A1“; neue Aufgaben werden automatisch A1, A2, A3 … benannt) und eine **Höchstpunktzahl**. Mit **„+ Aufgabe“** bzw. **„+ Bonusaufgabe“** fügen Sie weitere hinzu, **✕** entfernt eine Aufgabe.
+Jede Aufgabe hat eine **Bezeichnung** (z. B. „A1“; neue Aufgaben werden automatisch A1, A2, A3 … benannt) und eine **Höchstpunktzahl**. Mit **„+ Aufgabe“** bzw. **„+ Bonusaufgabe“** fügen Sie weitere hinzu, das **Kreuz** am Zeilenende entfernt eine Aufgabe.
 
 **Bonus:** Ist der Haken „Bonus“ gesetzt, zählen die Punkte zur erreichten Summe, aber **nicht zur Höchstpunktzahl**. Mehr als die Bestnote ist nicht möglich: Das Ergebnis wird bei 1 bzw. 15 Punkten gekappt. Bonusaufgaben sind gelb markiert.
 
@@ -382,22 +388,22 @@ Unter dem Schlüssel stehen das Balkendiagramm (Anzahl je ganzer Note 1–6), Te
 
 **Drittelparagraph:** Sind mehr als ein Drittel der gewerteten Arbeiten mangelhaft oder ungenügend, erscheint die rote Meldung **„Drittelparagraph greift!“**. Arbeiten mit Status „Täuschung/Verweigerung“ zählen dabei nicht als 5/6, wohl aber zur Gesamtzahl. Personen mit I-Status zählen in der gesamten Statistik nicht mit (siehe Abschnitt „Kurs & Schüler“).
 
-**Beamer-Ansicht:** Der Knopf **„⛶ Beamer“** öffnet im Vollbild nur den Notenspiegel (Balken, Teilnehmende, Ø Note, Höchstpunktzahl) und die Punkteverteilung (Rohpunkte von–bis und Anzahl je Notenstufe), darunter **Ø erreicht je Aufgabe** als Balken (Punkte und Prozent; nur eingetragene Werte zählen, wie in der Zeile „Ø gelöst“). Namen und Einzelergebnisse erscheinen nicht. Schließen mit **Esc** oder „✕ Schließen“. Die Ansicht ist eine Momentaufnahme; nach Änderungen neu öffnen.
+**Beamer-Ansicht:** Der Knopf **„Beamer“** öffnet im Vollbild nur den Notenspiegel (Balken, Teilnehmende, Ø Note, Höchstpunktzahl) und die Punkteverteilung (Rohpunkte von–bis und Anzahl je Notenstufe), darunter **Ø erreicht je Aufgabe** als Balken (Punkte und Prozent; nur eingetragene Werte zählen, wie in der Zeile „Ø gelöst“). Namen und Einzelergebnisse erscheinen nicht. Schließen mit **Esc** oder „Schließen“. Die Ansicht ist eine Momentaufnahme; nach Änderungen neu öffnen.
 
 ### 7.6 Ausdrucke
 
-Der Knopf **„🖨 Drucken …“** öffnet eine Auswahl aller Druckarten des Tests, getrennt nach „Für die Lehrkraft“ und „Zum Austeilen“. Beim Darüberfahren zeigt ein Tooltip, was der Ausdruck enthält.
+Der Knopf **„Drucken …“** öffnet eine Auswahl aller Druckarten des Tests, getrennt nach „Für die Lehrkraft“ und „Zum Austeilen“. Beim Darüberfahren zeigt ein Tooltip, was der Ausdruck enthält.
 
 | Druckart | Inhalt |
 |---|---|
 | **Für die Lehrkraft** | |
-| 📄 Ergebnisliste | Alle Personen mit Punkten je Aufgabe, Σ, %, Note (bei Klassen-/Kursarbeiten mit Spalte „Unterschrift“); darunter Notenspiegel und Schlüssel |
-| 🧩 Ergebnisse nach Teilen | nur bei Arbeiten in Teilen (siehe 7.8): alle Personen mit Punkten, Prozent und (bei getrennter Benotung) Note je Teil, dazu die Gesamtwerte; darunter Notenspiegel und Schlüssel |
-| 📊 Notenschlüssel und Notenspiegel | Punktschwellen je Note und Notenspiegel mit Statistik, ohne Namen (z. B. für das Klassenbuch oder die Fachleitung) |
-| 🔖 Trennblätter für OrdoScripto | nur nach „Für OrdoScripto vorbereiten“ (siehe 7.9): je Person eine A4-Seite mit Name, Klasse, Test, QR-Code und IDs; wahlweise nur für die Nachschreibenden |
+| Ergebnisliste | Alle Personen mit Punkten je Aufgabe, Σ, %, Note (bei Klassen-/Kursarbeiten mit Spalte „Unterschrift“); darunter Notenspiegel und Schlüssel |
+| Ergebnisse nach Teilen | nur bei Arbeiten in Teilen (siehe 7.8): alle Personen mit Punkten, Prozent und (bei getrennter Benotung) Note je Teil, dazu die Gesamtwerte; darunter Notenspiegel und Schlüssel |
+| Notenschlüssel und Notenspiegel | Punktschwellen je Note und Notenspiegel mit Statistik, ohne Namen (z. B. für das Klassenbuch oder die Fachleitung) |
+| Trennblätter für OrdoScripto | nur nach „Für OrdoScripto vorbereiten“ (siehe 7.9): je Person eine A4-Seite mit Name, Klasse, Test, QR-Code und IDs; wahlweise nur für die Nachschreibenden |
 | **Zum Austeilen** | |
-| ✂️ Ergebniszettel zum Ausschneiden | Ein Abschnitt pro Person: erreichte und mögliche Punkte je Aufgabe, Prozent, Note |
-| 💬 Moodle-Rückmeldung je Person | nur bei Tests aus Moodle (siehe 7.7): je Person eine Seite mit Ergebnis (Punkte, Prozent) oben, darunter Frage, gegebene Antwort, Lösung und Punkte; unten die **Note (Zahl und ausgeschrieben) wahlweise** sowie Linien für Datum und Unterschrift |
+| Ergebniszettel zum Ausschneiden | Ein Abschnitt pro Person: erreichte und mögliche Punkte je Aufgabe, Prozent, Note |
+| Moodle-Rückmeldung je Person | nur bei Tests aus Moodle (siehe 7.7): je Person eine Seite mit Ergebnis (Punkte, Prozent) oben, darunter Frage, gegebene Antwort, Lösung und Punkte; unten die **Note (Zahl und ausgeschrieben) wahlweise** sowie Linien für Datum und Unterschrift |
 
 ### 7.7 Moodle-Import
 
@@ -406,8 +412,8 @@ Tests aus Moodle lassen sich direkt übernehmen. Die Note berechnet OrdoNota mit
 1. In Moodle beim Test unter **Ergebnisse** zwei Dateien als CSV herunterladen:
    - **Antworten** („Antworten“-Bericht): Fragetext, gegebene und richtige Antwort je Frage.
    - **Bewertungen** („Bewertungen“-Bericht, Spalten `F 1 /1,00`, `F 2 /1,00` …): Punkte je Frage. Nur diese Datei enthält Korrekturen, die Sie in Moodle von Hand vorgenommen haben (z. B. Tippfehler als richtig gewertet).
-2. Im Reiter „Tests“ einen Test öffnen oder mit **„+ Neuer Test“** anlegen und in der Karte „Aufgaben“ auf **„⬆ Moodle-CSV“** klicken. Bei einer Arbeit in Teilen steht der Knopf **„⬆ Moodle“** je Teil in der Karte „Teile“ (siehe 7.8).
-3. Beide Dateien auswählen (mehrere auf einmal markieren). OrdoNota erkennt selbst, welche welche ist. Eine allein geht auch:
+2. Im Reiter „Tests“ einen Test öffnen oder mit **„+ Neuer Test“** anlegen und in der Karte „Aufgaben“ auf **„Moodle-CSV“** klicken. Bei einer Arbeit in Teilen steht der Knopf **„Moodle“** je Teil in der Karte „Teile“ (siehe 7.8).
+3. Beide Dateien auf die **Hochladen-Fläche** („CSV-Dateien hierher ziehen“) ziehen oder die Fläche anklicken und die Dateien auswählen (mehrere auf einmal markieren). OrdoNota erkennt selbst, welche welche ist. Eine allein geht auch:
    - nur Antworten: Punkte per Textvergleich (Antwort = richtige Antwort, je Frage 1 Punkt); Korrekturen aus Moodle fehlen,
    - nur Bewertungen: Punkte vollständig, der Ausdruck enthält aber keine Fragen und Antworten.
 4. **Zuordnung prüfen:** Jede Person aus Moodle wird einem Kursmitglied zugeordnet: zuerst über die beim letzten Import gemerkte Moodle-E-Mail-Adresse, sonst über Nach- und Vorname. Nicht erkannte Personen per Auswahlliste zuordnen oder „— nicht übernehmen —“ lassen.
@@ -420,15 +426,15 @@ Regeln beim Import:
 - Personen mit nicht beendetem Versuch („In Bearbeitung“) und Kursmitglieder ohne Moodle-Versuch bekommen den Status **„fehlt“**, sofern noch keine Punkte eingetragen sind. Punkte können von Hand nachgetragen werden.
 - Unbeantwortete Fragen zählen 0 Punkte.
 - Die Punkte-Genauigkeit wird passend gesetzt (ganze, halbe oder Zehntel-Punkte). Rechnet Moodle mit skalierten Punkten (z. B. `F 1 /0,71`), kann die Summe der gerundeten Fragenpunkte minimal von der Moodle-Bewertung abweichen; OrdoNota weist dann darauf hin.
-- **Beide CSV-Dateien werden verschlüsselt im Test gespeichert**, ebenso Fragen und Antworten je Person. Die Karte **„Moodle“** im Test zeigt das Importdatum und bietet die Originaldateien zum Herunterladen an (⬇; die heruntergeladene Datei ist unverschlüsselt).
+- **Beide CSV-Dateien werden verschlüsselt im Test gespeichert**, ebenso Fragen und Antworten je Person. Die Karte **„Moodle“** im Test zeigt das Importdatum und bietet die Originaldateien zum Herunterladen an (Knöpfe mit Download-Symbol; die heruntergeladene Datei ist unverschlüsselt).
 
-**Erneut importieren** (Knopf in der Karte „Moodle“; nach dem ersten Import verschwindet „⬆ Moodle-CSV“ aus der Karte „Aufgaben“), z. B. nach Korrekturen in Moodle: Die Punkte der Moodle-Fragen werden ersetzt, eigene zusätzliche Aufgaben (der Haken „ersetzen“ ist hier nicht vorausgewählt), Notenschlüssel, Gewicht und Status „nicht gewertet“/„Täuschung“ bleiben erhalten. Lädt man dabei nur die Bewertungen-CSV, bleiben die gespeicherten Antworttexte erhalten.
+**Erneut importieren** (Knopf in der Karte „Moodle“; nach dem ersten Import verschwindet „Moodle-CSV“ aus der Karte „Aufgaben“), z. B. nach Korrekturen in Moodle: Die Punkte der Moodle-Fragen werden ersetzt, eigene zusätzliche Aufgaben (der Haken „ersetzen“ ist hier nicht vorausgewählt), Notenschlüssel, Gewicht und Status „nicht gewertet“/„Täuschung“ bleiben erhalten. Lädt man dabei nur die Bewertungen-CSV, bleiben die gespeicherten Antworttexte erhalten.
 
-**Ausdruck „💬 Moodle-Rückmeldung je Person“** (unter „🖨 Drucken …“): Im Dialog wählen Sie **alle** (je eine Seite) oder **eine Person** und ob die **Note** mitgedruckt wird. Oben steht das Ergebnis (Punkte, Prozent mit Balken), darunter je Frage Frage, „Deine Antwort“, Lösung und Punkte. Jede Zeile trägt ein Zeichen und einen farbigen Rand: ✓ richtig (grün), ◐ teilweise (orange hinterlegt), ✗ falsch (rot hinterlegt, Lösung fett), – keine Antwort. Durch die Zeichen bleibt der Ausdruck auch in Schwarzweiß lesbar; Zeilen werden nicht über Seiten getrennt. Unten steht – wenn gewählt – die **Note als Zahl und ausgeschrieben** (z. B. „2+ voll gut“, „2- noch gut“; MSS: „11 Punkte gut (2)“), darunter Linien für **Datum** und **Unterschrift der Lehrkraft** (auch ohne Note).
+**Ausdruck „Moodle-Rückmeldung je Person“** (unter „Drucken …“): Im Dialog wählen Sie **alle** (je eine Seite) oder **eine Person** und ob die **Note** mitgedruckt wird. Oben steht das Ergebnis (Punkte, Prozent mit Balken), darunter je Frage Frage, „Deine Antwort“, Lösung und Punkte. Jede Zeile trägt ein Zeichen und einen farbigen Rand: ✓ richtig (grün), ◐ teilweise (orange hinterlegt), ✗ falsch (rot hinterlegt, Lösung fett), – keine Antwort. Durch die Zeichen bleibt der Ausdruck auch in Schwarzweiß lesbar; Zeilen werden nicht über Seiten getrennt. Unten steht – wenn gewählt – die **Note als Zahl und ausgeschrieben** (z. B. „2+ voll gut“, „2- noch gut“; MSS: „11 Punkte gut (2)“), darunter Linien für **Datum** und **Unterschrift der Lehrkraft** (auch ohne Note).
 
 ### 7.8 Arbeit in Teilen (z. B. Theorie und Praxis)
 
-Eine Klassenarbeit kann aus mehreren Teilen bestehen, z. B. einem Theorie- und einem Praxisteil oder Hörverstehen, Lesen und Schreiben. Haken **„Arbeit in Teilen“** in den Eckdaten setzen: Es entstehen die Teile „Theorie“ und „Praxis“, alle vorhandenen Aufgaben gehören zunächst zum ersten Teil. In der Karte **„Teile“** lassen sich die Teile umbenennen, mit **„+ Teil“** weitere anlegen und mit **✕** entfernen (mit ihren Aufgaben und Punkten). In der Karte „Aufgaben“ hat jeder Teil eigene Knöpfe „+ Aufgabe“ und „+ Bonusaufgabe“.
+Eine Klassenarbeit kann aus mehreren Teilen bestehen, z. B. einem Theorie- und einem Praxisteil oder Hörverstehen, Lesen und Schreiben. Haken **„Arbeit in Teilen“** in den Eckdaten setzen: Es entstehen die Teile „Theorie“ und „Praxis“, alle vorhandenen Aufgaben gehören zunächst zum ersten Teil. In der Karte **„Teile“** lassen sich die Teile umbenennen, mit **„+ Teil“** weitere anlegen und mit dem **Kreuz** entfernen (mit ihren Aufgaben und Punkten). In der Karte „Aufgaben“ hat jeder Teil eigene Knöpfe „+ Aufgabe“ und „+ Bonusaufgabe“.
 
 **Wertung** (Auswahl in der Karte „Teile“):
 
@@ -443,13 +449,13 @@ Bei getrennter Benotung gilt außerdem:
 - Der **Notenschlüssel** zeigt den Schlüssel des gewählten Teils (Umschalter über der Tabelle); Notenspiegel, Statistik und **Drittelparagraph** beziehen sich auf die Gesamtnote.
 - Die Beamer-Ansicht zeigt die Punkteverteilung je Teil.
 
-**Teil ausblenden:** Neben der Überschrift „Ergebnisse“ steht je Teil ein Knopf (z. B. **▾ Theorie**). Ein Klick blendet die Aufgabenspalten dieses Teils aus (**▸ Theorie**); Σ und (bei getrennter Benotung) die Teilnote bleiben sichtbar. So passt z. B. beim Eintragen des Praxisteils alles auf den Bildschirm. Der Zustand wird je Test auf diesem Gerät gemerkt; Ausdrucke zeigen immer alle Teile.
+**Teil ausblenden:** Neben der Überschrift „Ergebnisse“ steht je Teil ein Knopf (z. B. **Theorie** mit Pfeil nach unten). Ein Klick blendet die Aufgabenspalten dieses Teils aus (Pfeil nach rechts); Σ und (bei getrennter Benotung) die Teilnote bleiben sichtbar. So passt z. B. beim Eintragen des Praxisteils alles auf den Bildschirm. Der Zustand wird je Test auf diesem Gerät gemerkt; Ausdrucke zeigen immer alle Teile.
 
-**Moodle-Import in einen Teil:** Knopf **„⬆ Moodle“** in der Zeile des Teils. Die Fragen werden Aufgaben F1, F2, … dieses Teils, die anderen Teile bleiben unverändert; „Bisherige Aufgaben ersetzen“ (siehe 7.7) betrifft nur die Aufgaben dieses Teils. Die CSV-Dateien werden beim Teil gespeichert (eigene Karte „Moodle – Teilname“ mit „Erneut importieren“). Personen ohne beendeten Moodle-Versuch bekommen „fehlt“ für die ganze Arbeit, wenn sie noch gar keine Punkte haben; haben sie in einem anderen Teil schon Punkte, wird bei getrennter Benotung nur dieser Teil auf „fehlt“ gesetzt.
+**Moodle-Import in einen Teil:** Knopf **„Moodle“** in der Zeile des Teils. Die Fragen werden Aufgaben F1, F2, … dieses Teils, die anderen Teile bleiben unverändert; „Bisherige Aufgaben ersetzen“ (siehe 7.7) betrifft nur die Aufgaben dieses Teils. Die CSV-Dateien werden beim Teil gespeichert (eigene Karte „Moodle – Teilname“ mit „Erneut importieren“). Personen ohne beendeten Moodle-Versuch bekommen „fehlt“ für die ganze Arbeit, wenn sie noch gar keine Punkte haben; haben sie in einem anderen Teil schon Punkte, wird bei getrennter Benotung nur dieser Teil auf „fehlt“ gesetzt.
 
 **Teile aufheben:** Haken „Arbeit in Teilen“ entfernen. Alle Aufgaben und Punkte bleiben erhalten und werden wieder mit einem Schlüssel bewertet; Schlüssel, Gewichte und Status der einzelnen Teile gehen verloren (mit Rückfrage).
 
-**Ausdrucke:** „Ergebnisliste“ und „Ergebniszettel“ zeigen die Aufgaben nach Teilen mit Zwischensumme (bei getrennter Benotung zusätzlich die Teilnoten), „Notenschlüssel und Notenspiegel“ den Schlüssel je Teil, **„🧩 Ergebnisse nach Teilen“** eine kompakte Tabelle aller Personen mit Punkten, Prozent und Note je Teil und gesamt.
+**Ausdrucke:** „Ergebnisliste“ und „Ergebniszettel“ zeigen die Aufgaben nach Teilen mit Zwischensumme (bei getrennter Benotung zusätzlich die Teilnoten), „Notenschlüssel und Notenspiegel“ den Schlüssel je Teil, **„Ergebnisse nach Teilen“** eine kompakte Tabelle aller Personen mit Punkten, Prozent und Note je Teil und gesamt.
 
 > Arbeiten in Teilen brauchen OrdoNota ab Version 1.18 auf allen Geräten (Datenformat 2, siehe 21.10).
 
@@ -457,10 +463,10 @@ Bei getrennter Benotung gilt außerdem:
 
 OrdoScripto ist ein eigenes Programm, das handschriftliche Mathe-Arbeiten per lokaler KI liest und Punkte vorschlägt. Es kennt **keine Namen**, nur pseudonyme IDs. OrdoNota vergibt diese IDs, druckt Trennblätter mit QR-Code und schreibt die Import-Datei für OrdoScripto.
 
-1. Test öffnen, in der Karte „Aufgaben“ auf **„🔖 Für OrdoScripto vorbereiten“** klicken.
+1. Test öffnen, in der Karte „Aufgaben“ auf **„Für OrdoScripto vorbereiten“** klicken.
 2. Die App vergibt eine **Test-ID** `T-<Jahr der Arbeit>-<laufende Nummer>` (z. B. `T-2026-0007`, laufend über die ganze Datenbank) und jeder aktiven Person eine **Schüler-ID** `S-` plus 6 Zeichen (ohne I, O, 0, 1, z. B. `S-7F3K9Q`). Die IDs sind **je Test neu**, damit OrdoScripto Arbeiten verschiedener Tests nicht derselben Person zuordnen kann. Vergebene IDs ändern sich nie.
-3. Die Karte **„OrdoScripto“** zeigt die Test-ID. **„⬇ Import-CSV“** speichert `<Test-ID>_import.csv` mit genau den Spalten `test_id;schueler_id;kurs`, **ohne Namen**. In der Spalte `kurs` steht die Einstufung der Person (6.1, 6.2): `U` (undifferenziert), `G`, `E`, `E1`, `E2`, `GK` (Grundkurs) oder `LK` (Leistungskurs). OrdoScripto zeigt sie nur an; für die Bepunktung zählt der Erwartungshorizont, die Noten vergibt OrdoNota. Die Kopfzeile der Karte zählt die Werte (z. B. „20 × E2, 4 × E1“). Nach einer Änderung der Einstufung die Import-CSV neu speichern. Diese Datei wird in OrdoScripto beim Anlegen des Tests hochgeladen.
-4. **„🖨 Drucken …“ → „Trennblätter für OrdoScripto“** druckt je Person eine A4-Seite: Name und Klasse groß zum Einsortieren, Titel und Datum des Tests, in der Mitte ein QR-Code (6 cm) mit dem Inhalt `ORDO|<Test-ID>|<Schüler-ID>`, darunter die beiden IDs als Text und der Hinweis „Trennblatt – vor die Arbeit des Schülers legen“. Die Reihenfolge folgt der Schülerliste. Als PDF speichern geht über den Druckdialog des Browsers („Als PDF speichern“).
+3. Die Karte **„OrdoScripto“** zeigt die Test-ID. **„Import-CSV“** speichert `<Test-ID>_import.csv` mit genau den Spalten `test_id;schueler_id;kurs`, **ohne Namen**. In der Spalte `kurs` steht die Einstufung der Person (6.1, 6.2): `U` (undifferenziert), `G`, `E`, `E1`, `E2`, `GK` (Grundkurs) oder `LK` (Leistungskurs). OrdoScripto zeigt sie nur an; für die Bepunktung zählt der Erwartungshorizont, die Noten vergibt OrdoNota. Die Kopfzeile der Karte zählt die Werte (z. B. „20 × E2, 4 × E1“). Nach einer Änderung der Einstufung die Import-CSV neu speichern. Diese Datei wird in OrdoScripto beim Anlegen des Tests hochgeladen.
+4. **„Drucken …“ → „Trennblätter für OrdoScripto“** druckt je Person eine A4-Seite: Name und Klasse groß zum Einsortieren, Titel und Datum des Tests, in der Mitte ein QR-Code (6 cm) mit dem Inhalt `ORDO|<Test-ID>|<Schüler-ID>`, darunter die beiden IDs als Text und der Hinweis „Trennblatt – vor die Arbeit des Schülers legen“. Die Reihenfolge folgt der Schülerliste. Als PDF speichern geht über den Druckdialog des Browsers („Als PDF speichern“).
 5. Je Person das Trennblatt vor die Arbeit legen und den ganzen Stapel scannen. OrdoScripto liest die QR-Codes, ordnet die folgenden Seiten der Schüler-ID zu und verwirft die Trennblattseiten.
 
 **Nachschreibtermin** (siehe 7.3): Er hat dieselbe Test-ID und dieselben Schüler-IDs wie die Arbeit, weil OrdoScripto die Nachschreibarbeiten in denselben Test aufnimmt. Im Nachschreibtermin ist beim Drucken **„Nur Nachschreibende“** vorausgewählt (wer in der Arbeit „fehlt“/„Nachschreiben“ hat oder schon im Nachschreibtermin eingetragen ist).
@@ -499,9 +505,9 @@ Kombinationen sind möglich, z. B. `+h` (gute Mitarbeit, Hausaufgaben vergessen)
 
 **Hilfen**
 
-- **Schnellwahl** (Knopf „▸ Schnellwahl einblenden“ neben der Überschrift; standardmäßig ausgeblendet, der Zustand wird auf diesem Gerät gemerkt): Eine zusätzliche Spalte rechts neben den Stunden. Für die neueste Stunde lässt sich je Person per Klick `++`, `+`, `0`, `-`, `--` oder `k` sowie `u`/`h` und `m` setzen. Ein erneuter Klick auf die markierte Schaltfläche hebt die Auswahl wieder auf. Tippen in die Zellen funktioniert weiterhin.
-- **Fotos** (Knopf „▸ Fotos einblenden“ neben „Schnellwahl“; Zustand wird auf diesem Gerät gemerkt): zeigt vor jedem Nachnamen das Schülerfoto, damit Sie Gesichter und Namen schneller zuordnen. Wer noch kein Foto hat, bekommt ein blasses Personensymbol als Platzhalter. Fotos werden im Reiter „Sitzplan“ hinzugefügt (siehe 10.4).
-- **▦ Kacheln** (neben „Fotos“, seit 1.46): Vollbild für das Tablet mit einer großen Kachel je Person, farbig nach der Bewertung der gewählten Stunde (Standard: die neueste; oben umschaltbar). Die Kacheln stehen wie im Sitzplan des gewählten Raums, mit dem Lehrerpult; wer dort keinen Platz hat, steht unten unter „Ohne Platz“. Ohne Sitzplan stehen alle alphabetisch im Raster. Tippen auf eine Kachel öffnet große Knöpfe ++ + 0 - -- k und u/h/m: Eine Bewertung schließt die Knöpfe wieder, die Zusätze lassen sie offen; erneutes Tippen auf die markierte Auswahl hebt sie auf. Ein k trägt wie überall eine Fehlzeit ein (siehe 6.5), Abwesende von heute stehen schon mit k da. **📷 Fotos** blendet die Fotos ein, **Esc** bzw. **✕** schließt erst die Knöpfe, dann die Ansicht. Die Ansicht zeigt Bewertungen und ist deshalb nicht für den Beamer gedacht.
+- **Schnellwahl** (Knopf „Schnellwahl einblenden“ neben der Überschrift; standardmäßig ausgeblendet, der Zustand wird auf diesem Gerät gemerkt): Eine zusätzliche Spalte rechts neben den Stunden. Für die neueste Stunde lässt sich je Person per Klick `++`, `+`, `0`, `-`, `--` oder `k` sowie `u`/`h` und `m` setzen. Ein erneuter Klick auf die markierte Schaltfläche hebt die Auswahl wieder auf. Tippen in die Zellen funktioniert weiterhin.
+- **Fotos** (Knopf „Fotos einblenden“ neben „Schnellwahl“; Zustand wird auf diesem Gerät gemerkt): zeigt vor jedem Nachnamen das Schülerfoto, damit Sie Gesichter und Namen schneller zuordnen. Wer noch kein Foto hat, bekommt ein blasses Personensymbol als Platzhalter. Fotos werden im Reiter „Sitzplan“ hinzugefügt (siehe 10.4).
+- **Kacheln** (neben „Fotos“, seit 1.46): Vollbild für das Tablet mit einer großen Kachel je Person, farbig nach der Bewertung der gewählten Stunde (Standard: die neueste; oben umschaltbar). Die Kacheln stehen wie im Sitzplan des gewählten Raums, mit dem Lehrerpult; wer dort keinen Platz hat, steht unten unter „Ohne Platz“. Ohne Sitzplan stehen alle alphabetisch im Raster. Tippen auf eine Kachel öffnet große Knöpfe ++ + 0 - -- k und u/h/m: Eine Bewertung schließt die Knöpfe wieder, die Zusätze lassen sie offen; erneutes Tippen auf die markierte Auswahl hebt sie auf. Ein k trägt wie überall eine Fehlzeit ein (siehe 6.5), Abwesende von heute stehen schon mit k da. **Fotos** blendet die Fotos ein, **Esc** bzw. das **Kreuz** schließt erst die Knöpfe, dann die Ansicht. Die Ansicht zeigt Bewertungen und ist deshalb nicht für den Beamer gedacht.
 - **füllen** (unter dem Datum): setzt alle noch leeren Zellen dieser Stunde auf einen Wert, z. B. `0`. Danach tragen Sie nur noch die Abweichungen ein.
 - **Datum anklicken:** Datum ändern oder Stunde löschen.
 - Rechts stehen je Person: Σ Punkte, Max, %, Fehlstunden (k), Hausaufgaben-Vermerke (u/h), Material vergessen (M) und die **Note**.
@@ -522,37 +528,37 @@ Präsentationen (Referate, Vorträge) werden nach **Kriterien** bewertet: je Kri
 
 ### 8a.1 Kriterienpool
 
-Der **Kriterienpool** (aufklappbare Karte unten im Reiter) gilt für **alle Kurse und Schuljahre**. Jedes Kriterium hat eine Gruppe (z. B. Inhalt, Vortrag, Medien, Sprache, Austausch), eine Bezeichnung und für jede Stufe 0–3 eine kurze Beschreibung, z. B. „Freies Sprechen“: 0 = abgelesen, 1 = überwiegend abgelesen, 2 = weitgehend frei, 3 = frei mit Stichwörtern. Ein Startbestand mit 31 fein gegliederten Kriterien ist vorhanden – lieber mehrere eindeutige Kriterien als ein Sammelkriterium, z. B. bei den Medien getrennt *Übersichtlichkeit*, *Lesbarkeit*, *Ansprechende Gestaltung*, *Bilder und Grafiken*, *Rechtschreibung*; beim Vortrag *Lautstärke*, *Sprechtempo und Pausen*, *Betonung*, *Blickkontakt*, *Körpersprache*. Mit **✎** bearbeiten, mit **✕** löschen, mit **„+ Kriterium“** ergänzen. **„Startbestand ergänzen (n)“** erscheint, wenn Kriterien des Startbestands im Pool fehlen (z. B. gelöschte oder nach einem Update neu hinzugekommene), und fügt sie wieder hinzu; vorhandene Kriterien werden dabei nicht verändert. Änderungen am Pool wirken nur auf neue Bewertungen; bestehende Bewertungen behalten ihre Kriterien.
+Der **Kriterienpool** (aufklappbare Karte unten im Reiter) gilt für **alle Kurse und Schuljahre**. Jedes Kriterium hat eine Gruppe (z. B. Inhalt, Vortrag, Medien, Sprache, Austausch), eine Bezeichnung und für jede Stufe 0–3 eine kurze Beschreibung, z. B. „Freies Sprechen“: 0 = abgelesen, 1 = überwiegend abgelesen, 2 = weitgehend frei, 3 = frei mit Stichwörtern. Ein Startbestand mit 31 fein gegliederten Kriterien ist vorhanden – lieber mehrere eindeutige Kriterien als ein Sammelkriterium, z. B. bei den Medien getrennt *Übersichtlichkeit*, *Lesbarkeit*, *Ansprechende Gestaltung*, *Bilder und Grafiken*, *Rechtschreibung*; beim Vortrag *Lautstärke*, *Sprechtempo und Pausen*, *Betonung*, *Blickkontakt*, *Körpersprache*. Mit dem **Stift-Symbol** bearbeiten, mit dem **Kreuz** löschen, mit **„+ Kriterium“** ergänzen. **„Startbestand ergänzen (n)“** erscheint, wenn Kriterien des Startbestands im Pool fehlen (z. B. gelöschte oder nach einem Update neu hinzugekommene), und fügt sie wieder hinzu; vorhandene Kriterien werden dabei nicht verändert. Änderungen am Pool wirken nur auf neue Bewertungen; bestehende Bewertungen behalten ihre Kriterien.
 
 ### 8a.2 Bewertung anlegen
 
 1. Halbjahr wählen → **„+ Neue Bewertung“**.
 2. Bezeichnung eingeben und Kriterien aus dem Pool per Haken wählen (die Stufenbeschreibungen erscheinen beim Darüberfahren) – oder unter **„Kriterien übernehmen von“** eine frühere Bewertung (auch aus einem anderen Kurs) als Vorlage nehmen.
-3. In der Karte **„Kriterien“** lassen sich die Kriterien **gewichten** (×1, ×2, ×3: ein Kriterium ×2 zählt 0–6 Punkte), mit ↑/↓ sortieren, mit ✎ für diese Bewertung anpassen (wahlweise auch im Pool) und mit ✕ entfernen. **„+ aus dem Pool“** fügt weitere hinzu, **„+ eigenes Kriterium“** legt ein neues an (wahlweise auch im Pool).
+3. In der Karte **„Kriterien“** lassen sich die Kriterien **gewichten** (×1, ×2, ×3: ein Kriterium ×2 zählt 0–6 Punkte), mit ↑/↓ sortieren, mit dem Stift-Symbol für diese Bewertung anpassen (wahlweise auch im Pool) und mit dem Kreuz entfernen. **„+ aus dem Pool“** fügt weitere hinzu, **„+ eigenes Kriterium“** legt ein neues an (wahlweise auch im Pool).
 
 Eckdaten wie bei Tests: Bezeichnung, Datum, **Bereich** (Sonstige oder Klassen-/Kursarbeit als Ersatzleistung), „nicht gewertet“, Gewicht, Notenstufen (Sek I) und LIMIT.
 
 ### 8a.3 Bewerten
 
 - **Karte „Bewerten“** (für die Bewertung während oder direkt nach der Präsentation): Person wählen (Auswahlliste oder ‹ ›; ✓ = schon bewertet), **Thema** und Datum eintragen, je Kriterium auf **0, 1, 2 oder 3** klicken. Unter dem Kriterium steht die Beschreibung der gewählten Stufe; ein zweiter Klick hebt die Auswahl auf. Darunter eine **Bemerkung** (erscheint auf dem Bewertungsbogen) sowie Summe, Prozent und Note.
-- **Karte „Übersicht“:** alle Personen mit Thema, Punkten je Kriterium (direkt eintragbar, nur 0–3), Σ, %, Note und Status (fehlt, Nachschreiben, Täuschung, nicht gewertet – wie bei Tests). **✎** am Zeilenende öffnet die Person oben in „Bewerten“. Spalten sind sortierbar.
+- **Karte „Übersicht“:** alle Personen mit Thema, Punkten je Kriterium (direkt eintragbar, nur 0–3), Σ, %, Note und Status (fehlt, Nachschreiben, Täuschung, nicht gewertet – wie bei Tests). Das **Stift-Symbol** am Zeilenende öffnet die Person oben in „Bewerten“. Spalten sind sortierbar.
 - Rechts stehen Notenschlüssel (Schwellen änderbar), Notenspiegel und Drittelparagraph wie bei Tests.
 
 Die Note erscheint in der Notenübersicht als eigene Spalte (◉, Sprung über „Präs. ›“) und zählt mit ihrem Gewicht im gewählten Bereich.
 
 ### 8a.4 Ausdrucke
 
-**„🖨 Drucken …“** bietet:
+**„Drucken …“** bietet:
 
 | Druckart | Inhalt |
 |---|---|
 | **Für die Lehrkraft** | |
-| 📄 Bewertungsliste | alle Personen mit Thema, Punkten je Kriterium, Σ, %, Note; darunter Notenspiegel und Schlüssel |
-| 📊 Notenschlüssel und Notenspiegel | Schwellen je Note und Notenspiegel, ohne Namen |
-| 📝 Leere Bewertungsbögen | je aktive Person ein Bogen mit Name, Feld für Thema und Datum, je Kriterium Kästchen 0–3 mit Stufenbeschreibung, Summe, Note, Bemerkungszeilen – zum Ankreuzen während der Präsentation |
+| Bewertungsliste | alle Personen mit Thema, Punkten je Kriterium, Σ, %, Note; darunter Notenspiegel und Schlüssel |
+| Notenschlüssel und Notenspiegel | Schwellen je Note und Notenspiegel, ohne Namen |
+| Leere Bewertungsbögen | je aktive Person ein Bogen mit Name, Feld für Thema und Datum, je Kriterium Kästchen 0–3 mit Stufenbeschreibung, Summe, Note, Bemerkungszeilen – zum Ankreuzen während der Präsentation |
 | **Zum Austeilen** | |
-| 📋 Bewertungskriterien (Handreichung) | eine Seite für die Klasse vorab: alle Kriterien mit Gruppe, Gewicht und der Beschreibung jeder Stufe 0–3 (mit Punkten je Stufe), ohne Namen und Noten; Notenschlüssel wahlweise |
-| 🗒️ Bewertungsbogen je Person | je Person eine Seite: Thema, je Kriterium alle Stufen mit angekreuzter Stufe und Punkten, Summe, Prozent, Bemerkung; Note wahlweise, Linien für Datum und Unterschrift (alle oder eine Person) |
+| Bewertungskriterien (Handreichung) | eine Seite für die Klasse vorab: alle Kriterien mit Gruppe, Gewicht und der Beschreibung jeder Stufe 0–3 (mit Punkten je Stufe), ohne Namen und Noten; Notenschlüssel wahlweise |
+| Bewertungsbogen je Person | je Person eine Seite: Thema, je Kriterium alle Stufen mit angekreuzter Stufe und Punkten, Summe, Prozent, Bemerkung; Note wahlweise, Linien für Datum und Unterschrift (alle oder eine Person) |
 
 ### 8a.5 Vorlagen
 
@@ -564,10 +570,10 @@ Eine **Vorlage** ist ein benannter Satz von Kriterien mit Reihenfolge, Gewichten
   - **Hausaufgaben vorstellen** – Fachliche Richtigkeit ×2, Vollständigkeit, Lösungsweg erklären ×2, Darstellung der Lösung, Fachsprache, Fragen beantworten, Umgang mit Fehlern (27 Punkte).
 
   Sie lassen sich wie eigene Vorlagen umbenennen, löschen und überschreiben. Fehlt eine (gelöscht oder Datenbank aus 1.21), holt **„Standardvorlagen ergänzen (n)“** in der Karte „Vorlagen“ sie zurück (Vergleich über den Namen). Für die Hausaufgaben-Vorlage gibt es drei neue Kriterien im Startbestand: *Lösungsweg erklären* (Inhalt), *Darstellung der Lösung* (Medien), *Umgang mit Fehlern* (Austausch) – in bestehenden Pools über „Startbestand ergänzen“ nachzutragen.
-- **Speichern:** In der Karte „Kriterien“ einer Bewertung **„💾 Als Vorlage speichern“** und einen Namen eingeben. Gibt es den Namen schon, ersetzt die App nach Rückfrage die Kriterien dieser Vorlage.
+- **Speichern:** In der Karte „Kriterien“ einer Bewertung **„Als Vorlage speichern“** und einen Namen eingeben. Gibt es den Namen schon, ersetzt die App nach Rückfrage die Kriterien dieser Vorlage.
 - **Neu aus dem Pool:** In der aufklappbaren Karte **„Vorlagen“** mit **„+ Vorlage aus dem Pool“** Name eingeben und Kriterien ankreuzen.
 - **Verwenden:** Beim Anlegen einer Bewertung unter **„Kriterien übernehmen von“** die Vorlage wählen (Gruppe „Vorlagen“; darunter stehen frühere Bewertungen).
-- **Verwalten:** In der Karte „Vorlagen“ umbenennen (✎), löschen (✕) und mit **„🖨 Handreichung“** die Bewertungskriterien der Vorlage für die Klasse drucken – auch ohne dass schon eine Bewertung existiert.
+- **Verwalten:** In der Karte „Vorlagen“ umbenennen (Stift-Symbol), löschen (Kreuz) und mit **„Handreichung“** die Bewertungskriterien der Vorlage für die Klasse drucken – auch ohne dass schon eine Bewertung existiert.
 
 Bewertungen sind unabhängig von ihrer Vorlage: Spätere Änderungen an der Vorlage oder ihr Löschen ändern bestehende Bewertungen nicht.
 
@@ -579,10 +585,10 @@ Bei einer Gruppenpräsentation wird die Gruppe **einmal** bewertet, und die Punk
    - **Einzelpräsentation** – wie bisher.
    - **Gruppen – Kriterien je Gruppe oder Person:** In der Karte „Kriterien“ legt die Spalte **„Bewertet“** für jedes Kriterium fest, ob es einmal für die Gruppe (Standard, z. B. Inhalt, Gliederung, Medien) oder für jede Person einzeln bewertet wird (z. B. Freies Sprechen, Blickkontakt, Fragen beantworten). Die Einstellung wird in Vorlagen mitgespeichert.
    - **Gruppen – alles als Gruppe:** Alle Kriterien werden für die Gruppe bewertet; Unterschiede nur über Abweichungen.
-2. **Gruppen bilden** in der Karte **„Gruppen“**: „+ Gruppe“, Namen ändern, Personen über „+ Person“ hinzufügen und mit × herausnehmen, Gruppe mit ✕ löschen. **„Gruppen übernehmen von …“** kopiert die Gruppen (ohne Punkte) einer Gruppeneinteilung aus dem Reiter „Gruppen“ (Auftrag wird Thema, siehe 10b) oder einer anderen Präsentation des Kurses. Personen ohne Gruppe werden einzeln bewertet; eine Präsentation darf also gemischt sein.
+2. **Gruppen bilden** in der Karte **„Gruppen“**: „+ Gruppe“, Namen ändern, Personen über „+ Person“ hinzufügen und mit × herausnehmen, Gruppe mit dem Kreuz löschen. **„Gruppen übernehmen von …“** kopiert die Gruppen (ohne Punkte) einer Gruppeneinteilung aus dem Reiter „Gruppen“ (Auftrag wird Thema, siehe 10b) oder einer anderen Präsentation des Kurses. Personen ohne Gruppe werden einzeln bewertet; eine Präsentation darf also gemischt sein.
 3. **Bewerten** mit dem Umschalter **Gruppe / Person**:
    - **Gruppe:** Gruppe wählen (‹ ›), Thema und Datum der Gruppe, Knöpfe 0–3 für die Gruppenkriterien; darunter je Mitglied die Personenkriterien, Summe, Note und Status. „einzeln ›“ springt zur Personenansicht.
-   - **Person:** alle Kriterien einer Person. Bei Gruppenkriterien ist der Gruppenwert vorgewählt. Ein anderer Wert gilt als **Abweichung (◆)** und ersetzt den Gruppenwert nur für diese Person; **„↺ Gruppenwert“** nimmt sie zurück.
+   - **Person:** alle Kriterien einer Person. Bei Gruppenkriterien ist der Gruppenwert vorgewählt. Ein anderer Wert gilt als **Abweichung (◆)** und ersetzt den Gruppenwert nur für diese Person; **„Gruppenwert“** nimmt sie zurück.
    - **Übersicht:** Spalte „Gruppe“; Gruppenwerte grau und kursiv, Abweichungen farbig markiert. Eine andere Zahl in einer Gruppenzelle ist eine Abweichung; Leeren oder der Gruppenwert stellt den Gruppenwert wieder her.
 4. **Status** (fehlt, Nachschreiben …) und Bemerkung gelten je Person. Die Bemerkung zur Gruppe erscheint auf den Bewertungsbögen aller Mitglieder.
 5. **Ausdrucke:** Die Bewertungsliste ist nach Gruppen geordnet (mit Gruppenspalte, ◆ für Abweichungen, je Kriterium „Gruppe“/„Person“). Bewertungsbögen zeigen Gruppe, Gruppenthema und bei jedem Kriterium „für die Gruppe“ bzw. „je Person“; die Handreichung erklärt das Verfahren.
@@ -597,13 +603,13 @@ Bei einer Gruppenpräsentation wird die Gruppe **einmal** bewertet, und die Punk
 Die Tabelle zeigt pro Person alle Leistungen des gewählten Halbjahres:
 
 ```
-Name │ Klassen-/Kursarbeiten │ Ø │ Sonstige Leistungen          │ Ø │ Gerechnet │ Gesetzt │ ✎ 💬
+Name │ Klassen-/Kursarbeiten │ Ø │ Sonstige Leistungen          │ Ø │ Gerechnet │ Gesetzt │ [Stift] [Sprechblase]
      │ KA 1 (Test)  KA 2     │   │ HÜ 1  Heft ×2  EPO Sep–Okt   │   │ 2,25  2-  │         │
 ```
 
 | Spalte | Bedeutung |
 |---|---|
-| Spalten mit ✎ bzw. ◷ | Ergebnisse aus Tests bzw. EPO-Blöcken; nur anzeigen, bearbeitet wird im jeweiligen Reiter („Test ›“ / „EPO ›“ springt dorthin) |
+| Spalten aus Tests bzw. EPO-Blöcken | Ergebnisse aus Tests bzw. EPO-Blöcken; nur anzeigen, bearbeitet wird im jeweiligen Reiter („Test ›“ / „EPO ›“ springt dorthin) |
 | Spalten ohne Symbol | direkt eingetragene Einzelnoten (bearbeitbar) |
 | ausgegraute Spalte | Test mit Haken „nicht gewertet“ (siehe 7.1); wird angezeigt, zählt aber nicht |
 | Spalten mit ◉ | Ergebnisse aus dem Reiter „Präsentationen“ (Sprung über „Präs. ›“) |
@@ -612,11 +618,11 @@ Name │ Klassen-/Kursarbeiten │ Ø │ Sonstige Leistungen          │ Ø �
 | Ø | gewichteter Schnitt des Bereichs (Sek I: Dezimalnote, MSS: Punkte) |
 | Gerechnet | ungerundeter Gesamtschnitt + gerundete Note |
 | Gesetzt | Ihre Zeugnisnote, falls sie von der gerechneten abweicht (leer = gerechnete Note gilt) |
-| ✎ | Begründung für eine gesetzte Note (erscheint erst, wenn eine Note gesetzt ist) |
-| 💬 | Bemerkung zur Person (erscheint auf dem Leistungsbogen) |
+| Stift-Symbol | Begründung für eine gesetzte Note (erscheint erst, wenn eine Note gesetzt ist) |
+| Sprechblasen-Symbol | Bemerkung zur Person (erscheint auf dem Leistungsbogen) |
 | Fehlst. | Fehlstunden im Halbjahr, in Klammern die unentschuldigten (nur, wenn es Fehlzeiten gibt; Einzelheiten siehe 6.5) |
 
-**Spalten einklappen:** Ein Klick auf **▾ Klassen-/Kursarbeiten** bzw. **▾ Sonstige Leistungen** im Tabellenkopf klappt die Gruppe ein; dann steht nur noch ihr Ø da (▸ mit der Zahl der ausgeblendeten Spalten klappt sie wieder auf). Gibt es mindestens zwei Spalten aus dem Reiter „Ziehen“, schiebt **„Ziehungen bündeln (n)“** sie zu einer Spalte **„Ziehen (n)“** mit dem Zeitraum zusammen. Sie zeigt die Noten jeder Person nebeneinander (Bearbeiten nach „Ziehungen einzeln“). Einklappen und Bündeln ändern nur die Ansicht. Die Noten zählen weiter, Ausdrucke und CSV zeigen alle Spalten, und der Zustand wird pro Gerät gemerkt.
+**Spalten einklappen:** Ein Klick auf **Klassen-/Kursarbeiten** bzw. **Sonstige Leistungen** (mit Pfeil nach unten) im Tabellenkopf klappt die Gruppe ein; dann steht nur noch ihr Ø da (Pfeil nach rechts mit der Zahl der ausgeblendeten Spalten klappt sie wieder auf). Gibt es mindestens zwei Spalten aus dem Reiter „Ziehen“, schiebt **„Ziehungen bündeln (n)“** sie zu einer Spalte **„Ziehen (n)“** mit dem Zeitraum zusammen. Sie zeigt die Noten jeder Person nebeneinander (Bearbeiten nach „Ziehungen einzeln“). Einklappen und Bündeln ändern nur die Ansicht. Die Noten zählen weiter, Ausdrucke und CSV zeigen alle Spalten, und der Zustand wird pro Gerät gemerkt.
 
 **Einzelnote hinzufügen:** **„+ Klassen-/Kursarbeit (Note direkt)“** oder **„+ Sonstige Note (HÜ, Heft, Referat …)“**. Es öffnet sich ein Dialog für Name, Datum, Gewicht, Bereich und Halbjahr. Diesen Dialog erreichen Sie später durch Klick auf den Spaltenkopf. Dort lässt sich die Spalte auch löschen.
 
@@ -633,7 +639,7 @@ Name │ Klassen-/Kursarbeiten │ Ø │ Sonstige Leistungen          │ Ø �
 
 Ungültige Eingaben werden rot markiert und nicht übernommen.
 
-**Gesetzte Noten:** Eine Eingabe in „Gesetzt“ überschreibt die gerechnete Note. Die Zeile wird farbig hinterlegt. Über **✎** können Sie eine Begründung hinterlegen. Sie erscheint auf dem Leistungsbogen.
+**Gesetzte Noten:** Eine Eingabe in „Gesetzt“ überschreibt die gerechnete Note. Die Zeile wird farbig hinterlegt. Über das **Stift-Symbol** können Sie eine Begründung hinterlegen. Sie erscheint auf dem Leistungsbogen.
 
 ### 9.2 Jahresnote
 
@@ -647,22 +653,22 @@ Für jeden Kurs lassen sich Sitzpläne für einen oder mehrere Räume anlegen. J
 
 - Oben stehen die Räume als Karten mit Rastergröße und Zahl der belegten Plätze. Ein Klick wechselt den Raum.
 - **„+ Neuer Raum“** legt einen weiteren Raum an (die Bezeichnung wird abgefragt; Rastergröße wie im aktuellen Raum, aber leer).
-- **Raum / Bezeichnung** benennt den Raum um, **🗑** löscht ihn (nur wenn es mehr als einen gibt).
+- **Raum / Bezeichnung** benennt den Raum um, das **Papierkorb-Symbol** löscht ihn (nur wenn es mehr als einen gibt).
 - Jeder Raum hat eigene Sitzordnung, Rastergröße und Pultposition. Welcher Raum zuletzt gewählt war, merkt sich jedes Gerät.
 - Ein Sitzplan aus Version 1.2/1.3 wird beim Öffnen der Datenbank automatisch zu „Raum 1“.
 
 ### 10.2 Sitzordnung
 
-- **✎ Raster bearbeiten** (der Knopf zeigt die aktuelle Größe, z. B. „8 × 5“) blendet an allen vier Seiten des Rasters **+** und **−** ein: oben/unten fügen eine Reihe hinzu bzw. entfernen sie, links/rechts eine Spalte (höchstens 16 Spalten × 12 Reihen). Wird oben oder links etwas eingefügt oder entfernt, rücken alle Plätze mit – die Sitzordnung bleibt erhalten. Sitzen in einer entfernten Reihe/Spalte Personen, fragt die App nach und legt sie zurück in „Noch ohne Platz“. **✓ Raster fertig** blendet die Knöpfe wieder aus. **Lehrerpult** oben oder unten.
+- **Raster bearbeiten** (der Knopf zeigt die aktuelle Größe, z. B. „8 × 5“) blendet an allen vier Seiten des Rasters **+** und **−** ein: oben/unten fügen eine Reihe hinzu bzw. entfernen sie, links/rechts eine Spalte (höchstens 16 Spalten × 12 Reihen). Wird oben oder links etwas eingefügt oder entfernt, rücken alle Plätze mit – die Sitzordnung bleibt erhalten. Sitzen in einer entfernten Reihe/Spalte Personen, fragt die App nach und legt sie zurück in „Noch ohne Platz“. **✓ Raster fertig** blendet die Knöpfe wieder aus. **Lehrerpult** oben oder unten.
 - Karten aus **„Noch ohne Platz“** (rechts) mit Maus oder Finger auf einen Platz ziehen. Auf einen besetzten Platz gezogen, **tauschen** die beiden die Plätze. Zurück in die Ablage gezogen, ist die Person wieder vom Plan genommen. Beim Ziehen an den oberen/unteren Rand scrollt die Seite mit.
 - **🎲 Freie Plätze füllen** verteilt alle noch nicht platzierten Personen in zufälliger Reihenfolge auf die freien Plätze. **Alle abräumen** setzt die Sitzordnung des Raums zurück (mit Rückfrage).
-- **🖨 Drucken** gibt den Plan des gewählten Raums auf einer A4-Seite aus (Raumname in der Überschrift, mit Fotos, soweit vorhanden).
+- **Drucken** gibt den Plan des gewählten Raums auf einer A4-Seite aus (Raumname in der Überschrift, mit Fotos, soweit vorhanden).
 - Neue Personen im Kurs erscheinen automatisch in der Ablage, inaktive verschwinden vom Plan.
 
 ### 10.3 Gespeicherte Stände
 
-- **„💾 Stand speichern …“** legt eine Kopie der aktuellen Sitzordnung des gewählten Raums unter einem Namen ab (z. B. „ab Herbstferien“).
-- **Laden** ersetzt die Sitzordnung des gerade gewählten Raums nach Rückfrage durch den Stand, **✕** löscht ihn.
+- **„Stand speichern …“** legt eine Kopie der aktuellen Sitzordnung des gewählten Raums unter einem Namen ab (z. B. „ab Herbstferien“).
+- **Laden** ersetzt die Sitzordnung des gerade gewählten Raums nach Rückfrage durch den Stand, das **Kreuz** löscht ihn.
 - Die Stände gelten für den ganzen Kurs; der Raum, aus dem sie stammen, steht dabei. Personen, die es im Stand noch nicht gab, landen beim Laden in der Ablage.
 
 ### 10.4 Fotos
@@ -673,7 +679,7 @@ Für jeden Kurs lassen sich Sitzpläne für einen oder mehrere Räume anlegen. J
 - Gleichnamige Personen in anderen Kursen desselben Schuljahres, die noch kein Foto haben, bekommen es automatisch mit.
 - Karten ohne Foto zeigen ein blasses Personensymbol als Platzhalter – am Bildschirm und im Ausdruck, damit der Plan einheitlich aussieht.
 - **Entfernen:** Mit der Maus über die Karte fahren und auf **×** klicken.
-- **Ausblenden:** Der Knopf **„▾ Fotos ausblenden“** in der Werkzeugleiste blendet alle Fotos auf den Karten aus, z. B. wenn der Sitzplan am Beamer gezeigt wird. Die Fotos bleiben gespeichert; „▸ Fotos einblenden“ zeigt sie wieder. Die Einstellung gilt auch für den Ausdruck und wird auf diesem Gerät gemerkt.
+- **Ausblenden:** Der Knopf **„Fotos ausblenden“** in der Werkzeugleiste blendet alle Fotos auf den Karten aus, z. B. wenn der Sitzplan am Beamer gezeigt wird. Die Fotos bleiben gespeichert; „Fotos einblenden“ zeigt sie wieder. Die Einstellung gilt auch für den Ausdruck und wird auf diesem Gerät gemerkt.
 - **Datenschutz:** Schülerfotos sind personenbezogene Daten. Ob sie in einer eigenen Anwendung gespeichert werden dürfen, regelt die Schule (Schulleitung bzw. Datenschutzbeauftragte/r).
 
 ## 10a. Reiter „Ziehen“
@@ -686,12 +692,12 @@ Oben wählen Sie den **Pool**: **Klassisch** (wie bisher, je Ziehung eine eigene
 
 - **Anzahl** eintragen (wird auf diesem Gerät gemerkt), **🎲 Ziehen** klicken. Die Gezogenen erscheinen groß mit Foto (bzw. Personensymbol) – geeignet auch für den Beamer.
 - **Bewerten:** Jede Ziehung legt im gewählten Halbjahr bei den **sonstigen Leistungen** eine Spalte „HA-Kontrolle TT.MM.“ an (Gewicht 1). Die Note tragen Sie direkt unter dem Namen ein; nur die Gezogenen bekommen eine Note, für alle anderen bleibt die Spalte leer und zählt nicht. In der Notenübersicht sind die Felder der Nicht-Gezogenen blass und gestrichelt dargestellt; sie lassen sich bei Bedarf trotzdem ausfüllen (dann erscheinen sie normal). Name, Gewicht und Bereich lassen sich wie bei jeder Spalte in der Notenübersicht ändern; Kürzel wie `f` (fehlt) ebenfalls dort.
-- **Auffüllen:** Sind weniger Personen im Pool als gezogen werden sollen, werden zuerst alle Übrigen gezogen, dann wird der Pool automatisch aufgefüllt und der Rest daraus gezogen (mit Hinweis). **↺ Pool auffüllen** setzt den Pool jederzeit von Hand zurück; vergebene Noten bleiben erhalten.
+- **Auffüllen:** Sind weniger Personen im Pool als gezogen werden sollen, werden zuerst alle Übrigen gezogen, dann wird der Pool automatisch aufgefüllt und der Rest daraus gezogen (mit Hinweis). **Pool auffüllen** setzt den Pool jederzeit von Hand zurück; vergebene Noten bleiben erhalten.
 - **Übersicht „Pool“:** zeigt je Person den Status *im Pool*, *gezogen TT.MM.* oder *herausgenommen* (sortierbar).
   - Haken **„Im Pool“** entfernen nimmt eine Person aus dem Pool heraus (bis zum nächsten Auffüllen); Haken setzen nimmt sie wieder auf – auch nach einer Ziehung.
   - Haken **„Heute abwesend“**: Die Person wird bei der Ziehung übersprungen, bleibt aber im Pool. Seit 1.45 wird der Haken als Fehlzeit von heute gespeichert (siehe 6.5) und ist am nächsten Tag wieder leer. Er gilt auch im Reiter „Gruppen“ (Abwesende werden beim Gruppenbilden ausgelassen, siehe 10b).
 - Nicht mehr aktive Personen (siehe 6.2) werden nie gezogen.
-- **↶ Rückgängig** (bei der letzten Ziehung) stellt den Pool wie vor der Ziehung wieder her und löscht die angelegte Notenspalte – mit Rückfrage, besonders wenn schon Noten eingetragen sind.
+- **Rückgängig** (bei der letzten Ziehung) stellt den Pool wie vor der Ziehung wieder her und löscht die angelegte Notenspalte – mit Rückfrage, besonders wenn schon Noten eingetragen sind.
 - **Frühere Ziehungen** (aufklappbar) listen Datum, Spalte und die Gezogenen. Die Noten lassen sich dort **nachtragen oder ändern** (Enter springt zur nächsten Person); sie landen in der Notenspalte der jeweiligen Ziehung.
 
 **Benannte Pools (eine Spalte für alle Ziehungen)**
@@ -701,8 +707,8 @@ Für eine Runde, in der jede Person genau einmal drankommt, z. B. „HA Runde 1�
 - **+ Neuer Pool** fragt nach dem Namen und legt im gewählten Halbjahr eine Spalte mit diesem Namen bei den **sonstigen Leistungen** an (Gewicht 1, änderbar wie jede Spalte in der Notenübersicht). Mehrere Pools pro Kurs und Halbjahr sind möglich; die Auswahl oben wechselt zwischen ihnen (auf diesem Gerät gemerkt).
 - **🎲 Ziehen** zieht aus dem Pool. Alle Noten landen in der **einen Spalte** des Pools. In der Notenübersicht zeigt ihr Kopf den **Zeitraum** der Ziehungen (z. B. „12.10.–19.10.“), Felder noch nicht Gezogener sind blass und gestrichelt. Auch der Ausdruck der Notenliste zeigt den Zeitraum.
 - **Eine Runde:** Sind weniger Personen übrig als gewünscht, werden nur die Übrigen gezogen. Danach ist der Pool **fertig** (✓ in der Auswahl), es wird nicht automatisch aufgefüllt. Für weitere Ziehungen einen neuen Pool anlegen.
-- „Im Pool“, „Heute abwesend“, **↶ Rückgängig** (löscht nur die Noten der zurückgenommenen Ziehung aus der Spalte) und „Frühere Ziehungen“ funktionieren wie beim klassischen Pool. Herausgenommene Personen zählen nicht zur Runde.
-- **✎ Umbenennen** ändert den Namen von Pool und Spalte. **🗑 Löschen** entfernt nur den Pool; die Spalte mit allen Noten bleibt.
+- „Im Pool“, „Heute abwesend“, **Rückgängig** (löscht nur die Noten der zurückgenommenen Ziehung aus der Spalte) und „Frühere Ziehungen“ funktionieren wie beim klassischen Pool. Herausgenommene Personen zählen nicht zur Runde.
+- **Umbenennen** ändert den Namen von Pool und Spalte. **Löschen** entfernt nur den Pool; die Spalte mit allen Noten bleibt.
 
 **Prüfung auf Ziehfehler:** Die Karte **„Prüfung“** erscheint, sobald es etwas zu melden gibt: eine Note bei einer Person, die für diese Spalte nicht gezogen wurde, eine doppelt gezogene Person (z. B. nach dem Wiederaufnehmen in den Pool) oder eine gelöschte Spalte. Gezogene ohne Note werden nur gezählt („5 Gezogene noch ohne Note“). Die Prüfung ändert nichts.
 
@@ -723,11 +729,11 @@ Gruppen bilden für Gruppenaufträge, Lernaufträge, Stationenlernen, Gruppenpuz
 - **Heute abwesend** (aufklappbare Karte, gemeinsam mit dem Reiter „Ziehen“, als Fehlzeit von heute gespeichert, siehe 6.5): Diese Personen werden ausgelassen und stehen unter „Nicht eingeteilt“.
 
 **Nacharbeiten:**
-- **🎲 Neu würfeln** mischt alle nicht fixierten Gruppen neu. **🔒** fixiert eine Gruppe, sie bleibt beim Neuwürfeln unverändert.
-- **⚙ Verfahren** ändert Größe, Verfahren und Abwechslung (wahlweise sofort neu würfeln).
+- **Neu würfeln** mischt alle nicht fixierten Gruppen neu. das **Schloss-Symbol** fixiert eine Gruppe, sie bleibt beim Neuwürfeln unverändert.
+- **Verfahren** ändert Größe, Verfahren und Abwechslung (wahlweise sofort neu würfeln).
 - Personen mit Maus, Stift oder Finger **ziehen** (wie im Sitzplan): auf einer Gruppe (oder bei „Nicht eingeteilt“) ablegen = verschieben, auf einer anderen Person ablegen = tauschen. Das Ziel wird beim Ziehen hervorgehoben, am oberen/unteren Rand scrollt die Seite mit; wer zwischen den Gruppen loslässt, bleibt, wo er war – oder **anklicken** und dann eine Gruppe anklicken (verschieben) bzw. eine andere Person anklicken (tauschen).
-- Gruppennamen ändern, je Gruppe einen **Auftrag/ein Thema** eintragen, „+ Gruppe“, Gruppe mit ✕ löschen (Mitglieder werden „nicht eingeteilt“).
-- Umschalter **📷 Fotos** und **Nachnamen** neben der Einteilung: Fotos (bzw. Personensymbol) bei den Namen zeigen, Nachnamen ausblenden (bei gleichen Vornamen mit Initiale). Pro Gerät gemerkt; beim Darüberfahren steht immer der volle Name.
+- Gruppennamen ändern, je Gruppe einen **Auftrag/ein Thema** eintragen, „+ Gruppe“, Gruppe mit dem Kreuz löschen (Mitglieder werden „nicht eingeteilt“).
+- Umschalter **Fotos** und **Nachnamen** neben der Einteilung: Fotos (bzw. Personensymbol) bei den Namen zeigen, Nachnamen ausblenden (bei gleichen Vornamen mit Initiale). Pro Gerät gemerkt; beim Darüberfahren steht immer der volle Name.
 - Werden Regeln verletzt (z. B. nach einem Verschieben von Hand) oder sind Abwesende eingeteilt, erscheint ein Hinweis ⚠.
 
 **Regeln** (aufklappbare Karte, gelten für alle Einteilungen des Kurses):
@@ -735,26 +741,26 @@ Gruppen bilden für Gruppenaufträge, Lernaufträge, Stationenlernen, Gruppenpuz
 - **Zusammen:** Diese Paare bleiben zusammen (z. B. Unterstützung).
 - Regeln gehen beim Würfeln vor Leistung und Abwechslung. Sie sind vertraulich: verschlüsselt gespeichert wie alle Daten und nur in dieser Karte zu sehen – nie auf dem Beamer oder im Ausdruck.
 
-**Gruppenpuzzle:** In einer Einteilung (den Stammgruppen) **„🧩 Expertengruppen bilden“** klicken. Jede Person der Stammgruppe bekommt einen Buchstaben (A, B, C … = Teilthema); alle mit A bilden die Expertengruppe A usw. So sitzt aus jeder Stammgruppe genau eine Person in jeder Expertengruppe. Die **Expertengruppen erscheinen direkt unter den Stammgruppen** (gleiche Einteilung, kein eigener Eintrag in der Liste) mit eigenem Teilthema je Gruppe, Beamer, Druck und 🗑. Die **Anzahl der Teilthemen** (= Expertengruppen) ist oben in der Karte einstellbar (Standard: Größe der größten Stammgruppe); die Themen werden dann reihum verteilt, sodass die Expertengruppen möglichst gleich groß sind und sich innerhalb einer Stammgruppe kein Thema wiederholt, solange sie nicht mehr Personen als Themen hat. „+ Gruppe“ und ✕ ändern die Anzahl ebenfalls. Werden die Stammgruppen danach geändert (neu gewürfelt, Personen verschoben, hinzugefügt oder entfernt), erscheint ein Hinweis; **„↻ Neu verteilen“** verteilt alle neu und behält Anzahl, Gruppennamen und Teilthemen. Die Buchstaben stehen auch auf Beamer und Ausdruck der Stammgruppen. Beim Löschen der Stammgruppen werden die Expertengruppen mitgelöscht.
+**Gruppenpuzzle:** In einer Einteilung (den Stammgruppen) **„Expertengruppen bilden“** klicken. Jede Person der Stammgruppe bekommt einen Buchstaben (A, B, C … = Teilthema); alle mit A bilden die Expertengruppe A usw. So sitzt aus jeder Stammgruppe genau eine Person in jeder Expertengruppe. Die **Expertengruppen erscheinen direkt unter den Stammgruppen** (gleiche Einteilung, kein eigener Eintrag in der Liste) mit eigenem Teilthema je Gruppe, Beamer, Druck und Papierkorb-Symbol. Die **Anzahl der Teilthemen** (= Expertengruppen) ist oben in der Karte einstellbar (Standard: Größe der größten Stammgruppe); die Themen werden dann reihum verteilt, sodass die Expertengruppen möglichst gleich groß sind und sich innerhalb einer Stammgruppe kein Thema wiederholt, solange sie nicht mehr Personen als Themen hat. „+ Gruppe“ und das Kreuz ändern die Anzahl ebenfalls. Werden die Stammgruppen danach geändert (neu gewürfelt, Personen verschoben, hinzugefügt oder entfernt), erscheint ein Hinweis; **„↻ Neu verteilen“** verteilt alle neu und behält Anzahl, Gruppennamen und Teilthemen. Die Buchstaben stehen auch auf Beamer und Ausdruck der Stammgruppen. Beim Löschen der Stammgruppen werden die Expertengruppen mitgelöscht.
 
 **Zeigen, drucken, übernehmen:**
-- **📽 Beamer:** alle Gruppen mit Auftrag und Namen im Vollbild (Esc schließt). Beim Gruppenpuzzle schaltet ein Umschalter oben zwischen **Stammgruppen** und **Expertengruppen** um (der Beamer-Knopf der Expertengruppen öffnet direkt diese). Die Schrift wird automatisch so groß gewählt, dass alle Gruppen ohne Scrollen auf den Bildschirm passen. Umschalter oben rechts: **📷 Fotos** (Foto bzw. Personensymbol vor dem Namen) und **Nachnamen** (aus: nur Vornamen, bei gleichen Vornamen mit Initiale, z. B. „Lea B.“). Beide werden pro Gerät gemerkt.
-- **🖨 Drucken …:** *Gruppeneinteilung* (alle Gruppen auf einer Seite zum Aushängen) oder *Gruppenkarten* (je Gruppe eine Karte zum Ausschneiden).
+- **Beamer:** alle Gruppen mit Auftrag und Namen im Vollbild (Esc schließt). Beim Gruppenpuzzle schaltet ein Umschalter oben zwischen **Stammgruppen** und **Expertengruppen** um (der Beamer-Knopf der Expertengruppen öffnet direkt diese). Die Schrift wird automatisch so groß gewählt, dass alle Gruppen ohne Scrollen auf den Bildschirm passen. Umschalter oben rechts: **Fotos** (Foto bzw. Personensymbol vor dem Namen) und **Nachnamen** (aus: nur Vornamen, bei gleichen Vornamen mit Initiale, z. B. „Lea B.“). Beide werden pro Gerät gemerkt.
+- **Drucken …:** *Gruppeneinteilung* (alle Gruppen auf einer Seite zum Aushängen) oder *Gruppenkarten* (je Gruppe eine Karte zum Ausschneiden).
 - **→ In Präsentation übernehmen:** kopiert die Gruppen in eine Präsentation des Kurses; der Auftrag wird zum Thema der Gruppe. Eine Einzelpräsentation wird dabei zur Gruppenpräsentation (Kriterien je Gruppe oder Person, siehe 8a.6). Umgekehrt geht es in der Präsentation über „Gruppen übernehmen von …“.
 
 ## 10c. Reiter „Tools“
 
-Werkzeuge für den Unterricht (bis Version 1.35 hieß der Reiter „Zufall“). **Es wird nichts in die Notenliste eingetragen**, und die Ergebnisse gelten nur, bis die App geschlossen oder neu geladen wird. Alle Werkzeuge stehen in gleich großen Kacheln. Oben rechts im Reiter öffnet **⚙ Werkzeuge …** die Auswahl für den Kurs: Haken schalten ein Werkzeug ein oder aus, ▲▼ ändern die Reihenfolge, **Standard (alle an)** stellt alles zurück. Die Auswahl gilt sofort, nur für diesen Kurs und auf allen Geräten (sie steht in der Datenbank). Ein laufender Timer läuft weiter, auch wenn seine Kachel ausgeschaltet ist. Sind alle Werkzeuge aus, zeigt der Reiter einen Hinweis mit demselben Knopf. Jedes Werkzeug hat oben rechts **⛶ Vollbild** für den Beamer (Esc beendet). Bei „Bewegung reduzieren“ im Betriebssystem erscheint das Ergebnis ohne Animation.
+Werkzeuge für den Unterricht (bis Version 1.35 hieß der Reiter „Zufall“). **Es wird nichts in die Notenliste eingetragen**, und die Ergebnisse gelten nur, bis die App geschlossen oder neu geladen wird. Alle Werkzeuge stehen in gleich großen Kacheln. Oben rechts im Reiter öffnet **Werkzeuge …** die Auswahl für den Kurs: Haken schalten ein Werkzeug ein oder aus, die Pfeile nach oben und unten ändern die Reihenfolge, **Standard (alle an)** stellt alles zurück. Die Auswahl gilt sofort, nur für diesen Kurs und auf allen Geräten (sie steht in der Datenbank). Ein laufender Timer läuft weiter, auch wenn seine Kachel ausgeschaltet ist. Sind alle Werkzeuge aus, zeigt der Reiter einen Hinweis mit demselben Knopf. Jedes Werkzeug hat oben rechts **Vollbild** für den Beamer (Esc beendet). Bei „Bewegung reduzieren“ im Betriebssystem erscheint das Ergebnis ohne Animation.
 
-- **⏱ Timer:** großer Countdown, z. B. für Arbeitsphasen. Zeit eintragen (`5` = 5 Minuten, `2,5`, `4:30` oder `90s`) oder eine **Schnellwahl** (1 bis 30 Min.) anklicken, dann **▶ Start**. **⏸ Pause** hält an, **▶ Weiter** läuft weiter, **− 1 Min.**/**+ 1 Min.** ändern die Zeit auch während des Laufens, **↺** setzt auf die eingestellte Zeit zurück.
+- **Timer:** großer Countdown, z. B. für Arbeitsphasen. Zeit eintragen (`5` = 5 Minuten, `2,5`, `4:30` oder `90s`) oder eine **Schnellwahl** (1 bis 30 Min.) anklicken, dann **Start**. **Pause** hält an, **Weiter** läuft weiter, **− 1 Min.**/**+ 1 Min.** ändern die Zeit auch während des Laufens, das **Symbol mit dem kreisförmigen Pfeil** („Zurücksetzen“) setzt auf die eingestellte Zeit zurück.
   - **Design:** Ring (Standard, läuft im Uhrzeigersinn ab: der Rest endet bei 12 Uhr), große Ziffern, Balken oder Sanduhr. Die Farbe zeigt, wie viel Zeit bleibt: blau, in der letzten Minute (bei kurzen Timern im letzten Fünftel) gelb, in den letzten 10 Sekunden und am Ende rot. Am Ende blinkt 00:00, „Zeit ist um!“ erscheint und daneben die Überzeit.
   - **Signal** am Ende: Gong, Wecker, Piepen oder aus. Die Lautstärke ist die des Pomodoro-Timers (Einstellungen).
-  - **⧉ Pop-up** öffnet den Timer in einem eigenen, frei verschiebbaren Fenster, z. B. auf dem Beamer, während die App auf dem Laptop bleibt. Im Fenster gibt es Start/Pause, ± 1 Min. und ↺; die Leertaste startet bzw. hält an. Fenster und Reiter zeigen denselben Timer. Blockiert der Browser das Fenster, hilft „Pop-ups erlauben“ oder **⛶ Vollbild**.
+  - **Pop-up** öffnet den Timer in einem eigenen, frei verschiebbaren Fenster, z. B. auf dem Beamer, während die App auf dem Laptop bleibt. Im Fenster gibt es Start/Pause, ± 1 Min. und Zurücksetzen; die Leertaste startet bzw. hält an. Fenster und Reiter zeigen denselben Timer. Blockiert der Browser das Fenster, hilft „Pop-ups erlauben“ oder **Vollbild**.
   - Der Timer gilt für die ganze App, nicht je Kurs. Er läuft beim Wechsel von Reiter oder Kurs weiter, endet aber beim Schließen oder Neuladen der App. Zeit, Design und Signal merkt sich das Gerät.
 - **Zufallszahl:** „von“ und „bis“ eintragen (ganze Zahlen, auch negativ; beide Grenzen sind möglich), **🎲 Zahl erzeugen**. Darunter stehen die letzten Ergebnisse.
-- **Personen auswählen:** Anzahl eintragen, **🎲 Auswählen**. Die Ausgewählten erscheinen mit Foto (bzw. Personensymbol). Ohne Haken ist jede Auswahl unabhängig, dieselbe Person kann also gleich wieder kommen. Mit **„Keine Wiederholung“** kommt, wer dran war, erst wieder, wenn alle dran waren (Anzeige „x von y noch nicht dran“, „↺ alle wieder aufnehmen“). Das ist unabhängig vom Pool im Reiter „Ziehen“. Wer dort „heute abwesend“ ist, wird auch hier ausgelassen.
+- **Personen auswählen:** Anzahl eintragen, **🎲 Auswählen**. Die Ausgewählten erscheinen mit Foto (bzw. Personensymbol). Ohne Haken ist jede Auswahl unabhängig, dieselbe Person kann also gleich wieder kommen. Mit **„Keine Wiederholung“** kommt, wer dran war, erst wieder, wenn alle dran waren (Anzeige „x von y noch nicht dran“, „alle wieder aufnehmen“). Das ist unabhängig vom Pool im Reiter „Ziehen“. Wer dort „heute abwesend“ ist, wird auch hier ausgelassen.
 - **Würfel:** W4, W6, W8, W10, W12 oder W20 und 1–6 Würfel wählen, **🎲 Würfeln**. Die Würfel rollen als 3D-Körper über den Tisch und bleiben liegen. Sie werden dann genau von oben gezeigt: Die gewürfelte Seite zeigt nach vorn, ihre Zahl ist kräftig, die Zahlen der schrägen Nachbarflächen sind blass. Bei mehreren Würfeln stehen die Einzelwerte und die Summe darunter (z. B. „4 + 2 + 5 = 11“). Wie bei echten Würfeln ergeben gegenüberliegende Seiten zusammen n + 1. 6 und 9 sind ab dem W10 mit Punkt markiert („6.“, „9.“).
-- **Karten ziehen:** Stapel wählen: **52 Karten** (Poker/Rommé, 2 bis Ass), **32 Karten** (Skat, 7 bis Ass) oder **eigene Karten**, dazu die **Anzahl**. **🂠 Ziehen** oder ein Klick auf den Stapel zieht so viele Karten auf einmal: Sie fliegen nacheinander vom Stapel und drehen sich um. Der Stapel bleibt immer sichtbar, er wird mit jeder Ziehung niedriger, die Restzahl steht darunter, und leer erscheint er als gestrichelter Platz. Gezogen wird ohne Zurücklegen. Sind weniger Karten übrig als gewünscht, kommen die restlichen (mit Hinweis). Frühere Ziehungen stehen klein darunter. **↺ Neu mischen** legt alle zurück. Die Karten zeigen die englischen Buchstaben J, Q, K für Bube, Dame, König, die Liste darunter B, D, K. Die Kartenbilder sind gemeinfrei (CC0, Quelle in `cards/LIZENZ.txt`).
+- **Karten ziehen:** Stapel wählen: **52 Karten** (Poker/Rommé, 2 bis Ass), **32 Karten** (Skat, 7 bis Ass) oder **eigene Karten**, dazu die **Anzahl**. **🂠 Ziehen** oder ein Klick auf den Stapel zieht so viele Karten auf einmal: Sie fliegen nacheinander vom Stapel und drehen sich um. Der Stapel bleibt immer sichtbar, er wird mit jeder Ziehung niedriger, die Restzahl steht darunter, und leer erscheint er als gestrichelter Platz. Gezogen wird ohne Zurücklegen. Sind weniger Karten übrig als gewünscht, kommen die restlichen (mit Hinweis). Frühere Ziehungen stehen klein darunter. **Neu mischen** legt alle zurück. Die Karten zeigen die englischen Buchstaben J, Q, K für Bube, Dame, König, die Liste darunter B, D, K. Die Kartenbilder sind gemeinfrei (CC0, Quelle in `cards/LIZENZ.txt`).
   - **Eigene Karten** (z. B. Themen, Aufgaben, Rollen): „Eigene Karten bearbeiten“ aufklappen, je Zeile eine Karte eintragen, **Übernehmen und neu mischen**. Die Liste wird im Kurs gespeichert.
 
 ## 11. Drucken und Exportieren
@@ -763,22 +769,22 @@ Alle Ausdrucke öffnen den Druckdialog des Browsers. Dort können Sie auch **„
 
 **Druckkopf (seit 1.47):** Alle Ausdrucke haben denselben Kopf. Links stehen Schullogo und Schulname, rechts Kurs, Schuljahr (mit Halbjahr), Lehrkraft und Datum. Das Datum ist das der Leistung (z. B. „Testdatum“), sonst „Stand“ mit dem Druckdatum. Darunter folgen Titel, bei Bögen je Person der Name, und eine Zeile mit Angaben zur Leistung. Logo, Schulname und Lehrkraft tragen Sie unter Einstellungen → **Ausdrucke** ein (siehe 12). Was leer ist, fällt weg; ohne Logo und Schulnamen steht der Titel links wie bisher. Zettel zum Ausschneiden (Ergebniszettel, Mitarbeitszettel) bekommen eine einzeilige Fassung: kleines Logo, Schulname, Name der Person, rechts Leistung, Kurs und Datum. Die Gruppenkarten zum Ausschneiden bleiben ohne Kopf.
 
-In Tests, Mitarbeit/EPO und Notenübersicht fasst je ein Knopf **„🖨 Drucken …“** alle Druckarten zusammen. Er öffnet eine Auswahl, gegliedert nach **„Für die Lehrkraft“** und **„Zum Austeilen“**; ein Tooltip beschreibt jede Druckart.
+In Tests, Mitarbeit/EPO und Notenübersicht fasst je ein Knopf **„Drucken …“** alle Druckarten zusammen. Er öffnet eine Auswahl, gegliedert nach **„Für die Lehrkraft“** und **„Zum Austeilen“**; ein Tooltip beschreibt jede Druckart.
 
 | Wo | Druckart / Knopf | Inhalt |
 |---|---|---|
-| Notenübersicht | 📄 Notenliste | alle Leistungen, Schnitte und Noten des gewählten Halbjahres bzw. die Jahresnoten; gesetzte Noten mit * |
+| Notenübersicht | Notenliste | alle Leistungen, Schnitte und Noten des gewählten Halbjahres bzw. die Jahresnoten; gesetzte Noten mit * |
 | Notenübersicht | 👤 Leistungsbögen je Person | eine Seite je Person (Auswahl siehe unten) |
 | Notenübersicht, Kurs & Schüler | 🗓️ Fehlzeiten | alle Unterrichtstage des Halbjahres mit A/E/U je Person und den Summen in Unterrichtsstunden (siehe 6.5) |
-| Notenübersicht | ⬇ CSV/Excel (eigener Knopf) | alle Noten und Ergebnisse des Kurses als CSV (Semikolon, öffnet direkt in Excel) |
-| Kurs & Schüler | ⬇ Excel | Schülerliste als Excel-Datei (.xlsx): Nr., Nachname, Vorname, I-Status, Aktiv (siehe 6.3) |
-| Tests | 📄 Ergebnisliste · 🧩 Ergebnisse nach Teilen · 📊 Notenschlüssel und Notenspiegel · 🔖 Trennblätter für OrdoScripto · ✂️ Ergebniszettel · 💬 Moodle-Rückmeldung | siehe 7.6 bis 7.9 |
-| Tests | ⛶ Beamer (eigener Knopf) | Vollbild ohne Namen: Notenspiegel, Punkteverteilung, Ø je Aufgabe (siehe 7.5) |
-| Sitzplan | 🖨 Drucken | Sitzplan des gewählten Raums mit Vornamen, Fotos und Lehrerpult, A4 (quer, wenn mehr Spalten als Reihen) |
-| Gruppen | 📄 Gruppeneinteilung · 🗂️ Gruppenkarten | siehe 10b; ohne Noten und Regeln |
-| Präsentationen | 📄 Bewertungsliste · 📊 Notenschlüssel · 📝 Leere Bewertungsbögen · 📋 Bewertungskriterien (Handreichung) · 🗒️ Bewertungsbogen je Person | siehe 8a.4; Handreichung auch je Vorlage (8a.5) |
-| Mitarbeit/EPO | 📄 Bewertungsliste | Bewertungsraster aller Stunden mit Ergebnis und Note je Person |
-| Mitarbeit/EPO | ✂️ Mitarbeitszettel zum Ausschneiden | ein Zettel pro Person (mehrere pro Blatt, gestrichelte Schnittlinie): Name, Kurs, Blockname und Zeitraum, Punktelegende, Bewertungen mit Datum im Tabellenkopf, Ergebnis mit Note sowie Linien für Datum und Unterschrift |
+| Notenübersicht | CSV/Excel (eigener Knopf) | alle Noten und Ergebnisse des Kurses als CSV (Semikolon, öffnet direkt in Excel) |
+| Kurs & Schüler | Excel | Schülerliste als Excel-Datei (.xlsx): Nr., Nachname, Vorname, I-Status, Aktiv (siehe 6.3) |
+| Tests | Ergebnisliste · Ergebnisse nach Teilen · Notenschlüssel und Notenspiegel · Trennblätter für OrdoScripto · Ergebniszettel · Moodle-Rückmeldung | siehe 7.6 bis 7.9 |
+| Tests | Beamer (eigener Knopf) | Vollbild ohne Namen: Notenspiegel, Punkteverteilung, Ø je Aufgabe (siehe 7.5) |
+| Sitzplan | Drucken | Sitzplan des gewählten Raums mit Vornamen, Fotos und Lehrerpult, A4 (quer, wenn mehr Spalten als Reihen) |
+| Gruppen | Gruppeneinteilung · Gruppenkarten | siehe 10b; ohne Noten und Regeln |
+| Präsentationen | Bewertungsliste · Notenschlüssel · Leere Bewertungsbögen · Bewertungskriterien (Handreichung) · Bewertungsbogen je Person | siehe 8a.4; Handreichung auch je Vorlage (8a.5) |
+| Mitarbeit/EPO | Bewertungsliste | Bewertungsraster aller Stunden mit Ergebnis und Note je Person |
+| Mitarbeit/EPO | Mitarbeitszettel zum Ausschneiden | ein Zettel pro Person (mehrere pro Blatt, gestrichelte Schnittlinie): Name, Kurs, Blockname und Zeitraum, Punktelegende, Bewertungen mit Datum im Tabellenkopf, Ergebnis mit Note sowie Linien für Datum und Unterschrift |
 
 **Leistungsbögen:** Im Dialog wählen Sie **für wen** (alle oder eine Person), den **Zeitraum** (alle Halbjahre oder eines) und den **Inhalt**:
 
@@ -816,7 +822,7 @@ So eignet sich derselbe Bogen für Elterngespräche (z. B. ohne Bemerkung) und f
 | | Jetzt sichern / Verschlüsselte Kopie herunterladen / Aus Datei wiederherstellen / Datenordner wechseln / Sicherung wiederherstellen (siehe 20) / Datenbank prüfen (siehe 21.14) | – |
 | Schuljahre | Umbenennen, leere Schuljahre löschen | – |
 | Reiter | Reiter ein-/ausschalten als Standard für alle Kurse (Tests, Mitarbeit/EPO, Präsentationen, Ziehen, Tools, Gruppen, Notenübersicht, Sitzplan); einzelne Kurse können abweichen (6.4) | alle an |
-| | Reihenfolge der Reiter (▲▼, auch durch Ziehen in der Reiterleiste; gilt für alle Kurse) | Standardreihenfolge |
+| | Reihenfolge der Reiter (Pfeile nach oben und unten, auch durch Ziehen in der Reiterleiste; gilt für alle Kurse) | Standardreihenfolge |
 | Darstellung | Noten farbig hinterlegen | an |
 | | Farbschema: wie System / hell / dunkel | wie System |
 | | Helles Design: Standard / Salbei / Lavendel (Vorschaukacheln) | Standard |
@@ -825,14 +831,14 @@ So eignet sich derselbe Bogen für Elterngespräche (z. B. ohne Bemerkung) und f
 | | Anzahl Pomodoros / Länge eines Pomodoros | 4 / 25 Min. |
 | | Kurze Pause / lange Pause am Ende (0 = keine) | 5 / 15 Min. |
 | | Ticken: aus / nur Pomodoros / immer | aus |
-| | Signal bei Phasenwechsel: aus / Wecker klingeln / Gong / Piepen (je mit „▶ Probe“) | Wecker klingeln |
+| | Signal bei Phasenwechsel: aus / Wecker klingeln / Gong / Piepen (je mit „Probe“) | Wecker klingeln |
 | | Lautstärke | 60 % |
 
-**Pomodoro-Timer:** Ist er aktiviert, steht er in der Kopfzeile neben dem Schuljahr: Phase (🍅 2/4 bzw. ☕ Pause), verbleibende Zeit und die Knöpfe **▶ Start**, **⏸ Pause**, **↺ Zurücksetzen** und **⚙ Einstellungen** (dieselben Einstellungen wie im Reiter, als Dialog). Farben: **rot** = Pomodoro läuft, **grün** = Pause läuft, **gelb** = pausiert, grau = bereit bzw. fertig. Nach jedem Pomodoro beginnt automatisch die kurze Pause, nach dem letzten die lange Pause; danach ist der Durchlauf fertig. Bei jedem Phasenwechsel erklingt das gewählte Signal und eine Meldung erscheint. Die Töne erzeugt die App selbst (keine Tondateien). Der Timer läuft weiter, wenn die App gesperrt oder neu geladen wird; sein Stand gilt pro Gerät.
+**Pomodoro-Timer:** Ist er aktiviert, steht er in der Kopfzeile neben dem Schuljahr: Phase (🍅 2/4 bzw. ☕ Pause), verbleibende Zeit und die Knöpfe **Start**, **Pause**, **Zurücksetzen** und **Einstellungen** (Zahnrad-Symbol; dieselben Einstellungen wie im Reiter, als Dialog). Farben: **rot** = Pomodoro läuft, **grün** = Pause läuft, **gelb** = pausiert, grau = bereit bzw. fertig. Nach jedem Pomodoro beginnt automatisch die kurze Pause, nach dem letzten die lange Pause; danach ist der Durchlauf fertig. Bei jedem Phasenwechsel erklingt das gewählte Signal und eine Meldung erscheint. Die Töne erzeugt die App selbst (keine Tondateien). Der Timer läuft weiter, wenn die App gesperrt oder neu geladen wird; sein Stand gilt pro Gerät.
 
 **Ausdrucke (seit 1.47):** Schulname, Lehrkraft und Logo erscheinen im Kopf aller Ausdrucke (siehe 11). Sie liegen in der verschlüsselten Datenbank und gelten damit auf allen Geräten. Das Logo wird als Bild in der Datenbank gespeichert; ein großes Foto verkleinert die App beim Hochladen auf 600 px an der längsten Seite, SVG-Dateien (bis 300 KB) bleiben unverändert. Das Notfallwerkzeug gibt das Logo nicht in der CSV aus.
 
-**Designs (seit 1.43):** Für den hellen und den dunklen Modus gibt es je drei Designs: hell **Standard** (Petrol), **Salbei** (grünliches Grau) und **Lavendel** (Flieder); dunkel **Standard** (Schiefer), **Nord** (kühles Blaugrau) und **Aubergine** (dunkles Violett). Jede Kachel zeigt eine kleine Vorschau mit Schrift, Akzentfarbe und drei Notenfarben; ein Klick wählt das Design sofort. Ist das Farbschema fest auf hell oder dunkel gestellt, wechselt es beim Klick auf eine Kachel des anderen Modus mit; bei „Wie das System“ gilt das Design, sobald das System in diesen Modus wechselt. Das ☾ in der Kopfzeile schaltet nur zwischen hell und dunkel und behält die gewählten Designs. Die Notenfarben (grün → rot) bleiben in allen Designs gleich, Ausdrucke sind immer schwarz auf weiß, und das Timer-Pop-up übernimmt das Design.
+**Designs (seit 1.43):** Für den hellen und den dunklen Modus gibt es je drei Designs: hell **Standard** (Petrol), **Salbei** (grünliches Grau) und **Lavendel** (Flieder); dunkel **Standard** (Schiefer), **Nord** (kühles Blaugrau) und **Aubergine** (dunkles Violett). Jede Kachel zeigt eine kleine Vorschau mit Schrift, Akzentfarbe und drei Notenfarben; ein Klick wählt das Design sofort. Ist das Farbschema fest auf hell oder dunkel gestellt, wechselt es beim Klick auf eine Kachel des anderen Modus mit; bei „Wie das System“ gilt das Design, sobald das System in diesen Modus wechselt. Der Schalter **Hell / Dunkel / Wie das System** in der Kopfzeile wechselt nur den Modus und behält die gewählten Designs. Die Notenfarben (grün → rot) bleiben in allen Designs gleich, Ausdrucke sind immer schwarz auf weiß, und das Timer-Pop-up übernimmt das Design.
 
 **Reiter:** Ausgeschaltete Reiter verschwinden aus der Reiterleiste aller Kurse, die keine eigene Auswahl haben (siehe 6.4). Daten daraus bleiben gespeichert und zählen weiter. Unter den Haken steht, wie viele Kurse abweichen.
 
@@ -1204,7 +1210,7 @@ Reines HTML/CSS/JavaScript ohne Build-Schritt und ohne externe Bibliotheken. Die
 | Datei | Namensraum | Aufgabe |
 |---|---|---|
 | `js/logo.js` | `NM.logo` | Logo als SVG: `full(h)` (Monogramm + Schriftzug), `mark(px)` (nur Monogramm), `favicon()`; Farbe folgt der Textfarbe. Quelle: `logo/ordonota-logo*.svg` |
-| `js/util.js` | `NM.util` | DOM-Helfer `h()`, Formatierung (deutsch), Dialoge, Toasts, Download, CSV |
+| `js/util.js` | `NM.util` | DOM-Helfer `h()`, Symbole `icon(name)` (aus dem gemeinsamen Design), Formatierung (deutsch), Dialoge, Toasts, Download, CSV |
 | `js/xlsx.js` | `NM.xlsx` | Excel-Dateien ohne Bibliothek: `workbook({ sheet, rows, widths })` → Blob (ZIP ohne Kompression, ein Blatt, Kopfzeile fett) |
 | `js/grades.js` | `NM.grades` | **Gesamte Notenlogik** (rein, ohne DOM): Skalen, Eingabe-Parser, Rundung, Notenschlüssel (mit Prüfung auf nicht erreichbare Stufen, `unreachableSteps`), Test-/EPO-Auswertung, Arbeiten in Teilen, Präsentationen (auch in Gruppen), Halbjahres-/Jahresnote |
 | `js/crypto.js` | `NM.crypto` | `Vault`: Erzeugen, Entsperren (Passwort/Wiederherstellung), Ver-/Entschlüsseln, Passwortwechsel |
@@ -1219,11 +1225,12 @@ Reines HTML/CSS/JavaScript ohne Build-Schritt und ohne externe Bibliotheken. Die
 | `js/qr.js` | `NM.qr` | QR-Code-Erzeuger (rein, ohne Bibliothek): Byte-Modus, Fehlerkorrektur Q, Versionen 1–10, Reed-Solomon über GF(256), alle 8 Masken mit Strafpunkten; `encode(text, { mask, minVersion })` → Modulmatrix, `svg(qr, { quiet: 4, width })` |
 | `js/scripto.js` | `NM.scripto` | Schnittstelle zu OrdoScripto (rein, ohne DOM): Test- und Schüler-IDs vergeben (`prepare`), IDs lesen (`dataOf`, auch für Nachschreibtermine), Personen für die Trennblätter (`sheetStudents`, `makeupStudents`), QR-Inhalt (`qrText`), Import-CSV (`importCsv`) |
 | `js/moodle.js` | `NM.moodle` | Moodle-Import (rein, ohne DOM): CSV zerlegen, Antworten-/Bewertungen-CSV erkennen und zusammenführen, Personen zuordnen, in einen Test oder Teil übernehmen (`applyImport` mit `replace`: bisherige Aufgaben ersetzen, `adopt`: Bezeichnung/Datum übernehmen) |
-| `js/ui.js` | `NM.ui` | Wiederverwendbare Bausteine: Halbjahres-Umschalter, Noten-Eingabezellen, Badges, Leistungs-Dialog, Sortieren (`sorter`, `nameCells`), Druckauswahl (`printButton`), Reiter-Haken (`tabChecks`) |
+| `js/ui.js` | `NM.ui` | Wiederverwendbare Bausteine: Halbjahres-Umschalter, Noten-Eingabezellen, Badges, Leistungs-Dialog, Sortieren (`sorter`, `nameCells`), Druckauswahl (`printButton`), Reiter-Haken (`tabChecks`), leere Ansichten (`emptyState(title, text, button, iconName)`), Hochladen-Fläche (`dropzone(input, title, hint)`) |
 | `js/app.js` | `NM.app` | Anwendungskern: Anmeldung, Sitzung, Autosave, Sperre, Layout, Navigation (`TABS`; ausschaltbare Reiter `OPTIONAL_TABS`, `tabOn`, `shownTab`), Neuzeichnen mit Fokus-Erhalt, Tabellen-Tastatur |
 | `js/view-*.js` | `NM.views.*` | Je ein Reiter: `course`, `tests`, `epo`, `pres` (Präsentationen), `draw`, `random` (Tools), `groups` (Gruppen), `overview`, `seating`, `settings` |
 | `js/print.js` | `NM.print` | Druckansichten |
-| `css/app.css` | – | Gestaltung inkl. der sechs Designs (Farb-Tokens, `[data-theme][data-variant]`) und Druck-CSS |
+| `css/app.css` | – | Gestaltung von OrdoNota inkl. der sechs Designs (Farb-Tokens, `[data-theme][data-variant]`) und Druck-CSS; liegt über dem gemeinsamen Design (22.2) |
+| `css/blades.min.css`, `css/solagio-design.css`, `js/solagio-design.js` | – | gemeinsames Design der Ordo-Apps (22.2); verteilt, nie von Hand ändern |
 | `launcher/*.go` | – | Startprogramm (Go, nur Standardbibliothek, siehe 22.1): Server, Dateizugriff, Browserstart, Ordner-Dialog; `build.sh` baut alle Fassungen |
 
 **Ablauf einer Änderung**
@@ -1239,7 +1246,7 @@ Berechnete Werte (Schnitte, Testnoten, EPO-Noten) werden **nie gespeichert**, so
 
 Ist beim Neuzeichnen gerade ein Knopf gedrückt (z. B. „+ Aufgabe“, während ein Eingabefeld beim Verlassen speichert), wartet `rerender()` bis nach dem Klick (`pressing` in `js/app.js`). Sonst würde der Knopf zwischen Maus-runter und Maus-hoch ersetzt und der Klick ginge verloren.
 
-**Pro Gerät im Browser gespeichert** (`localStorage`/IndexedDB, nicht in der Datenbank): Ordner-Handle, Geräte-ID und -name, gewählter Kurs/Reiter/Halbjahr, Farbschema (`ui.theme`, `ui.lightTheme`, `ui.darkTheme`), ein-/ausgeklappte Kursliste, ausgeblendete Teile in der Ergebnistabelle, Umschalter Fotos/Nachnamen im Reiter „Gruppen“ und in dessen Beameransicht, Stand des Pomodoro-Timers.
+**Pro Gerät im Browser gespeichert** (`localStorage`/IndexedDB, nicht in der Datenbank): Ordner-Handle, Geräte-ID und -name, gewählter Kurs/Reiter/Halbjahr, Farbschema (`ui.theme`, `ui.lightTheme`, `ui.darkTheme`; der Modus-Schalter schreibt `ui.theme`), „Große Schrift“ (vom Design selbst gemerkt), ein-/ausgeklappte Kursliste, ausgeblendete Teile in der Ergebnistabelle, Umschalter Fotos/Nachnamen im Reiter „Gruppen“ und in dessen Beameransicht, Stand des Pomodoro-Timers.
 
 ### 22.1 Startprogramm (`launcher/`)
 
@@ -1270,6 +1277,34 @@ Das Startprogramm ist das einzige Teil mit Build-Schritt; die App selbst bleibt 
 
 **Schutz:** Der Server lauscht nur auf `127.0.0.1`. Jede Anfrage braucht den passenden `Host` (`127.0.0.1`/`localhost` mit dem Port, gegen DNS-Rebinding), `/api` zusätzlich das Cookie mit dem Kennwort aus der Datei `token` (`HttpOnly`, `SameSite=Strict`); schreibende Anfragen außerdem den Kopf `X-OrdoNota: 1`, den fremde Webseiten ohne CORS-Freigabe nicht setzen können. Der Server sieht nur die verschlüsselte Datenbank. Beim Beenden entfernt er den Lock, wenn er noch von seiner Sitzung stammt.
 
+### 22.2 Gemeinsames Design (solagio-design)
+
+Seit 2.0 teilt OrdoNota das Aussehen mit den anderen Ordo-Apps. Es sind weiterhin reine Dateien ohne Build-Schritt und ohne Netz.
+
+| Datei | Inhalt |
+|---|---|
+| `css/blades.min.css` | Grundlage (Blades, MIT) |
+| `css/solagio-design.css` | Tokens, Bausteine und Größen des gemeinsamen Designs |
+| `js/solagio-design.js` | Symbole (Tabler Icons, MIT), Modus-Schalter, „Große Schrift“, Hochladen-Fläche |
+| `schrift/JosefinSans-ordo.woff2` | Schrift für Überschriften (OFL 1.1) |
+| `lizenzen/` | Lizenztexte der drei Bestandteile |
+
+**Quelle und Verteilen:** Die Quelle ist das Projekt `../../Design` (Design-Repo). Verteilt wird mit `python3 werkzeuge/verteile.py ../OrdoScola/OrdoNota --app ordonota --ebene solagio`; Kontrolle mit `--pruefen --ebene solagio`. Die verteilten Dateien werden **nie von Hand geändert**, Änderungen gehören ins Design-Repo.
+
+**CSS-Ebenen:** `blades` → `solagio` → `ordonota-grund` → Regeln ohne Ebene (alles Übrige in `css/app.css`). Die spätere Ebene gewinnt, Regeln ohne Ebene gewinnen immer. Der Kommentar am Anfang von `css/app.css` beschreibt das ebenfalls.
+
+**Tokens** (Namen der Farben und Maße, in `css/app.css` und im Design): `--bg`, `--bg-raised`, `--bg-card`, `--border`, `--border-soft`, `--border-strong`, `--text`, `--text-dim`, `--text-faint`, `--accent` (mit `-strong`, `-dim`, `-soft`), `--ok`, `--bad`, `--gold` (je mit `-soft`), `--shadow`, `--shadow-soft`, `--sans`, `--mono`, `--display`, `--radius-s`, `--radius`, `--radius-l`, `--control` (Höhe von Knöpfen und Feldern). Die alten Namen (`--surface`, `--muted`, `--danger`, `--warn`, `--font`) gibt es nicht mehr. Die Farben des Standard-Designs stehen in `css/app.css` noch einmal (Selektoren `[data-theme]` statt nur `:root`), damit die Vorschaukacheln in den Einstellungen ihr eigenes Design zeigen. Ändert sich das Design, müssen diese Werte nachgezogen werden. Maße stehen in `rem`, damit „Große Schrift“ (125 %) alles mitnimmt.
+
+**Bausteine im Code:**
+- `NM.util.icon(name)` liefert ein Symbol als `<span class="sd-icon">` (rein schmückend; der Knopf braucht daneben Text oder `aria-label`). Die Namen stehen in `js/solagio-design.js`.
+- `NM.ui.emptyState(title, text, button, iconName)` zeigt eine leere Ansicht mit Hinweis und Knopf.
+- `NM.ui.dropzone(input, title, hint)` legt eine Hochladen-Fläche um ein vorhandenes Dateifeld (Datei ablegen oder auswählen; das Feld bleibt unverändert, Moodle-Import).
+- `applyTheme()` und `setThemeMode(mode)` in `js/app.js`: `setThemeMode` speichert `light`, `dark` oder `auto` in `ui.theme`, `applyTheme` setzt `data-theme` und `data-variant` (siehe „Farben und Designs“ in 26.4) und hält den Modus-Schalter der Kopfzeile aktuell.
+
+**Weitere Stellen:** Das Timer-Pop-up (`openTimerPopup` in `js/view-random.js`) lädt die drei Dateien `css/blades.min.css`, `css/solagio-design.css` und `css/app.css` selbst. Im Startprogramm erlaubt `staticAllowed` (`launcher/server.go`) auch `schrift/`; `launcher/build.sh` baut `schrift/` in das Programm ein und legt `lizenzen/` in das Release-ZIP.
+
+**Browser-Mindeststand:** Chrome/Edge 120, Firefox 117, Safari/iOS 17.2 (CSS-Ebenen `@layer`, verschachteltes CSS, `light-dark()`).
+
 ## 23. Dateiformat der Datenbank
 
 > **Name:** Seit Version 1.12 heißt die App **OrdoNota**. Die Dateien im Datenordner (`notenmanager.nmdb`, `notenmanager.lock.json`, Sicherungen `notenmanager_….nmdb`), die Formatkennung `notenmanager-db` und die Kennungen im Browser-Speicher behalten absichtlich ihren alten Namen, damit bestehende Datenbanken und Sicherungen ohne Umstellung weiter funktionieren. Ein vorhandener Datenordner (z. B. `Notenmanager-Daten`) kann ebenfalls seinen Namen behalten.
@@ -1284,7 +1319,7 @@ Das Startprogramm ist das einzige Teil mit Build-Schritt; die App selbst bleibt 
   "kdf": "PBKDF2-SHA256",
   "savedAt": "2026-10-14T21:57:03.123Z",
   "device": "Laptop Schule",
-  "app": "1.47.0",
+  "app": "2.0.0",
   "pw":   { "salt": "<b64>", "iter": 600000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "rec":  { "salt": "<b64>", "iter": 100000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "data": { "iv": "<b64>", "ct": "<b64: verschlüsseltes JSON des Datenmodells>" }
@@ -1307,7 +1342,7 @@ Entschlüsselter Inhalt (`schema: 4`):
 ```js
 {
   schema: 4,                             // Datenformat (siehe 26.2)
-  savedWith: "1.47.0",                    // App-Version beim letzten Speichern
+  savedWith: "2.0.0",                    // App-Version beim letzten Speichern
   created: "<ISO>", savedAt: "<ISO>",
   settings: { autoLockMin, limitSek1, limitMss, precision, testCat: "ka" | "other" /* seit 1.30 */, keepBackups, backupEveryMin, gradeColors,
               tabs: { "<Reiter>": false },   // seit 1.25: ausgeschaltete Reiter (Standard für alle Kurse)
@@ -1398,7 +1433,7 @@ Das Skript startet einen unsichtbaren Chromium-Browser (Chrome, Edge, Chromium, 
 1. alle Testseiten (siehe 25.2), danach die Datenbanken früherer Versionen (`tests/altdaten/`) in der App: alle Reiter beider Kurse und die Jahresnote ohne Fehler, „Datenbank prüfen“ ohne Probleme,
 2. den Start der App im Demo-Modus und alle Reiter für einen Sek-I- und einen MSS-Kurs ohne JavaScript-Fehler, den Knopf „Demo ansehen“ (öffnet `?demo` im neuen Fenster, eigene Ansicht in `nm.ui` bleibt unberührt),
 3. das Sortieren per Klick auf Spaltenköpfe (Tests, EPO, Notenübersicht; Richtung und leere Werte unten), den einheitlichen Druckkopf (Schulname und Lehrkraft in den Einstellungen, Logo-Upload mit Verkleinerung auf 600 px, Nicht-Bilder abgelehnt; Kopf mit Logo, Schule, Lehrkraft und Kurs in Notenliste, Jahresnoten, Ergebnisliste, Notenschlüssel, Bewertungsliste und leeren Bögen der Präsentationen, Handreichung, EPO-Liste, Sitzplan und Fehlzeiten; Zettel kompakt; Testdatum; leere Angaben fallen weg; Migration und Prüfung), im EPO-Reiter die Kachelansicht (Touch-Emulation: Anordnung nach Sitzplan mit Pult und „Ohne Platz“, Tippen bewertet und schließt, Zusätze m und k mit Fehlzeit, Esc, alphabetisch ohne Plätze, Kacheln und Knöpfe mindestens 44 px) und den Zusatz m (Material vergessen: Eingabe, ungültige Eingabe, Schnellwahl, Spalte M, eigene Punkte, Legende in Bewertungsliste und Mitarbeitszetteln),
-4. den Pomodoro-Timer (Aktivieren, Farben je Zustand, Phasenwechsel, Zurücksetzen, Einstellungsdialog), das Layout des Reiters „Einstellungen“ bei aktivem Timer (keine Lücken zwischen den Karten, Auswahllisten nicht abgeschnitten, bei 1570 und 2560 px), die sechs Designs (Kontrast von Schrift, Akzent-, Status- und Notenfarben nach WCAG, Vorschaukacheln, Wahl bleibt nach dem Neuladen, ☾ schaltet nur hell/dunkel, „Wie das System“ folgt dem System, Timer-Pop-up übernimmt das Design) und die Kürzel in der eingeklappten Kursliste, die weichen Übergänge (nur bei Reiter-, Kurs- und Halbjahreswechsel), das Ein-/Ausklappen der Kursliste, das Ein-/Ausschalten von Reitern (Standard in den Einstellungen, Abweichung je Kurs, Ersatzreiter, Sprunglinks, „Wie Standard“), das Umsortieren der Reiter (▲▼, Ziehen in der Reiterleiste, Standardreihenfolge), das Einklappen der Spaltengruppen und Bündeln der Ziehungsspalten in der Notenübersicht (Noten unverändert, Zeitraum, Ausdruck vollständig), den Reiter „Tests“ in voller Breite, die Warnung bei zu wenig Punkten im Notenschlüssel (doppelte Schwellen markiert, Knöpfe „Halbe Punkte“/„Nur ganze Noten“ beheben sie), Arbeiten in Teilen (einschalten, Aufgaben und Punkte je Teil, Teil ausblenden, getrennt benoten, Status je Teil, Schlüssel je Teil, Ausdrucke inkl. „Ergebnisse nach Teilen“, Beamer, Teile aufheben), die Druckauswahl „🖨 Drucken …“ in Tests, EPO und Notenübersicht (Gruppen, Tooltips, Auswahl druckt, Abbrechen nicht) und den Haken „Unterschrift gesehen“ bei Klassenarbeiten (Zähler, Ausdruck), Nachschreibtermine („+ Nachschreibtermin“, nur Fehlende und „Alle zeigen“, eine gemeinsame Spalte in der Notenübersicht mit „N“, Rechnung als eine Leistung, Gewicht folgt der Arbeit, Verknüpfung lösen/setzen, Arbeit löschen), den Moodle-Import (Knopf im Test statt neben „+ Neuer Test“, bisherige Aufgaben ersetzen oder behalten, Dateiauswahl im Dialog, Zuordnung, Status „fehlt“, Ausdruck mit und ohne Note, erneuter Import), die Schnittstelle zu OrdoScripto (QR-Codes aller Versionen 1–10 und Masken mit `zxing-cpp` zurückgelesen; Vorbereiten mit Einstufungs-Abfrage, Import-CSV ohne Namen, Trennblätter als echtes PDF gedruckt, mit 300 dpi gerastert und jeder Code exakt gelesen; Nachschreibtermin mit denselben IDs, neue Personen; Einstufung des Kurses und je Person mit Rückfrage, Spalte `kurs` mit der Einstufung je Person, Oberstufe mit GK/LK), die Fehlzeiten („Heute abwesend“ in Ziehen und Gruppen gespeichert, EPO-k ⇄ Fehlzeit, Karte reihum A/E/U und „+ Tag“ mit Stundenzahl, Spalte „Fehlst.“ in der Notenübersicht, Druckauswahl und Ausdruck; im Notfallwerkzeug die Fehlstunden je Halbjahr),
+4. den Pomodoro-Timer (Aktivieren, Farben je Zustand, Phasenwechsel, Zurücksetzen, Einstellungsdialog), das Layout des Reiters „Einstellungen“ bei aktivem Timer (keine Lücken zwischen den Karten, Auswahllisten nicht abgeschnitten, bei 1570 und 2560 px), die sechs Designs (Kontrast von Schrift, Akzent-, Status- und Notenfarben nach WCAG, Vorschaukacheln, Wahl bleibt nach dem Neuladen, der Schalter in der Kopfzeile wechselt nur den Modus, „Wie das System“ folgt dem System, Timer-Pop-up übernimmt das Design) und die Kürzel in der eingeklappten Kursliste, die weichen Übergänge (nur bei Reiter-, Kurs- und Halbjahreswechsel), das Ein-/Ausklappen der Kursliste, das Ein-/Ausschalten von Reitern (Standard in den Einstellungen, Abweichung je Kurs, Ersatzreiter, Sprunglinks, „Wie Standard“), das Umsortieren der Reiter (Pfeile nach oben und unten, Ziehen in der Reiterleiste, Standardreihenfolge), das Einklappen der Spaltengruppen und Bündeln der Ziehungsspalten in der Notenübersicht (Noten unverändert, Zeitraum, Ausdruck vollständig), den Reiter „Tests“ in voller Breite, die Warnung bei zu wenig Punkten im Notenschlüssel (doppelte Schwellen markiert, Knöpfe „Halbe Punkte“/„Nur ganze Noten“ beheben sie), Arbeiten in Teilen (einschalten, Aufgaben und Punkte je Teil, Teil ausblenden, getrennt benoten, Status je Teil, Schlüssel je Teil, Ausdrucke inkl. „Ergebnisse nach Teilen“, Beamer, Teile aufheben), die Druckauswahl „Drucken …“ in Tests, EPO und Notenübersicht (Gruppen, Tooltips, Auswahl druckt, Abbrechen nicht) und den Haken „Unterschrift gesehen“ bei Klassenarbeiten (Zähler, Ausdruck), Nachschreibtermine („+ Nachschreibtermin“, nur Fehlende und „Alle zeigen“, eine gemeinsame Spalte in der Notenübersicht mit „N“, Rechnung als eine Leistung, Gewicht folgt der Arbeit, Verknüpfung lösen/setzen, Arbeit löschen), den Moodle-Import (Knopf im Test statt neben „+ Neuer Test“, bisherige Aufgaben ersetzen oder behalten, Dateiauswahl im Dialog, Zuordnung, Status „fehlt“, Ausdruck mit und ohne Note, erneuter Import), die Schnittstelle zu OrdoScripto (QR-Codes aller Versionen 1–10 und Masken mit `zxing-cpp` zurückgelesen; Vorbereiten mit Einstufungs-Abfrage, Import-CSV ohne Namen, Trennblätter als echtes PDF gedruckt, mit 300 dpi gerastert und jeder Code exakt gelesen; Nachschreibtermin mit denselben IDs, neue Personen; Einstufung des Kurses und je Person mit Rückfrage, Spalte `kurs` mit der Einstufung je Person, Oberstufe mit GK/LK), die Fehlzeiten („Heute abwesend“ in Ziehen und Gruppen gespeichert, EPO-k ⇄ Fehlzeit, Karte reihum A/E/U und „+ Tag“ mit Stundenzahl, Spalte „Fehlst.“ in der Notenübersicht, Druckauswahl und Ausdruck; im Notfallwerkzeug die Fehlstunden je Halbjahr),
 5. den Excel-Export der Schülerliste (gültiges ZIP/XML, Umlaute und Sonderzeichen), das Kurs-Löschen nur mit „LÖSCHEN“, das Ein-/Ausblenden der Fotos im EPO-Reiter und im Sitzplan (auch im Druck) das Erweitern/Verkleinern des Sitzplan-Rasters an allen vier Seiten sowie das Ziehen (keine Wiederholung bis zum Auffüllen, automatisches Auffüllen, Note, Rückgängig, Abwesende/Herausgenommene) und die benannten Pools (Sammelspalte, eine Runde bis fertig, Rückgängig, Prüfung, Notenübersicht, Zusammenfassen, Löschen ohne Notenverlust), den Reiter „Tools“ (Timer: Start/Pause, läuft beim Reiterwechsel weiter, Ende mit Signal, ± 1 Min., Schnellwahl, vier Designs, Pop-up steuert denselben Timer; Einstellungen aller Werkzeuge werden gemerkt; Zahl im Bereich, Personen ohne Wiederholung und ohne Abwesende, 3D-Würfel mit Summe und gewürfelter Seite oben, Karten 52/32/eigene als Bild, Stapel immer sichtbar, mehrere auf einmal, nichts in der Notenliste) und den Reiter „Präsentationen“ (Bewerten per Knopf und in der Tabelle, Gewicht, Kriterien aus dem Pool und eigene, Vorlage, Ausdrucke, Spalte in der Notenübersicht, Pool bearbeiten, Startbestand ergänzen, Vorlagen speichern/anlegen/verwenden/drucken/löschen, Standardvorlagen vorhanden und ergänzen, Handreichung mit Notenschlüssel) und Gruppenpräsentationen (Gruppenwert für alle Mitglieder, Personenkriterien, Abweichung setzen/zurücksetzen, Tabelle, Gruppen bearbeiten/übernehmen, Druck, Auflösen ohne Notenänderung), den Reiter „Gruppen“ (neue Einteilung, Abwesende, Fixieren, Anklicken/Ziehen, Auftrag, Regel mit Warnung, Beamer ohne Noten mit Schrift passend zum Bildschirm und Umschaltern für Fotos/Nachnamen, Druck, Fotos/Nachnamen in der Einteilung, Gruppenpuzzle mit Expertengruppen unter den Stammgruppen, Anzahl der Teilthemen einstellbar und beim Neu verteilen erhalten, Hinweis nach Änderungen, Beamer-Umschalter Stamm-/Expertengruppen, Übernahme in eine Präsentation),
 6. das Notfallwerkzeug: Eine von der App echt verschlüsselte Datenbank wird mit `tools/entschluesseln.py` per Passwort und per Wiederherstellungsschlüssel entschlüsselt und mit dem Original verglichen. Dazu kommen falsches Passwort, manipulierte Datei und CSV-Ausgabe (auch für die Datenbanken aller früheren Versionen aus `tests/altdaten/`),
 7. das Startprogramm (nur wenn Go installiert ist, sonst übersprungen): `go test` in `launcher/` (Programmsymbol ohne Schriftzug, Zugriffsschutz, nur erlaubte Dateien, Speichern und Konflikt, Sicherungen, Konfliktkopien, Lock, Datenordner wählen, Kennwort, Programmordner finden), dann ein echter Start mit Testordner: Zugriff ohne Kennwort abgelehnt, zweiter Start erkennt das laufende Programm, die App erkennt das Startprogramm, legt eine Datenbank an (ohne Rückfrage), speichert Änderungen in den Ordner (mit dem Notfallwerkzeug geprüft), erkennt eine externe Änderung, überschreibt auf Wunsch, stellt aus einer Datei mit fremdem Passwort wieder her (eigenes Passwort bleibt), wechselt den Datenordner mit Sicherungen (alter Ordner bleibt, neuer gemerkt, danach wird dort gespeichert), übernimmt in einem leeren Ordner eine Datenbank aus einer Datei und gibt den Lock beim Beenden frei.
@@ -1471,7 +1506,7 @@ In `js/model.js` stehen zwei Nummern:
 - **Neuer Reiter:** Datei `js/view-name.js` mit `NM.views.name = { render(view, { course, db }) }` anlegen, in `index.html` einbinden und in `TABS` in `js/app.js` eintragen. Soll er sich ausschalten lassen, zusätzlich in `OPTIONAL_TABS`; ob ein Reiter im Kurs an ist, fragt `NM.app.tabOn(course, id)` ab (z. B. vor Sprunglinks).
 - **Sortierbare Spalte:** `NM.ui.sorter(tabelle, { schlüssel: { get: (s) => Wert, first: 'asc' | 'desc' } })` liefert `rows()` zum Ordnen der Schülerliste sowie `head()`, `toggle()` und `nameHeads()` für die Spaltenköpfe; die passenden Namenszellen erzeugt `NM.ui.nameCells(s, nr)`.
 - **Moodle-Import:** Einlesen und Übernehmen in `js/moodle.js` (Tests: `tests/moodle.test.html`), Dialog und Karte in `js/view-tests.js`, Ausdruck `NM.print.moodle` in `js/print.js`.
-- **Ausdrucke:** neue Ausdrucke in die Druckauswahl „🖨 Drucken …“ (`NM.ui.printButton`) eintragen, kein eigener Knopf. Jeder Ausdruck beginnt mit `header(course, title, sub, opts)` in `js/print.js` (seit 1.47; `opts`: `kicker`, `person`, `half`, `date`, `dateLabel`, `showDate`, `extra`, `compact` für Zettel), keine eigenen Köpfe. CSS `.p-head*`, `.p-school`, `.p-logo`, `.p-kicker`, `.p-meta`. Die Angaben kommen aus `settings.print` (`NM.model.cleanPrint`, Karte `printCard` mit `readLogo` in `js/view-settings.js`). Test: E2E `run_print_head_check`.
+- **Ausdrucke:** neue Ausdrucke in die Druckauswahl „Drucken …“ (`NM.ui.printButton`) eintragen, kein eigener Knopf. Jeder Ausdruck beginnt mit `header(course, title, sub, opts)` in `js/print.js` (seit 1.47; `opts`: `kicker`, `person`, `half`, `date`, `dateLabel`, `showDate`, `extra`, `compact` für Zettel), keine eigenen Köpfe. CSS `.p-head*`, `.p-school`, `.p-logo`, `.p-kicker`, `.p-meta`. Die Angaben kommen aus `settings.print` (`NM.model.cleanPrint`, Karte `printCard` mit `readLogo` in `js/view-settings.js`). Test: E2E `run_print_head_check`.
 - **Arbeit in Teilen (seit 1.18):** Logik in `js/grades.js` (`hasParts`, `separateParts`, `taskGroups`, `partAsTest`, `keyForPart`, `partStats`; `testResult()` liefert `parts`), Oberfläche in `js/view-tests.js` (`partsCard`, Teilspalten, Schlüssel je Teil), Druck `NM.print.test(…, 'parts')`.
 - **Präsentationen (seit 1.20):** Logik in `js/grades.js` (`presAsTest`, `presResult`, `presStats`, `keyForPres`; Präsentation = Test mit Kriterien als Aufgaben, 3 × Gewicht), Modell `NM.model.newPres`/`presCriterion`/`defaultCriteriaPool`/`newPresTemplate`, Standardvorlagen `PRES_TEMPLATES` mit `defaultPresTemplates(pool)` und `missingDefaultTemplates`, Reiter `js/view-pres.js`, Druck `NM.print.pres(course, a, 'list' | 'key' | 'blank' | 'sheets')` und `NM.print.presGuide`. Die Schlüsselkarte teilt sich der Reiter mit den Tests (`NM.views.tests.keyCardFor`).
 - **Gruppenpräsentationen (seit 1.23):** Logik in `js/grades.js` (`presGroupOf`, `presCritIsGroup`, `presScores`, `presDeviation`, `presTopic`), Oberfläche in `js/view-pres.js` (`setGroupMode`, `groupsCard`, `groupRateCard`, `personRateCard`).
@@ -1480,7 +1515,7 @@ In `js/model.js` stehen zwei Nummern:
 - **Tools (seit 1.29 als „Zufall“, seit 1.36 „Tools“ mit Timer):** Timer-Logik in `js/timer.js` (`NM.timer`), Anzeige `timerTool`/`timerFace` (Designs ring, digits, bar, hourglass) und Pop-up `openTimerPopup` in `js/view-random.js`; ein Timer für die ganze App (`clock`), alle Anzeigen in `clock.faces`, Signal über `NM.pomodoro.alarm`. Zufalls-Logik in `js/random.js` (`NM.random`), Reiter `js/view-random.js` (`numberTool`, `peopleTool`, `diceTool` mit eigenem Canvas-3D-Zeichner `paintDie`, `cardTool` mit `flyIn`). Kartenbilder in `cards/` (`<Farbe C/D/H/S><Wert 2–10/B/D/K/A>.svg`, `back.svg`, CC0); ein neuer App-Ordner muss auch in `staticAllowed` (`launcher/server.go`) und in `launcher/build.sh`. Ergebnisse und Stapel nur in der Sitzung (`NM.views.random.session`), Einstellungen pro Gerät in `nm.ui` (`ui.random`), eigene Karten in `course.randomCards`. „Heute abwesend“ aus `NM.views.draw.absent`. Werkzeuge je Kurs (seit 1.39): `course.tools`, reine Logik `NM.model.TOOL_IDS`/`toolList`/`setTools`, Kacheln über die Tabelle `TOOLS` und Fenster `toolsMenu` in `js/view-random.js`; ein neues Werkzeug kommt in `TOOL_IDS` und `TOOLS`. Tests: `tests/random.test.html`, `tests/model.test.html`, E2E `run_random_check`, `run_tools_layout_check`, `run_tools_menu_check`.
 - **Demo öffnen (seit 1.31):** `NM.app.openDemo()` (`js/app.js`) öffnet die eigene Adresse mit `?demo` in einem neuen Fenster; Knöpfe über `demoLink()` auf den Startseiten (`renderStart`, `renderCreate`) und in `infoCard` (`js/view-settings.js`). Die Demo speichert ihre Ansicht unter `nm.ui.demo` (`UI_KEY`). E2E `run_demo_link_check`.
 - **Update-Sicherheit (seit 1.33):** Strukturprüfung `NM.model.check(db)` (`js/model.js`, rein, liefert `{ level: 'fehler' | 'hinweis', where, text }`), Aufruf nach dem Entsperren in `unlock` (`js/app.js`, nur Meldung) und im Dialog `checkDialog` (`js/view-settings.js`). Prüfstücke früherer Versionen in `tests/altdaten/` (erzeugt mit `erzeugen.js` aus dem Git-Verlauf), geprüft in `tests/update.test.html`, E2E `run_old_db_check` und in `run_decrypt_tool`. Neue Felder in `check` aufnehmen, wenn ein fehlerhafter Wert die Rechnung stören würde.
-- **Reihenfolge der Reiter (seit 1.34):** `settings.tabOrder`; reine Logik `NM.model.orderTabs`/`moveTab`, in der App `NM.app.orderedTabs()` (überall statt `TABS` verwenden, wo Reiter angezeigt werden) und `NM.app.setTabOrder()`. Ziehen in der Reiterleiste in `renderMain` (`js/app.js`), ▲▼ in `tabOrderList` (`js/view-settings.js`), Haken in `NM.ui.tabChecks`. E2E `run_tab_order_check`.
+- **Reihenfolge der Reiter (seit 1.34):** `settings.tabOrder`; reine Logik `NM.model.orderTabs`/`moveTab`, in der App `NM.app.orderedTabs()` (überall statt `TABS` verwenden, wo Reiter angezeigt werden) und `NM.app.setTabOrder()`. Ziehen in der Reiterleiste in `renderMain` (`js/app.js`), Pfeile in `tabOrderList` (`js/view-settings.js`), Haken in `NM.ui.tabChecks`. E2E `run_tab_order_check`.
 - **Notenübersicht einklappen/bündeln (seit 1.35):** `halfCard` in `js/view-overview.js` (`ui.ovFold = { ka, other, draw }` pro Gerät, `drawRange`, `bundleCell`). Ziehungsspalten = Einzelnoten, deren id in `course.draw.history[].aid` steht. Ausdrucke (`NM.print.course`) sind unabhängig davon. E2E `run_overview_fold_check`.
 - **Ziehen-Pools (seit 1.37):** Logik `js/draw.js` (`NM.draw`), Reiter `js/view-draw.js` (`poolPicker`, `renderPool`, `checkCard`, `mergeDialog`; klassischer Pool weiter über `drawStudents`/`pool`). Gewählter Pool pro Gerät in `ui.drawPool`. Wer für eine Spalte gezogen wurde: `NM.draw.drawnSets` (Notenübersicht), Zeitraum im Kopf über `poolSub` (`js/view-overview.js`) und `drawDate` (`js/print.js`). Strukturprüfung der Pools in `NM.model.check`. E2E `run_draw_pools_check`.
 - **Gruppenbildung (seit 1.24):** Logik in `js/groups.js` (`sizes`, `build` mit Kostenfunktion und Tauschsuche, `check`, `experts`), Reiter `js/view-groups.js` (`roll`, `expertCard`), Druck `NM.print.groups`, Übernahme in Präsentationen `NM.views.pres.applyGroups`. „Heute abwesend“ kommt aus `NM.views.draw.absent` (nur Sitzung). Leistung = gerundete Halbjahresnote (`G.halfResult(...).final`), nie gespeichert. Tests: `tests/groups.test.html`, E2E `run_groups_tab_check`.
@@ -1490,7 +1525,8 @@ In `js/model.js` stehen zwei Nummern:
 - **Einstufung (seit 1.42, GK/LK seit 1.43.1):** `course.einstufung` (U, G, E, E1, E2, GK, LK) und `student.einstufung` nur bei Abweichung. Immer über `NM.model.courseEinstufung`, `studentEinstufung`, `setStudentEinstufung` und `setCourseEinstufung` (`{ keep }`) lesen und setzen, Liste `NM.model.EINSTUFUNGEN`, Auswahl je Stufe `einstufungenFor(course, aktuell)`, Kursart → Einstufung `einstufungFromType` (Kursart-Auswahl und `changeJahrgang`, neue Kurse in `newCourse`). Oberfläche: `courseCard`/`changeEinstufung` und Spalte „Einst.“ in `studentsCard` (`js/view-course.js`). Notfallwerkzeug: Spalte „Einstufung“. Tests: `tests/qr.test.html`, E2E `run_scripto_check`.
 - **Notenschlüssel-Warnung:** `G.unreachableSteps(key)` meldet nicht erreichbare Stufen; Warnung mit Schnellknöpfen in `NM.views.tests.keyCardFor` (Tests, Teile, Präsentationen).
 - **Neue Kursart:** Eintrag in `COURSE_TYPES` in `js/grades.js`.
-- **Farben und Designs (seit 1.43):** Tokens oben in `css/app.css`: `:root, [data-theme='light']` hell, `[data-theme='dark']` dunkel (davor der `prefers-color-scheme`-Rückfall, bis das Skript läuft), darunter die weiteren Designs als `[data-theme][data-variant='…']`, die nur abweichende Tokens überschreiben. Die Liste steht in `NM.app.THEMES` (`js/app.js`); `applyTheme` löst „Wie das System“ selbst auf (`themeMode`, Listener auf `prefers-color-scheme`) und setzt immer `data-theme` und `data-variant`, `themeVariant` liefert das gewählte Design. Kacheln: `themeTiles` in `js/view-settings.js`; das Timer-Pop-up kopiert beide Attribute (`openTimerPopup`). Ein neues Design: Eintrag in `THEMES` und ein Token-Block in `css/app.css`; `run_theme_check` prüft den Kontrast automatisch.
+- **Gemeinsames Design (seit 2.0):** nur im Design-Repo ändern und neu verteilen, siehe 22.2. Neue Knöpfe mit `NM.util.icon(name)`, leere Ansichten mit `NM.ui.emptyState`, Dateifelder mit `NM.ui.dropzone`. Farben nur über die Tokens, Maße in `rem`.
+- **Farben und Designs (seit 1.43):** Tokens oben in `css/app.css`: `:root, [data-theme='light']` hell, `[data-theme='dark']` dunkel (davor der `prefers-color-scheme`-Rückfall, bis das Skript läuft), darunter die weiteren Designs als `[data-theme][data-variant='…']`, die nur abweichende Tokens überschreiben. Die Liste steht in `NM.app.THEMES` (`js/app.js`); `applyTheme` löst „Wie das System“ selbst auf (der Modus-Schalter der Kopfzeile ruft `setThemeMode`) (`themeMode`, Listener auf `prefers-color-scheme`) und setzt immer `data-theme` und `data-variant`, `themeVariant` liefert das gewählte Design. Kacheln: `themeTiles` in `js/view-settings.js`; das Timer-Pop-up kopiert beide Attribute (`openTimerPopup`). Ein neues Design: Eintrag in `THEMES` und ein Token-Block in `css/app.css`; `run_theme_check` prüft den Kontrast automatisch.
 - **Änderungen am Datenmodell:** Standardwerte in `NM.model.migrate()` ergänzen, damit bestehende Datenbanken weiter funktionieren. Bei inkompatiblen Änderungen `SCHEMA` erhöhen.
 - **Startprogramm:** Quelltext in `launcher/` (Go, nur Standardbibliothek), Tests `launcher/server_test.go`, `icon_test.go`, `desktop_linux_test.go` (laufen in `run_tests.py` mit, E2E `run_launcher_check`). Neue Schnittstellen immer in `server.go` und `ServerStore` (`js/storage.js`) zugleich, mit derselben Bedeutung wie in `FolderStore`. Ordnerwechsel: `store.pickTarget()` → `{ name, hasDb, same }`, `store.moveTo(ziel, { backups })`, `Store.useTarget(ziel)` (ohne Kopieren); Oberfläche `changeFolder`, `restoreFromFile` in `js/view-settings.js`, `importFromFile`/`NM.app.switchStore` in `js/app.js`, Dateiauswahl `NM.util.pickFile`. Neue Ordner mit App-Dateien in `staticAllowed` (`server.go`) und in `build.sh` eintragen. Bauen: `launcher/build.sh`.
 - **Neue Version einspielen:** Programmordner (`index.html`, `css/`, `js/`) ersetzen; für das Startprogramm mit eingebauten Dateien vorher `launcher/build.sh` laufen lassen. Der Datenordner bleibt unberührt. Vorher eine Sicherung anlegen.

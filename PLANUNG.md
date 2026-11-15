@@ -254,7 +254,7 @@ Schon vorhanden und Grundlage für alle drei: die Schnellwahl im EPO-Reiter (neu
 3. **Fehlzeiten:** eigene Liste je Kurs; „Heute abwesend“ und EPO-k schreiben hinein bzw. werden daraus vorbelegt.
 4. **Druckkopf:** für alle Ausdrucke; Inhalt Schullogo, Schulname, Lehrkraft, Kurs, Schuljahr und Datum; gespeichert in der (verschlüsselten) Datenbank, damit auf allen Geräten gleich.
 
-## Z) Gemeinsames Design der Ordo-Apps (solagio-design) – geplant, Ziel Version 2.0.0
+## Z) Gemeinsames Design der Ordo-Apps (solagio-design) – erledigt in 2.0.0 (nicht veröffentlicht, Zweig `design`)
 
 Anlass: Alle Ordo-Apps bekommen dasselbe Erscheinungsbild. Das Design (Tokens, Blades, Bausteine mit der Vorsilbe `sd-`, Symbole aus Tabler Icons, Schrift Josefin Sans) liegt im Projekt `../Design` und kommt per Verteilskript als feste Kopie in die App. Geklärt mit dem Nutzer am 14.11.2026. **Einbau erst nach Freigabe dieses Plans.**
 
