@@ -260,7 +260,7 @@ ul.plain li { display: flex; align-items: center; gap: 0.625rem; padding: 0.375r
 .btn-danger:disabled { color: var(--text-dim); border-color: var(--border); background: transparent; }
 .btn-ghost { border-style: dashed; background: transparent; color: var(--accent); }
 .btn-ghost:hover { background: var(--accent-soft); }
-.btn-sm { height: 1.75rem; padding: 0 0.625rem; font-size: 0.8125rem; font-weight: 500; border-radius: var(--radius-s); }
+.btn-sm { height: 1.75rem; min-height: 1.75rem; padding: 0 0.625rem; font-size: 0.8125rem; font-weight: 500; border-radius: var(--radius-s); }
 .btn-block { width: 100%; }
 .icon-btn {
   display: inline-flex; align-items: center; justify-content: center;
@@ -296,6 +296,8 @@ select.input { padding-right: 0.25rem; }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 0.875rem; }
 .form-row { display: flex; gap: 0.75rem; align-items: flex-end; flex-wrap: wrap; }
 .form-row .field { margin-bottom: 0; }
+.form-row + p, .form-row + .grp-set-info { margin-top: 0.5rem; }   /* Hinweis unter einer Feldzeile */
+.card > .inline + .form-grid { margin-top: 0.625rem; }   /* Knopfzeile über Feldern */
 .actions-end { margin-left: auto; }
 .actions-end > .inline { flex-wrap: wrap; }
 
@@ -426,8 +428,12 @@ select.input { padding-right: 0.25rem; }
 
 details.details-card > summary { display: flex; align-items: baseline; gap: 0.75rem; cursor: pointer; list-style: none; }
 details.details-card > summary::-webkit-details-marker { display: none; }
-details.details-card > summary::before { content: '▸'; color: var(--text-dim); }
-details.details-card[open] > summary::before { content: '▾'; }
+/* Klapp-Pfeil für alle Klapp-Karten: gezeichneter Winkel in der Strichstärke der Symbole */
+details.details-card > summary::before, .pool-card > summary::before {
+  content: ''; flex: none; align-self: center; width: 0.4375rem; height: 0.4375rem; margin: 0 0.125rem 0 0.1875rem;
+  border-right: 1.5px solid var(--text-dim); border-bottom: 1.5px solid var(--text-dim); transform: rotate(-45deg);
+}
+details.details-card[open] > summary::before, .pool-card[open] > summary::before { transform: translateY(-2px) rotate(45deg); }
 details.details-card > summary h2 { margin: 0; }
 details.details-card[open] > summary { margin-bottom: 0.75rem; }
 
@@ -451,7 +457,6 @@ details.details-card[open] > summary { margin-bottom: 0.75rem; }
 .table { border-collapse: separate; border-spacing: 0; width: 100%; font-variant-numeric: tabular-nums; }
 .table th, .table td { padding: 0.25rem 0.5rem; border-bottom: 1px solid var(--border); white-space: nowrap; vertical-align: middle; }
 .table th { background: var(--bg-raised); font-size: 0.75rem; font-weight: 600; color: var(--text-dim); text-align: left; position: sticky; top: 0; z-index: 2; }
-.table thead tr:nth-child(2) th { top: 1.8125rem; }
 .table tbody tr:hover td { background: var(--bg-raised); }
 .table tbody tr:last-child td { border-bottom: 0; }
 .table.compact td { padding: 2px 0.375rem; }
@@ -638,7 +643,9 @@ body.grp-dragging, body.grp-dragging * { cursor: grabbing !important; }
 .row-current td { background: var(--accent-soft); }
 .topic-col { max-width: 10rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .crit-short { display: inline-block; max-width: 5.625rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pool-card summary { display: flex; align-items: baseline; gap: 0.5rem; cursor: pointer; }
+.pool-card summary { display: flex; align-items: baseline; gap: 0.5rem; cursor: pointer; list-style: none; }
+.pool-card > summary::-webkit-details-marker { display: none; }
+.pool-card[open] > summary { margin-bottom: 0.5rem; }
 .pool-card summary h2 { display: inline; margin: 0; }
 .pool-group h3 { margin: 0.75rem 0 0.375rem; }
 .pool-item { display: inline-flex; align-items: center; gap: 2px; margin: 0 0.375rem 0.375rem 0; padding: 2px 0.25rem 2px 0.625rem; border: 1px solid var(--border); border-radius: 999px; background: var(--bg-raised); }
@@ -676,8 +683,8 @@ body.grp-dragging, body.grp-dragging * { cursor: grabbing !important; }
 .tab-order h3 { margin: 0.875rem 0 2px; }
 .tab-order-list { list-style: none; padding: 0; margin: 0.375rem 0 0.625rem; max-width: 20rem; counter-reset: tabpos; }
 .tab-order-list li { display: flex; align-items: center; gap: 0.25rem; counter-increment: tabpos; }
-.tab-order-list li span { flex: 1; }
-.tab-order-list li span::before { content: counter(tabpos) ". "; color: var(--text-dim); }
+.tab-order-list li > span { flex: 1; }   /* nur die Beschriftung, nicht die Symbole in den Knöpfen */
+.tab-order-list li > span::before { content: counter(tabpos) ". "; color: var(--text-dim); }
 .tab-order-list .icon-btn:disabled { opacity: 0.3; }
 .tools-list li .check { flex: 1; margin: 0; }
 .tools-list li .check::before { content: counter(tabpos) ". "; color: var(--text-dim); }
@@ -824,7 +831,8 @@ dialog.modal h2 { font-size: 1.25rem; margin-bottom: 1rem; }
   .sidebar.collapsed .side-toggle { width: auto; margin: 0; }
   .sidebar.collapsed .course-chip { width: auto; min-width: 3.25rem; margin: 0; }
   .view { padding: 1rem; }
-  .view .btn { white-space: normal; max-width: 100%; }
+  .view .btn { white-space: normal; max-width: 100%; height: auto; padding-block: 0.375rem; line-height: 1.25; }   /* lange Beschriftung darf umbrechen, der Knopf wächst mit */
+  .view .btn:not(.btn-sm) { min-height: var(--control); }
   .form-grid { grid-template-columns: 1fr; }
   .grid-2 { grid-template-columns: 1fr; }
   .topbar { gap: 0.5rem; padding: 0.375rem 0.625rem; flex-wrap: wrap; }
