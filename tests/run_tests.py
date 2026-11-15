@@ -1691,9 +1691,9 @@ def run_theme_check(br, base):
             Object.assign(NM.app.state.ui, { theme: mode, [mode + 'Theme']: id }); NM.app.applyTheme(); await wait(50);
             const root = document.documentElement, low = [];
             const check = (fg, bg, min) => { const r = cr(fg, bg); if (r < min) low.push(`${fg} auf ${bg}: ${r.toFixed(2)}`); };
-            for (const bg of ['var(--bg)', 'var(--surface)', 'var(--surface-2)']) {
-                for (const fg of ['var(--text)', 'var(--muted)']) check(fg, bg, 4.5);
-                for (const fg of ['var(--accent)', 'var(--ok)', 'var(--warn)', 'var(--danger)']) check(fg, bg, 3);
+            for (const bg of ['var(--bg)', 'var(--bg-card)', 'var(--bg-raised)']) {
+                for (const fg of ['var(--text)', 'var(--text-dim)', 'var(--text-faint)']) check(fg, bg, 4.5);
+                for (const fg of ['var(--accent)', 'var(--ok)', 'var(--gold)', 'var(--bad)', 'var(--border-strong)']) check(fg, bg, 3);
             }
             check('var(--on-accent)', 'var(--accent)', 4.5);
             for (const p of [0, 5, 10, 15]) check('var(--g-text)', `hsl(${Math.round(p / 15 * 125)} var(--g-s) var(--g-l))`, 4.5);

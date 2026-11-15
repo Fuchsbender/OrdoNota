@@ -1,9 +1,11 @@
-/*! solagio-design 0.3.0 (Commit 5e1853d, 2026-11-15) – Kopie für ordonota.
+/*! solagio-design 0.3.1 (Commit 6d7f802, 2026-11-15) – Kopie für ordonota.
  * Nicht hier ändern: Quelle ist das Repo solagio-design (Projekte/Design),
  * verteilt mit werkzeuge/verteile.py.
  * Reihenfolge: Tokens · Akzent · Brücke zu Blades · Bausteine.
- * Daneben laden: blades.min.css (Blades, MIT). Schrift: Josefin Sans (OFL 1.1). */
+ * Daneben laden: blades.min.css (Blades, MIT). Schrift: Josefin Sans (OFL 1.1).
+ * Alles steht in der CSS-Ebene „solagio“: CSS der App ohne Ebene gewinnt immer. */
 
+@layer solagio {
 /* solagio-design – Tokens: Farben, Schrift, Abstände, Radien.
  * Gemeinsame Grundlage der Ordo-Apps und von solagio.de.
  *
@@ -1145,4 +1147,5 @@ dialog::backdrop { background: var(--backdrop); }
  * lässt die Ladeanzeige (aria-busy) laufen. Eigene Übergänge hier ebenfalls abschalten. */
 @media (prefers-reduced-motion: reduce) {
   .sd-dropzone, .sd-sort .sd-icon, .sd-tabs-ink { transition: none; }
+}
 }

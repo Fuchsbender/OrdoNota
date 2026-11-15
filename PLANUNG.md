@@ -286,15 +286,22 @@ Anlass: Alle Ordo-Apps bekommen dasselbe Erscheinungsbild. Das Design (Tokens, B
 
 Jede Etappe endet mit `ERGEBNIS: x von x bestanden` und einem Commit auf dem Zweig `design`.
 
-- [ ] 0. Design-Projekt 0.3.0: Baustein `sd-tabs`, rund 30 neue Symbole, Musterseite ergänzen.
-- [ ] 1. Vorbereitung: Zweig, `PRODUCT.md`, Vergleichsfotos aller Ansichten im Demo-Modus (hell, dunkel, 1280 und 390 px), Design-Dateien verteilen (`css/blades.min.css`, `css/solagio-design.css`, `js/solagio-design.js`, `schrift/`), `data-app="ordonota"` in `index.html`, `launcher/build.sh` und die Dateiliste des Servers um `schrift/` erweitern, Lizenzhinweise.
-- [ ] 2. Tokens: Namen umstellen, warme Grundfarbe, vier Varianten umschreiben, Kontrasttest anpassen. Das Timer-Fenster lädt die neuen CSS-Dateien mit.
+- [x] 0. Design-Projekt 0.3.0: Baustein `sd-tabs`, rund 30 neue Symbole, Musterseite ergänzen.
+- [x] 1. Vorbereitung: Zweig, `PRODUCT.md`, Vergleichsfotos aller Ansichten im Demo-Modus (hell, dunkel, 1280 und 390 px), Design-Dateien verteilen (`css/blades.min.css`, `css/solagio-design.css`, `js/solagio-design.js`, `schrift/`), `data-app="ordonota"` in `index.html`, `launcher/build.sh` und die Dateiliste des Servers um `schrift/` erweitern, Lizenzhinweise.
+- [x] 2. Tokens: Namen umstellen, warme Grundfarbe, vier Varianten umschreiben, Kontrasttest anpassen. Das Timer-Fenster lädt die neuen CSS-Dateien mit.
 - [ ] 3. px → rem in `app.css`. Kriterium: Fotos vorher und nachher sind bei normaler Schrift gleich.
 - [ ] 4. Gerüst: Kopfzeile mit Logo, Modus-Schalter, große Schrift, Reiter, Kursleiste.
 - [ ] 5. Knöpfe, Felder, Dialoge, Meldungen, Anmeldung, Einstellungen (mit den Vorschaukacheln der Designs).
 - [ ] 6. Symbole statt Emoji.
 - [ ] 7. Fachansichten Reiter für Reiter: Tokens, Überschriften in Josefin Sans, Inline-Stile entfernen (berechnete Werte wie Notenfarben und Sitzpositionen bleiben), Timer-Fenster, Beamer-Ansichten.
 - [ ] 8. Abschluss: Prüfung auf Bedienbarkeit, Kontrast und schmale Bildschirme, Importe härten, Chromium, Firefox und WebKit, unter `file://` und über das Startprogramm, Doku (`DOKUMENTATION.md`, `README.md`), Version 2.0.0, Prüfung auf private Angaben vor dem Push.
+
+### Aus der Umsetzung
+
+- **CSS-Ebenen (Etappe 2):** Das Design wird mit `verteile.py … --ebene solagio` verteilt und steht damit in der CSS-Ebene `solagio`. `app.css` beginnt mit der Ebene `ordonota-grund`: Sie setzt alles, was `app.css` nicht selbst festlegt, auf die Vorgabe des Browsers zurück (`all: revert`), ausgenommen das Wurzelelement, Bilder, SVG und alles mit einer Klasse `sd-…` samt Inhalt. Blades wirkt in OrdoNota also nur in den `sd-`-Bausteinen; Knöpfe, Felder und Dialoge des Gerüsts stehen mit den Tokens in `app.css`. Grund: Sonst schlägt Blades in die rund 500 eigenen Klassen durch (schwebende Beschriftungen, Abstände, Feldhöhen).
+- Die Design-Dateien stehen erst seit Etappe 2 in `index.html` (nicht seit Etappe 1), zusammen mit den umbenannten Tokens.
+- Die Farben des Standard-Designs stehen in `app.css` noch einmal (`[data-theme='light']`, `[data-theme='dark']`), weil die Vorschaukacheln der Einstellungen ihr Design an einem inneren Element tragen. Ändern sich die Werte im Design-Projekt, hier nachziehen.
+- Vergleichsfotos: `.claude/design-fotos/fotos.py <Ordner>` (nur lokal), Stand vorher in `.claude/design-fotos/vorher/`.
 
 ### Offen
 

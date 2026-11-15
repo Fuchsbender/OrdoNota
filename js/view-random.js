@@ -279,9 +279,12 @@
       toast('Das Pop-up-Fenster wurde blockiert. Bitte Pop-ups für OrdoNota erlauben oder „⛶ Vollbild“ verwenden.', 'warn');
       return null;
     }
-    const css = new URL('css/app.css?v=' + M.APP_VERSION, location.href).href;
+    // Dieselben Dateien in derselben Reihenfolge wie in index.html (gemeinsames Design vor app.css)
+    const css = ['css/blades.min.css', 'css/solagio-design.css', 'css/app.css']
+      .map((f) => '<link rel="stylesheet" href="' + new URL(f + '?v=' + M.APP_VERSION, location.href).href + '">')
+      .join('');
     d.open();
-    d.write('<!doctype html><html lang="de"><head><meta charset="utf-8"><title>Timer – OrdoNota</title><link rel="stylesheet" href="' + css + '"></head><body class="tmr-popup"></body></html>');
+    d.write('<!doctype html><html lang="de" data-app="ordonota"><head><meta charset="utf-8"><title>Timer – OrdoNota</title>' + css + '</head><body class="tmr-popup"></body></html>');
     d.close();
     for (const k of ['data-theme', 'data-variant']) {
       const v = document.documentElement.getAttribute(k);
