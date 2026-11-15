@@ -388,6 +388,35 @@ def run_course_check(br, base):
         return out; })()""")
     report("Sitzplan: Raster an allen Seiten erweitern/verkleinern", bool(res4) and res4["edges"] == 4 and res4["afterTop"] == [4, 1, 2]
            and res4["afterRight"] == [5, 0] and res4["afterLeft"] == [4, 4, 0] and res4["afterBottom"] == [3, False] and not br.errors, str(res4) + "; ".join(br.errors))
+    # Tastaturweg: Eingabetaste setzt/wählt, Pfeiltasten verschieben und tauschen, Entf nimmt vom Plan; Fokus bleibt auf der Karte
+    res5 = br.eval("""(async () => {
+        const wait = () => new Promise((r) => setTimeout(r, 150));
+        const c = NM.app.currentCourse(); const st = c.seatingPlans[0];
+        st.cols = 3; st.rows = 2; st.pos = {};
+        const ids = NM.model.activeStudents(c).map((s) => s.id);
+        st.pos[ids[1]] = { x: 1, y: 0 };
+        NM.app.rerender(); await wait();
+        const card = (id) => document.querySelector('.seat-card[data-sid="' + id + '"]');
+        const key = (k) => { document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true })); return wait(); };
+        const out = {};
+        card(ids[0]).focus(); await key('Enter');
+        out.placed = [st.pos[ids[0]].x, st.pos[ids[0]].y, document.activeElement === card(ids[0])];
+        await key('ArrowRight');
+        out.unselected = st.pos[ids[0]].x;            // nicht ausgewählt: Pfeiltaste verschiebt nicht
+        await key('Enter');
+        out.pressed = card(ids[0]).getAttribute('aria-pressed');
+        await key('ArrowRight');                      // besetzter Nachbarplatz: tauschen
+        out.swap = [st.pos[ids[0]].x, st.pos[ids[1]].x];
+        await key('ArrowUp');                         // am Rand: bleibt
+        await key('ArrowDown');
+        out.down = [st.pos[ids[0]].x, st.pos[ids[0]].y, document.activeElement === card(ids[0])];
+        out.label = card(ids[0]).getAttribute('aria-label').replace(/^.*, Reihe/, 'Reihe');
+        await key('Delete');
+        out.removed = [ids[0] in st.pos, !!card(ids[0]).closest('[data-tray]'), document.activeElement === card(ids[0])];
+        return out; })()""")
+    report("Sitzplan: Karten per Tastatur setzen, verschieben, tauschen, abräumen", bool(res5) and res5["placed"] == [0, 0, True] and res5["unselected"] == 0
+           and res5["pressed"] == "true" and res5["swap"] == [1, 0] and res5["down"] == [1, 1, True] and res5["label"] == "Reihe 2, Platz 2"
+           and res5["removed"] == [False, True, True] and not br.errors, str(res5) + "; ".join(br.errors))
     report("Sitzplan: Symbol ohne Foto, Fotos ausblenden", bool(res2) and res2["shown"] > 0 and res2["icons"] == 1 and res2["hidden"] == 0 and res2["cards"] > 0 and not br.errors, str(res2))
     report("EPO: Fotos ein-/ausblenden (Foto bzw. Platzhalter je Person)", bool(res) and res["before"] == 0 and res["empty"] == 1 and res["imgs"] == res["rows"] - 1 and not br.errors, str(res) + "; ".join(br.errors))
 

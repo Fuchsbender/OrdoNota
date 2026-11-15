@@ -63,9 +63,20 @@
     const card = (s) => {
       const show = !ui.seatHidePhotos;
       const pic = show && !!s.photo;
+      const at = st.pos[s.id];
+      const seated = !unplaced.includes(s);
       return h(
         'div',
-        { class: 'seat-card' + (show ? ' has-photo' : '') + (s.id === selectedSid ? ' seat-selected' : ''), 'data-sid': s.id, title: M.studentName(s) + ' – anklicken und Strg+V fügt ein kopiertes Foto ein' },
+        {
+          class: 'seat-card' + (show ? ' has-photo' : '') + (s.id === selectedSid ? ' seat-selected' : ''),
+          'data-sid': s.id,
+          'data-focus-key': 'seat-' + s.id,
+          role: 'button',
+          tabindex: '0',
+          'aria-pressed': s.id === selectedSid ? 'true' : 'false',
+          'aria-label': M.studentName(s) + (seated ? `, Reihe ${at.y + 1}, Platz ${at.x + 1}` : ', ohne Platz'),
+          title: M.studentName(s) + ' – anklicken und Strg+V fügt ein kopiertes Foto ein',
+        },
         // ohne Foto: blasses Personensymbol als Platzhalter
         show ? h('img', { class: 'seat-photo' + (pic ? '' : ' seat-photo-empty'), src: pic ? s.photo : M.PERSON_ICON, alt: '', draggable: 'false' }) : null,
         h('span', { class: 'seat-name' }, names[s.id]),
@@ -191,7 +202,8 @@
           st.desk === 'top' ? desk : null,
           h('div', { class: 'seat-wrap', 'data-scroll-key': 'seat-grid' }, ui.seatEdit ? editFrame(course, st, grid) : grid),
           st.desk === 'bottom' ? desk : null,
-          h('p', { class: 'muted small' }, 'Karten mit der Maus (oder dem Finger) auf einen Platz ziehen. Auf einen besetzten Platz gezogen, tauschen die beiden die Plätze.')
+          h('p', { class: 'muted small' }, 'Karten mit der Maus (oder dem Finger) auf einen Platz ziehen. Auf einen besetzten Platz gezogen, tauschen die beiden die Plätze.'),
+          h('p', { class: 'muted small' }, 'Mit der Tastatur: Karte mit der Eingabetaste auswählen, mit den Pfeiltasten verschieben, mit Entf vom Plan nehmen. Eine Karte ohne Platz setzt die Eingabetaste auf den ersten freien Platz.')
         ),
         h(
           'div',
@@ -208,6 +220,7 @@
       )
     );
     enableDrag(view, course, st);
+    enableKeys(view, course, st);
     enablePhotoDrop(view, course);
   }
 
@@ -379,6 +392,67 @@
     addPhotoFrom(course, selectedSid, { file: item.getAsFile() });
   });
 
+  /** Setzt eine Person auf einen Platz. Sitzt dort schon jemand, bekommt der den alten Platz (oder geht in die Ablage). */
+  function place(st, sid, x, y, other) {
+    const from = st.pos[sid];
+    if (other && other !== sid) {
+      if (from && from.x < st.cols && from.y < st.rows) st.pos[other] = { x: from.x, y: from.y };
+      else delete st.pos[other];
+    }
+    st.pos[sid] = { x, y };
+  }
+
+  /** Auswahl einer Karte umschalten (Ziel für Strg+V und für die Pfeiltasten). */
+  function toggleSelected(sid) {
+    selectedSid = selectedSid === sid ? null : sid;
+    document.querySelectorAll('.seat-card').forEach((el) => {
+      el.classList.toggle('seat-selected', el.dataset.sid === selectedSid);
+      el.setAttribute('aria-pressed', el.dataset.sid === selectedSid ? 'true' : 'false');
+    });
+  }
+
+  /**
+   * Tastaturweg zum Ziehen: Eingabe-/Leertaste wählt eine Karte aus, Pfeiltasten schieben die ausgewählte Karte
+   * auf den Nachbarplatz (besetzt = tauschen), Entf nimmt sie vom Plan. Ohne Platz: Eingabetaste = erster freier Platz.
+   */
+  function enableKeys(root, course, st) {
+    const STEP = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+    root.addEventListener('keydown', (e) => {
+      const cardEl = e.target.classList && e.target.classList.contains('seat-card') ? e.target : null;
+      if (!cardEl || e.altKey || e.ctrlKey || e.metaKey) return;
+      const sid = cardEl.dataset.sid;
+      const seated = !!cardEl.closest('.seat-cell');
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        if (seated) return toggleSelected(sid);
+        const { cells } = layout(course);
+        for (let y = 0; y < st.rows; y++) {
+          for (let x = 0; x < st.cols; x++) {
+            if (cells[x + ',' + y]) continue;
+            st.pos[sid] = { x, y };
+            return NM.app.commit();
+          }
+        }
+        return toast('Kein Platz mehr frei – Raster vergrößern.', 'error');
+      }
+      if (!seated) return;
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        delete st.pos[sid];
+        if (selectedSid === sid) selectedSid = null;
+        return NM.app.commit();
+      }
+      const d = STEP[e.key];
+      if (!d || selectedSid !== sid) return;
+      e.preventDefault();
+      const x = st.pos[sid].x + d[0];
+      const y = st.pos[sid].y + d[1];
+      if (x < 0 || y < 0 || x >= st.cols || y >= st.rows) return;
+      place(st, sid, x, y, layout(course).cells[x + ',' + y] || null);
+      NM.app.commit();
+    });
+  }
+
   /** Ziehen per Pointer-Events (Maus, Stift, Touch). */
   function enableDrag(root, course, st) {
     root.addEventListener('pointerdown', (e) => {
@@ -435,8 +509,7 @@
         if (over) over.classList.remove('seat-over');
         // Klick ohne nennenswerte Bewegung: Karte auswählen (für Strg+V)
         if (ev.type === 'pointerup' && Math.hypot(ev.clientX - e.clientX, ev.clientY - e.clientY) < 5) {
-          selectedSid = selectedSid === sid ? null : sid;
-          document.querySelectorAll('.seat-card').forEach((el) => el.classList.toggle('seat-selected', el.dataset.sid === selectedSid));
+          toggleSelected(sid);
           return;
         }
         const t = ev.type === 'pointerup' ? target(ev) : null;
@@ -444,17 +517,8 @@
         if (t.hasAttribute('data-tray')) {
           delete st.pos[sid];
         } else {
-          const x = Number(t.dataset.x);
-          const y = Number(t.dataset.y);
-          const from = st.pos[sid];
           const otherEl = t.querySelector('.seat-card');
-          const other = otherEl && otherEl.dataset.sid !== sid ? otherEl.dataset.sid : null;
-          // Tauschen: die verdrängte Person bekommt den alten Platz (oder geht in die Ablage)
-          if (other) {
-            if (from && from.x < st.cols && from.y < st.rows) st.pos[other] = { x: from.x, y: from.y };
-            else delete st.pos[other];
-          }
-          st.pos[sid] = { x, y };
+          place(st, sid, Number(t.dataset.x), Number(t.dataset.y), otherEl ? otherEl.dataset.sid : null);
         }
         NM.app.commit();
       };

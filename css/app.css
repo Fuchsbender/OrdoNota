@@ -948,7 +948,9 @@ dialog.modal h2 { font-size: 1.25rem; margin-bottom: 1rem; }
 .seat-card:hover { border-color: var(--accent); }
 .seat-card.seat-dragging { opacity: 0.35; }
 .seat-card { position: relative; flex-direction: column; gap: 0.1875rem; }
+.seat-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 0.1875rem; }
 .seat-card.seat-selected { outline: 0.1875rem solid var(--accent); outline-offset: 1px; }
+.seat-card.seat-selected:focus-visible { outline-offset: 0.25rem; }
 .seat-card.seat-over { border-color: var(--accent); background: var(--accent-soft); }
 .seat-card.has-photo { padding: 0.25rem; }
 .seat-photo-empty { opacity: 0.55; }
