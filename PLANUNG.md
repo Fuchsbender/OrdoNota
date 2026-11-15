@@ -313,7 +313,8 @@ Jede Etappe endet mit `ERGEBNIS: x von x bestanden` und einem Commit auf dem Zwe
 - Safari/iOS ansehen (siehe oben), danach Zweig `design` nach `main` übernehmen, pushen und Release 2.0.0 – nur auf Ansage.
 - Der Löschknopf für Sitzplan-Fotos erscheint nur beim Überfahren mit der Maus und ist mit Touch nicht erreichbar (war schon vor 2.0 so).
 - Die Kursleiste nimmt auf dem Handy viel Höhe ein.
-- Aus dem Audit noch offen: Kontrast in der Variante Nord auf erhöhten Flächen knapp unter 4,5 : 1 (Kursangabe, Bonus-Häkchen, Fehlerhinweis); sehr kleine Tippflächen in den Tabellen bei Touch (Sortierknöpfe, Kontrollkästchen, Kreuz an Gruppen-Chips).
+- Kontrast in der Variante Nord behoben (15.11.2026): `--text-dim` und `--bad` heller, damit Kursangabe, Bonus-Häkchen und Fehlerhinweis auch auf getönten Flächen 4,5 : 1 erreichen. Der Test prüft jetzt in allen sechs Designs auch Schrift auf den getönten Flächen der Karte.
+- Aus dem Audit noch offen: sehr kleine Tippflächen in den Tabellen bei Touch (Sortierknöpfe, Kontrollkästchen, Kreuz an Gruppen-Chips).
 - Titel der Ausdrucke in Josefin Sans: eigener kleiner Schritt nach 2.0.0, falls gewünscht.
 
 ## C) Gamification des Pomodoro-Timers (zurückgestellt, erst auf Nachfrage des Nutzers)

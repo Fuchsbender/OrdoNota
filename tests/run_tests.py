@@ -1708,7 +1708,7 @@ def run_theme_check(br, base):
     br.open(f"{base}/index.html?demo")
     br.wait("!!document.querySelector('.overview-table')", 30)
     br.errors = []
-    # Kontrast (WCAG): Schrift ≥ 4.5:1 auf allen Flächen, Akzent- und Statusfarben ≥ 3:1, Schrift auf den Notenfarben ≥ 4.5:1
+    # Kontrast (WCAG): Schrift ≥ 4.5:1 auf allen Flächen und auf den getönten Flächen der Karte, Akzent- und Statusfarben ≥ 3:1, Schrift auf den Notenfarben ≥ 4.5:1
     res = br.eval("""(async () => {
         const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
         const probe = document.createElement('div'); document.body.append(probe);
@@ -1725,6 +1725,13 @@ def run_theme_check(br, base):
                 for (const fg of ['var(--accent)', 'var(--ok)', 'var(--gold)', 'var(--bad)', 'var(--border-strong)']) check(fg, bg, 3);
             }
             check('var(--on-accent)', 'var(--accent)', 4.5);
+            // getönte Flächen auf der Karte (aktiver Kurs, Bonus-Aufgabe, Meldungen): Farbe mit Alpha über --bg-card gelegt
+            const tint = (soft) => { const n = soft.match(/[\\d.]+/g).map(Number), b = rgb('var(--bg-card)'); return 'rgb(' + b.map((v, k) => Math.round(n[k] * n[3] + v * (1 - n[3]))).join(', ') + ')'; };
+            for (const s of ['accent', 'ok', 'bad', 'gold']) {
+                const bg = tint(getComputedStyle(root).getPropertyValue(`--${s}-soft`).trim());
+                check('var(--text)', bg, 4.5); check('var(--text-dim)', bg, 4.5);
+                if (s !== 'accent') check(`var(--${s})`, bg, 4.5);
+            }
             for (const p of [0, 5, 10, 15]) check('var(--g-text)', `hsl(${Math.round(p / 15 * 125)} var(--g-s) var(--g-l))`, 4.5);
             out.themes[mode + ':' + id] = [root.dataset.theme, root.dataset.variant, getComputedStyle(root).colorScheme, low];
             out.bgs.push(getComputedStyle(document.body).backgroundColor);
@@ -1782,7 +1789,7 @@ def run_theme_check(br, base):
     themes = (res or {}).get("themes", {})
     ok_c = len(themes) == 6 and all(v[3] == [] and v[0] == k.split(":")[0] and v[1] == k.split(":")[1] and v[2] == ("dark" if v[0] == "dark" else "light") for k, v in themes.items()) \
         and len(set(res["bgs"])) == 6
-    report("Sechs Designs: Attribute, color-scheme, eigener Hintergrund, Kontrast (Schrift ≥ 4.5:1, Akzent/Status ≥ 3:1, Notenfarben)", ok_c and not br.errors, str(themes) + "; ".join(br.errors))
+    report("Sechs Designs: Attribute, color-scheme, eigener Hintergrund, Kontrast (Schrift ≥ 4.5:1, auch auf getönten Flächen, Akzent/Status ≥ 3:1, Notenfarben)", ok_c and not br.errors, str(themes) + "; ".join(br.errors))
     ok_s = bool(res) and res["tiles"] == ["light:standard*", "light:salbei", "light:lavendel", "dark:standard*", "dark:nord", "dark:aubergine"] \
         and res["tileBgs"] == 6 and res["pickLight"] == ["light", "lavendel"] and res["pickDark"] == ["dark", "nord", "true"] \
         and res["saved"] == ["dark", "lavendel", "nord"]

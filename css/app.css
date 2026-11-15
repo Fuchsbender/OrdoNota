@@ -150,15 +150,15 @@
   --border-soft: #343b48;
   --border-strong: #7f8aa0;
   --text: #e5e9f0;
-  --text-dim: #a7b1c2;
+  --text-dim: #b6becc;
   --text-faint: #9aa5b8;
   --accent: #88c0d0;
   --accent-strong: #a6d2de;
   --accent-dim: #4f6f7b;
   --accent-soft: rgba(136, 192, 208, 0.16);
   --on-accent: #18222c;
-  --bad: #ec8a92;
-  --bad-soft: rgba(236, 138, 146, 0.14);
+  --bad: #ef9ca2;
+  --bad-soft: rgba(239, 156, 162, 0.14);
   --ok: #a8c98f;
   --ok-soft: rgba(168, 201, 143, 0.16);
   --gold: #ebcb8b;
