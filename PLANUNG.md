@@ -254,7 +254,7 @@ Schon vorhanden und Grundlage für alle drei: die Schnellwahl im EPO-Reiter (neu
 3. **Fehlzeiten:** eigene Liste je Kurs; „Heute abwesend“ und EPO-k schreiben hinein bzw. werden daraus vorbelegt.
 4. **Druckkopf:** für alle Ausdrucke; Inhalt Schullogo, Schulname, Lehrkraft, Kurs, Schuljahr und Datum; gespeichert in der (verschlüsselten) Datenbank, damit auf allen Geräten gleich.
 
-## Z) Gemeinsames Design der Ordo-Apps (solagio-design) – erledigt in 2.0.0 (nicht veröffentlicht, Zweig `design`)
+## Z) Gemeinsames Design der Ordo-Apps (solagio-design) – erledigt in 2.0.0 (veröffentlicht am 15.11.2026)
 
 Anlass: Alle Ordo-Apps bekommen dasselbe Erscheinungsbild. Das Design (Tokens, Blades, Bausteine mit der Vorsilbe `sd-`, Symbole aus Tabler Icons, Schrift Josefin Sans) liegt im Projekt `../Design` und kommt per Verteilskript als feste Kopie in die App. Geklärt mit dem Nutzer am 14.11.2026. **Einbau erst nach Freigabe dieses Plans.**
 
@@ -310,7 +310,7 @@ Jede Etappe endet mit `ERGEBNIS: x von x bestanden` und einem Commit auf dem Zwe
 
 ### Offen
 
-- Safari/iOS ansehen (siehe oben), danach Zweig `design` nach `main` übernehmen, pushen und Release 2.0.0 – nur auf Ansage.
+- Safari/iOS ansehen (siehe oben). Veröffentlicht wurde 2.0.0 am 15.11.2026 ohne diese Prüfung.
 - Die Kursleiste nimmt auf dem Handy viel Höhe ein.
 - Kontrast in der Variante Nord behoben (15.11.2026): `--text-dim` und `--bad` heller, damit Kursangabe, Bonus-Häkchen und Fehlerhinweis auch auf getönten Flächen 4,5 : 1 erreichen. Der Test prüft jetzt in allen sechs Designs auch Schrift auf den getönten Flächen der Karte.
 - Touch-Bedienung nachgezogen (15.11.2026), nur bei `pointer: coarse`: Sortierknöpfe und Links mindestens 28 px, Kästchen in Tabellen 24 px, Kreuz an Chips 28 px, Klapp-Zeilen in voller Höhe, Gruppenkästen breiter. Die Datenzeilen bleiben dicht; 44 px gelten nur für das Gerüst. Der Löschknopf für Sitzplan-Fotos erscheint jetzt auch an der ausgewählten Karte (antippen) und beim Tastaturfokus. Kopfzeile: unter 860 px nur das Zeichen, die Kursauswahl gibt nach, bei großer Schrift bricht sie unter 800 px um. Gemessen in Chromium mit emuliertem Touch; echte Geräte und Safari/iOS stehen aus.
