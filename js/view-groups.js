@@ -68,10 +68,10 @@
       })
     );
     if (!M.activeStudents(course).length) {
-      view.append(UI.emptyState('Noch keine Namen', 'Bitte zuerst im Reiter „Kurs & Schüler“ Namen eintragen.'));
+      view.append(UI.emptyState('Noch keine Namen', 'Bitte zuerst im Reiter „Kurs & Schüler“ Namen eintragen.', null, 'users'));
       return;
     }
-    if (!cur) view.append(UI.emptyState('Noch keine Gruppeneinteilung', 'Für Gruppenaufträge, Lernaufträge, Gruppenpuzzle oder Vorträge: „+ Neue Einteilung“ – Größe oder Anzahl vorgeben, zufällig oder nach Leistung gemischt, mit Regeln wie „nicht zusammen“. Die Einteilung lässt sich danach neu würfeln, per Ziehen anpassen, am Beamer zeigen, drucken und in eine Präsentation übernehmen.'));
+    if (!cur) view.append(UI.emptyState('Noch keine Gruppeneinteilung', 'Für Gruppenaufträge, Lernaufträge, Gruppenpuzzle oder Vorträge: „+ Neue Einteilung“ – Größe oder Anzahl vorgeben, zufällig oder nach Leistung gemischt, mit Regeln wie „nicht zusammen“. Die Einteilung lässt sich danach neu würfeln, per Ziehen anpassen, am Beamer zeigen, drucken und in eine Präsentation übernehmen.', null, 'layout-grid'));
     else view.append(...setCard(course, cur));
     view.append(absentCard(course), rulesCard(course));
   }

@@ -36,7 +36,7 @@
       })
     );
     if (!cur) {
-      view.appendChild(UI.emptyState('Noch kein EPO-Block in ' + half, 'Ein EPO-Block umfasst eine Reihe von Unterrichtsstunden. Pro Stunde vergeben Sie ++, +, 0, - oder -- (dazu ggf. Hausaufgaben-Vermerke). Daraus wird eine Note berechnet, die automatisch in die Notenübersicht einfließt.'));
+      view.appendChild(UI.emptyState('Noch kein EPO-Block in ' + half, 'Ein EPO-Block umfasst eine Reihe von Unterrichtsstunden. Pro Stunde vergeben Sie ++, +, 0, - oder -- (dazu ggf. Hausaufgaben-Vermerke). Daraus wird eine Note berechnet, die automatisch in die Notenübersicht einfließt.', null, 'notes'));
       return;
     }
     view.append(metaCard(course, cur), gridCard(course, cur, level), configCard(course, cur, level));
@@ -459,7 +459,7 @@
         grid.style.gridTemplateColumns = `repeat(${st.cols}, minmax(0, 1fr))`;
         const seatRows = `repeat(${st.rows}, minmax(76px, auto))`;
         grid.style.gridTemplateRows = st.desk === 'top' ? `auto ${seatRows}` : `${seatRows} auto`;
-        const desk = h('div', { class: 'tiles-desk', style: `grid-column: 1 / -1` }, 'Lehrerpult');
+        const desk = h('div', { class: 'tiles-desk' }, 'Lehrerpult');
         if (st.desk === 'top') grid.appendChild(desk);
         const off = st.desk === 'top' ? 2 : 1;
         for (const [key, sid] of Object.entries(cells)) {

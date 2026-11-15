@@ -41,7 +41,7 @@
     );
     if (!cur) {
       view.append(
-        UI.emptyState('Noch keine Präsentation in ' + half, 'Legen Sie eine Bewertung an: Kriterien aus dem Kriterienpool oder einer Vorlage wählen, je Person 0–3 Punkte pro Kriterium vergeben – die Note wird wie bei Tests über den Notenschlüssel berechnet.'),
+        UI.emptyState('Noch keine Präsentation in ' + half, 'Legen Sie eine Bewertung an: Kriterien aus dem Kriterienpool oder einer Vorlage wählen, je Person 0–3 Punkte pro Kriterium vergeben – die Note wird wie bei Tests über den Notenschlüssel berechnet.', null, 'presentation'),
         templatesCard(course, db),
         poolCard(db)
       );

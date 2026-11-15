@@ -78,7 +78,7 @@
 
     view.append(h('div', { class: 'view-head' }, h('h1', null, 'Ziehen'), UI.halfSwitch(course, false)));
     if (!students.length) {
-      view.appendChild(UI.emptyState('Noch keine Schülerinnen und Schüler', 'Bitte zuerst im Reiter „Kurs & Schüler“ Namen eintragen.'));
+      view.appendChild(UI.emptyState('Noch keine Schülerinnen und Schüler', 'Bitte zuerst im Reiter „Kurs & Schüler“ Namen eintragen.', null, 'users'));
       return;
     }
     D.data(course);

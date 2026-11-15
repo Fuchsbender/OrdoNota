@@ -40,7 +40,7 @@
       })
     );
     if (!cur) {
-      view.appendChild(UI.emptyState('Noch kein Test in ' + half, 'Legen Sie einen Test an: Aufgaben mit Höchstpunktzahlen festlegen, Rohpunkte eintragen – Note, Notenspiegel und Drittelparagraph werden automatisch berechnet.'));
+      view.appendChild(UI.emptyState('Noch kein Test in ' + half, 'Legen Sie einen Test an: Aufgaben mit Höchstpunktzahlen festlegen, Rohpunkte eintragen – Note, Notenspiegel und Drittelparagraph werden automatisch berechnet.', null, 'list-check'));
       return;
     }
     const t = cur.test;
@@ -1199,7 +1199,6 @@
     const replace = h('input', { type: 'checkbox', checked: !again && !scored.length, 'data-moodle-replace': '', onchange: () => (replaceWarn.hidden = !(replace.checked && scored.length)) });
     const replaceWarn = h('div', { class: 'alert alert-danger', hidden: !(replace.checked && scored.length) }, `Eingetragene Punkte in ${scored.map((x) => x.name).join(', ')} werden gelöscht.`);
     const fileInput = h('input', {
-      class: 'input',
       type: 'file',
       accept: '.csv,text/csv',
       multiple: true,
@@ -1274,7 +1273,7 @@
         again ? h('p', { class: 'small' }, 'Die Punkte der Moodle-Fragen werden ersetzt. Eigene Aufgaben, Notenschlüssel und Einstellungen bleiben erhalten.') : null,
         part && !again ? h('p', { class: 'small' }, `Jede Moodle-Frage wird eine Aufgabe (F1, F2, …) im Teil „${part.name}“. Die anderen Teile bleiben unverändert.`) : null,
         target && !part && !again ? h('p', { class: 'small' }, 'Jede Moodle-Frage wird eine Aufgabe (F1, F2, …) dieses Tests.' + (adopt ? ' Bezeichnung und Datum kommen aus Moodle.' : '')) : null,
-        h('label', { class: 'field' }, h('span', null, 'CSV-Dateien (eine oder beide)'), fileInput),
+        UI.dropzone(fileInput, 'CSV-Dateien hierher ziehen', 'Eine oder beide: Antworten und Bewertungen'),
         !target || adopt ? h('label', { class: 'field' }, h('span', null, 'Bezeichnung'), name) : null,
         own.length
           ? h(

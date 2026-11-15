@@ -274,8 +274,40 @@
     );
   }
 
-  function emptyState(title, text, button) {
-    return h('div', { class: 'empty' }, h('h2', null, title), text ? h('p', null, text) : null, button || null);
+  /** Leerer Zustand (Baustein sd-empty): Ring mit Symbol, Überschrift, Text, optional ein Knopf. */
+  function emptyState(title, text, button, iconName) {
+    return h(
+      'div',
+      { class: 'empty sd-empty' },
+      h('span', { class: 'sd-ring' }, icon(iconName || 'inbox')),
+      h('h2', null, title),
+      text ? h('p', null, text) : null,
+      button || null
+    );
+  }
+
+  /**
+   * Fläche zum Hochladen (Baustein sd-dropzone) um ein vorhandenes Dateifeld. Das Feld bleibt unverändert
+   * (Auswahl und Ablegen gehen direkt an den Browser), die App liest die Datei weiter wie bisher.
+   */
+  function dropzone(input, title, hint) {
+    const id = 'dz-' + Math.random().toString(36).slice(2, 8);
+    input.setAttribute('aria-labelledby', id);
+    const wrap = h(
+      'div',
+      { class: 'dropzone-wrap' },
+      h(
+        'div',
+        { class: 'sd-dropzone', 'data-sd-dropzone': '' },
+        h('span', { class: 'sd-ring' }, icon('upload')),
+        h('span', { class: 'sd-dropzone-title', id }, title, ' oder ', h('u', null, 'auswählen')),
+        hint ? h('span', { class: 'sd-dropzone-hint' }, hint) : null,
+        h('span', { class: 'sd-dropzone-file', 'data-sd-dropzone-file': '', 'aria-live': 'polite' }),
+        input
+      )
+    );
+    if (window.SolagioDesign) window.SolagioDesign.einrichten(wrap);
+    return wrap;
   }
 
   const PRINT_GROUPS = [
@@ -366,6 +398,7 @@
     sorter,
     pickerList,
     emptyState,
+    dropzone,
     catLabel,
     fmtDate,
     printButton,

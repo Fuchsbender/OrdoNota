@@ -934,12 +934,11 @@
     main.appendChild(view);
     if (!course && tab !== 'settings') {
       view.appendChild(
-        h(
-          'div',
-          { class: 'empty' },
-          h('h2', null, 'Noch kein Kurs ausgewählt'),
-          h('p', null, 'Legen Sie links einen Kurs an (Klasse + Fach), fügen Sie die Schülerliste ein und los geht’s.'),
-          h('button', { class: 'btn btn-primary', onclick: addCourse }, '+ Kurs anlegen')
+        NM.ui.emptyState(
+          'Noch kein Kurs ausgewählt',
+          'Legen Sie links einen Kurs an (Klasse + Fach), fügen Sie die Schülerliste ein und los geht’s.',
+          h('button', { class: 'btn btn-primary', onclick: addCourse }, '+ Kurs anlegen'),
+          'users'
         )
       );
       return;

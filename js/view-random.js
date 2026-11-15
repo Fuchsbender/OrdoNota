@@ -39,7 +39,7 @@
     view.append(h('div', { class: 'view-head' }, h('h1', null, 'Tools'), h('span', { class: 'muted small' }, 'Werkzeuge für den Unterricht – es wird nichts in die Notenliste eingetragen.'), h('span', { class: 'spacer' }), menu));
     const shown = M.toolList(course).filter((x) => x.on && TOOLS[x.id]);
     if (!shown.length) {
-      view.appendChild(UI.emptyState('Alle Werkzeuge sind ausgeschaltet', 'Über „Werkzeuge …“ lassen sich die Werkzeuge für diesen Kurs wieder einschalten.', h('button', { class: 'btn btn-primary', onclick: () => toolsMenu(course) }, icon('settings'), ' Werkzeuge …')));
+      view.appendChild(UI.emptyState('Alle Werkzeuge sind ausgeschaltet', 'Über „Werkzeuge …“ lassen sich die Werkzeuge für diesen Kurs wieder einschalten.', h('button', { class: 'btn btn-primary', onclick: () => toolsMenu(course) }, icon('settings'), ' Werkzeuge …'), 'settings'));
       return;
     }
     view.appendChild(h('div', { class: 'rnd-grid' }, shown.map((x) => TOOLS[x.id].make(course))));
@@ -899,7 +899,7 @@
     let front;
     if (c.text) {
       const len = c.text.length;
-      front = h('div', { class: 'rnd-card-front rnd-card-text', style: { fontSize: len > 60 ? '0.7em' : len > 25 ? '0.9em' : '1.25em' } }, c.text);
+      front = h('div', { class: 'rnd-card-front rnd-card-text ' + (len > 60 ? 'rnd-text-s' : len > 25 ? 'rnd-text-m' : 'rnd-text-l') }, c.text);
     } else {
       front = h('img', { class: 'rnd-card-front', src: `cards/${c.suit}${c.rank}.svg`, alt: c.name, draggable: 'false' });
     }
