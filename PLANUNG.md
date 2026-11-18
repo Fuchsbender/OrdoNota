@@ -318,6 +318,70 @@ Jede Etappe endet mit `ERGEBNIS: x von x bestanden` und einem Commit auf dem Zwe
 - Schriftname (15.11.2026): Die gekürzte Schrift heißt jetzt intern und im CSS „Ordo Josefin“ (solagio-design 0.3.2). Die OFL behält den Namen „Josefin Sans“ dem Original vor.
 - Titel der Ausdrucke in Josefin Sans: eigener kleiner Schritt nach 2.0.0, falls gewünscht.
 
+## Wunschliste vom 18.11.2026 (Reihenfolge der Umsetzung: AA, AB, AC, AD, AE, AF, AG)
+
+Mit dem Nutzer am 18.11.2026 geklärt (grill-me, alle Empfehlungen angenommen). Jeder Buchstabe ist eine eigene Version mit Tests. **Später, eigener Klärungsdurchgang:** Kompetenzanalysen sammeln und Kompetenzveränderung darstellen. Dafür ist das Personenregister (AD) die Grundlage. Weitere Verläufe hängen dort als Zeitreihe mit Datum an der Person, so wie die Fassungen des Förderplans (AG).
+
+**Datenschutz für alles hier (gilt für AC–AG):** Nachteilsausgleiche (LRS, Dyskalkulie) und Förderpläne sind Gesundheitsdaten nach Art. 9 DSGVO, Notizen sind ebenfalls schutzwürdig. Sie erscheinen **nie** in Beamer- und Vollbildansichten, nie auf Ergebnis-, Mitarbeitszetteln oder Leistungsbögen und nie in der unverschlüsselten Schülerliste als Excel. In Exporten nur, wenn man es ausdrücklich ankreuzt. In der Notenübersicht dezent. `tools/entschluesseln.py` (CSV-Ausgabe) mitziehen. Vor dem Commit von Doku-Beispielen mit `code-pruefen` prüfen (öffentliches Repo).
+
+### AA) Sitzplan im Beamer-Vollbild
+
+- Knopf im Reiter „Sitzplan“ wie die Beamer-Ansicht einer Arbeit (`beamerView`, `js/view-tests.js:1064`): `requestFullscreen`, Esc schließt.
+- Zeigt das Raster des gewählten Raums mit den Karten wie bisher (Vorname, ggf. Nachnamensinitial, Foto, wenn nicht ausgeblendet), nur groß, mit dem Pult als Orientierung. Keine Bearbeitung.
+- Nie I-Status, Ausgleiche, Notizen oder Noten.
+
+### AB) Notenschlüssel: Vorschlag „ein Punkt je Stufe“ bei wenigen Punkten
+
+Ausgangslage: Bei wenigen Punkten fallen Schwellen zusammen (18 Punkte, Grenze 50 %, ganze Punkte: 2+ und 2 ab 15, 3 und 3− ab 12). Die Warnung `unreachableNotice` (`js/view-tests.js:885`) bietet bisher nur halbe/Zehntel-Punkte und „nur ganze Noten“ an.
+
+- **Dritter Schnellknopf** in der Warnung, z. B. „Punkte verteilen“: schreibt einen Vorschlag in die eigenen Schwellen (`custom`) des Tests bzw. Teils. Vor dem Übernehmen zeigt ein Dialog den neuen Schlüssel und alle verschobenen Stufen. Danach lässt er sich wie jede eigene Schwelle von Hand ändern.
+- **Regel:** Die Grenze zum Bestehen bleibt fest (Sek I: 4− bei LIMIT, MSS: 4 Punkte bei LIMIT); die App verschiebt sie nie von sich aus. Wo Schwellen zusammenfallen, wird je ganzer Punkt (bzw. je Schritt der Genauigkeit) eine Stufe vergeben, von oben beginnend (Höchstpunktzahl → beste Stufe). Reichen die Punktwerte zwischen Grenze und Höchstpunktzahl nicht für alle Stufen, bleibt die zweitbeste Stufe (1− bzw. 14 Punkte) unerreichbar, die anderen nicht. Beispiel 18 Punkte, Sek I, 50 %: 1 ab 18, 2+ ab 17 … 4− ab 9; 1− entfällt. Die Regel kommt als reine Funktion nach `js/grades.js` und wird mit Grenzfällen getestet (wenige Punkte, halbe Punkte, MSS, eigene Schwellen vorhanden).
+- Gilt auch unterhalb der Grenze (5+, 5, 5−) und für Sek I wie MSS.
+- Wer die 44 % aus dem ersten Beispiel des Nutzers (18 → 1, 17 → 1−, 16 → 2+ …, 4− ab 8) bewusst will, trägt sie als eigene Schwellen ein.
+- Doku: Abschnitt Notenschlüssel (DOKUMENTATION.md) um den Knopf und die Regel ergänzen.
+
+### AC) Verbalbeurteilung bei I-Status
+
+I-Status = Inklusionsstatus: Es gibt einen Förderplan, die Noten zählen nicht in die Statistik (DOKUMENTATION.md:291, Bedeutung dort ergänzen). Er bleibt **pro Kurs** (zieldifferente Förderung kann je Fach verschieden sein).
+
+- Bei Personen mit I-Status hat jedes Ergebnis einer Arbeit (auch Teile, Präsentationen bei Bedarf) ein Feld **Verbalbeurteilung** (`results[sid].verbal`, Freitext). Das Feld ist immer sichtbar, unter 4− (Sek I) bzw. unter 4 Punkten (MSS) wird es hervorgehoben und als „fehlt noch“ markiert, solange es leer ist.
+- Auf dem **Ergebniszettel** steht die Verbalbeurteilung **anstelle** der Note. Schalter je Ergebnis „Note auf dem Zettel zeigen“ (`results[sid].showGrade`), voreingestellt aus, wenn eine Verbalbeurteilung vorhanden ist. Intern rechnet die App die Note weiter (Leistungsbogen, Lehrerlisten, Notenübersicht).
+- Nur neue Felder → kein neues `SCHEMA`; `migrate()` muss nichts tun (Felder fehlen = leer).
+
+### AD) Personenregister (Schema 5)
+
+Heute gibt es keine kursübergreifende Person: Jeder Kurs hat eigene `course.students[]` mit eigenen IDs (`js/model.js:166`).
+
+- Neu: `db.people: [ { id, last, first, created } ]`. Jede Person im Kurs bekommt `personId`. Name und Foto bleiben vorerst auch am Kurseintrag (Import, Sitzplan unverändert); ändert sich ein Name im Kurs, fragt die App, ob die Person im Register mit geändert werden soll.
+- Noten, I-Status, Einstufung, Bemerkung (`course.comments`) bleiben am Kurs.
+- **Migration:** `SCHEMA` 4 → 5. Für jeden Kurseintrag wird eine eigene Person angelegt, nichts wird automatisch zusammengeführt. Vorher Sicherung; Migration an der Demo-Datenbank testen.
+- **Zusammenführen:** Dialog „Personen zusammenführen“ (Einstellungen oder Reiter „Kurs & Schüler“) schlägt gleiche Namen (und gleiche Moodle-Adresse) vor; der Nutzer bestätigt Paare. Zusammengeführte Personen lassen sich wieder trennen (Notizen/Ausgleiche bleiben dann bei der gewählten Person).
+- **Neue Kurse / neues Schuljahr:** Beim Anlegen oder Importieren schlägt die App vorhandene Personen mit gleichem Namen vor; ohne Bestätigung entsteht eine neue Person.
+- **Löschen:** Steht eine Person in keinem Kurs mehr, fragt die App, ob sie samt Notizen, Ausgleichen und Förderplan gelöscht werden soll. Im Register Hinweis „seit … in keinem Kurs“. Keine automatische Frist.
+- Das Register wird so angelegt, dass weitere Verläufe (Kompetenzerhebungen) später an der Person hängen können.
+- `tools/entschluesseln.py`, DOKUMENTATION.md (Datenmodell, Abschnitt Kurs & Schüler) mitziehen.
+
+### AE) Nachteilsausgleich
+
+- An der Person: `people[].ausgleiche: [ { id, art: "lrs" | "dyskalkulie" | "sonst", text?, faecher: [..], massnahmen, bis? } ]` (Art „Sonstiges“ mit Freitext; Fächer als Liste der Fachbezeichnungen; Maßnahmen als Freitext, z. B. „Rechtschreibung nicht bewertet, 25 % mehr Zeit“; „gültig bis“ optional).
+- **Markierung:** Kürzel (z. B. „LRS“, „DK“) an derselben Stelle wie das „I“ (`UI.nameCells`, `js/ui.js:196`) bei der Punkteeingabe und in der Notenübersicht, nur in Kursen, deren Fach in `faecher` steht (leer = alle). Abgelaufene Ausgleiche werden im Register hervorgehoben, aber nicht mehr markiert.
+- **Je Arbeit** ein Haken „Ausgleich gewährt“ (`results[sid].ausgleich: true`), damit festgehalten ist, dass der Ausgleich gewährt wurde. Die App rechnet **nichts** automatisch um und ändert nichts an der Statistik.
+- Nicht im Vollbild, nicht auf Zetteln, nicht in der Excel-Schülerliste (siehe Datenschutz oben).
+
+### AF) Notizverlauf
+
+- Neben der vorhandenen „Bemerkung zur Person“ (`course.comments`, erscheint auf dem Leistungsbogen) – sie bleibt unverändert. Die Notizen sind intern und werden nie gedruckt.
+- An der Person: `people[].notizen: [ { id, datum, text, courseId? } ]`.
+- **Detailansicht der Person** mit dem ganzen Verlauf (neueste oben), Eintrag anlegen, ändern, löschen. In der Kursansicht nach Kurs filterbar.
+- **Schnelleintrag aus dem Sitzplan:** Karte wählen → „Notiz“ (Datum heute, Kurs voreingestellt). Nicht in der Beamer-Ansicht (AA).
+- Symbol an der Person in der Notenübersicht, wenn Notizen vorhanden sind (öffnet die Detailansicht).
+
+### AG) Förderplan
+
+- An der Person: `people[].foerderplaene: [ { id, datum, schwerpunkt, von?, bis?, ziele, massnahmen } ]`, je Fortschreibung (meist halbjährlich) eine **Fassung mit Datum**; die neueste gilt. Förderschwerpunkte: Lernen, Sprache, emotionale und soziale Entwicklung, ganzheitliche Entwicklung, körperliche und motorische Entwicklung, Hören, Sehen, Sonstiges. Ziele und Maßnahmen als Freitext. **Kein Dateianhang** (Datenbankgröße; der offizielle Plan liegt in der Schulakte).
+- In der Detailansicht der Person (AF), Fassungen nebeneinander vergleichbar.
+- Hat eine Person einen Förderplan, in einem Kurs aber keinen I-Status: dezenter Hinweis in der Kursliste („Förderplan vorhanden, I-Status nicht gesetzt“). Nichts automatisch.
+
 ## C) Gamification des Pomodoro-Timers (zurückgestellt, erst auf Nachfrage des Nutzers)
 
 **Vor Beginn die offenen Fragen unten mit dem Nutzer klären.** C ergänzt nur Felder → kein neues `SCHEMA`; `migrate()` und `tools/entschluesseln.py` (CSV-Ausgabe) mitziehen.
