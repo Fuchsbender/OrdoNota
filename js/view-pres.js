@@ -1016,6 +1016,8 @@
       st,
       results: p.results,
       alt: (patch) => G.keyForPres(Object.assign({}, p, patch), level),
+      max: G.testMaxScore(G.presAsTest(p)),
+      precision: 1,
       hint: 'Abhilfe: weitere Kriterien aufnehmen oder Kriterien höher gewichten.',
     });
   }

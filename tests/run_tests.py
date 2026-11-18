@@ -1419,13 +1419,28 @@ def run_unreachable_check(br, base):
         a.test.precision = 1; NM.app.rerender(); await wait();
         btn('Nur ganze Noten').click(); await wait();
         out.whole = [!!a.test.wholeGrades, !!warn()];
-        a.test.tasks[0].max = 40; delete a.test.wholeGrades; NM.app.rerender(); await wait();
+        delete a.test.wholeGrades; NM.app.rerender(); await wait();
+        // Punkte verteilen: Dialog mit verschobenen Stufen, Abbrechen ändert nichts, Übernehmen schreibt eigene Schwellen
+        btn('Punkte verteilen').click(); await wait();
+        const dlg = () => document.querySelector('[data-key-spread-dialog]');
+        const dbtn = (t) => [...document.querySelectorAll('dialog[open] button')].find((b) => b.textContent === t);
+        out.dialog = [!!dlg(), dlg() && dlg().textContent.includes('7 Stufen werden verschoben'), dlg() && dlg().textContent.includes('1- entfällt'),
+                      dlg() && dlg().querySelectorAll('tbody tr.custom').length, dlg() && dlg().querySelectorAll('tbody tr').length];
+        dbtn('Abbrechen').click(); await wait();
+        out.cancel = Object.keys(a.test.custom || {}).length;
+        btn('Punkte verteilen').click(); await wait();
+        dbtn('Übernehmen').click(); await wait();
+        const G = NM.grades, key = G.keyForTest(a.test, 'sek1');
+        out.applied = [a.test.custom[14], a.test.custom[11], a.test.custom[4], G.label(G.testResult(Object.assign({}, a.test, { results: { x: { scores: { a1: 16 } } } }), 'x', 'sek1').p, 'sek1'),
+                       G.unreachableSteps(key).map((x) => x.p), warn() && warn().textContent.includes('1- ist nicht erreichbar'), !btn('Punkte verteilen')];
+        a.test.tasks[0].max = 40; a.test.custom = {}; NM.app.rerender(); await wait();
         out.enough = !!warn();
         return out; })()""")
     ok = bool(res) and "2 und 3- sind nicht erreichbar" in (res["text"] or "") and res["rows"] == 2 \
-        and res["buttons"] == ["½ Halbe Punkte", "Nur ganze Noten"] and res["half"] == [0.5, False] \
-        and res["whole"] == [True, False] and res["enough"] is False
-    report("Schlüssel: Warnung bei doppelten Schwellen, halbe Punkte/ganze Noten lösen sie", ok and not br.errors, str(res) + "; ".join(br.errors))
+        and res["buttons"] == ["½ Halbe Punkte", "Nur ganze Noten", "Punkte verteilen"] and res["half"] == [0.5, False] \
+        and res["whole"] == [True, False] and res["dialog"] == [True, True, True, 7, 14] and res["cancel"] == 0 \
+        and res["applied"] == [18, 16, None, "2", [13], True, True] and res["enough"] is False
+    report("Schlüssel: Warnung bei doppelten Schwellen, halbe Punkte/ganze Noten lösen sie, „Punkte verteilen“ mit Dialog", ok and not br.errors, str(res) + "; ".join(br.errors))
 
 
 def run_tabs_check(br, base):

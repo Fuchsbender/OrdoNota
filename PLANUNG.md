@@ -325,7 +325,7 @@ Mit dem Nutzer am 18.11.2026 geklärt (grill-me, alle Empfehlungen angenommen). 
 **To-do (Stand 18.11.2026):**
 
 - [x] **AA** Sitzplan im Beamer-Vollbild – erledigt in 2.1.0 (18.11.2026), Anordnung wie im Editor, S2/S3 wie empfohlen
-- [ ] **AB** Notenschlüssel: Knopf „Punkte verteilen“
+- [x] **AB** Notenschlüssel: Knopf „Punkte verteilen“ – erledigt in 2.2.0 (18.11.2026)
 - [ ] **AC** Verbalbeurteilung bei I-Status
 - [ ] **AD** Personenregister (Schema 5, Migration, Zusammenführen) – vorher Sicherung, Migration an der Demo testen
 - [ ] **AE** Nachteilsausgleich
@@ -358,7 +358,10 @@ Mit dem Nutzer am 18.11.2026 geklärt (grill-me, alle Empfehlungen angenommen). 
 - **S2 Fotos:** → Empfehlung: eigene Einstellung für den Beamer, **beim ersten Mal aus**, Schalter „Fotos“; die Wahl merkt sich das Gerät (`nm.ui`). Projizierte Fotos sind heikler, große Vornamen von hinten besser lesbar.
 - **S3 Personen ohne Platz:** → Empfehlung: schmale Leiste „Noch ohne Platz: …“ mit Vornamen, nur wenn es solche gibt.
 
-### AB) Notenschlüssel: Vorschlag „ein Punkt je Stufe“ bei wenigen Punkten
+### AB) Notenschlüssel: Vorschlag „ein Punkt je Stufe“ bei wenigen Punkten (erledigt in 2.2.0)
+
+Umgesetzt wie unten. Ergänzt: Schwellen, die schon passen, bleiben (nur Zusammenfallendes rückt); reichen die Werte nicht, entfallen über der Grenze nach der 1− auch die folgenden Stufen, unter der Grenze zuerst die 5−. Der Knopf erscheint nur, wenn danach weniger Stufen wegfallen.
+
 
 Ausgangslage: Bei wenigen Punkten fallen Schwellen zusammen (18 Punkte, Grenze 50 %, ganze Punkte: 2+ und 2 ab 15, 3 und 3− ab 12). Die Warnung `unreachableNotice` (`js/view-tests.js:885`) bietet bisher nur halbe/Zehntel-Punkte und „nur ganze Noten“ an.
 

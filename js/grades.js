@@ -221,6 +221,58 @@
     return out;
   }
 
+  /**
+   * Vorschlag „Punkte verteilen“ bei wenigen Punkten: Wo Schwellen zusammenfallen, bekommt jede Stufe einen eigenen
+   * Punktwert (je Schritt der Genauigkeit). Die Grenze zum Bestehen (4− bzw. 4 Punkte, bei ganzen Noten die 4) bleibt fest.
+   * Über der Grenze von oben: Schwellen bleiben, wo sie schon passen, sonst rücken sie um einen Schritt nach unten bzw.
+   * oben. Reichen die Punktwerte nicht, bekommt die beste Stufe die Höchstpunktzahl und die zweitbeste (dann die
+   * dritte …) entfällt (gleiche Schwelle wie die beste). Unter der Grenze genauso; dort entfallen zuerst die
+   * schwächsten Stufen (5−, dann 5 …). Die 0-Stufe bleibt bei 0.
+   * @returns { custom: {p: min} nur geänderte Stufen, moved: [{p, from, to}] absteigend, key: neuer Schlüssel }
+   */
+  function spreadKey(key, maxScore, precision) {
+    const step = Number(precision) || 1;
+    const r = (x) => roundToPrecision(x, step);
+    const desc = key.slice().sort((a, b) => b.p - a.p);
+    const pass = key.filter((k) => k.p >= 4).reduce((a, b) => (b.p < a.p ? b : a), { p: Infinity });
+    if (pass.p === Infinity) return { custom: {}, moved: [], key };
+    const bound = pass.min;
+    const out = {};
+    // Abschnitt verteilen: steps absteigend (beste zuerst), Werte strikt zwischen lo und hi (hi eingeschlossen, wenn hiIn)
+    const spread = (steps, lo, hi, hiIn, dropFromTop) => {
+      const n = steps.length;
+      if (!n) return;
+      const top = hiIn ? hi : r(hi - step);
+      const m = Math.max(0, Math.round((top - lo) / step)); // verfügbare Werte: top, top−step, …, lo+step
+      let vals;
+      if (m >= n) {
+        vals = steps.map((k) => k.min);
+        for (let i = 0; i < n; i++) vals[i] = Math.min(vals[i], i ? r(vals[i - 1] - step) : top);
+        for (let i = n - 1; i >= 0; i--) vals[i] = Math.max(vals[i], i === n - 1 ? r(lo + step) : r(vals[i + 1] + step));
+      } else if (dropFromTop) {
+        // beste Stufe ganz oben, dahinter entfallen n − m Stufen, der Rest je ein Schritt
+        const drop = n - m;
+        vals = steps.map((_, i) => (i <= drop ? top : r(top - (i - drop) * step)));
+      } else {
+        // von oben je ein Schritt; die schwächsten Stufen ohne eigenen Wert teilen die letzte Schwelle
+        vals = steps.map((_, i) => (m ? r(top - Math.min(i, m - 1) * step) : top));
+      }
+      steps.forEach((k, i) => (out[k.p] = vals[i]));
+    };
+    spread(desc.filter((k) => k.p > pass.p), bound, maxScore, true, true);
+    spread(desc.filter((k) => k.p < pass.p && k.p > 0), 0, bound, false, false);
+    const custom = {};
+    const moved = [];
+    const next = key.map((k) => {
+      if (!(k.p in out) || Math.abs(out[k.p] - k.min) < 1e-9) return k;
+      custom[k.p] = out[k.p];
+      moved.push({ p: k.p, from: k.min, to: out[k.p] });
+      return Object.assign({}, k, { min: out[k.p], pct: maxScore > 0 ? round2((out[k.p] / maxScore) * 100) : 0, custom: true });
+    });
+    moved.sort((a, b) => b.p - a.p);
+    return { custom, moved, key: next };
+  }
+
   /** Punktstufe für eine erreichte Punktzahl (höchste Stufe, deren Schwelle erreicht ist). */
   function scoreToPoints(score, key) {
     if (score === null || score === undefined) return null;
@@ -722,6 +774,7 @@
     keyForTest,
     wholeOnly,
     unreachableSteps,
+    spreadKey,
     scoreToPoints,
     testMaxScore,
     testResult,

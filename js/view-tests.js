@@ -844,6 +844,8 @@
       focusId: a.id + (part ? '-' + part.id : ''),
       key: part ? G.keyForPart(t, part, level) : G.keyForTest(t, level),
       alt: (patch) => (part ? G.keyForPart(t, Object.assign({}, part, patch), level) : G.keyForTest(Object.assign({}, t, patch), level)),
+      max: G.testMaxScore(part ? G.partAsTest(t, part) : t),
+      precision: Number((part ? G.partAsTest(t, part) : t).precision) || 1,
       counts: part ? G.partStats(t, part, ids, level).counts : st.counts,
       holder: part || t,
       st,
@@ -880,8 +882,9 @@
   /**
    * Warnung bei nicht erreichbaren Notenstufen (zu wenig Punkte für alle Stufen) mit Schnellknöpfen.
    * alt(patch) liefert den Schlüssel mit geänderten Einstellungen; angeboten wird nur, was das Problem löst.
+   * spread = { key, max, precision }: „Punkte verteilen“ (G.spreadKey), angeboten, wenn danach weniger Stufen fehlen.
    */
-  function unreachableNotice(level, lost, holder, alt, hint) {
+  function unreachableNotice(level, lost, holder, alt, hint, spread) {
     const L = (p) => G.label(p, level);
     const lostText = lost.map((x) => L(x.p)).join(', ').replace(/, ([^,]*)$/, ' und $1');
     const byText = lost.map((x) => L(x.by)).join(', ').replace(/, ([^,]*)$/, ' bzw. $1');
@@ -909,6 +912,11 @@
           NM.app.commit();
         } }, 'Nur ganze Noten')
       );
+    const sp = spread && spread.max > 0 ? G.spreadKey(spread.key, spread.max, spread.precision) : null;
+    if (sp && sp.moved.length && G.unreachableSteps(sp.key).length < lost.length)
+      fixes.push(
+        h('button', { class: 'btn btn-sm', 'data-key-spread': '', title: 'Jede Stufe bekommt einen eigenen Punktwert; die Grenze zum Bestehen bleibt', onclick: () => spreadDialog(level, holder, sp) }, 'Punkte verteilen')
+      );
     const ownCustom = lost.some((x) => (holder.custom || {})[x.p] !== undefined || (holder.custom || {})[x.by] !== undefined);
     return h(
       'div',
@@ -919,11 +927,56 @@
     );
   }
 
+  /** Zeigt den vorgeschlagenen Schlüssel mit allen verschobenen Stufen; „Übernehmen“ schreibt ihn in die eigenen Schwellen. */
+  async function spreadDialog(level, holder, sp) {
+    const moved = new Map(sp.moved.map((m) => [m.p, m]));
+    const still = G.unreachableSteps(sp.key);
+    const stillP = new Set(still.map((x) => x.p));
+    const rows = sp.key
+      .slice()
+      .reverse()
+      .filter((k) => k.p > 0)
+      .map((k) => {
+        const m = moved.get(k.p);
+        return h(
+          'tr',
+          { class: [m ? 'custom' : '', stillP.has(k.p) ? 'unreachable' : ''].filter(Boolean).join(' ') },
+          h('td', null, UI.gradeBadge(k.p, level)),
+          h('td', { class: 'num muted' }, m ? fmtScore(m.from) : ''),
+          h('td', { class: 'num' + (m ? ' strong' : '') }, stillP.has(k.p) ? 'entfällt' : fmtScore(k.min))
+        );
+      });
+    const n = sp.moved.length;
+    const ok = await modal({
+      title: 'Punkte verteilen',
+      body: h(
+        'div',
+        { 'data-key-spread-dialog': '' },
+        h('p', null, `Jede Stufe bekommt einen eigenen Punktwert, von der Höchstpunktzahl abwärts. Die Grenze zum Bestehen bleibt, wo sie ist. ${n} ${n === 1 ? 'Stufe wird' : 'Stufen werden'} verschoben (fett).`),
+        still.length ? h('p', { class: 'muted small' }, `Für alle Stufen reichen die Punkte nicht: ${still.map((x) => G.label(x.p, level)).join(', ')} ${still.length === 1 ? 'entfällt' : 'entfallen'}.`) : null,
+        h(
+          'table',
+          { class: 'table compact key-table' },
+          h('thead', null, h('tr', null, h('th', null, level === 'mss' ? 'Punkte' : 'Note'), h('th', { class: 'num' }, 'bisher ab'), h('th', { class: 'num' }, 'neu ab'))),
+          h('tbody', null, rows)
+        ),
+        h('p', { class: 'muted small' }, 'Danach lassen sich die Schwellen wie gewohnt von Hand ändern; „Zurücksetzen“ stellt den berechneten Schlüssel wieder her.')
+      ),
+      buttons: [
+        { label: 'Abbrechen', value: false },
+        { label: 'Übernehmen', value: true, kind: 'primary' },
+      ],
+    });
+    if (ok !== true) return;
+    holder.custom = Object.assign({}, holder.custom || {}, sp.custom);
+    NM.app.commit();
+  }
+
   /**
    * Notenschlüssel-Karte (auch für Präsentationen): Schlüssel mit änderbaren Schwellen (holder.custom),
    * darunter Notenspiegel, Statistik und Drittelparagraph aus st.
    */
-  function keyCardFor(course, level, { focusId, key, counts, holder, st, results, top = null, statsTitle = null, alt = null, hint = '' }) {
+  function keyCardFor(course, level, { focusId, key, counts, holder, st, results, top = null, statsTitle = null, alt = null, hint = '', max = 0, precision = 1 }) {
     const anyCustom = key.some((k) => k.custom);
     const lost = key.some((k) => k.min > 0) ? G.unreachableSteps(key) : [];
     const lostP = new Set(lost.map((x) => x.p));
@@ -986,7 +1039,7 @@
           : null
       ),
       top,
-      lost.length ? unreachableNotice(level, lost, holder, alt, hint) : null,
+      lost.length ? unreachableNotice(level, lost, holder, alt, hint, { key, max, precision }) : null,
       h(
         'table',
         { class: 'table compact key-table' },

@@ -189,6 +189,31 @@
     eq('Unerreichbar: 40 Pkt. ganze Punkte ohne Warnung', G.unreachableSteps(G.testKey('sek1', 50, 40, 1, {})), []);
     eq('Unerreichbar: MSS 20 Pkt. ganze Punkte', G.unreachableSteps(G.testKey('mss', 45, 20, 1, {})).length > 0, true);
     eq('Unerreichbar: eigene Schwelle unter der Nachbarstufe', G.unreachableSteps(G.testKey('sek1', 50, 40, 1, { 11: 30 })).map((x) => x.p), [10]);
+    // „Punkte verteilen“ (AB)
+    const L = (p) => G.label(p, 'sek1');
+    const ab = (k) => k.slice().sort((a, b) => b.p - a.p).filter((x) => x.p > 0).map((x) => L(x.p) + ':' + x.min).join(' ');
+    const s18 = G.spreadKey(k18, 18, 1);
+    eq('Verteilen: 18 Pkt. – 1 ab 18, 1- entfällt, dann je ein Punkt bis 4- ab 9', ab(s18.key), '1:18 1-:18 2+:17 2:16 2-:15 3+:14 3:13 3-:12 4+:11 4:10 4-:9 5+:8 5:6 5-:5');
+    eq('Verteilen: 18 Pkt. – nur 1- bleibt unerreichbar', G.unreachableSteps(s18.key).map((x) => L(x.p)), ['1-']);
+    eq('Verteilen: 18 Pkt. – nur geänderte Stufen in custom', Object.keys(s18.custom).map(Number).sort((a, b) => b - a), [14, 13, 12, 11, 10, 9, 8]);
+    eq('Verteilen: verschobene Stufen absteigend mit alt/neu', s18.moved.slice(0, 2), [{ p: 14, from: 17, to: 18 }, { p: 13, from: 16, to: 18 }]);
+    eq('Verteilen: Note aus dem neuen Schlüssel (16 → 2)', L(G.scoreToPoints(16, s18.key)), '2');
+    eq('Verteilen: 40 Pkt. ändert nichts', G.spreadKey(G.testKey('sek1', 50, 40, 1, {}), 40, 1).moved, []);
+    eq('Verteilen: halbe Punkte bei 18 Pkt. ändert nichts', G.spreadKey(G.testKey('sek1', 50, 18, 0.5, {}), 18, 0.5).moved, []);
+    eq('Verteilen: ganze Noten bei 18 Pkt. ändert nichts', G.spreadKey(G.testKey('sek1', 50, 18, 1, {}, true), 18, 1).moved, []);
+    const s6 = G.spreadKey(G.testKey('sek1', 50, 6, 1, {}), 6, 1);
+    eq('Verteilen: 6 Pkt. – Grenze bleibt, 1 ab 6, 4 ab 4, 4+ ab 5, unter der Grenze 5+ 2, 5 und 5- 1', ab(s6.key), '1:6 1-:6 2+:6 2:6 2-:6 3+:6 3:6 3-:6 4+:5 4:4 4-:3 5+:2 5:1 5-:1');
+    const sOwn = G.spreadKey(G.testKey('sek1', 50, 18, 1, { 4: 10 }), 18, 1);
+    eq('Verteilen: eigene Grenze bleibt fest', [sOwn.key.find((x) => x.p === 4).min, 4 in sOwn.custom], [10, false]);
+    eq('Verteilen: eigene Grenze 10 – 8 Werte für 10 Stufen, 1- und 2+ entfallen', G.unreachableSteps(sOwn.key).map((x) => L(x.p)), ['1-', '2+']);
+    const kM = G.testKey('mss', 45, 20, 1, {});
+    const sM = G.spreadKey(kM, 20, 1);
+    eq('Verteilen: MSS 20 Pkt. – Grenze 04 bleibt, 15 ab 20', [sM.key.find((x) => x.p === 4).min, sM.key.find((x) => x.p === 4).min === kM.find((x) => x.p === 4).min, sM.key.find((x) => x.p === 15).min], [kM.find((x) => x.p === 4).min, true, 20]);
+    eq('Verteilen: MSS 20 Pkt. – höchstens 14 unerreichbar', G.unreachableSteps(sM.key).every((x) => x.p === 14), true);
+    eq('Verteilen: MSS 10 Pkt. halbe Punkte – nur 14 unerreichbar', G.unreachableSteps(G.spreadKey(G.testKey('mss', 50, 10, 0.5, {}), 10, 0.5).key).map((x) => x.p), [14]);
+    const sMh = G.spreadKey(G.testKey('mss', 50, 12, 0.5, {}), 12, 0.5);
+    eq('Verteilen: MSS 12 Pkt. halbe Punkte – nichts unerreichbar', G.unreachableSteps(sMh.key), []);
+    eq('Verteilen: MSS halbe Punkte – Schwellen auf halbe Punkte', sMh.key.every((x) => Math.abs(x.min * 2 - Math.round(x.min * 2)) < 1e-9), true);
     const pr = { limit: 50, custom: {}, criteria: [{ id: 'a', weight: 1 }, { id: 'b', weight: 1 }], results: {} };
     eq('Unerreichbar: Präsentation mit 6 Punkten', G.unreachableSteps(G.keyForPres(pr, 'sek1')).length > 0, true);
   }
