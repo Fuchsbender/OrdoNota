@@ -188,6 +188,7 @@
                 ui.seatHidePhotos ? [icon('chevron-right'), ' Fotos einblenden'] : [icon('chevron-down'), ' Fotos ausblenden']
               ),
               h('button', { class: 'btn', onclick: () => NM.print.seating(course) }, icon('printer'), ' Drucken'),
+              h('button', { class: 'btn', 'data-seat-beamer': '', title: 'Sitzplan groß im Vollbild für den Beamer, ohne Bearbeitung', onclick: () => beamer(course) }, icon('arrows-maximize'), ' Beamer'),
               plans(course).length > 1 ? h('button', { class: 'icon-btn danger', title: 'Diesen Raum löschen', 'aria-label': 'Diesen Raum löschen', onclick: () => deleteRoom(course, st) }, icon('trash')) : null
             )
           )
@@ -594,5 +595,116 @@
     NM.app.commit();
   }
 
-  NM.views.seating = { render, layout, cardNames };
+  // ---------- Beamer ----------
+
+  /**
+   * Vollbild für den Beamer: Raster des gewählten Raums wie im Editor (Pult an derselben Stelle), große Vornamen,
+   * keine Bearbeitung. Zeigt nie Noten, I-Status oder andere vertrauliche Angaben. Fotos per Schalter (pro Gerät gemerkt).
+   */
+  function beamer(course) {
+    const ui = NM.app.state.ui;
+    const opt = (ui.seatBeamer = Object.assign({ photos: false }, ui.seatBeamer || {}));
+    const title = h('h1', null);
+    const area = h('div', { class: 'seat-beamer-area' });
+    const free = h('p', { class: 'seat-beamer-free' });
+    const toggle = (key, label, tip) =>
+      h(
+        'button',
+        {
+          class: 'btn grp-beamer-toggle' + (opt[key] ? ' active' : ''),
+          'aria-pressed': String(!!opt[key]),
+          'data-beamer-toggle': key,
+          title: tip,
+          onclick: (e) => {
+            opt[key] = !opt[key];
+            e.currentTarget.classList.toggle('active', opt[key]);
+            e.currentTarget.setAttribute('aria-pressed', String(opt[key]));
+            NM.app.saveUi();
+            draw();
+          },
+        },
+        label
+      );
+    let room = null;
+    // Platzgröße: so groß, wie Breite und Höhe der Fläche es zulassen; Schrift passend zum längsten Namen
+    const fit = () => {
+      if (!room) return;
+      const { st, longest } = room;
+      const grid = area.querySelector('.seat-beamer-grid');
+      const desk = area.querySelector('.seat-beamer-desk');
+      const gap = Math.max(4, Math.round(Math.min(area.clientWidth, area.clientHeight) / 90));
+      const deskH = desk ? desk.offsetHeight + gap : 0;
+      const cell = Math.max(24, Math.floor(Math.min((area.clientWidth - gap * (st.cols - 1)) / st.cols, (area.clientHeight - deskH - gap * (st.rows - 1)) / st.rows)));
+      grid.style.setProperty('--cell', cell + 'px');
+      grid.style.gap = gap + 'px';
+      const share = opt.photos ? 0.18 : 0.26;
+      grid.style.fontSize = Math.max(10, Math.floor(Math.min(cell * share, (cell * 0.88) / (Math.max(longest, 3) * 0.6)))) + 'px';
+    };
+    const draw = () => {
+      const { st, students, cells, unplaced } = layout(course);
+      const names = cardNames(students);
+      const byId = new Map(students.map((s) => [s.id, s]));
+      title.replaceChildren(M.courseTitle(course), h('span', { class: 'muted' }, ' · ' + st.name));
+      const grid = h('div', { class: 'seat-beamer-grid', style: `--cols:${st.cols}` });
+      for (let y = 0; y < st.rows; y++) {
+        for (let x = 0; x < st.cols; x++) {
+          const s = byId.get(cells[x + ',' + y]);
+          grid.appendChild(
+            s
+              ? h(
+                  'div',
+                  { class: 'seat-beamer-card' + (opt.photos ? ' has-photo' : '') },
+                  opt.photos ? h('img', { class: 'seat-photo' + (s.photo ? '' : ' seat-photo-empty'), src: s.photo || M.PERSON_ICON, alt: '' }) : null,
+                  h('span', { class: 'seat-beamer-name' }, names[s.id])
+                )
+              : h('div', { class: 'seat-beamer-empty', 'aria-hidden': 'true' })
+          );
+        }
+      }
+      const desk = h('div', { class: 'seat-beamer-desk' }, 'Lehrerpult');
+      area.replaceChildren(...(st.desk === 'bottom' ? [grid, desk] : [desk, grid]));
+      free.replaceChildren();
+      if (unplaced.length) free.append(h('span', { class: 'muted' }, 'Noch ohne Platz: '), M.sortStudents(unplaced).map((s) => names[s.id]).join(', '));
+      free.hidden = !unplaced.length;
+      room = { st, longest: Math.max(0, ...Object.values(cells).map((sid) => names[sid].length)) };
+      fit();
+    };
+    const close = () => {
+      document.removeEventListener('keydown', onKey);
+      window.removeEventListener('resize', fit);
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+      overlay.remove();
+    };
+    const onKey = (e) => {
+      if (e.key === 'Escape') close();
+    };
+    const overlay = h(
+      'div',
+      { class: 'beamer grp-beamer seat-beamer', role: 'dialog', 'aria-label': 'Sitzplan im Vollbild' },
+      h(
+        'div',
+        { class: 'grp-beamer-head' },
+        title,
+        h(
+          'div',
+          { class: 'grp-beamer-bar' },
+          toggle('photos', [icon('camera'), ' Fotos'], 'Fotos (bzw. Personensymbol) auf den Karten zeigen'),
+          h('button', { class: 'btn', 'data-beamer-close': '', onclick: close, title: 'Schließen (Esc)' }, icon('x'), ' Schließen')
+        )
+      ),
+      area,
+      free
+    );
+    document.body.appendChild(overlay);
+    draw();
+    document.addEventListener('keydown', onKey);
+    window.addEventListener('resize', fit);
+    if (overlay.requestFullscreen) overlay.requestFullscreen().catch(() => {});
+    overlay.addEventListener('fullscreenchange', () => {
+      if (!document.fullscreenElement) close();
+      else fit();
+    });
+  }
+
+  NM.views.seating = { render, layout, cardNames, beamer };
 })((globalThis.NM = globalThis.NM || {}));

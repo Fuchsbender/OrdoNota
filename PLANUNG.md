@@ -322,9 +322,9 @@ Jede Etappe endet mit `ERGEBNIS: x von x bestanden` und einem Commit auf dem Zwe
 
 Mit dem Nutzer am 18.11.2026 geklärt (grill-me, alle Empfehlungen angenommen). Jeder Buchstabe ist eine eigene Version mit Tests.
 
-**To-do (Stand 18.11.2026, nichts davon gebaut):**
+**To-do (Stand 18.11.2026):**
 
-- [ ] **AA** Sitzplan im Beamer-Vollbild – Entwurf der Oberfläche fertig (`/impeccable shape`, siehe AA). **Nächster Schritt:** Fragen S1–S3 vom Nutzer bestätigen lassen, dann bauen.
+- [x] **AA** Sitzplan im Beamer-Vollbild – erledigt in 2.1.0 (18.11.2026), Anordnung wie im Editor, S2/S3 wie empfohlen
 - [ ] **AB** Notenschlüssel: Knopf „Punkte verteilen“
 - [ ] **AC** Verbalbeurteilung bei I-Status
 - [ ] **AD** Personenregister (Schema 5, Migration, Zusammenführen) – vorher Sicherung, Migration an der Demo testen
@@ -352,7 +352,7 @@ Mit dem Nutzer am 18.11.2026 geklärt (grill-me, alle Empfehlungen angenommen). 
 - Keine Bearbeitung: kein Ziehen, kein Auswählen, kein Foto-Löschknopf, keine Hinweistexte.
 - Knopf „Beamer“ im Kopf des Reiters „Sitzplan“. Esc oder Verlassen des Vollbilds schließt (wie `beamerView`). Alle sechs Designs, „Bewegung reduzieren“ beachten.
 
-**Offene Fragen S1–S3 (Empfehlung jeweils dabei, Nutzer hat noch nicht geantwortet):**
+**Fragen S1–S3** (am 18.11.2026 entschieden, gebaut in 2.1.0): S2 und S3 wie empfohlen. **S1 abweichend:** keine Drehung und kein Schalter „Lehrersicht“, das Vollbild zeigt den Plan genau wie im Editor (Nutzer: Wechsel nicht sinnvoll).
 
 - **S1 Blickrichtung:** Liegt das Pult im Editor unten (Sicht der Lehrkraft), wären für die Klasse links und rechts vertauscht. → Empfehlung: Beamer zeigt immer **aus Sicht der Klasse** (Pult oben, links ist links; bei Pult unten um 180° gedreht), Schalter „Lehrersicht“ für die Ansicht wie im Editor.
 - **S2 Fotos:** → Empfehlung: eigene Einstellung für den Beamer, **beim ersten Mal aus**, Schalter „Fotos“; die Wahl merkt sich das Gerät (`nm.ui`). Projizierte Fotos sind heikler, große Vornamen von hinten besser lesbar.

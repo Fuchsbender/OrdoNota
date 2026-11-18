@@ -421,6 +421,61 @@ def run_course_check(br, base):
     report("EPO: Fotos ein-/ausblenden (Foto bzw. Platzhalter je Person)", bool(res) and res["before"] == 0 and res["empty"] == 1 and res["imgs"] == res["rows"] - 1 and not br.errors, str(res) + "; ".join(br.errors))
 
 
+def run_seat_beamer_check(br, base):
+    print("Sitzplan im Beamer-Vollbild (wie im Editor, Fotos, ohne Platz, Esc):")
+    br.open(f"{base}/index.html?demo")
+    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.errors = []
+    res = br.eval("""(async () => {
+        const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
+        const c = NM.app.db().courses[0];
+        const ids = NM.model.activeStudents(c).map((s) => s.id);
+        c.seatingPlans = [{ id: 'r1', name: 'Raum 204', cols: 3, rows: 2, desk: 'top', pos: {} }];
+        c.seatingPlans[0].pos = { [ids[0]]: { x: 0, y: 0 }, [ids[1]]: { x: 2, y: 1 } };
+        NM.app.state.ui.seatingId = { [c.id]: 'r1' };
+        delete NM.app.state.ui.seatBeamer;
+        NM.app.select({ courseId: c.id, tab: 'seating' }); await wait();
+        const names = NM.views.seating.cardNames(NM.model.activeStudents(c));
+        document.querySelector('[data-seat-beamer]').click(); await wait();
+        const bm = () => document.querySelector('.seat-beamer');
+        const cells = () => [...bm().querySelector('.seat-beamer-grid').children].map((el) => el.classList.contains('seat-beamer-card') ? el.textContent : '');
+        const deskFirst = () => bm().querySelector('.seat-beamer-area').firstElementChild.classList.contains('seat-beamer-desk');
+        const tog = (k) => bm().querySelector('[data-beamer-toggle="' + k + '"]').click();
+        const out = { names: [names[ids[0]], names[ids[1]]] };
+        out.open = [!!bm(), bm().textContent.includes('Raum 204'), bm().querySelectorAll('.seat-beamer-empty').length, bm().querySelectorAll('img').length,
+                    bm().querySelectorAll('[draggable], .seat-photo-del, [tabindex]').length];
+        out.cls = [cells(), deskFirst()];
+        const free = bm().querySelector('.seat-beamer-free');
+        out.free = [free.hidden, free.textContent.startsWith('Noch ohne Platz:'), free.textContent.includes(names[ids[2]])];
+        out.noTeacher = !bm().querySelector('[data-beamer-toggle="teacher"]');
+        c.seatingPlans[0].desk = 'bottom'; tog('photos'); await wait();
+        out.bottom = [cells(), deskFirst(), bm().querySelectorAll('.seat-beamer-card img').length, NM.app.state.ui.seatBeamer.photos];
+        const area = bm().querySelector('.seat-beamer-area'), grid = bm().querySelector('.seat-beamer-grid');
+        out.fit = [parseFloat(grid.style.getPropertyValue('--cell')) >= 60, grid.offsetHeight <= area.clientHeight + 1, grid.offsetWidth <= area.clientWidth + 1];
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); await wait();
+        out.closed = !bm();
+        // alle sitzen → keine Leiste
+        c.seatingPlans[0].desk = 'top'; c.seatingPlans[0].cols = 8; c.seatingPlans[0].rows = 5;
+        ids.forEach((id, i) => (c.seatingPlans[0].pos[id] = { x: i % 8, y: Math.floor(i / 8) }));
+        NM.views.seating.beamer(c); await wait();
+        out.allSeated = bm().querySelector('.seat-beamer-free').hidden;
+        bm().querySelector('[data-beamer-close]').click(); await wait();
+        out.closed2 = !bm();
+        return out; })()""")
+    if res:
+        n0, n1 = res["names"]
+        ok = (res["open"] == [True, True, 4, 0, 0]
+              and res["cls"] == [[n0, "", "", "", "", n1], True]
+              and res["free"] == [False, True, True]
+              and res["noTeacher"]
+              and res["bottom"][0] == [n0, "", "", "", "", n1] and res["bottom"][1:] == [False, 2, True]
+              and res["fit"] == [True, True, True] and res["closed"] and res["allSeated"] and res["closed2"])
+    else:
+        ok = False
+    report("Sitzplan-Beamer: wie im Editor (Pult oben/unten, nicht gedreht), Fotos aus/an, „Noch ohne Platz“, keine Bearbeitung, Esc",
+           ok and not br.errors, str(res) + "; ".join(br.errors))
+
+
 def run_epo_material_check(br, base):
     """EPO: Zusatz m (Material vergessen) per Eingabe und Schnellwahl, Spalte M, Punkte-Einstellung, Ausdruck."""
     br.open(f"{base}/index.html?demo")
@@ -2697,6 +2752,7 @@ def main():
         run_app_smoke(br, base)
         run_sort_check(br, base)
         run_course_check(br, base)
+        run_seat_beamer_check(br, base)
         run_epo_material_check(br, base)
         run_attendance_check(br, base)
         run_epo_tiles_check(br, base)
