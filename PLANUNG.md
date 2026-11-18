@@ -320,7 +320,22 @@ Jede Etappe endet mit `ERGEBNIS: x von x bestanden` und einem Commit auf dem Zwe
 
 ## Wunschliste vom 18.11.2026 (Reihenfolge der Umsetzung: AA, AB, AC, AD, AE, AF, AG)
 
-Mit dem Nutzer am 18.11.2026 geklärt (grill-me, alle Empfehlungen angenommen). Jeder Buchstabe ist eine eigene Version mit Tests. **Später, eigener Klärungsdurchgang:** Kompetenzanalysen sammeln und Kompetenzveränderung darstellen. Dafür ist das Personenregister (AD) die Grundlage. Weitere Verläufe hängen dort als Zeitreihe mit Datum an der Person, so wie die Fassungen des Förderplans (AG).
+Mit dem Nutzer am 18.11.2026 geklärt (grill-me, alle Empfehlungen angenommen). Jeder Buchstabe ist eine eigene Version mit Tests.
+
+**To-do (Stand 18.11.2026, nichts davon gebaut):**
+
+- [ ] **AA** Sitzplan im Beamer-Vollbild – Entwurf der Oberfläche fertig (`/impeccable shape`, siehe AA). **Nächster Schritt:** Fragen S1–S3 vom Nutzer bestätigen lassen, dann bauen.
+- [ ] **AB** Notenschlüssel: Knopf „Punkte verteilen“
+- [ ] **AC** Verbalbeurteilung bei I-Status
+- [ ] **AD** Personenregister (Schema 5, Migration, Zusammenführen) – vorher Sicherung, Migration an der Demo testen
+- [ ] **AE** Nachteilsausgleich
+- [ ] **AF** Notizverlauf
+- [ ] **AG** Förderplan
+- [ ] später: Kompetenzanalysen und Kompetenzverlauf (eigener grill-me-Durchgang, baut auf AD auf)
+
+**Ablauf je Buchstabe** (Projekte-CLAUDE.md): Oberfläche vorher mit `/impeccable shape` planen und bestätigen lassen → umsetzen (Hauptsitzung oder `code-umsetzen`) → Impeccable-Detektor über die geänderten UI-Dateien → `/impeccable polish` (bei Formularen auch `harden`) → Tests (`code-testlauf`) → Doku (DOKUMENTATION.md, README.md), Version (Minor), hier als erledigt abhaken → lokaler Commit. Pushen nur auf Ansage, vorher `code-pruefen`.
+
+**Kleinigkeiten, die ohne Rückfrage ergänzt wurden** (dem Nutzer am 18.11. gemeldet, kein Widerspruch): AD – Namensänderung im Kurs fragt, ob das Register mitgeändert wird; AC – Verbalbeurteilung zuerst für Arbeiten, Präsentationen nur bei Bedarf. **Später, eigener Klärungsdurchgang:** Kompetenzanalysen sammeln und Kompetenzveränderung darstellen. Dafür ist das Personenregister (AD) die Grundlage. Weitere Verläufe hängen dort als Zeitreihe mit Datum an der Person, so wie die Fassungen des Förderplans (AG).
 
 **Datenschutz für alles hier (gilt für AC–AG):** Nachteilsausgleiche (LRS, Dyskalkulie) und Förderpläne sind Gesundheitsdaten nach Art. 9 DSGVO, Notizen sind ebenfalls schutzwürdig. Sie erscheinen **nie** in Beamer- und Vollbildansichten, nie auf Ergebnis-, Mitarbeitszetteln oder Leistungsbögen und nie in der unverschlüsselten Schülerliste als Excel. In Exporten nur, wenn man es ausdrücklich ankreuzt. In der Notenübersicht dezent. `tools/entschluesseln.py` (CSV-Ausgabe) mitziehen. Vor dem Commit von Doku-Beispielen mit `code-pruefen` prüfen (öffentliches Repo).
 
@@ -329,6 +344,19 @@ Mit dem Nutzer am 18.11.2026 geklärt (grill-me, alle Empfehlungen angenommen). 
 - Knopf im Reiter „Sitzplan“ wie die Beamer-Ansicht einer Arbeit (`beamerView`, `js/view-tests.js:1064`): `requestFullscreen`, Esc schließt.
 - Zeigt das Raster des gewählten Raums mit den Karten wie bisher (Vorname, ggf. Nachnamensinitial, Foto, wenn nicht ausgeblendet), nur groß, mit dem Pult als Orientierung. Keine Bearbeitung.
 - Nie I-Status, Ausgleiche, Notizen oder Noten.
+
+**Entwurf der Oberfläche (`/impeccable shape`, 18.11.2026):**
+
+- Vollbild im Stil von `.beamer` (`css/app.css:719`). Oben Kursname und Raumname, rechts eine Leiste mit Schaltern wie in der Gruppen-Beamer-Ansicht (`grp-beamer-toggle`, `js/view-groups.js:793`): „Fotos“, „Lehrersicht“, „Schließen (Esc)“.
+- Das Raster des gewählten Raums (`ui.seatingId`) füllt die Fläche, die Karten skalieren mit der Raumgröße (8 × 5 ohne Rollen). Nur Vornamen (`cardNames`), groß; leere Plätze blass angedeutet, damit die Reihen erkennbar sind. Pult als Orientierung.
+- Keine Bearbeitung: kein Ziehen, kein Auswählen, kein Foto-Löschknopf, keine Hinweistexte.
+- Knopf „Beamer“ im Kopf des Reiters „Sitzplan“. Esc oder Verlassen des Vollbilds schließt (wie `beamerView`). Alle sechs Designs, „Bewegung reduzieren“ beachten.
+
+**Offene Fragen S1–S3 (Empfehlung jeweils dabei, Nutzer hat noch nicht geantwortet):**
+
+- **S1 Blickrichtung:** Liegt das Pult im Editor unten (Sicht der Lehrkraft), wären für die Klasse links und rechts vertauscht. → Empfehlung: Beamer zeigt immer **aus Sicht der Klasse** (Pult oben, links ist links; bei Pult unten um 180° gedreht), Schalter „Lehrersicht“ für die Ansicht wie im Editor.
+- **S2 Fotos:** → Empfehlung: eigene Einstellung für den Beamer, **beim ersten Mal aus**, Schalter „Fotos“; die Wahl merkt sich das Gerät (`nm.ui`). Projizierte Fotos sind heikler, große Vornamen von hinten besser lesbar.
+- **S3 Personen ohne Platz:** → Empfehlung: schmale Leiste „Noch ohne Platz: …“ mit Vornamen, nur wenn es solche gibt.
 
 ### AB) Notenschlüssel: Vorschlag „ein Punkt je Stufe“ bei wenigen Punkten
 
