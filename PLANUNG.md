@@ -326,6 +326,7 @@ Mit dem Nutzer am 18.11.2026 geklärt (grill-me, alle Empfehlungen angenommen). 
 
 - [x] **AA** Sitzplan im Beamer-Vollbild – erledigt in 2.1.0 (18.11.2026), Anordnung wie im Editor, S2/S3 wie empfohlen
 - [x] **AB** Notenschlüssel: Knopf „Punkte verteilen“ – erledigt in 2.2.0 (18.11.2026)
+- [ ] **Vorab: Hänger im Testlauf beheben** (vor AC, siehe unten „Testlauf bleibt stehen“)
 - [ ] **AC** Verbalbeurteilung bei I-Status
 - [ ] **AD** Personenregister (Schema 5, Migration, Zusammenführen) – vorher Sicherung, Migration an der Demo testen
 - [ ] **AE** Nachteilsausgleich
@@ -338,6 +339,24 @@ Mit dem Nutzer am 18.11.2026 geklärt (grill-me, alle Empfehlungen angenommen). 
 **Kleinigkeiten, die ohne Rückfrage ergänzt wurden** (dem Nutzer am 18.11. gemeldet, kein Widerspruch): AD – Namensänderung im Kurs fragt, ob das Register mitgeändert wird; AC – Verbalbeurteilung zuerst für Arbeiten, Präsentationen nur bei Bedarf. **Später, eigener Klärungsdurchgang:** Kompetenzanalysen sammeln und Kompetenzveränderung darstellen. Dafür ist das Personenregister (AD) die Grundlage. Weitere Verläufe hängen dort als Zeitreihe mit Datum an der Person, so wie die Fassungen des Förderplans (AG).
 
 **Datenschutz für alles hier (gilt für AC–AG):** Nachteilsausgleiche (LRS, Dyskalkulie) und Förderpläne sind Gesundheitsdaten nach Art. 9 DSGVO, Notizen sind ebenfalls schutzwürdig. Sie erscheinen **nie** in Beamer- und Vollbildansichten, nie auf Ergebnis-, Mitarbeitszetteln oder Leistungsbögen und nie in der unverschlüsselten Schülerliste als Excel. In Exporten nur, wenn man es ausdrücklich ankreuzt. In der Notenübersicht dezent. `tools/entschluesseln.py` (CSV-Ausgabe) mitziehen. Vor dem Commit von Doku-Beispielen mit `code-pruefen` prüfen (öffentliches Repo).
+
+### Testlauf bleibt stehen (vor AC beheben)
+
+**Befund (18.11.2026 abends):** Der volle Lauf `tests/run_tests.py` blieb dreimal hintereinander minutenlang stehen, jedes Mal an einer anderen Stelle (Reiter „Gruppen“, Farbschemata, Druckauswahl). Dabei arbeitet weder Python noch der Browser. Die Seite antwortet aber, wenn man sich von außen verbindet, und danach lief der Test einmal weiter. Einzeln, jeder Block in einem frischen Browser, sind alle 127 Tests grün und die meisten Blöcke in Sekunden fertig. Ausnahme: `run_old_db_check` braucht 270 s. Früher am selben Tag liefen zwei volle Läufe durch.
+
+**Vorgehen:**
+1. Den Hänger nachstellen, z. B. mehrere volle Läufe mit `python -u`, und die Stelle festhalten. Prüfen, ob es nur nach langer Laufzeit im selben Browser passiert.
+2. Vermutungen prüfen:
+   - `Browser.call` wartet ohne Zeitgrenze, weil andere CDP-Meldungen den 180-s-Timeout von `ws.recv` immer wieder zurücksetzen.
+   - Der Headless-Browser zeichnet nicht mehr, und ein Test wartet auf ein Bild, einen Übergang oder eine Animation.
+   - Ein Fullscreen-Zustand bleibt aus den Beamer-Tests hängen.
+   - Ein echtes `window.print` wird aufgerufen.
+3. Warum `run_old_db_check` so lange braucht.
+4. Beheben:
+   - feste Gesamtzeitgrenze je `call`/`eval` mit klarer Fehlermeldung, die den Block nennt
+   - Ursache abstellen
+   - ggf. ein frischer Browser je Block
+5. Fertig, wenn drei volle Läufe hintereinander `ERGEBNIS: x von x bestanden` mit Exit-Code 0 melden und kein Lauf länger als etwa 10 Minuten braucht.
 
 ### AA) Sitzplan im Beamer-Vollbild
 
