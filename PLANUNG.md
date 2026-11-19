@@ -328,7 +328,7 @@ Mit dem Nutzer am 18.11.2026 geklärt (grill-me, alle Empfehlungen angenommen). 
 - [x] **AB** Notenschlüssel: Knopf „Punkte verteilen“ – erledigt in 2.2.0 (18.11.2026)
 - [x] **Vorab: Hänger im Testlauf beheben** (erledigt 19.11.2026, siehe unten „Testlauf bleibt stehen“)
 - [x] **AC** Verbalbeurteilung bei I-Status – erledigt in 2.3.0 (19.11.2026), V1–V3 wie empfohlen
-- [x] **AD** Personenregister (Schema 5, Migration, Zusammenführen), 2.4.0 (19.11.2026, lokal committet, nicht gepusht; Release-Notizen: alle Geräte zuerst aktualisieren)
+- [x] **AD** Personenregister (Schema 5, Migration, Zusammenführen), 2.4.0 (19.11.2026, gepusht, Release v2.4.0)
   - [x] **AD-1** Datenmodell, Umstellung, `NM.people`, Sicherung, Kopieren, Löschen, Notfallwerkzeug (19.11.2026)
   - [x] **AD-2** Seite „Personen“, Zusammenführen und Trennen, Abgleich beim Einfügen, Namen ändern → 2.4.0 (19.11.2026)
 - [ ] **AE** Nachteilsausgleich
