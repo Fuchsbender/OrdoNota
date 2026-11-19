@@ -329,6 +329,8 @@ Mit dem Nutzer am 18.11.2026 geklärt (grill-me, alle Empfehlungen angenommen). 
 - [x] **Vorab: Hänger im Testlauf beheben** (erledigt 19.11.2026, siehe unten „Testlauf bleibt stehen“)
 - [x] **AC** Verbalbeurteilung bei I-Status – erledigt in 2.3.0 (19.11.2026), V1–V3 wie empfohlen
 - [ ] **AD** Personenregister (Schema 5, Migration, Zusammenführen) – vorher Sicherung, Migration an der Demo testen
+  - [x] **AD-1** Datenmodell, Umstellung, `NM.people`, Sicherung, Kopieren, Löschen, Notfallwerkzeug (19.11.2026, lokal committet, ohne Versionssprung, nicht pushen)
+  - [ ] **AD-2** Seite „Personen“, Zusammenführen und Trennen, Abgleich beim Einfügen, Namen ändern → 2.4.0
 - [ ] **AE** Nachteilsausgleich
 - [ ] **AF** Notizverlauf
 - [ ] **AG** Förderplan
@@ -439,6 +441,53 @@ Heute gibt es keine kursübergreifende Person: Jeder Kurs hat eigene `course.stu
 - **Löschen:** Steht eine Person in keinem Kurs mehr, fragt die App, ob sie samt Notizen, Ausgleichen und Förderplan gelöscht werden soll. Im Register Hinweis „seit … in keinem Kurs“. Keine automatische Frist.
 - Das Register wird so angelegt, dass weitere Verläufe (Kompetenzerhebungen) später an der Person hängen können.
 - `tools/entschluesseln.py`, DOKUMENTATION.md (Datenmodell, Abschnitt Kurs & Schüler) mitziehen.
+
+**Entwurf (`/impeccable shape`, 19.11.2026, Fragen P1–P3 entschieden, alle wie empfohlen):**
+
+*Datenmodell*
+- `db.people: [ { id, last, first, created, orphanSince? } ]`, Kurseintrag `course.students[].personId`. Invariante: Jeder Kurseintrag zeigt auf eine vorhandene Person. `orphanSince` (Datum) wird gesetzt, wenn der letzte Kurseintrag einer Person verschwindet und sie im Register bleibt, und entfernt, sobald sie wieder in einem Kurs steht.
+- Name, Foto, Mail-Adresse (Moodle), I-Status, Einstufung, „Aktiv“ bleiben am Kurseintrag. Der Name im Register ist der Name der Person, die Namen in den Kursen dürfen abweichen (z. B. altes Schuljahr vor einer Namensänderung).
+- Reine Logik in neuem Modul `js/people.js` (`NM.people`, ohne DOM, mit `tests/people.test.html`): `ensure(db)` (fehlende Personen anlegen, verwaiste markieren), `entries(db, pid)` (Kurseinträge einer Person), `matches(db, name)` (gleiche Namen), `suggestPairs(db)` (gleiche Namen oder gleiche Mail-Adresse in Kurseinträgen, nicht schon dieselbe Person, nicht beide im selben Kurs), `merge(db, keepId, goneId)`, `split(db, pid, entryRefs)`, `remove(db, pid)`.
+- **Migration** (`SCHEMA` 4 → 5, `migrate()` ruft `NM.people.ensure`): Für jeden Kurseintrag ohne `personId` eine eigene Person mit dessen Namen, `created` = Erstellungsdatum der Datenbank. Nichts wird automatisch zusammengeführt. `ensure` läuft bei jedem Öffnen, damit auch Datenbanken mit Lücken heil werden. `check()` meldet unbekannte `personId` als Fehler und Personen ohne Kurs ohne `orphanSince` als Hinweis.
+- **Sicherung:** Die erste Speicherung nach der Umstellung legt immer eine Sicherung an, unabhängig von „höchstens alle 10 Minuten“ (Umsetzung in `FolderStore` und `ServerStore` prüfen). Ältere App-Versionen öffnen die Datenbank danach nicht mehr (Meldung „neuere Version“). Das kommt in die Release-Notizen: alle Geräte zuerst aktualisieren.
+
+*P1 Ort: eigene Seite „Personen“*
+- In der Seitenleiste unter „+ Kurs anlegen“ ein Eintrag **„Personen“** (Symbol `users`), auch eingeklappt erreichbar. Er öffnet eine eigene Seite ohne Kursreiter (`ui.tab = 'people'`, nicht in `TABS`, nicht ausschaltbar, nicht sortierbar). Die Seite geht auch ohne Kurs.
+- **Links die Liste:** Suche (Vor- oder Nachname), Filter „Alle / Ohne Kurs“, Zähler. Je Person Nachname, Vorname und darunter die Kurse kurz („8b M · 7b M 25/26“) oder „seit 03.11.2026 in keinem Kurs“. Sortiert nach Name, mit Tastatur bedienbar (Liste mit Pfeiltasten, Enter wählt).
+- **Rechts die gewählte Person:** Name im Register (bearbeitbar), Kurse als Liste mit Schuljahr, Kurs, Name im Kurs (falls abweichend), „nicht aktiv“, Link „Zum Kurs“. Darunter Knöpfe „Mit anderer Person zusammenführen …“, „Trennen …“ (nur bei mehr als einem Kurseintrag), „Aus dem Register löschen“ (nur ohne Kurs). Platz für AF/AG (Notizen, Förderplan) ist hier vorgesehen, bleibt aber leer.
+- Unter 900 px Breite: Liste und Person untereinander, „‹ Alle Personen“ führt zurück.
+- Oben rechts **„Zusammenführen …“** mit Zahl der Vorschläge.
+
+*Zusammenführen und Trennen*
+- **Dialog „Personen zusammenführen“:** je Vorschlag eine Zeile „Fischer, Mia (8b Mathe) = Fischer, Mia (7b Mathe 25/26)“ mit Grund („gleicher Name“ / „gleiche Mail-Adresse“) und Haken, **nicht** vorausgewählt (bestehende Daten, kein frischer Abgleich). „Zusammenführen“ verknüpft die angehakten Paare. Die ältere Person bleibt, ihr Name gilt.
+- Manuell aus der Detailansicht: „Mit anderer Person zusammenführen …“ öffnet eine Suche. Gesperrt, wenn beide im selben Kurs stehen (Hinweis dazu).
+- **Trennen …:** Haken an den Kurseinträgen, die zu einer neuen Person werden. Die neue Person bekommt den Namen des ersten gewählten Eintrags. Alles, was später an der Person hängt (Notizen, Ausgleiche, Förderplan), bleibt bei der bisherigen.
+
+*P2 Namen einfügen: Dialog, vorausgewählt*
+- Nach „Namen übernehmen“: Gibt es für neue Namen Personen mit genau gleichem Vor- und Nachnamen (ohne Groß-/Kleinschreibung und Leerzeichen am Rand), die nicht schon im Kurs sind, öffnet sich **„Diese Namen gibt es schon“**. Je Name eine Zeile mit Haken „dieselbe Person“ und ihren bisherigen Kursen. Bei genau einem Treffer ist der Haken vorausgewählt, bei mehreren gibt es eine Auswahl (Standard: „neue Person“). „Übernehmen“ verknüpft, „Alle als neue Personen“ verknüpft nichts. Ohne Treffer kein Dialog.
+- „+ Einzeln hinzufügen“ legt eine leere Person an. Der Abgleich passiert beim ersten Eintragen des Namens (Frage nur, wenn es genau eine passende Person gibt, die nicht im Kurs ist).
+
+*P3 Kurs kopieren:* Die Kopie übernimmt die `personId` (dieselben Personen), ohne Dialog.
+
+*Namen ändern*
+- Ändert man Vor- oder Nachnamen im Reiter „Kurs & Schüler“, und die Person steht nur in diesem Kurs, ändert sich der Name im Register still mit.
+- Steht sie in weiteren Kursen und weicht der Registername danach ab, kommt eine Rückfrage: „Auch im Personenregister ändern? (Die anderen Kurse behalten ihren Namen.)“ mit „Im Register ändern“ / „Nur in diesem Kurs“.
+- Ändert man den Namen im Register, bleiben die Kursnamen unverändert. Hinweis dort: „Die Kurse behalten ihren Namen.“
+
+*Löschen*
+- Kreuz am Kurseintrag: Ist es der letzte Eintrag der Person, ergänzt die bestehende Rückfrage den Haken „Auch aus dem Personenregister löschen“ (aus). Ohne Haken bleibt die Person mit `orphanSince` = heute.
+- Kurs löschen: Danach verwaiste Personen werden im Dialog gezählt, mit demselben Haken für alle.
+- Im Register: „Aus dem Register löschen“ nur für Personen ohne Kurs, mit Bestätigung.
+
+*Grenzen und Datenschutz*
+- Das Register erscheint nie auf dem Beamer, nie im Ausdruck, nicht in der Excel-Schülerliste. Kein Ausdruck des Registers.
+- Notfallwerkzeug: zusätzlich `Personenregister.csv` (Nachname, Vorname, Kurse, seit wann ohne Kurs) und in den Kurs-CSVs eine Spalte „Person“ (ID).
+- Demo: Die Demo-Daten zeigen das Register mit den beiden Kursen. Eine Person, die in beiden Kursen steht, ist nicht nötig (Sek I und MSS), die Tests bauen solche Fälle selbst.
+- Alle sechs Designs, Tastatur, Touch 44 px, „Bewegung reduzieren“.
+
+*Tests:* Migration an jeder Datenbank aus `tests/altdaten/` (jede Person genau einmal, Noten unverändert, `check` ohne Fehler); `NM.people` als Testseite (ensure, matches, suggestPairs, merge, split, remove, orphanSince); End-to-End: Seite „Personen“, Suche, Filter, Einfügen mit Dialog, Kopieren, Namen ändern mit Rückfrage, Zusammenführen und Trennen, Löschen mit verwaisten Personen, Sicherung bei der Umstellung, Notfallwerkzeug.
+
+*Umfang:* Das ist groß. Zum Umsetzen in zwei Commits teilen: **AD-1** Datenmodell, Migration, `NM.people`, Sicherung, Kopieren, Löschen, Notfallwerkzeug (ohne neue Seite). **AD-2** Seite „Personen“, Zusammenführen und Trennen, Abgleich beim Einfügen, Namen ändern. Version 2.4.0 erst mit AD-2. AD-1 allein wird nicht gepusht.
 
 ### AE) Nachteilsausgleich
 

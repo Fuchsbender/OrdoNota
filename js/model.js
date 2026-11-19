@@ -9,7 +9,9 @@
   // 2 (1.18): Arbeiten in Teilen – getrennt benotete Teile würden ältere Versionen falsch rechnen.
   // 3 (1.20): Präsentationen (kind "pres") – ältere Versionen kennen diese Leistungsart nicht.
   // 4 (1.23): Gruppenpräsentationen – ältere Versionen würden Gruppenwerte ignorieren und falsche Noten zeigen.
-  const SCHEMA = 4;
+  // 5 (2.4): Personenregister (db.people, students[].personId) – ältere Versionen würden neue Kurseinträge
+  //    ohne Person anlegen und Personen beim Löschen nicht aufräumen.
+  const SCHEMA = 5;
   const APP_VERSION = '2.3.0';
 
   class NewerSchemaError extends Error {}
@@ -132,6 +134,7 @@
       presTemplates: defaultPresTemplates(pool),
       years: [year],
       courses: [],
+      people: [], // seit Schema 5: Personenregister (js/people.js)
     };
   }
 
@@ -199,6 +202,8 @@
         NM.attendance.fromEpo(c);
       }
     }
+    // Schema 5: Personenregister – jeder Kurseintrag bekommt eine Person (eigene, nichts wird zusammengeführt)
+    NM.people.ensure(db, { created: typeof db.created === 'string' && db.created ? db.created.slice(0, 10) : undefined });
     db.schema = SCHEMA;
     db.savedWith = APP_VERSION;
     return db;
@@ -229,6 +234,25 @@
       return seen;
     };
     dup(db.courses, 'Kurs', 'Datenbank');
+    // Schema 5: Personenregister
+    const people = Array.isArray(db.people) ? db.people : null;
+    if (Number(db.schema) >= 5 && !people) add('fehler', 'Personenregister', 'fehlt');
+    const pids = people ? dup(people, 'Person', 'Personenregister') : new Set();
+    if (people) {
+      const used = new Set();
+      for (const c of db.courses) {
+        const where = `${c.klasse || '?'} ${c.fach || ''}`.trim();
+        const inCourse = new Set();
+        for (const s of Array.isArray(c.students) ? c.students : []) {
+          if (!s.personId || !pids.has(s.personId)) add('fehler', where, `${[s.first, s.last].filter(Boolean).join(' ') || 'Eintrag'} hat keine Person im Register`);
+          else if (inCourse.has(s.personId)) add('fehler', where, `dieselbe Person steht zweimal im Kurs (${[s.first, s.last].filter(Boolean).join(' ')})`);
+          inCourse.add(s.personId);
+          used.add(s.personId);
+        }
+      }
+      const loose = people.filter((p) => p && p.id && !used.has(p.id) && !p.orphanSince).length;
+      if (loose) add('hinweis', 'Personenregister', `${loose} Person(en) in keinem Kurs ohne Datum „seit“`);
+    }
     const pr = db.settings && db.settings.print;
     if (pr !== undefined && (!isObj(pr) || ['schoolName', 'teacher', 'logo'].some((k) => pr[k] !== undefined && typeof pr[k] !== 'string'))) add('fehler', 'Einstellungen', 'Druckkopf ungültig');
     else if (pr && pr.logo && !LOGO_URL.test(pr.logo)) add('fehler', 'Einstellungen', 'Schullogo ist kein Bild');
@@ -829,6 +853,7 @@
     c12.assessments.push(kv);
     for (const s of [...c8.students, ...c12.students]) s.photo = PERSON_ICON;
     db.courses.push(c8, c12);
+    NM.people.ensure(db);
     // Fehlzeiten (1.45): k aus den EPO-Stunden, dazu einige entschuldigte/unentschuldigte
     if (NM.attendance) {
       NM.attendance.fromEpo(c8);

@@ -354,16 +354,33 @@
   }
 
   async function removeStudent(course, s) {
+    const db = NM.app.db();
     const hasGrades = course.assessments.some((a) => G.assessmentPoints(a, s.id, G.courseLevel(course)) !== null);
-    const ok = await confirmDialog(
-      'Schüler/in entfernen?',
-      hasGrades
-        ? `${M.studentName(s) || 'Diese Person'} hat bereits Noten. Beim Entfernen werden diese gelöscht. Bei einem Abgang besser nur „Aktiv“ abwählen.`
-        : `${M.studentName(s) || 'Diese Person'} wird entfernt.`,
-      { okLabel: 'Entfernen', danger: true }
-    );
-    if (!ok) return;
+    // Letzter Kurseintrag der Person? Dann wahlweise auch aus dem Personenregister löschen (Schema 5)
+    const orphan = NM.people.orphansIf(db, (c, x) => c === course && x.id === s.id);
+    const alsoPerson = h('input', { type: 'checkbox', 'data-remove-person': '' });
+    const text = hasGrades
+      ? `${M.studentName(s) || 'Diese Person'} hat bereits Noten. Beim Entfernen werden diese gelöscht. Bei einem Abgang besser nur „Aktiv“ abwählen.`
+      : `${M.studentName(s) || 'Diese Person'} wird entfernt.`;
+    const v = await modal({
+      title: 'Schüler/in entfernen?',
+      body: h(
+        'div',
+        null,
+        h('p', null, text),
+        orphan.length
+          ? h('label', { class: 'check' }, alsoPerson, ' Auch aus dem Personenregister löschen (die Person steht in keinem anderen Kurs)')
+          : null
+      ),
+      buttons: [
+        { label: 'Abbrechen', value: false },
+        { label: 'Entfernen', value: true, kind: 'danger' },
+      ],
+    });
+    if (v !== true) return;
+    const dropPerson = orphan.length && alsoPerson.checked;
     course.students = course.students.filter((x) => x.id !== s.id);
+    if (dropPerson) NM.people.remove(db, orphan[0].id);
     for (const a of course.assessments) {
       if (a.manual) delete a.manual.grades[s.id];
       if (a.test) delete a.test.results[s.id];
@@ -564,8 +581,10 @@
           {
             class: 'btn btn-danger',
             onclick: async () => {
-              if (!(await confirmCourseDelete(course))) return;
+              const ok = await confirmCourseDelete(course);
+              if (!ok) return;
               db.courses = db.courses.filter((c) => c.id !== course.id);
+              for (const pid of ok.people) NM.people.remove(db, pid);
               NM.app.state.ui.courseId = null;
               NM.app.commit({ render: false });
               NM.app.select({ tab: 'overview' });
@@ -581,6 +600,9 @@
 
   /** Kurs löschen nur nach Eingabe von „LÖSCHEN“. */
   async function confirmCourseDelete(course) {
+    // Personen, die danach in keinem Kurs mehr stehen (Schema 5): wahlweise auch aus dem Register löschen
+    const orphans = NM.people.orphansIf(NM.app.db(), (c) => c === course);
+    const alsoPeople = h('input', { type: 'checkbox', 'data-remove-people': '' });
     const input = h('input', { class: 'input', autocomplete: 'off', spellcheck: 'false', placeholder: DELETE_WORD });
     const matches = () => input.value.trim() === DELETE_WORD;
     const v = await modal({
@@ -589,6 +611,9 @@
         'div',
         null,
         h('p', null, `„${M.courseTitle(course)}“ wird mit allen Schülerinnen und Schülern, Noten und Sitzplänen gelöscht. Das lässt sich nur über eine Sicherung rückgängig machen.`),
+        orphans.length
+          ? h('label', { class: 'check' }, alsoPeople, orphans.length === 1 ? ' Auch die Person aus dem Personenregister löschen, die danach in keinem Kurs mehr steht' : ` Auch die ${orphans.length} Personen aus dem Personenregister löschen, die danach in keinem Kurs mehr stehen`)
+          : null,
         h('label', { class: 'field' }, h('span', null, `Zur Bestätigung „${DELETE_WORD}“ eingeben:`), input)
       ),
       buttons: [
@@ -607,7 +632,7 @@
       if (v !== null) toast(`Nicht gelöscht – bitte genau „${DELETE_WORD}“ eingeben.`, 'error');
       return false;
     }
-    return true;
+    return { people: alsoPeople.checked ? orphans.map((p) => p.id) : [] };
   }
 
   async function copyCourse(course, db) {
@@ -646,7 +671,7 @@
     copy.einstufung = M.courseEinstufung(course);
     if (course.tabs) copy.tabs = Object.assign({}, course.tabs);
     if (withStudents.checked)
-      copy.students = M.activeStudents(course).map((s) => Object.assign({ id: uid(), last: s.last, first: s.first, active: true }, s.einstufung ? { einstufung: s.einstufung } : {}));
+      copy.students = M.activeStudents(course).map((s) => Object.assign({ id: uid(), last: s.last, first: s.first, active: true }, s.personId ? { personId: s.personId } : {}, s.einstufung ? { einstufung: s.einstufung } : {})); // dieselben Personen im Register (Schema 5)
     db.courses.push(copy);
     NM.app.commit({ render: false });
     NM.app.select({ yearId: year.value, courseId: copy.id, tab: 'course' });

@@ -174,7 +174,7 @@ def report(name, ok, detail=""):
 
 def run_test_pages(br, base):
     print("Testseiten:")
-    for page in ["grades", "model", "attendance", "update", "moodle", "qr", "pomodoro", "groups", "random", "timer", "draw", "crypto", "storage"]:
+    for page in ["grades", "model", "people", "attendance", "update", "moodle", "qr", "pomodoro", "groups", "random", "timer", "draw", "crypto", "storage"]:
         br.open(f"{base}/tests/{page}.test.html")
         done = br.wait("/^(ALLE TESTS BESTANDEN|\\d+ FEHLGESCHLAGEN|FEHLER)/.test(document.getElementById('out').textContent)")
         text = br.eval("document.getElementById('out').textContent") or ""
@@ -216,6 +216,8 @@ def run_old_db_check(br, base):
             NM.app.state.db = NM.model.migrate(JSON.parse(JSON.stringify(fx.db)));
             const db = NM.app.db(), bad = [];
             const fehler = NM.model.check(db).filter((p) => p.level === 'fehler').length;
+            const entries = db.courses.flatMap((c) => c.students);
+            const people = entries.length === db.people.length && entries.every((s) => db.people.some((p) => p.id === s.personId)) && new Set(entries.map((s) => s.personId)).size === entries.length;
             for (const c of db.courses) {
                 for (const tab of ['course', 'tests', 'epo', 'pres', 'draw', 'random', 'groups', 'overview', 'seating', 'settings']) {
                     NM.app.select({ yearId: c.yearId, courseId: c.id, tab }); await wait();
@@ -234,9 +236,9 @@ def run_old_db_check(br, base):
             const dlg = document.querySelector('dialog.modal');
             const dialogOk = !!dlg && dlg.textContent.includes('Keine Probleme gefunden') && dlg.textContent.includes(NM.model.APP_VERSION);
             if (dlg) dlg.querySelector('.modal-actions button').click();
-            return { version: fx.version, fehler, bad, dialogOk }; })()""" % name)
-        ok = bool(res) and res["fehler"] == 0 and not res["bad"] and res["dialogOk"] and not br.errors
-        report(f"{name}: alle Reiter beider Kurse ohne Fehler, „Datenbank prüfen“ ohne Probleme", ok, str(res) + "; ".join(br.errors)[:500])
+            return { version: fx.version, fehler, bad, dialogOk, people }; })()""" % name)
+        ok = bool(res) and res["fehler"] == 0 and not res["bad"] and res["dialogOk"] and res["people"] and not br.errors
+        report(f"{name}: alle Reiter beider Kurse ohne Fehler, „Datenbank prüfen“ ohne Probleme, je Kurseintrag eine eigene Person", ok, str(res) + "; ".join(br.errors)[:500])
 
 
 def run_sort_check(br, base):
@@ -1245,6 +1247,77 @@ def run_makeup_check(br, base):
            res["created"] and res["info"] and res["rowsMissing"] == 1 and res["rowsAll"] == 12 and res["rowsBack"] == 1 and res["s11"] and res["half"] and res["sync"], str(res))
     report("Verknüpfung lösen/setzen, Original löschen macht eigene Tests",
            res["unlinked"] and res["ownCol"] == 1 and res["relinked"] and res["orphan"] and not br.errors, str(res) + " " + "; ".join(br.errors))
+
+
+def run_people_check(br, base):
+    print("Personenregister (Kopieren, Entfernen, Kurs löschen, Sicherung bei der Umstellung):")
+    br.open(f"{base}/index.html?demo")
+    br.wait(APP_READY, 30)
+    br.errors = []
+    res = br.eval("""(async () => {
+        const wait = (ms = 150) => new Promise((r) => setTimeout(r, ms));
+        const db = NM.app.db(), P = NM.people, out = {};
+        const btn = (text, root = document) => [...root.querySelectorAll('button')].find((b) => b.textContent.trim().startsWith(text));
+        const dialog = () => document.querySelector('dialog.modal');
+        const c8 = db.courses[0];
+        NM.app.select({ courseId: c8.id, tab: 'course' }); await wait();
+        const n0 = db.people.length;
+        // Kurs kopieren: dieselben Personen
+        btn('Kurs kopieren').click(); await wait();
+        btn('Kopieren', dialog()).click(); await wait(300);
+        const copy = db.courses[db.courses.length - 1];
+        out.copy = [copy !== c8, copy.students.length === NM.model.activeStudents(c8).length,
+                    copy.students.every((s, i) => s.personId === NM.model.activeStudents(c8)[i].personId), db.people.length === n0];
+        // Eintrag in der Kopie entfernen: Person steht noch im Original → kein Haken
+        const rm = async (course, s) => { NM.app.select({ courseId: course.id, tab: 'course' }); await wait();
+            const row = [...document.querySelectorAll('#view tr')].find((tr) => [...tr.querySelectorAll('input')].some((i) => i.value === s.last) && [...tr.querySelectorAll('input')].some((i) => i.value === s.first));
+            row.querySelector('button[aria-label="Entfernen"]').click(); await wait(); return dialog(); };
+        const a = copy.students[0], pa = a.personId;
+        let d = await rm(copy, a);
+        out.noBox = !d.querySelector('[data-remove-person]');
+        btn('Entfernen', d).click(); await wait();
+        out.stillThere = !!P.byId(db, pa) && !P.byId(db, pa).orphanSince && P.entries(db, pa).length === 1;
+        // Letzter Eintrag, Haken aus → Person bleibt mit „seit heute“
+        const a8 = c8.students.find((s) => s.personId === pa);
+        d = await rm(c8, a8);
+        out.box = !!d.querySelector('[data-remove-person]') && !d.querySelector('[data-remove-person]').checked;
+        btn('Entfernen', d).click(); await wait();
+        out.orphan = !!P.byId(db, pa) && P.byId(db, pa).orphanSince === NM.util.todayISO();
+        // Letzter Eintrag, Haken an → Person gelöscht
+        const b = copy.students[0], pb = b.personId;
+        d = await rm(copy, b); btn('Entfernen', d).click(); await wait();
+        const b8 = c8.students.find((s) => s.personId === pb);
+        d = await rm(c8, b8); d.querySelector('[data-remove-person]').checked = true; btn('Entfernen', d).click(); await wait();
+        out.gone = !P.byId(db, pb);
+        // Kurs löschen: Kopie (alle Personen auch im Original) → kein Haken
+        const del = async (course, tick) => { NM.app.select({ courseId: course.id, tab: 'course' }); await wait();
+            btn('Kurs löschen').click(); await wait(); const dd = dialog();
+            const box = dd.querySelector('[data-remove-people]'); const label = box ? box.closest('label').textContent : '';
+            if (box && tick) box.checked = true;
+            const inp = dd.querySelector('input.input'); inp.value = 'LÖSCHEN'; inp.dispatchEvent(new Event('input'));
+            dd.querySelector('.btn-danger').click(); await wait(300); return { box: !!box, label }; };
+        out.delCopy = (await del(copy, true)).box;
+        const ids8 = c8.students.map((s) => s.personId);
+        const r8 = await del(c8, true);
+        out.del8 = [r8.box, r8.label.includes(ids8.length + ' Personen'), ids8.every((id) => !P.byId(db, id))];
+        out.otherKept = db.courses[0].students.every((s) => !!P.byId(db, s.personId));
+        out.fehler = NM.model.check(db).filter((x) => x.level === 'fehler').map((x) => x.text);
+        // Sicherung bei der Umstellung: nach Schema 4 → 5 sichert die nächste Speicherung auf jeden Fall
+        const real = NM.app.state.store; const fake = { lastBackup: Date.now() };
+        NM.app.state.store = fake;
+        NM.app.migrateOpened({ schema: 4, years: [], courses: [] }); out.reset = fake.lastBackup === 0;
+        fake.lastBackup = 123; NM.app.migrateOpened({ schema: 5, years: [], courses: [], people: [] }); out.keep = fake.lastBackup === 123;
+        NM.app.state.store = real;
+        NM.app.state.dirty = false;
+        return out; })()""")
+    r = res or {}
+    report("Kurs kopieren: Kopie zeigt auf dieselben Personen, kein neuer Registereintrag", r.get("copy") == [True, True, True, True], str(res))
+    report("Entfernen: Person in anderem Kurs → kein Haken, Person bleibt", r.get("noBox") and r.get("stillThere"), str(res))
+    report("Entfernen des letzten Eintrags: Haken aus → Person bleibt „seit heute in keinem Kurs“", r.get("box") and r.get("orphan"), str(res))
+    report("Entfernen des letzten Eintrags: Haken an → Person aus dem Register gelöscht", r.get("gone"), str(res))
+    report("Kurs löschen: Haken nur für Personen ohne weiteren Kurs, mit Anzahl; gelöscht, Rest bleibt", r.get("delCopy") is False and r.get("del8") == [True, True, True] and r.get("otherKept") and r.get("fehler") == [], str(res))
+    report("Umstellung auf Schema 5: nächste Speicherung legt sicher eine Sicherung an", r.get("reset") and r.get("keep"), str(res))
+    report("Personenregister ohne JavaScript-Fehler", not br.errors, "; ".join(br.errors)[:500])
 
 
 def run_verbal_check(br, base):
@@ -2822,7 +2895,20 @@ def run_decrypt_tool(br, base):
         ok = code == 0 and os.path.exists(klartext) and json.load(open(klartext, encoding="utf-8")) == sample["db"]
         csvs = os.listdir(os.path.join(tmp, "csv")) if os.path.isdir(os.path.join(tmp, "csv")) else []
         report("Kommandozeile schreibt JSON", ok)
-        report(f"CSV je Kurs ({len(csvs)} Dateien)", len(csvs) == len(sample["db"]["courses"]))
+        report(f"CSV je Kurs und Personenregister ({len(csvs)} Dateien)", len(csvs) == len(sample["db"]["courses"]) + 1 and "Personenregister.csv" in csvs)
+        try:
+            import csv as _csv
+            with open(os.path.join(tmp, "csv", "Personenregister.csv"), encoding="utf-8-sig") as f:
+                reg = list(_csv.reader(f, delimiter=";"))
+            kurs_csv = next(n for n in csvs if n != "Personenregister.csv")
+            with open(os.path.join(tmp, "csv", kurs_csv), encoding="utf-8-sig") as f:
+                kz = list(_csv.reader(f, delimiter=";"))
+            ids = {p["id"] for p in sample["db"]["people"]}
+            ok_reg = (reg[0][:3] == ["Person", "Nachname", "Vorname"] and len(reg) == len(sample["db"]["people"]) + 1
+                      and all(r[0] in ids and r[4] for r in reg[1:]) and kz[0][-1] == "Person" and all(z[-1] in ids for z in kz[1:]))
+            report("CSV: Personenregister mit Kursen je Person, Spalte „Person“ in den Kurs-CSVs", ok_reg, str(reg[:3]))
+        except Exception as e:  # noqa: BLE001
+            report("CSV: Personenregister mit Kursen je Person, Spalte „Person“ in den Kurs-CSVs", False, repr(e))
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     # Arbeit in Teilen: Rohpunkte je Teil in der CSV (Aufgabe ohne gültigen Teil → erster Teil)
@@ -2881,7 +2967,7 @@ def main():
         run_epo_material_check, run_attendance_check, run_epo_tiles_check, run_print_head_check,
         run_draw_check, run_draw_pools_check, run_random_check, run_timer_check, run_tools_layout_check,
         run_tools_menu_check, run_pomodoro_check, run_transition_check, run_sidebar_check,
-        run_tests_view_check, run_task_add_click_check, run_makeup_check, run_verbal_check, run_unreachable_check,
+        run_tests_view_check, run_task_add_click_check, run_makeup_check, run_verbal_check, run_people_check, run_unreachable_check,
         run_tabs_check, run_tab_order_check, run_overview_fold_check, run_settings_layout_check,
         run_theme_check, run_demo_link_check, run_old_db_check, run_parts_check, run_print_menu_check,
         run_pres_check, run_group_check, run_groups_tab_check, run_moodle_check, run_scripto_check,

@@ -301,7 +301,7 @@
     if (pw === null) return;
     try {
       const vault = await Vault.unlock(fileObj, pw);
-      const db = M.migrate(await vault.open(fileObj));
+      const db = migrateOpened(await vault.open(fileObj));
       if (await state.store.exists()) throw new Error('Im Ordner liegt inzwischen schon eine Datenbank.');
       state.vault = vault;
       state.db = db;
@@ -370,7 +370,7 @@
     }
     const fileObj = await state.store.read();
     const vault = await Vault.unlock(fileObj, password);
-    const db = M.migrate(await vault.open(fileObj));
+    const db = migrateOpened(await vault.open(fileObj));
     if (!(await checkLockAndConflicts())) {
       vault.wipe();
       return;
@@ -442,7 +442,7 @@
       if (!(await state.store.ensurePermission())) throw new Error('Kein Zugriff auf den Ordner.');
       const fileObj = await state.store.read();
       const vault = await Vault.unlockWithRecovery(fileObj, keyInput.value);
-      const db = M.migrate(await vault.open(fileObj));
+      const db = migrateOpened(await vault.open(fileObj));
       await vault.setPassword(pw1.value);
       if (!(await checkLockAndConflicts())) return;
       state.vault = vault;
@@ -524,9 +524,22 @@
   let lastChangeAt = 0;
 
   /** Nach jeder Änderung aufrufen: markiert ungespeichert, speichert verzögert, zeichnet neu. */
+  /**
+   * Geöffnete Datenbank auf den aktuellen Stand bringen. Wurde dabei das Schema erhöht (z. B. 4 → 5,
+   * Personenregister), sichert die nächste Speicherung die bisherige Datei auf jeden Fall.
+   */
+  function migrateOpened(raw) {
+    const before = Number(raw && raw.schema) || 0;
+    const db = M.migrate(raw);
+    if (before < M.SCHEMA && state.store && 'lastBackup' in state.store) state.store.lastBackup = 0;
+    return db;
+  }
+
   function commit({ render = true } = {}) {
     // Nachschreibtermine folgen der Original-Arbeit (Halbjahr, Bereich, Gewicht, Wertung)
     for (const c of (state.db && state.db.courses) || []) NM.model.syncMakeups(c);
+    // Personenregister: neue Kurseinträge bekommen eine Person, „seit … in keinem Kurs“ (Schema 5)
+    if (state.db) NM.people.ensure(state.db);
     state.dirty = true;
     lastChangeAt = Date.now();
     clearTimeout(saveTimer);
@@ -590,7 +603,7 @@
     if (v === 'reload') {
       try {
         const fileObj = await state.store.read();
-        state.db = M.migrate(await state.vault.open(fileObj));
+        state.db = migrateOpened(await state.vault.open(fileObj));
         state.dirty = false;
         ensureSelection();
         renderShell();
@@ -1128,6 +1141,7 @@
     shownTab,
     currentHalf,
     setHalf,
+    migrateOpened,
     select,
     lockApp,
     switchStore,

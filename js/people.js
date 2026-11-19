@@ -1,0 +1,201 @@
+/* OrdoNota – Personenregister (seit Schema 5): kursübergreifende Personen. Rein, ohne DOM.
+ *
+ * db.people: [ { id, last, first, created, orphanSince? } ], jeder Kurseintrag course.students[].personId.
+ * Name, Foto, Mail-Adresse, I-Status, Einstufung und „Aktiv“ bleiben am Kurseintrag; Noten bleiben am Kurs.
+ * Später hängen an der Person weitere Listen (Notizen, Ausgleiche, Förderpläne), die beim Zusammenführen
+ * zusammengelegt werden.
+ */
+(function (NM) {
+  'use strict';
+
+  const today = () => NM.util.todayISO();
+  const norm = (s) => String(s || '').trim().replace(/\s+/g, ' ').toLowerCase();
+  /** Vergleichsschlüssel eines Namens (ohne Groß-/Kleinschreibung und überzählige Leerzeichen). */
+  const nameKey = (last, first) => norm(last) + '|' + norm(first);
+  const hasName = (x) => !!(norm(x.last) || norm(x.first));
+
+  function list(db) {
+    if (!Array.isArray(db.people)) db.people = [];
+    return db.people;
+  }
+
+  function byId(db, id) {
+    return list(db).find((p) => p.id === id) || null;
+  }
+
+  function newPerson(last, first, created) {
+    return { id: NM.util.uid(), last: String(last || ''), first: String(first || ''), created: created || today() };
+  }
+
+  /** Alle Kurseinträge je Person: Map personId → [{ course, student }]. */
+  function index(db) {
+    const map = new Map();
+    for (const c of db.courses || []) {
+      for (const s of c.students || []) {
+        if (!s.personId) continue;
+        if (!map.has(s.personId)) map.set(s.personId, []);
+        map.get(s.personId).push({ course: c, student: s });
+      }
+    }
+    return map;
+  }
+
+  /** Kurseinträge einer Person. */
+  function entries(db, pid) {
+    return index(db).get(pid) || [];
+  }
+
+  /**
+   * Register vollständig machen (bei jedem Öffnen und nach jeder Änderung):
+   * - Kurseintrag ohne (gültige) personId → eigene neue Person (nie automatisch zusammenführen),
+   *   ebenso ein zweiter Eintrag derselben Person im selben Kurs;
+   * - Person mit genau einem Kurseintrag übernimmt dessen Namen;
+   * - orphanSince: gesetzt, sobald eine Person in keinem Kurs mehr steht, entfernt, wenn sie wieder in einem steht.
+   * `created`: Erstellungsdatum für neu angelegte Personen (Migration: Datum der Datenbank).
+   */
+  function ensure(db, { created } = {}) {
+    const people = list(db).filter((p) => p && typeof p === 'object' && p.id);
+    db.people = people;
+    const known = new Map(people.map((p) => [p.id, p]));
+    for (const c of db.courses || []) {
+      const inCourse = new Set();
+      for (const s of c.students || []) {
+        let p = s.personId ? known.get(s.personId) : null;
+        if (!p || inCourse.has(p.id)) {
+          p = newPerson(s.last, s.first, created);
+          people.push(p);
+          known.set(p.id, p);
+          s.personId = p.id;
+        }
+        inCourse.add(p.id);
+      }
+    }
+    const idx = index(db);
+    for (const p of people) {
+      const es = idx.get(p.id) || [];
+      if (es.length) delete p.orphanSince;
+      else if (!p.orphanSince) p.orphanSince = today();
+      if (es.length === 1) {
+        p.last = String(es[0].student.last || '');
+        p.first = String(es[0].student.first || '');
+      }
+      if (typeof p.last !== 'string') p.last = String(p.last || '');
+      if (typeof p.first !== 'string') p.first = String(p.first || '');
+      if (!p.created) p.created = created || today();
+    }
+    return db;
+  }
+
+  /** Personen mit gleichem Namen (Register oder ein Kurseintrag), wahlweise ohne die, die schon im Kurs `exceptCourse` stehen. */
+  function matches(db, last, first, { exceptCourse = null } = {}) {
+    const key = nameKey(last, first);
+    if (key === '|') return [];
+    const idx = index(db);
+    const inCourse = new Set(((exceptCourse && exceptCourse.students) || []).map((s) => s.personId));
+    return list(db).filter((p) => {
+      if (inCourse.has(p.id)) return false;
+      if (nameKey(p.last, p.first) === key) return true;
+      return (idx.get(p.id) || []).some((e) => nameKey(e.student.last, e.student.first) === key);
+    });
+  }
+
+  /** Stehen zwei Personen gemeinsam in einem Kurs? Dann dürfen sie nicht zusammengeführt werden. */
+  function shareCourse(db, aId, bId) {
+    return (db.courses || []).some((c) => {
+      const ids = new Set((c.students || []).map((s) => s.personId));
+      return ids.has(aId) && ids.has(bId);
+    });
+  }
+
+  /**
+   * Vorschläge zum Zusammenführen: gleicher Name im Register oder gleiche Mail-Adresse in einem Kurseintrag,
+   * nicht schon dieselbe Person, nicht gemeinsam in einem Kurs. Ältere Person zuerst (sie bliebe erhalten).
+   * @returns [{ keep, gone, reason: 'name' | 'mail' }]
+   */
+  function suggestPairs(db) {
+    const people = list(db);
+    const idx = index(db);
+    const older = (a, b) => (String(a.created || '') < String(b.created || '') || (a.created === b.created && people.indexOf(a) < people.indexOf(b)) ? [a, b] : [b, a]);
+    const out = [];
+    const seen = new Set();
+    const add = (a, b, reason) => {
+      if (a.id === b.id) return;
+      const k = [a.id, b.id].sort().join('|');
+      if (seen.has(k) || shareCourse(db, a.id, b.id)) return;
+      seen.add(k);
+      const [keep, gone] = older(a, b);
+      out.push({ keep, gone, reason });
+    };
+    const groups = (keyOf) => {
+      const m = new Map();
+      for (const p of people) {
+        for (const k of keyOf(p)) {
+          if (!k) continue;
+          if (!m.has(k)) m.set(k, []);
+          if (!m.get(k).includes(p)) m.get(k).push(p);
+        }
+      }
+      return [...m.values()].filter((g) => g.length > 1);
+    };
+    for (const g of groups((p) => (hasName(p) ? [nameKey(p.last, p.first)] : []))) for (let i = 0; i < g.length; i++) for (let j = i + 1; j < g.length; j++) add(g[i], g[j], 'name');
+    const mails = (p) => (idx.get(p.id) || []).map((e) => norm(e.student.email)).filter(Boolean);
+    for (const g of groups(mails)) for (let i = 0; i < g.length; i++) for (let j = i + 1; j < g.length; j++) add(g[i], g[j], 'mail');
+    return out;
+  }
+
+  /**
+   * `gone` in `keep` aufgehen lassen: alle Kurseinträge zeigen auf `keep`, Listen an der Person werden
+   * zusammengelegt, fehlende Felder übernommen, `keep` behält Namen und das ältere Erstellungsdatum.
+   */
+  function merge(db, keepId, goneId) {
+    const keep = byId(db, keepId);
+    const gone = byId(db, goneId);
+    if (!keep || !gone || keep === gone) throw new Error('Personen nicht gefunden.');
+    if (shareCourse(db, keepId, goneId)) throw new Error('Die beiden stehen im selben Kurs und können nicht dieselbe Person sein.');
+    for (const e of entries(db, goneId)) e.student.personId = keepId;
+    for (const [k, v] of Object.entries(gone)) {
+      if (['id', 'last', 'first', 'created', 'orphanSince'].includes(k)) continue;
+      if (Array.isArray(v) && Array.isArray(keep[k])) keep[k] = keep[k].concat(v);
+      else if (keep[k] === undefined) keep[k] = v;
+    }
+    if (gone.created && (!keep.created || gone.created < keep.created)) keep.created = gone.created;
+    db.people = list(db).filter((p) => p !== gone);
+    ensure(db);
+    return keep;
+  }
+
+  /**
+   * Kurseinträge (ids der course.students) von der Person abtrennen; sie werden zu einer neuen Person mit dem
+   * Namen des ersten gewählten Eintrags. Alles, was an der Person hängt, bleibt bei der bisherigen.
+   */
+  function split(db, pid, studentIds) {
+    const all = entries(db, pid);
+    const chosen = all.filter((e) => studentIds.includes(e.student.id));
+    if (!chosen.length) throw new Error('Keine Kurseinträge gewählt.');
+    if (chosen.length === all.length) throw new Error('Mindestens ein Kurseintrag muss bei der Person bleiben.');
+    const p = newPerson(chosen[0].student.last, chosen[0].student.first);
+    list(db).push(p);
+    for (const e of chosen) e.student.personId = p.id;
+    ensure(db);
+    return p;
+  }
+
+  /** Person aus dem Register löschen – nur, wenn sie in keinem Kurs mehr steht. */
+  function remove(db, pid) {
+    if (entries(db, pid).length) throw new Error('Die Person steht noch in einem Kurs.');
+    db.people = list(db).filter((p) => p.id !== pid);
+    return db;
+  }
+
+  /**
+   * Welche Personen stünden in keinem Kurs mehr, wenn diese Kurseinträge wegfielen?
+   * `drop(course, student)` → true für jeden Eintrag, der wegfällt.
+   */
+  function orphansIf(db, drop) {
+    const left = new Map();
+    for (const c of db.courses || []) for (const s of c.students || []) if (s.personId) left.set(s.personId, (left.get(s.personId) || 0) + (drop(c, s) ? 0 : 1));
+    return list(db).filter((p) => left.has(p.id) && left.get(p.id) === 0);
+  }
+
+  NM.people = { nameKey, list, byId, index, entries, ensure, matches, shareCourse, suggestPairs, merge, split, remove, orphansIf };
+})((globalThis.NM = globalThis.NM || {}));

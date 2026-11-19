@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="de">
+<head><meta charset="utf-8"><title>Tests Personenregister</title></head>
+<body>
+<pre id="out"></pre>
+<script src="../js/util.js"></script>
+<script src="../js/grades.js"></script>
+<script src="../js/attendance.js"></script>
+<script src="../js/people.js"></script>
+<script src="../js/model.js"></script>
+<script>
+  const P = NM.people;
+  const M = NM.model;
+  const lines = [];
+  let fails = 0;
+  const ok = (name, cond) => { if (!cond) fails++; lines.push((cond ? 'OK   ' : 'FAIL ') + name); };
+  const throws = (name, fn) => { try { fn(); ok(name, false); } catch (e) { ok(name, true); } };
+  const today = NM.util.todayISO();
+  // Erfundene Personen
+  const st = (id, last, first, extra = {}) => Object.assign({ id, last, first, active: true }, extra);
+  const course = (id, yearId, students) => ({ id, yearId, klasse: id, fach: 'M', jahrgang: 8, students, assessments: [] });
+  const fresh = () => ({
+    schema: 4,
+    created: '2025-08-20T10:00:00.000Z',
+    years: [{ id: 'y1', name: '2025/26' }, { id: 'y2', name: '2026/27' }],
+    courses: [
+      course('7b', 'y1', [st('a1', 'Fischer', 'Mia'), st('a2', 'Klein', 'Noah', { email: 'n.k@example.org' })]),
+      course('8b', 'y2', [st('b1', 'fischer ', ' Mia'), st('b2', 'Klein', 'Noah', { email: 'N.K@example.org' }), st('b3', 'Lang', 'Sophie')]),
+      course('8bD', 'y2', [st('d1', 'Klein', 'Noa', { email: 'n.k@example.org' })]),
+    ],
+  });
+
+  // ---------- Migration (Schema 4 → 5) ----------
+  {
+    const db = M.migrate(fresh());
+    const all = db.courses.flatMap((c) => c.students);
+    ok('Migration: Schema 5, Register angelegt', db.schema === 5 && Array.isArray(db.people));
+    ok('Migration: jeder Kurseintrag hat eine eigene Person (nichts zusammengeführt)', all.every((s) => s.personId) && new Set(all.map((s) => s.personId)).size === all.length && db.people.length === all.length);
+    ok('Migration: Name aus dem Kurseintrag, Datum der Datenbank', db.people.find((p) => p.id === all[0].personId).last === 'Fischer' && db.people.every((p) => p.created === '2025-08-20'));
+    ok('Migration: keine Person ohne Kurs', db.people.every((p) => !p.orphanSince));
+    ok('Migration: check ohne Fehler', M.check(db).filter((x) => x.level === 'fehler').length === 0);
+    const again = JSON.stringify(M.migrate(JSON.parse(JSON.stringify(db))).people);
+    ok('Migration zweimal: Register unverändert', again === JSON.stringify(db.people));
+    ok('Neue Datenbank: leeres Register', Array.isArray(M.newDb().people) && M.newDb().people.length === 0 && M.newDb().schema === 5);
+    const demo = M.demoDb();
+    ok('Demo: jede Person im Register', demo.courses.every((c) => c.students.every((s) => demo.people.some((p) => p.id === s.personId))));
+  }
+
+  // ---------- ensure ----------
+  {
+    const db = M.migrate(fresh());
+    const c8 = db.courses[1];
+    c8.students.push(st('b4', 'Neu', 'Nora'));
+    P.ensure(db);
+    const neu = P.byId(db, c8.students[3].personId);
+    ok('ensure: neuer Kurseintrag bekommt neue Person mit Namen', !!neu && neu.last === 'Neu' && neu.created === today);
+    c8.students[3].last = 'Neumann';
+    P.ensure(db);
+    ok('ensure: nur in einem Kurs → Register übernimmt Namensänderung', P.byId(db, c8.students[3].personId).last === 'Neumann');
+    c8.students.push(st('b5', 'X', 'Y', { personId: c8.students[0].personId }));
+    P.ensure(db);
+    ok('ensure: zweiter Eintrag derselben Person im selben Kurs → eigene Person', c8.students[4].personId !== c8.students[0].personId);
+    c8.students.push(st('b6', 'Z', 'Z', { personId: 'gibt-es-nicht' }));
+    P.ensure(db);
+    ok('ensure: unbekannte personId → neue Person', !!P.byId(db, c8.students[5].personId));
+    const sophie = c8.students[2].personId;
+    c8.students = c8.students.filter((s) => s.id !== 'b3');
+    P.ensure(db);
+    ok('ensure: ohne Kurs → orphanSince heute, Person bleibt', P.byId(db, sophie).orphanSince === today);
+    db.courses[0].students.push(st('a9', 'Lang', 'Sophie', { personId: sophie }));
+    P.ensure(db);
+    ok('ensure: wieder in einem Kurs → orphanSince weg', P.byId(db, sophie).orphanSince === undefined);
+    db.people.push(null, { last: 'ohne id' });
+    P.ensure(db);
+    ok('ensure: ungültige Registereinträge entfernt', db.people.every((p) => p && p.id));
+  }
+
+  // ---------- matches, suggestPairs ----------
+  {
+    const db = M.migrate(fresh());
+    const [c7, c8, cD] = db.courses;
+    const m = P.matches(db, 'Fischer', 'mia');
+    ok('matches: gleicher Name ohne Groß-/Kleinschreibung und Leerzeichen', m.length === 2);
+    ok('matches: ohne die Personen, die schon im Kurs stehen', P.matches(db, 'Fischer', 'Mia', { exceptCourse: c8 }).length === 1);
+    ok('matches: leerer Name findet nichts', P.matches(db, '', '').length === 0);
+    const pairs = P.suggestPairs(db);
+    const has = (a, b, why) => pairs.some((x) => [x.keep.id, x.gone.id].sort().join() === [a, b].sort().join() && x.reason === why);
+    ok('Vorschlag: gleicher Name (Fischer, Mia)', has(c7.students[0].personId, c8.students[0].personId, 'name'));
+    ok('Vorschlag: gleicher Name (Klein, Noah) nur einmal, nicht zusätzlich wegen Mail', has(c7.students[1].personId, c8.students[1].personId, 'name') && pairs.filter((x) => [x.keep.id, x.gone.id].includes(c7.students[1].personId) && [x.keep.id, x.gone.id].includes(c8.students[1].personId)).length === 1);
+    ok('Vorschlag: gleiche Mail-Adresse bei abweichendem Namen (Noa)', has(c7.students[1].personId, cD.students[0].personId, 'mail'));
+    c8.students.push(st('b7', 'Lang', 'Sophie'));
+    P.ensure(db);
+    ok('Vorschlag: nicht, wenn beide im selben Kurs stehen (zweimal Lang, Sophie in 8b)', !has(c8.students[2].personId, c8.students[3].personId, 'name') && P.shareCourse(db, c8.students[2].personId, c8.students[3].personId));
+    cD.students.push(st('d2', 'Fischer', 'Mia'));
+    P.ensure(db);
+    // Mia aus 8b und Mia aus 8bD stehen nicht zusammen in einem Kurs → Vorschlag; 7b-Mia und 8bD-Mia ebenso
+    ok('Vorschläge: jedes Paar höchstens einmal', new Set(P.suggestPairs(db).map((x) => [x.keep.id, x.gone.id].sort().join())).size === P.suggestPairs(db).length);
+  }
+
+  // ---------- merge, split, remove ----------
+  {
+    const db = M.migrate(fresh());
+    const [c7, c8, cD] = db.courses;
+    const keep = c7.students[0].personId, gone = c8.students[0].personId;
+    P.byId(db, keep).notizen = [{ id: 'n1' }];
+    P.byId(db, gone).notizen = [{ id: 'n2' }];
+    P.byId(db, gone).extra = 'x';
+    P.byId(db, gone).created = '2024-01-01';
+    const k = P.merge(db, keep, gone);
+    ok('merge: beide Kurseinträge zeigen auf die bleibende Person', c7.students[0].personId === keep && c8.students[0].personId === keep && !P.byId(db, gone));
+    ok('merge: Listen zusammengelegt, fehlende Felder übernommen, älteres Datum', k.notizen.map((n) => n.id).join() === 'n1,n2' && k.extra === 'x' && k.created === '2024-01-01');
+    ok('merge: Name der bleibenden Person', k.last === 'Fischer' && k.first === 'Mia');
+    ok('merge: Kurse der Person', P.entries(db, keep).length === 2);
+    throws('merge: gesperrt, wenn beide im selben Kurs', () => P.merge(db, c8.students[1].personId, c8.students[2].personId));
+    throws('merge: unbekannte Person', () => P.merge(db, keep, 'zz'));
+    // Trennen
+    throws('split: nicht alle Einträge abtrennen', () => P.split(db, keep, ['a1', 'b1']));
+    throws('split: keine Einträge gewählt', () => P.split(db, keep, []));
+    const neu = P.split(db, keep, ['b1']);
+    ok('split: Eintrag wird neue Person mit dessen Namen', c8.students[0].personId === neu.id && neu.last === 'fischer ' && neu.first === ' Mia');
+    ok('split: Listen bleiben bei der bisherigen Person', P.byId(db, keep).notizen.length === 2 && !neu.notizen);
+    // Löschen
+    throws('remove: nicht, solange die Person in einem Kurs steht', () => P.remove(db, keep));
+    const before = db.people.length;
+    const o = P.orphansIf(db, (c) => c === cD);
+    ok('orphansIf: Personen, die danach in keinem Kurs stehen', o.length === 1 && o[0].id === cD.students[0].personId);
+    ok('orphansIf: Personen mit anderem Kurs zählen nicht', P.orphansIf(db, (c) => c === c8).every((p) => p.id !== c8.students[1].personId || P.entries(db, p.id).length === 1));
+    db.courses = db.courses.filter((c) => c !== cD);
+    P.ensure(db);
+    P.remove(db, o[0].id);
+    ok('remove: Person ohne Kurs gelöscht', db.people.length === before - 1 && !P.byId(db, o[0].id));
+    ok('nach allem: check ohne Fehler', M.check(db).filter((x) => x.level === 'fehler').length === 0);
+  }
+
+  // ---------- check ----------
+  {
+    const db = M.migrate(fresh());
+    db.courses[0].students[0].personId = 'weg';
+    ok('check: unbekannte Person ist ein Fehler', M.check(db).some((x) => x.level === 'fehler' && /keine Person im Register/.test(x.text)));
+    const db2 = M.migrate(fresh());
+    db2.courses[1].students[1].personId = db2.courses[1].students[0].personId;
+    ok('check: dieselbe Person zweimal im Kurs ist ein Fehler', M.check(db2).some((x) => x.level === 'fehler' && /zweimal/.test(x.text)));
+    const db3 = M.migrate(fresh());
+    db3.people.push({ id: 'lose', last: 'A', first: 'B', created: today });
+    ok('check: Person ohne Kurs und ohne Datum ist ein Hinweis', M.check(db3).some((x) => x.level === 'hinweis' && /ohne Datum/.test(x.text)));
+    const db4 = M.migrate(fresh());
+    delete db4.people;
+    ok('check: Schema 5 ohne Register ist ein Fehler', M.check(db4).some((x) => x.level === 'fehler' && x.where === 'Personenregister'));
+  }
+
+  lines.unshift(fails === 0 ? 'ALLE TESTS BESTANDEN' : fails + ' FEHLGESCHLAGEN');
+  document.getElementById('out').textContent = lines.join('\n');
+  document.title = 'fertig';
+</script>
+</body>
+</html>

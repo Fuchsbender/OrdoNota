@@ -15,7 +15,7 @@ Aufruf:
     python3 entschluesseln.py DATEI.nmdb                  (fragt nach dem Passwort)
     python3 entschluesseln.py DATEI.nmdb --wiederherstellung
     python3 entschluesseln.py DATEI.nmdb -o ausgabe.json
-    python3 entschluesseln.py DATEI.nmdb --csv ordner/     (zusätzlich eine CSV je Kurs)
+    python3 entschluesseln.py DATEI.nmdb --csv ordner/     (zusätzlich eine CSV je Kurs und das Personenregister)
 
 ACHTUNG: Die Ausgabe ist NICHT verschlüsselt. Nach Gebrauch löschen.
 """
@@ -167,7 +167,7 @@ def schreibe_csv(daten, ordner):
         # Fehlzeiten (1.45): je Halbjahr Unterrichtsstunden gesamt, entschuldigt, unentschuldigt, offen
         fehl = kurs.get("attendance") or {}
         fehl_halbjahre = sorted({t.get("half") for t in fehl.values() if isinstance(t, dict) and t.get("half")})
-        kopf += [f"gesetzt {k}" for k in override_keys] + [f"Fehlstunden {hj} (E/U/offen)" for hj in fehl_halbjahre] + ["Bemerkung"]
+        kopf += [f"gesetzt {k}" for k in override_keys] + [f"Fehlstunden {hj} (E/U/offen)" for hj in fehl_halbjahre] + ["Bemerkung", "Person"]
         zeilen = [kopf]
         for s in schueler:
             sid = s["id"]
@@ -220,10 +220,28 @@ def schreibe_csv(daten, ordner):
                 gesamt = sum(summe.values())
                 z.append(f'{gesamt} ({summe["e"]}/{summe["u"]}/{summe["a"]})' if gesamt else "")
             z.append(kurs.get("comments", {}).get(sid, ""))
+            z.append(s.get("personId", ""))  # Schema 5: Person im Register (siehe Personenregister.csv)
             zeilen.append(z)
         name = f'{jahre.get(kurs.get("yearId"), "")}_{kurs.get("klasse", "")}_{kurs.get("fach", "")}'
         name = re.sub(r'[\\/:*?"<>|\s]+', "_", name).strip("_") or kurs["id"]
         pfad = os.path.join(ordner, name + ".csv")
+        with open(pfad, "w", newline="", encoding="utf-8-sig") as f:
+            csv.writer(f, delimiter=";").writerows(zeilen)
+        pfade.append(pfad)
+    # Schema 5: Personenregister mit den Kursen jeder Person
+    personen = daten.get("people") or []
+    if personen:
+        kurse_je = {}
+        for kurs in daten.get("courses", []):
+            titel = f'{jahre.get(kurs.get("yearId"), "")} {kurs.get("klasse", "")} {kurs.get("fach", "")}'.strip()
+            for s in kurs.get("students", []):
+                if s.get("personId"):
+                    kurse_je.setdefault(s["personId"], []).append(titel)
+        zeilen = [["Person", "Nachname", "Vorname", "angelegt", "Kurse", "seit (in keinem Kurs)"]]
+        for p in sorted(personen, key=lambda p: (p.get("last", ""), p.get("first", ""))):
+            zeilen.append([p.get("id", ""), p.get("last", ""), p.get("first", ""), p.get("created", ""),
+                           " | ".join(kurse_je.get(p.get("id"), [])), p.get("orphanSince", "")])
+        pfad = os.path.join(ordner, "Personenregister.csv")
         with open(pfad, "w", newline="", encoding="utf-8-sig") as f:
             csv.writer(f, delimiter=";").writerows(zeilen)
         pfade.append(pfad)
