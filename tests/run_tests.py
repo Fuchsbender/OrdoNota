@@ -45,6 +45,15 @@ except ImportError:
     sys.exit('Das Python-Paket "websocket-client" fehlt: pip install websocket-client')
 
 
+# App fertig geladen. Nicht auf einen bestimmten Reiter warten: Die App merkt sich den
+# zuletzt gewählten Reiter (localStorage), ein Warten auf .overview-table lief deshalb
+# nach dem ersten Block bei jedem Neuladen in die 30-s-Grenze.
+APP_READY = "!!(window.NM && NM.app && NM.app.db() && document.getElementById('view') && document.getElementById('view').children.length)"
+
+# Gesamtzeitgrenze für einen einzelnen DevTools-Aufruf (auch für ein langes eval).
+CALL_TIMEOUT = 240
+
+
 def find_browser():
     for b in BROWSERS:
         p = shutil.which(b) or (b if os.path.isfile(b) else None)
@@ -86,10 +95,21 @@ class Browser:
         self.call("Page.enable")
 
     def call(self, method, **params):
+        # Feste Gesamtzeitgrenze: Der Timeout von ws.recv allein beginnt bei jeder
+        # anderen DevTools-Meldung neu und könnte so ewig warten.
         self.mid += 1
         self.ws.send(json.dumps({"id": self.mid, "method": method, "params": params}))
+        deadline = time.time() + CALL_TIMEOUT
         while True:
-            msg = json.loads(self.ws.recv())
+            rest = deadline - time.time()
+            if rest <= 0:
+                raise TimeoutError(f"{method} ohne Antwort nach {CALL_TIMEOUT} s: {str(params.get('expression', ''))[:120]!r}")
+            self.ws.settimeout(rest)
+            try:
+                raw = self.ws.recv()
+            except websocket.WebSocketTimeoutException:
+                continue
+            msg = json.loads(raw)
             if msg.get("method") == "Runtime.exceptionThrown":
                 d = msg["params"]["exceptionDetails"]
                 self.errors.append((d.get("exception") or {}).get("description") or d.get("text"))
@@ -186,7 +206,7 @@ def run_old_db_check(br, base):
     for f in files:
         name = os.path.basename(f)
         br.open(f"{base}/index.html?demo")
-        br.wait("!!document.querySelector('.overview-table')", 30)
+        br.wait(APP_READY, 30)
         br.errors = []
         res = br.eval("""(async () => {
             const wait = (ms = 120) => new Promise((r) => setTimeout(r, ms));
@@ -222,7 +242,7 @@ def run_old_db_check(br, base):
 def run_sort_check(br, base):
     print("Sortieren nach Spaltenköpfen:")
     br.open(f"{base}/index.html?demo")
-    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.wait(APP_READY, 30)
     # Schüler-IDs der Tabellenzeilen in Anzeigereihenfolge (aus dem ersten data-focus-key je Zeile)
     ids = """[...document.querySelectorAll('.grid-table tbody tr:not(.foot)')].map((tr) => {
         const k = tr.querySelector('[data-focus-key]').dataset.focusKey;
@@ -262,7 +282,7 @@ def run_course_check(br, base):
     import base64, io, zipfile
     import xml.etree.ElementTree as ET
     br.open(f"{base}/index.html?demo")
-    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.wait(APP_READY, 30)
     br.errors = []
     # Excel-Datei so erzeugen wie der Knopf, aber als Base64 zurückgeben statt herunterladen
     b64 = br.eval("""(async () => {
@@ -334,7 +354,7 @@ def run_course_check(br, base):
 
     # EPO: Fotos per Umschalter (frische Demo – der Lösch-Test hat Kurs 1 entfernt)
     br.open(f"{base}/index.html?demo")
-    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.wait(APP_READY, 30)
     br.errors = []
     res = br.eval("""(async () => {
         const wait = () => new Promise((r) => setTimeout(r, 150));
@@ -424,7 +444,7 @@ def run_course_check(br, base):
 def run_seat_beamer_check(br, base):
     print("Sitzplan im Beamer-Vollbild (wie im Editor, Fotos, ohne Platz, Esc):")
     br.open(f"{base}/index.html?demo")
-    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.wait(APP_READY, 30)
     br.errors = []
     res = br.eval("""(async () => {
         const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
@@ -479,7 +499,7 @@ def run_seat_beamer_check(br, base):
 def run_epo_material_check(br, base):
     """EPO: Zusatz m (Material vergessen) per Eingabe und Schnellwahl, Spalte M, Punkte-Einstellung, Ausdruck."""
     br.open(f"{base}/index.html?demo")
-    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.wait(APP_READY, 30)
     br.errors = []
     res = br.eval("""(async () => {
         const wait = () => new Promise((r) => setTimeout(r, 150));
@@ -541,7 +561,7 @@ def run_epo_material_check(br, base):
 def run_attendance_check(br, base):
     """Fehlzeiten: „Heute abwesend“ wird gespeichert, EPO-k ⇄ Fehlzeit, Karte (reihum, + Tag), Notenübersicht, Ausdruck."""
     br.open(f"{base}/index.html?demo")
-    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.wait(APP_READY, 30)
     br.errors = []
     res = br.eval("""(async () => {
         const wait = (ms = 150) => new Promise((r) => setTimeout(r, ms));
@@ -615,7 +635,7 @@ def run_attendance_check(br, base):
 def run_epo_tiles_check(br, base):
     """EPO-Kachelansicht (Tablet): nach Sitzplan bzw. alphabetisch, Tippen bewertet, Zusätze, k → Fehlzeit, Esc, Touch-Größen."""
     br.open(f"{base}/index.html?demo")
-    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.wait(APP_READY, 30)
     br.errors = []
     br.call("Emulation.setTouchEmulationEnabled", enabled=True, maxTouchPoints=5)
 
@@ -688,7 +708,7 @@ def run_epo_tiles_check(br, base):
 def run_print_head_check(br, base):
     """Einheitlicher Druckkopf (1.47): Einstellungen mit Logo-Upload (verkleinert), Kopf in allen Druckarten, Zettel kompakt, leere Angaben fallen weg."""
     br.open(f"{base}/index.html?demo")
-    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.wait(APP_READY, 30)
     br.errors = []
     res = br.eval("""(async () => {
         const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
@@ -778,7 +798,7 @@ def run_print_head_check(br, base):
 def run_draw_check(br, base):
     print("Ziehen (Pool, Auffüllen, Noten, Rückgängig):")
     br.open(f"{base}/index.html?demo")
-    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.wait(APP_READY, 30)
     br.errors = []
     res = br.eval("""(async () => {
         const wait = () => new Promise((r) => setTimeout(r, 150));
@@ -836,7 +856,7 @@ def run_draw_check(br, base):
 def run_draw_pools_check(br, base):
     print("Ziehen: benannte Pools, Sammelspalte, Prüfung, Zusammenfassen:")
     br.open(f"{base}/index.html?demo")
-    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.wait(APP_READY, 30)
     br.errors = []
     res = br.eval("""(async () => {
         const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
@@ -896,7 +916,7 @@ def run_draw_pools_check(br, base):
 def run_random_check(br, base):
     print("Tools: Zufall (Zahl, Personen, Würfel, Karten):")
     br.open(f"{base}/index.html?demo")
-    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.wait(APP_READY, 30)
     br.errors = []
     js = """(async () => {
         const wait = (ms = 150) => new Promise((r) => setTimeout(r, ms));
@@ -1006,7 +1026,7 @@ MOODLE_GRADES = "\n".join([
 def run_pomodoro_check(br, base):
     print("Pomodoro-Timer (Einstellung, Kopfzeile, Phasen):")
     br.open(f"{base}/index.html?demo")
-    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.wait(APP_READY, 30)
     br.errors = []
     res = br.eval("""(async () => {
         const wait = (ms = 250) => new Promise((r) => setTimeout(r, ms));
@@ -1054,7 +1074,7 @@ def run_pomodoro_check(br, base):
 def run_transition_check(br, base):
     print("Weiche Übergänge (Reiter, Kurs, Halbjahr):")
     br.open(f"{base}/index.html?demo")
-    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.wait(APP_READY, 30)
     br.errors = []
     res = br.eval("""(async () => {
         const wait = (ms = 250) => new Promise((r) => setTimeout(r, ms));
@@ -1084,7 +1104,7 @@ def run_transition_check(br, base):
 def run_sidebar_check(br, base):
     print("Kursliste ein-/ausklappen:")
     br.open(f"{base}/index.html?demo")
-    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.wait(APP_READY, 30)
     br.errors = []
     res = br.eval("""(async () => {
         const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
@@ -1107,7 +1127,7 @@ def run_tests_view_check(br, base):
     print("Tests-Reiter (Breite, Unterschrift bei Klassenarbeiten):")
     br.call("Emulation.setDeviceMetricsOverride", width=2560, height=1300, deviceScaleFactor=1, mobile=False)
     br.open(f"{base}/index.html?demo")
-    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.wait(APP_READY, 30)
     br.errors = []
     res = br.eval("""(async () => {
         const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
@@ -1137,7 +1157,7 @@ def run_tests_view_check(br, base):
 def run_task_add_click_check(br, base):
     print("Tests: Punkte eingeben, dann „+ Aufgabe“ mit einem Klick:")
     br.open(f"{base}/index.html?demo")
-    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.wait(APP_READY, 30)
     br.errors = []
     pos = br.eval("""(async () => {
         const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
@@ -1167,7 +1187,7 @@ def run_task_add_click_check(br, base):
 def run_makeup_check(br, base):
     print("Nachschreibtermin (eine Spalte mit der Original-Arbeit):")
     br.open(f"{base}/index.html?demo")
-    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.wait(APP_READY, 30)
     br.errors = []
     res = br.eval("""(async () => {
         const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
@@ -1252,7 +1272,7 @@ def run_scripto_check(br, base):
     print("OrdoScripto (IDs, Import-CSV, Trennblätter mit QR-Code, zxing-cpp):")
     # 1. Modulmatrizen aus der App: mehrere Inhalte, Versionen 1–10, alle Masken
     br.open(f"{base}/index.html?demo")
-    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.wait(APP_READY, 30)
     br.errors = []
     faelle = br.eval("""(() => {
         const out = [];
@@ -1400,7 +1420,7 @@ def run_scripto_check(br, base):
 def run_unreachable_check(br, base):
     print("Notenschlüssel: Warnung bei zu wenig Punkten:")
     br.open(f"{base}/index.html?demo")
-    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.wait(APP_READY, 30)
     br.errors = []
     res = br.eval("""(async () => {
         const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
@@ -1446,7 +1466,7 @@ def run_unreachable_check(br, base):
 def run_tabs_check(br, base):
     print("Reiter ein-/ausschalten (Standard und je Kurs):")
     br.open(f"{base}/index.html?demo")
-    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.wait(APP_READY, 30)
     br.errors = []
     res = br.eval("""(async () => {
         const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
@@ -1487,7 +1507,7 @@ def run_tabs_check(br, base):
 def run_tab_order_check(br, base):
     print("Reiter umsortieren:")
     br.open(f"{base}/index.html?demo")
-    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.wait(APP_READY, 30)
     br.errors = []
     res = br.eval("""(async () => {
         const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
@@ -1529,7 +1549,7 @@ def run_tab_order_check(br, base):
 def run_overview_fold_check(br, base):
     print("Notenübersicht: Gruppen einklappen, Ziehungen bündeln:")
     br.open(f"{base}/index.html?demo")
-    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.wait(APP_READY, 30)
     br.errors = []
     res = br.eval("""(async () => {
         const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
@@ -1582,7 +1602,7 @@ def run_overview_fold_check(br, base):
 def run_timer_check(br, base):
     print("Tools: Timer (Countdown, Designs, Pop-up):")
     br.open(f"{base}/index.html?demo")
-    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.wait(APP_READY, 30)
     br.errors = []
     res = br.eval("""(async () => {
         const wait = (ms = 150) => new Promise((r) => setTimeout(r, ms));
@@ -1652,7 +1672,7 @@ def run_tools_layout_check(br, base):
     print("Tools: gleich große Kacheln, Ring läuft im Uhrzeigersinn:")
     br.call("Emulation.setDeviceMetricsOverride", width=1600, height=1000, deviceScaleFactor=1, mobile=False)
     br.open(f"{base}/index.html?demo")
-    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.wait(APP_READY, 30)
     br.errors = []
     res = br.eval("""(async () => {
         const wait = (ms = 150) => new Promise((r) => setTimeout(r, ms));
@@ -1676,7 +1696,7 @@ def run_tools_layout_check(br, base):
 def run_tools_menu_check(br, base):
     print("Tools: Werkzeuge je Kurs ein-/ausschalten und sortieren:")
     br.open(f"{base}/index.html?demo")
-    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.wait(APP_READY, 30)
     br.errors = []
     res = br.eval("""(async () => {
         const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
@@ -1722,7 +1742,7 @@ def run_demo_link_check(br, base):
         return { btn: !!btn, url: opened.length ? new URL(opened[0][0]).search : null, target: opened.length ? opened[0][1] : null }; })()""")
     br.eval("localStorage.setItem('nm.ui', JSON.stringify({ tab: 'tests', marker: 'echt' }))")
     br.open(f"{base}/index.html?demo")
-    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.wait(APP_READY, 30)
     res2 = br.eval("""(async () => {
         const wait = (ms = 250) => new Promise((r) => setTimeout(r, ms));
         NM.app.select({ tab: 'settings' }); await wait();
@@ -1740,7 +1760,7 @@ def run_settings_layout_check(br, base):
     for width in (1570, 2560):
         br.call("Emulation.setDeviceMetricsOverride", width=width, height=1300, deviceScaleFactor=1, mobile=False)
         br.open(f"{base}/index.html?demo")
-        br.wait("!!document.querySelector('.overview-table')", 30)
+        br.wait(APP_READY, 30)
         br.errors = []
         res = br.eval("""(async () => {
             const wait = (ms = 250) => new Promise((r) => setTimeout(r, ms));
@@ -1776,7 +1796,7 @@ def run_theme_check(br, base):
     print("Farbschemata: je drei helle und dunkle Designs:")
     br.call("Emulation.setEmulatedMedia", features=[{"name": "prefers-color-scheme", "value": "light"}])
     br.open(f"{base}/index.html?demo")
-    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.wait(APP_READY, 30)
     br.errors = []
     # Kontrast (WCAG): Schrift ≥ 4.5:1 auf allen Flächen und auf den getönten Flächen der Karte, Akzent- und Statusfarben ≥ 3:1, Schrift auf den Notenfarben ≥ 4.5:1
     res = br.eval("""(async () => {
@@ -1823,7 +1843,7 @@ def run_theme_check(br, base):
         return out; })()""")
     # Neu laden: Wahl bleibt (je Gerät im Browser-Speicher)
     br.open(f"{base}/index.html?demo")
-    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.wait(APP_READY, 30)
     res2 = br.eval("""(async () => {
         const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
         const at = () => [document.documentElement.dataset.theme, document.documentElement.dataset.variant];
@@ -1872,7 +1892,7 @@ def run_theme_check(br, base):
 def run_parts_check(br, base):
     print("Arbeit in Teilen (Theorie/Praxis):")
     br.open(f"{base}/index.html?demo")
-    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.wait(APP_READY, 30)
     br.errors = []
     res = br.eval("""(async () => {
         const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
@@ -1946,7 +1966,7 @@ def run_parts_check(br, base):
 def run_print_menu_check(br, base):
     print("Druckauswahl (Tests, EPO, Notenübersicht):")
     br.open(f"{base}/index.html?demo")
-    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.wait(APP_READY, 30)
     br.errors = []
     res = br.eval("""(async () => {
         const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
@@ -1988,7 +2008,7 @@ def run_print_menu_check(br, base):
 def run_pres_check(br, base):
     print("Präsentationen (Kriterienpool, Bewerten, Ausdrucke):")
     br.open(f"{base}/index.html?demo")
-    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.wait(APP_READY, 30)
     br.errors = []
     res = br.eval("""(async () => {
         const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
@@ -2142,7 +2162,7 @@ def run_pres_check(br, base):
 def run_group_check(br, base):
     print("Gruppenpräsentationen (Gruppen, Gruppenwert, Abweichung, Druck, Auflösen):")
     br.open(f"{base}/index.html?demo")
-    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.wait(APP_READY, 30)
     br.errors = []
     res = br.eval("""(async () => {
         const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
@@ -2233,7 +2253,7 @@ def run_groups_tab_check(br, base):
     # Großes Fenster, damit beim Ziehen Start und Ziel gleichzeitig sichtbar sind
     br.call("Emulation.setDeviceMetricsOverride", width=1600, height=1200, deviceScaleFactor=1, mobile=False)
     br.open(f"{base}/index.html?demo")
-    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.wait(APP_READY, 30)
     br.errors = []
     res = br.eval("""(async () => {
         const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
@@ -2406,7 +2426,7 @@ def run_groups_tab_check(br, base):
 def run_moodle_check(br, base):
     print("Moodle-Import (Dialog, Übernahme, Ausdruck):")
     br.open(f"{base}/index.html?demo")
-    br.wait("!!document.querySelector('.overview-table')", 30)
+    br.wait(APP_READY, 30)
     br.errors = []
     res = br.eval("""(async (answers, grades) => {
         const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
@@ -2760,52 +2780,46 @@ def run_decrypt_tool(br, base):
 
 
 def main():
+    blocks = [
+        run_test_pages, run_app_smoke, run_sort_check, run_course_check, run_seat_beamer_check,
+        run_epo_material_check, run_attendance_check, run_epo_tiles_check, run_print_head_check,
+        run_draw_check, run_draw_pools_check, run_random_check, run_timer_check, run_tools_layout_check,
+        run_tools_menu_check, run_pomodoro_check, run_transition_check, run_sidebar_check,
+        run_tests_view_check, run_task_add_click_check, run_makeup_check, run_unreachable_check,
+        run_tabs_check, run_tab_order_check, run_overview_fold_check, run_settings_layout_check,
+        run_theme_check, run_demo_link_check, run_old_db_check, run_parts_check, run_print_menu_check,
+        run_pres_check, run_group_check, run_groups_tab_check, run_moodle_check, run_scripto_check,
+        run_decrypt_tool, run_launcher_check,
+    ]
     srv, base = serve()
     br = Browser()
+    t_start = time.time()
+    slow = []
     try:
-        run_test_pages(br, base)
-        run_app_smoke(br, base)
-        run_sort_check(br, base)
-        run_course_check(br, base)
-        run_seat_beamer_check(br, base)
-        run_epo_material_check(br, base)
-        run_attendance_check(br, base)
-        run_epo_tiles_check(br, base)
-        run_print_head_check(br, base)
-        run_draw_check(br, base)
-        run_draw_pools_check(br, base)
-        run_random_check(br, base)
-        run_timer_check(br, base)
-        run_tools_layout_check(br, base)
-        run_tools_menu_check(br, base)
-        run_pomodoro_check(br, base)
-        run_transition_check(br, base)
-        run_sidebar_check(br, base)
-        run_tests_view_check(br, base)
-        run_task_add_click_check(br, base)
-        run_makeup_check(br, base)
-        run_unreachable_check(br, base)
-        run_tabs_check(br, base)
-        run_tab_order_check(br, base)
-        run_overview_fold_check(br, base)
-        run_settings_layout_check(br, base)
-        run_theme_check(br, base)
-        run_demo_link_check(br, base)
-        run_old_db_check(br, base)
-        run_parts_check(br, base)
-        run_print_menu_check(br, base)
-        run_pres_check(br, base)
-        run_group_check(br, base)
-        run_groups_tab_check(br, base)
-        run_moodle_check(br, base)
-        run_scripto_check(br, base)
-        run_decrypt_tool(br, base)
-        run_launcher_check(br, base)
+        for block in blocks:
+            t0 = time.time()
+            try:
+                block(br, base)
+            except Exception as e:
+                # Ein abgestürzter oder hängender Block zählt als Fehler; die übrigen laufen
+                # in einem frischen Browser weiter.
+                report(f"{block.__name__} abgebrochen", False, f"{type(e).__name__}: {e}")
+                try:
+                    br.close()
+                except Exception:
+                    pass
+                br = Browser()
+            dt = time.time() - t0
+            if dt > 60:
+                slow.append(f"{block.__name__} {dt:.0f} s")
     finally:
         br.close()
         srv.shutdown()
     failed = results.count(False)
     print()
+    if slow:
+        print("Langsame Blöcke (> 60 s): " + ", ".join(slow))
+    print(f"Laufzeit: {time.time() - t_start:.0f} s")
     print(f"ERGEBNIS: {len(results) - failed} von {len(results)} bestanden" + ("" if not failed else f" – {failed} FEHLGESCHLAGEN"))
     return 0 if not failed else 1
 

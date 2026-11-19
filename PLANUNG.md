@@ -326,7 +326,7 @@ Mit dem Nutzer am 18.11.2026 geklärt (grill-me, alle Empfehlungen angenommen). 
 
 - [x] **AA** Sitzplan im Beamer-Vollbild – erledigt in 2.1.0 (18.11.2026), Anordnung wie im Editor, S2/S3 wie empfohlen
 - [x] **AB** Notenschlüssel: Knopf „Punkte verteilen“ – erledigt in 2.2.0 (18.11.2026)
-- [ ] **Vorab: Hänger im Testlauf beheben** (vor AC, siehe unten „Testlauf bleibt stehen“)
+- [x] **Vorab: Hänger im Testlauf beheben** (erledigt 19.11.2026, siehe unten „Testlauf bleibt stehen“)
 - [ ] **AC** Verbalbeurteilung bei I-Status
 - [ ] **AD** Personenregister (Schema 5, Migration, Zusammenführen) – vorher Sicherung, Migration an der Demo testen
 - [ ] **AE** Nachteilsausgleich
@@ -340,7 +340,20 @@ Mit dem Nutzer am 18.11.2026 geklärt (grill-me, alle Empfehlungen angenommen). 
 
 **Datenschutz für alles hier (gilt für AC–AG):** Nachteilsausgleiche (LRS, Dyskalkulie) und Förderpläne sind Gesundheitsdaten nach Art. 9 DSGVO, Notizen sind ebenfalls schutzwürdig. Sie erscheinen **nie** in Beamer- und Vollbildansichten, nie auf Ergebnis-, Mitarbeitszetteln oder Leistungsbögen und nie in der unverschlüsselten Schülerliste als Excel. In Exporten nur, wenn man es ausdrücklich ankreuzt. In der Notenübersicht dezent. `tools/entschluesseln.py` (CSV-Ausgabe) mitziehen. Vor dem Commit von Doku-Beispielen mit `code-pruefen` prüfen (öffentliches Repo).
 
-### Testlauf bleibt stehen (vor AC beheben)
+### Testlauf bleibt stehen – behoben am 19.11.2026
+
+**Ursache (19.11.2026):** Es gab keinen echten Hänger. Die App merkt sich den zuletzt gewählten Reiter im `localStorage`. Der Smoke-Test endet auf „Einstellungen“, also öffnete jeder spätere Start dort. Die 36 Stellen `br.wait("…overview-table…", 30)` nach dem Neuladen liefen deshalb jedes Mal in die vollen 30 s. Dabei fragt Python nur alle 0,2 s nach, und Browser und Python wirken untätig. Blöcke mit mehreren Neuladungen (Farbschemata, Sitzplan-Beamer, Gruppen, Druckauswahl) standen so minutenlang, `run_old_db_check` brauchte 10 × 30 s. Ein voller Lauf dauerte über 20 Minuten statt gut 3. Geprüft und ausgeschlossen: Ein echtes `window.print` blockiert Headless-Chrome nicht (es wird ignoriert, Timer und Neuzeichnen laufen weiter).
+
+**Behoben in `tests/run_tests.py`:**
+- `APP_READY` (App geladen, Ansicht gezeichnet) statt Warten auf die Notenübersicht; der Smoke-Test „App startet“ prüft weiter die Notenübersicht im frischen Profil.
+- `CALL_TIMEOUT` (240 s) als feste Gesamtzeitgrenze je DevTools-Aufruf, unabhängig von anderen Meldungen.
+- Ein abgebrochener Block zählt als Fehler mit Namen, die übrigen laufen in einem frischen Browser weiter.
+- Am Ende stehen die Laufzeit und Blöcke über 60 s.
+
+**Ergebnis:** drei volle Läufe hintereinander je `ERGEBNIS: 127 von 127 bestanden`, Exit-Code 0, je 199 s.
+
+**Ursprünglicher Auftrag:**
+
 
 **Befund (18.11.2026 abends):** Der volle Lauf `tests/run_tests.py` blieb dreimal hintereinander minutenlang stehen, jedes Mal an einer anderen Stelle (Reiter „Gruppen“, Farbschemata, Druckauswahl). Dabei arbeitet weder Python noch der Browser. Die Seite antwortet aber, wenn man sich von außen verbindet, und danach lief der Test einmal weiter. Einzeln, jeder Block in einem frischen Browser, sind alle 127 Tests grün und die meisten Blöcke in Sekunden fertig. Ausnahme: `run_old_db_check` braucht 270 s. Früher am selben Tag liefen zwei volle Läufe durch.
 
