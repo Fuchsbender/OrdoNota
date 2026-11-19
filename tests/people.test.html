@@ -132,6 +132,21 @@
     ok('nach allem: check ohne Fehler', M.check(db).filter((x) => x.level === 'fehler').length === 0);
   }
 
+  // ---------- mergePairs ----------
+  {
+    const db = M.migrate(fresh());
+    const [c7, c8, cD] = db.courses;
+    const a = c7.students[1].personId, b = c8.students[1].personId, d = cD.students[0].personId;
+    // a=b und b=d nacheinander: b ist nach dem ersten Paar in a aufgegangen → zweites Paar wird zu a=d
+    const r = P.mergePairs(db, [{ keepId: a, goneId: b }, { keepId: b, goneId: d }]);
+    ok('mergePairs: Ketten werden aufgelöst', r.done === 2 && r.skipped === 0 && P.entries(db, a).length === 3 && !P.byId(db, b) && !P.byId(db, d));
+    const r2 = P.mergePairs(db, [{ keepId: a, goneId: b }]);
+    ok('mergePairs: schon dieselbe Person → übersprungen', r2.done === 0 && r2.skipped === 1);
+    const r3 = P.mergePairs(db, [{ keepId: c8.students[0].personId, goneId: c8.students[2].personId }]);
+    ok('mergePairs: im selben Kurs → übersprungen', r3.done === 0 && r3.skipped === 1);
+    ok('mergePairs: check ohne Fehler', M.check(db).filter((x) => x.level === 'fehler').length === 0);
+  }
+
   // ---------- check ----------
   {
     const db = M.migrate(fresh());

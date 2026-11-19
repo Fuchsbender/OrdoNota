@@ -1113,15 +1113,16 @@ def run_sidebar_check(br, base):
         const side = () => document.querySelector('.sidebar');
         const out = { open: side().getBoundingClientRect().width };
         document.querySelector('.side-toggle').click(); await wait(450);     // Gleitanimation abwarten
-        const chips = [...document.querySelectorAll('.course-chip')];
+        const chips = [...document.querySelectorAll('.course-chip:not(.people-link)')];
         out.closed = [side().classList.contains('collapsed'), side().getBoundingClientRect().width, chips.length, NM.app.state.ui.sideCollapsed];
+        out.closed.push(!!document.querySelector('.course-chip.people-link'));
         chips[1].click(); await wait();
         out.switch = [NM.app.currentCourse().id === NM.app.db().courses[1].id, side().classList.contains('collapsed'), document.querySelectorAll('.course-chip.active').length];
         document.querySelector('.side-toggle').click(); await wait(450);
-        out.reopen = [side().classList.contains('collapsed'), document.querySelectorAll('.course-item').length];
+        out.reopen = [side().classList.contains('collapsed'), document.querySelectorAll('.course-item:not(.people-link)').length, !!document.querySelector('.course-item.people-link'), !!document.querySelector('.course-chip.people-link')];
         return out; })()""")
-    ok = bool(res) and res["open"] > 200 and res["closed"][0] and res["closed"][1] < 80 and res["closed"][2] == 2 and res["closed"][3] is True \
-        and res["switch"] == [True, True, 1] and res["reopen"] == [False, 2]
+    ok = bool(res) and res["open"] > 200 and res["closed"][0] and res["closed"][1] < 80 and res["closed"][2] == 2 and res["closed"][3] is True and res["closed"][4] is True \
+        and res["switch"] == [True, True, 1] and res["reopen"] == [False, 2, True, False]
     report("Kursliste: einklappen, Kurs über Kürzel wechseln, ausklappen", ok and not br.errors, str(res) + "; ".join(br.errors))
 
 
@@ -1318,6 +1319,162 @@ def run_people_check(br, base):
     report("Kurs löschen: Haken nur für Personen ohne weiteren Kurs, mit Anzahl; gelöscht, Rest bleibt", r.get("delCopy") is False and r.get("del8") == [True, True, True] and r.get("otherKept") and r.get("fehler") == [], str(res))
     report("Umstellung auf Schema 5: nächste Speicherung legt sicher eine Sicherung an", r.get("reset") and r.get("keep"), str(res))
     report("Personenregister ohne JavaScript-Fehler", not br.errors, "; ".join(br.errors)[:500])
+
+
+def run_people_page_check(br, base):
+    print("Seite „Personen“ (Liste, Suche, Filter, Einfügen mit Abgleich, Namen ändern, Zusammenführen, Trennen, Löschen, schmal):")
+    br.call("Emulation.setDeviceMetricsOverride", width=1400, height=900, deviceScaleFactor=1, mobile=False)
+    br.open(f"{base}/index.html?demo")
+    br.wait(APP_READY, 30)
+    br.errors = []
+    res = br.eval("""(async () => {
+        const wait = (ms = 150) => new Promise((r) => setTimeout(r, ms));
+        const db = NM.app.db(), P = NM.people, M = NM.model, out = {};
+        const btn = (text, root = document) => [...root.querySelectorAll('button')].find((b) => b.textContent.trim().startsWith(text));
+        const dialog = () => document.querySelector('dialog.modal');
+        const c8 = db.courses[0];
+        // Namen, die es nur einmal gibt, und einer, der in beiden Demo-Kursen steht
+        const uniq = c8.students.filter((s) => P.matches(db, s.last, s.first).length === 1);
+        const dup = c8.students.find((s) => P.matches(db, s.last, s.first).length === 2);
+        // Seitenleiste → Seite ohne Kursreiter
+        NM.app.select({ courseId: c8.id, tab: 'overview' }); await wait();
+        document.querySelector('[data-people-link]').click(); await wait();
+        const items = () => [...document.querySelectorAll('.people-item')];
+        out.page = [NM.app.state.ui.tab === 'people', !document.querySelector('.tabs'), items().length === db.people.length,
+                    !!document.querySelector('[data-people-link]').getAttribute('aria-current')];
+        // Suche
+        const s0 = uniq[0];
+        const q = document.querySelector('[data-people-search]'); q.focus(); q.value = s0.first; q.dispatchEvent(new Event('input')); await wait();
+        out.search = [items().length >= 1, items().every((b) => b.textContent.includes(s0.first)), document.activeElement === document.querySelector('[data-people-search]')];
+        q.value = ''; document.querySelector('[data-people-search]').value = ''; document.querySelector('[data-people-search]').dispatchEvent(new Event('input')); await wait();
+        // Person wählen: Detail mit Kurs, Zum Kurs
+        items()[0].click(); await wait();
+        const pid0 = NM.app.state.ui.personId, p0 = P.byId(db, pid0);
+        out.detail = [!!document.querySelector('.people-card h2'), document.querySelector('.people-card h2').textContent === M.studentName(p0),
+                      !!document.querySelector('[data-goto-course]'), !document.querySelector('[data-person-split]'), !document.querySelector('[data-person-remove]')];
+        // Pfeiltasten in der Liste
+        items()[0].focus(); items()[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+        out.arrow = document.activeElement === items()[1];
+        // Neues Schuljahr mit Kurs, Namen einfügen: ein bekannter Name, ein neuer
+        const y2 = { id: 'y-neu', name: '2027/28' }; db.years.push(y2);
+        const cN = M.newCourse(y2.id, { jahrgang: 9 }); cN.klasse = '9x'; cN.fach = 'M'; db.courses.push(cN); NM.app.commit({ render: false });
+        NM.app.select({ yearId: y2.id, courseId: cN.id, tab: 'course' }); await wait();
+        const ta = document.querySelector('textarea[aria-label^="Namen einfügen"]');
+        const s1 = uniq[1];
+        ta.value = s0.last + ', ' + s0.first + '\\n' + dup.last + ', ' + dup.first + '\\nNeuling, Nora'; btn('Namen übernehmen').click(); await wait();
+        let d = dialog();
+        const pick = d && d.querySelector('[data-match-pick]');
+        out.matchDlg = [!!d, d && d.querySelector('h2').textContent === 'Diese Namen gibt es schon', d && d.querySelectorAll('[data-match-same]').length === 1,
+                        !!(d && d.querySelector('[data-match-same]') && d.querySelector('[data-match-same]').checked), !!pick && pick.value === '' && pick.options.length === 3];
+        btn('Übernehmen', d).click(); await wait(300);
+        const e0 = cN.students.find((s) => s.last === s0.last);
+        const eD = cN.students.find((s) => s.last === dup.last && s.first === dup.first);
+        out.linked = [cN.students.length === 3, e0 && e0.personId === s0.personId, P.entries(db, s0.personId).length === 2,
+                      cN.students.find((s) => s.last === 'Neuling').personId !== s0.personId, !!eD && P.entries(db, eD.personId).length === 1];
+        // „Alle als neue Personen“: zweiter Name, neue Person
+        ta.value; document.querySelector('textarea[aria-label^="Namen einfügen"]').value = s1.last + ', ' + s1.first;
+        btn('Namen übernehmen').click(); await wait(); d = dialog();
+        btn('Alle als neue Personen', d).click(); await wait(300);
+        const e1 = cN.students.find((s) => s.last === s1.last);
+        out.asNew = !!e1 && e1.personId !== s1.personId && P.entries(db, e1.personId).length === 1;
+        // Namen ändern bei Person in zwei Kursen: Rückfrage
+        const change = async (s, k, v) => { const i = document.querySelector(`[data-focus-key="st-${s.id}-${k}"]`); i.value = v; i.dispatchEvent(new Event('change')); await wait(); return dialog(); };
+        const oldFirst = P.byId(db, s0.personId).first;
+        d = await change(e0, 'first', oldFirst + 'x');
+        out.askName = !!d && d.querySelector('h2').textContent.startsWith('Auch im Personenregister');
+        btn('Nur in diesem Kurs', d).click(); await wait(300);
+        out.onlyCourse = P.byId(db, s0.personId).first === oldFirst && e0.first === oldFirst + 'x';
+        d = await change(e0, 'first', oldFirst + 'y'); btn('Im Register ändern', d).click(); await wait(300);
+        out.inRegister = P.byId(db, s0.personId).first === oldFirst + 'y' && s0.first === oldFirst;
+        // Nur in einem Kurs: Register zieht still mit
+        const eN = cN.students.find((s) => s.last === 'Neuling');
+        d = await change(eN, 'first', 'Nele');
+        out.silent = !d && P.byId(db, eN.personId).first === 'Nele';
+        // „+ Einzeln hinzufügen“, dann Namen eintragen → Abgleich mit genau einer Person
+        const s2 = uniq[2];
+        btn('+ Einzeln hinzufügen').click(); await wait();
+        const blank = cN.students.find((s) => !s.last && !s.first);
+        await change(blank, 'last', s2.last);
+        d = await change(blank, 'first', s2.first);
+        out.single = !!d && d.querySelector('h2').textContent === 'Diesen Namen gibt es schon';
+        const nBefore = db.people.length;
+        btn('Dieselbe Person', d).click(); await wait(300);
+        out.singleLinked = blank.personId === s2.personId && db.people.length === nBefore - 1;
+        // Zusammenführen-Vorschläge: e1 (als neu übernommen) = s1
+        NM.app.select({ tab: 'people' }); await wait();
+        const sug = document.querySelector('[data-merge-suggest]');
+        out.sugCount = !sug.disabled && Number(sug.querySelector('.pill').textContent) >= 1;
+        sug.click(); await wait(); d = dialog();
+        const boxes = [...d.querySelectorAll('[data-pair]')];
+        out.notPre = boxes.length >= 1 && boxes.every((b) => !b.checked);
+        const li = [...d.querySelectorAll('.merge-list li')].findIndex((x) => x.textContent.includes(s1.last) && x.textContent.includes(s1.first));
+        boxes[li].checked = true; btn('Zusammenführen', d).click(); await wait(300);
+        out.merged = e1.personId === s1.personId || P.entries(db, s1.personId).length === 2 || P.entries(db, e1.personId).length === 2;
+        // Trennen: Person s0 hat zwei Kurseinträge
+        NM.app.state.ui.personId = s0.personId; NM.app.rerender(); await wait();
+        document.querySelector('[data-person-split]').click(); await wait(); d = dialog();
+        const sb = [...d.querySelectorAll('[data-split-entry]')];
+        sb.forEach((b) => (b.checked = true)); btn('Trennen', d).click(); await wait();
+        out.splitGuard = !!dialog() && P.entries(db, s0.personId).length === 2;
+        sb[1].checked = false; btn('Trennen', dialog()).click(); await wait(300);
+        out.split = P.entries(db, s0.personId).length === 1 && e0.personId !== s0.personId;
+        // Registername ändern (nur ein Kurs): Kursname zieht mit
+        NM.app.state.ui.personId = e0.personId; NM.app.rerender(); await wait();
+        const ln = document.querySelector('[data-person-name="last"]'); ln.value = 'Umbenannt'; ln.dispatchEvent(new Event('change')); await wait();
+        out.regName = P.byId(db, e0.personId).last === 'Umbenannt' && e0.last === 'Umbenannt';
+        // Manuell zusammenführen: e0 wieder mit s0; Kandidaten im selben Kurs gesperrt
+        document.querySelector('[data-person-merge]').click(); await wait(); d = dialog();
+        const ms = d.querySelector('input[type="search"]'); ms.value = s0.last; ms.dispatchEvent(new Event('input'));
+        const radio = d.querySelector(`input[value="${s0.personId}"]`);
+        const blockedOk = [...d.querySelectorAll('input[name="merge-target"]')].filter((r) => r.disabled).every((r) => P.shareCourse(db, r.value, e0.personId));
+        radio.checked = true; radio.dispatchEvent(new Event('change')); btn('Zusammenführen', d).click(); await wait(300);
+        out.manual = [blockedOk, e0.personId === s0.personId || P.entries(db, e0.personId).length === 2];
+        // Filter „Ohne Kurs“ und Löschen
+        const orphanP = { id: 'p-lose', last: 'Ohnekurs', first: 'Olga', created: '2026-01-01' }; db.people.push(orphanP); NM.app.commit(); await wait();
+        document.querySelector('[data-people-filter="orphans"]').click(); await wait();
+        out.filter = items().length >= 1 && items().some((b) => b.dataset.person === 'p-lose') && items().every((b) => b.classList.contains('orphan'));
+        items().find((b) => b.dataset.person === 'p-lose').click(); await wait();
+        document.querySelector('[data-person-remove]').click(); await wait(); d = dialog();
+        btn('Löschen', d).click(); await wait(300);
+        out.removed = !P.byId(db, 'p-lose');
+        document.querySelector('[data-people-filter="all"]').click(); await wait();
+        // Kurs aus der Seitenleiste: zurück zu einem Kursreiter
+        document.querySelector('.course-item').click(); await wait();
+        out.back = NM.app.state.ui.tab === 'overview' && !!document.querySelector('.tabs');
+        out.fehler = M.check(db).filter((x) => x.level === 'fehler').map((x) => x.text);
+        NM.app.state.dirty = false;
+        return out; })()""")
+    r = res or {}
+    report("Personen: Seitenleiste öffnet eigene Seite ohne Kursreiter, alle Personen gelistet", r.get("page") == [True, True, True, True], str(res))
+    report("Personen: Suche filtert, Fokus bleibt im Suchfeld", r.get("search") == [True, True, True], str(res))
+    report("Personen: Detail mit Kursen, Pfeiltasten in der Liste", r.get("detail") == [True, True, True, True, True] and r.get("arrow"), str(res))
+    report("Einfügen: Dialog „Diese Namen gibt es schon“, ein Treffer vorausgewählt, mehrere mit Auswahl (Standard neu)", r.get("matchDlg") == [True, True, True, True, True] and r.get("linked") == [True, True, True, True, True], str(res))
+    report("Einfügen: „Alle als neue Personen“ verknüpft nichts", r.get("asNew"), str(res))
+    report("Namen ändern: Rückfrage bei mehreren Kursen (nur Kurs / im Register), still bei einem Kurs", r.get("askName") and r.get("onlyCourse") and r.get("inRegister") and r.get("silent"), str(res))
+    report("Einzeln hinzufügen: Abgleich beim ersten Eintragen des Namens", r.get("single") and r.get("singleLinked"), str(res))
+    report("Zusammenführen: Vorschläge gezählt, nicht vorausgewählt, angehaktes Paar verknüpft", r.get("sugCount") and r.get("notPre") and r.get("merged"), str(res))
+    report("Trennen: nicht alle Einträge, gewählter Eintrag wird neue Person", r.get("splitGuard") and r.get("split"), str(res))
+    report("Registername bei einem Kurs ändert den Kursnamen mit; manuell zusammenführen, gleicher Kurs gesperrt", r.get("regName") and r.get("manual") == [True, True], str(res))
+    report("Filter „Ohne Kurs“, Aus dem Register löschen, Kurswahl führt zurück, check ohne Fehler", r.get("filter") and r.get("removed") and r.get("back") and r.get("fehler") == [], str(res))
+    # Schmal: Liste oder Person, „Alle Personen“ führt zurück
+    br.call("Emulation.setDeviceMetricsOverride", width=390, height=844, deviceScaleFactor=2, mobile=True)
+    res2 = br.eval("""(async () => {
+        const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
+        const vis = (sel) => { const e = document.querySelector(sel); return !!e && getComputedStyle(e).display !== 'none'; };
+        NM.app.select({ tab: 'people' }); await wait();
+        const out = {};
+        out.list = [vis('.people-list'), !vis('.people-detail')];
+        document.querySelector('.people-item').click(); await wait();
+        out.detail = [!vis('.people-list'), vis('.people-detail'), vis('.people-back'), document.activeElement === document.querySelector('.people-card h2')];
+        document.querySelector('.people-back').click(); await wait();
+        out.back = [vis('.people-list'), !vis('.people-detail')];
+        out.overflow = document.documentElement.scrollWidth <= window.innerWidth + 1;
+        NM.app.state.dirty = false;
+        return out; })()""")
+    r2 = res2 or {}
+    report("Personen schmal (390 px): Liste, dann Person mit „Alle Personen“, ohne Querrollen", r2.get("list") == [True, True] and r2.get("detail") == [True, True, True, True] and r2.get("back") == [True, True] and r2.get("overflow"), str(res2))
+    br.call("Emulation.setDeviceMetricsOverride", width=1400, height=900, deviceScaleFactor=1, mobile=False)
+    report("Seite „Personen“ ohne JavaScript-Fehler", not br.errors, "; ".join(br.errors)[:500])
 
 
 def run_verbal_check(br, base):
@@ -2967,7 +3124,7 @@ def main():
         run_epo_material_check, run_attendance_check, run_epo_tiles_check, run_print_head_check,
         run_draw_check, run_draw_pools_check, run_random_check, run_timer_check, run_tools_layout_check,
         run_tools_menu_check, run_pomodoro_check, run_transition_check, run_sidebar_check,
-        run_tests_view_check, run_task_add_click_check, run_makeup_check, run_verbal_check, run_people_check, run_unreachable_check,
+        run_tests_view_check, run_task_add_click_check, run_makeup_check, run_verbal_check, run_people_check, run_people_page_check, run_unreachable_check,
         run_tabs_check, run_tab_order_check, run_overview_fold_check, run_settings_layout_check,
         run_theme_check, run_demo_link_check, run_old_db_check, run_parts_check, run_print_menu_check,
         run_pres_check, run_group_check, run_groups_tab_check, run_moodle_check, run_scripto_check,

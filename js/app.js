@@ -667,7 +667,7 @@
       const list = coursesOfYear();
       state.ui.courseId = list.length ? list[0].id : null;
     }
-    if (!TABS.some((t) => t.id === state.ui.tab)) state.ui.tab = 'overview';
+    if (state.ui.tab !== 'people' && !TABS.some((t) => t.id === state.ui.tab)) state.ui.tab = 'overview';
     saveUi();
   }
 
@@ -826,12 +826,13 @@
               class: 'course-chip' + (cur && cur.id === c.id ? ' active' : ''),
               title: M.courseTitle(c),
               'aria-label': M.courseTitle(c),
-              onclick: () => select({ courseId: c.id, tab: state.ui.tab === 'settings' ? 'overview' : state.ui.tab }),
+              onclick: () => select({ courseId: c.id, tab: courseTab() }),
             },
             h('span', { class: 'course-name' }, short(c.klasse || M.courseTitle(c), 5)),
             c.klasse && c.fach ? h('span', { class: 'course-meta' }, short(c.fach, 4)) : null
           )
-        )
+        ),
+        peopleLink(true)
       );
     }
     return h(
@@ -844,13 +845,37 @@
           'button',
           {
             class: 'course-item' + (cur && cur.id === c.id ? ' active' : ''),
-            onclick: () => select({ courseId: c.id, tab: state.ui.tab === 'settings' ? 'overview' : state.ui.tab }),
+            onclick: () => select({ courseId: c.id, tab: courseTab() }),
           },
           h('span', { class: 'course-name' }, M.courseTitle(c)),
           h('span', { class: 'course-meta' }, NM.grades.courseLevel(c) === 'mss' ? 'MSS' : 'Sek I', ' · ', M.activeStudents(c).length, ' SuS')
         )
       ),
-      h('button', { class: 'btn btn-ghost btn-block add-course', onclick: addCourse }, '+ Kurs anlegen')
+      h('button', { class: 'btn btn-ghost btn-block add-course', onclick: addCourse }, '+ Kurs anlegen'),
+      peopleLink(false)
+    );
+  }
+
+  /** Reiter beim Wechsel des Kurses: von Einstellungen und Personen zur Notenübersicht. */
+  function courseTab() {
+    return state.ui.tab === 'settings' || state.ui.tab === 'people' ? 'overview' : state.ui.tab;
+  }
+
+  /** Eintrag „Personen“ unter den Kursen (eigene Seite ohne Kursreiter, Personenregister). */
+  function peopleLink(collapsed) {
+    const on = state.ui.tab === 'people';
+    return h(
+      'button',
+      {
+        class: (collapsed ? 'course-chip' : 'course-item') + ' people-link' + (on ? ' active' : ''),
+        'aria-current': on ? 'page' : null,
+        title: collapsed ? 'Personen' : 'Personenregister: alle Personen über Kurse und Schuljahre',
+        'aria-label': collapsed ? 'Personen' : null,
+        'data-people-link': '',
+        onclick: () => select({ tab: 'people' }),
+      },
+      icon('users'),
+      collapsed ? null : h('span', { class: 'course-name' }, 'Personen')
     );
   }
 
@@ -894,6 +919,7 @@
   function renderMain() {
     const main = document.getElementById('main');
     if (!main) return;
+    if (state.ui.tab === 'people') return renderPeople(main);
     // Tastatur: Wer einen Reiter per Eingabetaste wählt, behält den Fokus auf dem Reiter
     const focusTab = keepTabFocus || focusedTab();
     clear(main);
@@ -977,6 +1003,17 @@
     const v = NM.views[tab];
     if (v) v.render(view, { course, db: state.db });
     tableSemantics(view);
+  }
+
+  /** Seite „Personen“: ohne Kursreiter, geht auch ohne Kurs. */
+  function renderPeople(main) {
+    clear(main);
+    const viewChanged = lastTab !== null && lastTab !== 'people';
+    lastTab = 'people';
+    lastViewKey = 'people';
+    const view = h('section', { class: 'view view-people' + (viewChanged ? ' view-enter' : ''), id: 'view', 'aria-label': 'Personen' });
+    main.appendChild(view);
+    NM.views.people.render(view, { db: state.db });
   }
 
   /** Pfeiltasten, Pos1 und Ende bewegen den Fokus in der Reiterleiste; Eingabe- oder Leertaste wählt. */

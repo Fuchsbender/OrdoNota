@@ -165,6 +165,35 @@
   }
 
   /**
+   * Mehrere Paare nacheinander zusammenführen (Dialog „Personen zusammenführen“). Ist eine Person schon in
+   * einer anderen aufgegangen, gilt deren Ziel; Paare, die inzwischen dieselbe Person sind oder gemeinsam in
+   * einem Kurs stehen, werden übersprungen.
+   * @param pairs [{ keepId, goneId }]
+   * @returns { done, skipped }
+   */
+  function mergePairs(db, pairs) {
+    const into = new Map();
+    const target = (id) => {
+      while (into.has(id)) id = into.get(id);
+      return id;
+    };
+    let done = 0;
+    let skipped = 0;
+    for (const { keepId, goneId } of pairs) {
+      const k = target(keepId);
+      const g = target(goneId);
+      if (k === g || !byId(db, k) || !byId(db, g) || shareCourse(db, k, g)) {
+        skipped++;
+        continue;
+      }
+      merge(db, k, g);
+      into.set(g, k);
+      done++;
+    }
+    return { done, skipped };
+  }
+
+  /**
    * Kurseinträge (ids der course.students) von der Person abtrennen; sie werden zu einer neuen Person mit dem
    * Namen des ersten gewählten Eintrags. Alles, was an der Person hängt, bleibt bei der bisherigen.
    */
@@ -197,5 +226,5 @@
     return list(db).filter((p) => left.has(p.id) && left.get(p.id) === 0);
   }
 
-  NM.people = { nameKey, list, byId, index, entries, ensure, matches, shareCourse, suggestPairs, merge, split, remove, orphansIf };
+  NM.people = { nameKey, list, byId, index, entries, ensure, matches, shareCourse, suggestPairs, merge, mergePairs, split, remove, orphansIf };
 })((globalThis.NM = globalThis.NM || {}));

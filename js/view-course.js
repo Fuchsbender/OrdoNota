@@ -195,10 +195,7 @@
           'data-col': col,
           'data-focus-key': `st-${s.id}-${k}`,
           'aria-label': `${k === 'last' ? 'Nachname' : 'Vorname'}, Zeile ${i + 1}`,
-          onchange: (e) => {
-            s[k] = e.target.value.trim();
-            NM.app.commit();
-          },
+          onchange: (e) => changeName(course, s, k, e.target.value.trim()),
         });
       return h(
         'tr',
@@ -316,9 +313,9 @@
                   known.add(k);
                   return true;
                 });
-                course.students.push(...fresh);
-                NM.app.commit();
-                toast(`${fresh.length} hinzugefügt` + (list.length > fresh.length ? `, ${list.length - fresh.length} bereits vorhanden` : '') + '.', 'success');
+                addPasted(course, fresh, list.length - fresh.length).then((done) => {
+                  if (done) paste.value = '';
+                });
               },
             },
             'Namen übernehmen'
@@ -337,6 +334,109 @@
         )
       )
     );
+  }
+
+  // ---------- Personenregister (Schema 5): Abgleich beim Einfügen, Namen ändern ----------
+
+  /** Bisherige Kurse einer Person, kurz (für Dialoge). */
+  const personCourses = (db, p) => NM.views.people.courseLine(db, p);
+
+  /**
+   * Eingefügte Namen übernehmen. Gibt es für neue Namen Personen mit gleichem Namen, die nicht schon im Kurs
+   * stehen, fragt der Dialog „Diese Namen gibt es schon“ (ein Treffer: vorausgewählt, mehrere: Auswahl, Standard neu).
+   * @returns true, wenn übernommen
+   */
+  async function addPasted(course, fresh, dupes) {
+    const db = NM.app.db();
+    const hits = fresh.map((s) => ({ s, ms: NM.people.matches(db, s.last, s.first, { exceptCourse: course }) })).filter((x) => x.ms.length);
+    if (hits.length) {
+      const controls = hits.map((x) =>
+        x.ms.length === 1
+          ? h('input', { type: 'checkbox', checked: true, 'data-match-same': '' })
+          : h('select', { class: 'input', 'data-match-pick': '', 'aria-label': 'Wer ist ' + M.studentName(x.s) + '?' }, h('option', { value: '' }, 'neue Person'), x.ms.map((p) => h('option', { value: p.id }, 'dieselbe wie ' + M.studentName(p) + ' (' + personCourses(db, p) + ')')))
+      );
+      const v = await modal({
+        title: 'Diese Namen gibt es schon',
+        wide: true,
+        body: h(
+          'div',
+          null,
+          h('p', null, 'Im Personenregister stehen schon Personen mit diesen Namen, zum Beispiel aus einem früheren Schuljahr. Ist es dieselbe Person, gehören ihre Kurse zusammen.'),
+          h(
+            'ul',
+            { class: 'plain match-list' },
+            hits.map((x, i) =>
+              h(
+                'li',
+                null,
+                x.ms.length === 1
+                  ? h('label', { class: 'check merge-pair' }, controls[i], h('span', null, h('span', { class: 'match-name' }, M.studentName(x.s)), 'dieselbe Person wie in ', personCourses(db, x.ms[0])))
+                  : h('label', null, h('span', { class: 'match-name' }, M.studentName(x.s) + ' – ' + x.ms.length + ' Personen mit diesem Namen'), controls[i])
+              )
+            )
+          )
+        ),
+        buttons: [
+          { label: 'Abbrechen', value: null },
+          { label: 'Alle als neue Personen', value: 'none' },
+          { label: 'Übernehmen', value: 'link', kind: 'primary' },
+        ],
+      });
+      if (!v) return false;
+      if (v === 'link') {
+        hits.forEach((x, i) => {
+          const c = controls[i];
+          const pid = x.ms.length === 1 ? (c.checked ? x.ms[0].id : '') : c.value;
+          if (pid) x.s.personId = pid; // zweimal dieselbe Person im Kurs: ensure macht die zweite zu einer neuen
+        });
+      }
+    }
+    course.students.push(...fresh);
+    NM.app.commit();
+    toast(`${fresh.length} hinzugefügt` + (dupes ? `, ${dupes} bereits vorhanden` : '') + '.', 'success');
+    return true;
+  }
+
+  /**
+   * Vor- oder Nachname im Kurs ändern. Steht die Person nur in diesem Kurs, zieht das Register still mit (ensure).
+   * Steht sie in weiteren Kursen und weicht der Registername danach ab: Rückfrage. War der Name vorher unvollständig
+   * (z. B. „+ Einzeln hinzufügen“) und gibt es genau eine passende Person, die nicht im Kurs steht: Abgleich.
+   */
+  async function changeName(course, s, k, value) {
+    const db = NM.app.db();
+    const P = NM.people;
+    const wasIncomplete = !String(s.last || '').trim() || !String(s.first || '').trim();
+    s[k] = value;
+    const es = s.personId ? P.entries(db, s.personId) : [];
+    const person = s.personId ? P.byId(db, s.personId) : null;
+    if (person && es.length > 1 && P.nameKey(person.last, person.first) !== P.nameKey(s.last, s.first)) {
+      const v = await modal({
+        title: 'Auch im Personenregister ändern?',
+        body: h('p', null, `${M.studentName(person)} steht auch in ${es.length - 1 === 1 ? 'einem anderen Kurs' : es.length - 1 + ' anderen Kursen'}. Soll der Name im Register zu „${M.studentName(s)}“ werden? Die anderen Kurse behalten ihren Namen.`),
+        buttons: [
+          { label: 'Nur in diesem Kurs', value: false },
+          { label: 'Im Register ändern', value: true, kind: 'primary' },
+        ],
+      });
+      if (v === true) {
+        person.last = s.last;
+        person.first = s.first;
+      }
+    } else if (person && es.length === 1 && wasIncomplete && s.last && s.first) {
+      const ms = P.matches(db, s.last, s.first, { exceptCourse: course });
+      if (ms.length === 1 && !P.shareCourse(db, ms[0].id, person.id)) {
+        const v = await modal({
+          title: 'Diesen Namen gibt es schon',
+          body: h('p', null, `Im Personenregister steht schon ${M.studentName(ms[0])} (${personCourses(db, ms[0])}). Ist es dieselbe Person?`),
+          buttons: [
+            { label: 'Neue Person', value: false },
+            { label: 'Dieselbe Person', value: true, kind: 'primary' },
+          ],
+        });
+        if (v === true) P.merge(db, ms[0].id, person.id);
+      }
+    }
+    NM.app.commit();
   }
 
   /** Schülerliste als .xlsx: aktive alphabetisch mit Nummer, danach nicht mehr aktive. */
