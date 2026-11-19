@@ -682,6 +682,24 @@ body.grp-dragging, body.grp-dragging * { cursor: grabbing !important; }
 .key-sub { margin: 0.875rem 0 0.375rem; font-size: 0.8125rem; }
 .test-layout { display: grid; grid-template-columns: minmax(0, 1fr) 20.625rem; gap: 1rem; align-items: start; }
 .test-layout > .card { margin-bottom: 1rem; }
+.tests-main { min-width: 0; }
+/* Verbalbeurteilungen bei I-Status (2.3.0) */
+.verbal-card .card-head { align-items: center; }
+.verbal-count { font-size: 0.75rem; font-weight: 600; padding: 0.125rem 0.5rem; border-radius: 999px; color: var(--text); background: var(--gold-soft); border: 1px solid var(--gold); }
+.verbal-item { display: grid; gap: 0.375rem; padding: 0.75rem 0; border-top: 1px solid var(--border); }
+.verbal-item:first-of-type { border-top: 0; padding-top: 0.25rem; }
+.verbal-item.missing .verbal-text { border-color: var(--gold); background: var(--gold-soft); }
+.verbal-head { display: flex; align-items: center; flex-wrap: wrap; gap: 0.25rem 0.75rem; }
+.verbal-name { font-weight: 600; }
+.verbal-result { display: inline-flex; align-items: center; gap: 0.25rem; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.verbal-flag { display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.8125rem; font-weight: 600; color: var(--gold); }
+.verbal-text { width: 100%; max-width: 72ch; min-height: 4.5rem; resize: vertical; line-height: 1.45; }
+.verbal-show { margin: 0; justify-self: start; align-items: flex-start; }
+.verbal-show input { margin-top: 0.2em; flex: none; }
+.verbal-show.off { color: var(--text-dim); cursor: default; }
+.verbal-hint { display: block; margin: 0.125rem auto 0; padding: 0 0.25rem; border: 0; background: none; font: inherit; font-size: 0.6875rem; line-height: 1.2; color: var(--text-dim); cursor: pointer; border-radius: 0.25rem; }
+.verbal-hint.missing { color: var(--gold); font-weight: 600; }
+.verbal-hint:hover { text-decoration: underline; text-underline-offset: 0.15em; }
 .grid-table th.col-tight { width: 1%; } /* Status/Unterschrift nur so breit wie nötig; Platz geht an die Aufgaben */
 .key-card { position: sticky; top: 3.5rem; }
 .key-table td, .key-table th { padding: 1px 0.375rem; }
@@ -1073,6 +1091,11 @@ body.no-grade-colors .p-grade[style*='--g-hue'] { background: none; }
 .p-slip { border-bottom: 1px dashed #666; padding: 0.625rem 0 0.75rem; break-inside: avoid; }
 .p-slip-table { width: auto; }
 .p-slip-result { font-size: 10pt; }
+.p-verbal { margin-top: 0.375rem; padding: 0.375rem 0.5rem; border: 1pt solid #000; border-radius: 0.25rem; break-inside: avoid; page-break-inside: avoid; }
+.p-verbal-label { font-size: 8pt; font-weight: 700; letter-spacing: 0.04em; color: #333; margin-bottom: 0.125rem; }
+.p-verbal-text { font-size: 10pt; line-height: 1.4; white-space: pre-line; }
+.p-mr-foot .p-verbal { margin: 0 0 0.75rem; padding: 0.625rem 0.875rem; }
+.p-mr-foot .p-verbal-text { font-size: 11pt; }
 .p-big { font-size: 14pt; }
 /* Moodle-Ergebnisse: je Person eine Seite */
 /* Trennblätter für OrdoScripto: eine Seite je Person, QR-Code 6 cm */

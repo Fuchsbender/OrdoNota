@@ -196,6 +196,11 @@
     );
   }
 
+  /** Verbalbeurteilung auf Zetteln und Bögen; Zeilenumbrüche bleiben (CSS white-space). */
+  function verbalBlock(text) {
+    return h('div', { class: 'p-verbal' }, h('div', { class: 'p-verbal-label' }, 'Verbalbeurteilung'), h('div', { class: 'p-verbal-text' }, text));
+  }
+
   /** „Theorie: 2 · Praxis: 3-“ (getrennt benotete Teile). */
   function partGrades(t, res, level) {
     if (!G.separateParts(t)) return null;
@@ -325,6 +330,16 @@
       const r = t.results[s.id] || {};
       const res = G.testResult(t, s.id, level);
       const pg = partGrades(t, res, level);
+      // I-Status mit Verbalbeurteilung: Text statt Prozent, Note und Teilnoten (2.3.0)
+      if (G.verbalOnSlip(s, t)) {
+        return h(
+          'div',
+          { class: 'p-slip' },
+          header(course, a.name, null, { compact: true, person: M.studentName(s), date: a.date }),
+          taskTable(t, r.scores || {}, res, 'p-slip-table'),
+          verbalBlock(G.verbalText(t, s.id))
+        );
+      }
       return h(
         'div',
         { class: 'p-slip' },
@@ -355,9 +370,12 @@
       const scores = (t.results[s.id] || {}).scores || {};
       const ans = answers[s.id] || {};
       const res = G.testResult(t, s.id, level);
-      const pct = max ? (res.score / max) * 100 : null;
+      // I-Status mit Verbalbeurteilung: ohne Prozent, Teilnoten und Note, dafür der Text (2.3.0)
+      const verbal = withGrade && G.verbalOnSlip(s, t);
+      const showGrade = withGrade && !verbal;
+      const pct = max && !verbal ? (res.score / max) * 100 : null;
       const rows = G.taskGroups(t).flatMap((g, gi) => [
-        g.part ? h('tr', { class: 'p-mr-part' }, h('td', { colspan: 5 }, g.part.name, h('span', null, ` · ${fmtScore(res.parts[gi].score)} / ${fmtScore(res.parts[gi].max)} Punkte` + (G.separateParts(t) && res.parts[gi].p !== null && withGrade ? ` · ${G.label(res.parts[gi].p, level)}` : '')))) : null,
+        g.part ? h('tr', { class: 'p-mr-part' }, h('td', { colspan: 5 }, g.part.name, h('span', null, ` · ${fmtScore(res.parts[gi].score)} / ${fmtScore(res.parts[gi].max)} Punkte` + (G.separateParts(t) && res.parts[gi].p !== null && showGrade ? ` · ${G.label(res.parts[gi].p, level)}` : '')))) : null,
         ...g.tasks.map((task) => taskRow(task, t.tasks.indexOf(task))),
       ]);
       function taskRow(task, i) {
@@ -396,7 +414,8 @@
         h(
           'div',
           { class: 'p-mr-foot' },
-          withGrade && res.p !== null
+          verbal ? verbalBlock(G.verbalText(t, s.id)) : null,
+          showGrade && res.p !== null
             ? h(
                 'div',
                 { class: 'p-mr-grade' },

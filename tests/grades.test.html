@@ -352,6 +352,34 @@
     eq('Eintrag erkannt (Punkte, Status, Teilstatus), leer nicht', [G.hasTestEntry(ns.test, 's2'), G.hasTestEntry(ns.test, 's3'), G.hasTestEntry(mk({ a: { partStatus: { p: 'fehlt' } } }), 'a'), G.hasTestEntry(ns.test, 'zz')], [true, false, true, false]);
   }
 
+  // ---------- Verbalbeurteilung bei I-Status (2.3.0) ----------
+  {
+    const vt = { results: { a: { scores: {}, verbal: '  Text\n' }, b: { scores: {}, verbal: '   ' }, c: { scores: {}, verbal: 'Text', showGrade: true }, d: { scores: {} } } };
+    const I = (id) => ({ id, iStatus: true });
+    const N = (id) => ({ id });
+    eq('Text getrimmt, nur Leerzeichen = leer, fehlt = leer', [G.verbalText(vt, 'a'), G.verbalText(vt, 'b'), G.verbalText(vt, 'd'), G.verbalText(vt, 'zz')], ['Text', '', '', '']);
+    eq('Grenze: p < 4 in Sek I (unter 4−) und MSS (unter 4 Punkten)', G.VERBAL_BELOW, 4);
+    eq('fehlt noch: I-Status, p 3, leer → ja; p 4 → nein; ohne I-Status → nein; mit Text → nein; ohne Note → nein', [
+      G.verbalMissing(I('d'), vt, { p: 3 }),
+      G.verbalMissing(I('d'), vt, { p: 4 }),
+      G.verbalMissing(N('d'), vt, { p: 0 }),
+      G.verbalMissing(I('a'), vt, { p: 0 }),
+      G.verbalMissing(I('b'), vt, { p: 2 }),
+      G.verbalMissing(I('d'), vt, { p: null }),
+    ], [true, false, false, false, true, false]);
+    eq('Zettel: Text statt Note nur mit I-Status, Text und ohne Haken', [
+      G.verbalOnSlip(I('a'), vt),
+      G.verbalOnSlip(N('a'), vt),
+      G.verbalOnSlip(I('b'), vt),
+      G.verbalOnSlip(I('c'), vt),
+      G.verbalOnSlip(I('d'), vt),
+    ], [true, false, false, false, false]);
+    const vk = (r) => ({ limit: 50, precision: 1, tasks: [{ id: 'x', name: 'A1', max: 10 }], custom: {}, results: { a: r } });
+    const pv = G.testResult(vk({ scores: { x: 2 }, verbal: 'T', showGrade: true }), 'a', 'sek1').p;
+    eq('Verbalbeurteilung ändert die Note nicht', [pv, pv === G.testResult(vk({ scores: { x: 2 } }), 'a', 'sek1').p], [pv, true]);
+    eq('Note vorhanden (Probe)', pv !== null, true);
+  }
+
   lines.unshift(fails === 0 ? 'ALLE TESTS BESTANDEN' : fails + ' FEHLGESCHLAGEN');
   
   document.getElementById('out').textContent = lines.join('\n');

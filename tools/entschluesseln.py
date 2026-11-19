@@ -150,6 +150,9 @@ def schreibe_csv(daten, ordner):
             # OrdoScripto (1.41): Pseudonyme stehen in der Arbeit, ein Nachschreibtermin nutzt die der Arbeit
             o = nach_id.get(a.get("makeupOf")) or a
             return (o.get("test") or {}).get("scripto") or {}
+        # Verbalbeurteilung bei I-Status (2.3.0): eigene Spalte hinter jeder Arbeit, in der es eine gibt
+        verbal_tests = {a.get("id") for a in spalten if a.get("kind") == "test"
+                        and any(str((r or {}).get("verbal") or "").strip() for r in ((a.get("test") or {}).get("results") or {}).values())}
         for a in spalten:
             titel = f'{a.get("half")} {a.get("name")} ({a.get("kind")}, Gewicht {a.get("weight")})'
             # Nachschreibtermin (1.40): zählt in der App mit der Original-Arbeit als eine Note
@@ -158,6 +161,8 @@ def schreibe_csv(daten, ordner):
             if a.get("kind") == "test" and scripto(a).get("testId"):
                 titel += f' – OrdoScripto {scripto(a)["testId"]}'
             kopf.append(titel)
+            if a.get("id") in verbal_tests:
+                kopf.append(titel + " – Verbalbeurteilung")
         override_keys = sorted(kurs.get("overrides", {}).keys())
         # Fehlzeiten (1.45): je Halbjahr Unterrichtsstunden gesamt, entschuldigt, unentschuldigt, offen
         fehl = kurs.get("attendance") or {}
@@ -186,6 +191,8 @@ def schreibe_csv(daten, ordner):
                         text = r.get("status") or text
                     pseudonym = (scripto(a).get("ids") or {}).get(sid)
                     z.append(f"{text} [{pseudonym}]".strip() if pseudonym else text)
+                    if a.get("id") in verbal_tests:
+                        z.append(str(r.get("verbal") or "").strip())
                 elif a.get("kind") == "pres":
                     pr = a.get("pres", {})
                     r = pr.get("results", {}).get(sid, {})

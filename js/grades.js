@@ -534,6 +534,28 @@
     return Object.values(r.scores || {}).some((v) => v !== null && v !== undefined && v !== '');
   }
 
+  // ---------- Verbalbeurteilung bei I-Status (seit 2.3.0) ----------
+
+  /** Unter dieser Punktzahl muss eine Verbalbeurteilung stehen: unter 4− (Sek I) bzw. unter 4 Punkten (MSS), in beiden Stufen p < 4. */
+  const VERBAL_BELOW = 4;
+
+  /** Text der Verbalbeurteilung einer Person in einer Arbeit (getrimmt), sonst ''. */
+  function verbalText(test, sid) {
+    const r = ((test && test.results) || {})[sid];
+    return r && typeof r.verbal === 'string' ? r.verbal.trim() : '';
+  }
+
+  /** Fehlt noch eine Verbalbeurteilung? Nur bei I-Status, mit Note unter VERBAL_BELOW und leerem Text. */
+  function verbalMissing(student, test, res) {
+    return !!(student && student.iStatus) && !!res && res.p !== null && res.p < VERBAL_BELOW && !verbalText(test, student.id);
+  }
+
+  /** Steht auf Zetteln für die Person die Verbalbeurteilung statt der Note? Nur mit I-Status, Text und ohne „Note auf dem Zettel zeigen“. */
+  function verbalOnSlip(student, test) {
+    if (!student || !student.iStatus || !verbalText(test, student.id)) return false;
+    return !((test.results || {})[student.id] || {}).showGrade;
+  }
+
   /** Leistung, deren Ergebnis für die Person zählt: der letzte Nachschreibtermin mit Eintrag, sonst die Arbeit selbst. */
   function countingFor(course, a, sid) {
     if (!course) return a;
@@ -817,6 +839,10 @@
     isMakeup,
     makeupsOf,
     hasTestEntry,
+    VERBAL_BELOW,
+    verbalText,
+    verbalMissing,
+    verbalOnSlip,
     countingFor,
     halfResult,
     yearResult,

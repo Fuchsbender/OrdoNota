@@ -327,7 +327,7 @@ Mit dem Nutzer am 18.11.2026 geklärt (grill-me, alle Empfehlungen angenommen). 
 - [x] **AA** Sitzplan im Beamer-Vollbild – erledigt in 2.1.0 (18.11.2026), Anordnung wie im Editor, S2/S3 wie empfohlen
 - [x] **AB** Notenschlüssel: Knopf „Punkte verteilen“ – erledigt in 2.2.0 (18.11.2026)
 - [x] **Vorab: Hänger im Testlauf beheben** (erledigt 19.11.2026, siehe unten „Testlauf bleibt stehen“)
-- [ ] **AC** Verbalbeurteilung bei I-Status
+- [x] **AC** Verbalbeurteilung bei I-Status – erledigt in 2.3.0 (19.11.2026), V1–V3 wie empfohlen
 - [ ] **AD** Personenregister (Schema 5, Migration, Zusammenführen) – vorher Sicherung, Migration an der Demo testen
 - [ ] **AE** Nachteilsausgleich
 - [ ] **AF** Notizverlauf
@@ -403,13 +403,29 @@ Ausgangslage: Bei wenigen Punkten fallen Schwellen zusammen (18 Punkte, Grenze 5
 - Wer die 44 % aus dem ersten Beispiel des Nutzers (18 → 1, 17 → 1−, 16 → 2+ …, 4− ab 8) bewusst will, trägt sie als eigene Schwellen ein.
 - Doku: Abschnitt Notenschlüssel (DOKUMENTATION.md) um den Knopf und die Regel ergänzen.
 
-### AC) Verbalbeurteilung bei I-Status
+### AC) Verbalbeurteilung bei I-Status (erledigt in 2.3.0)
 
 I-Status = Inklusionsstatus: Es gibt einen Förderplan, die Noten zählen nicht in die Statistik (DOKUMENTATION.md:291, Bedeutung dort ergänzen). Er bleibt **pro Kurs** (zieldifferente Förderung kann je Fach verschieden sein).
 
 - Bei Personen mit I-Status hat jedes Ergebnis einer Arbeit (auch Teile, Präsentationen bei Bedarf) ein Feld **Verbalbeurteilung** (`results[sid].verbal`, Freitext). Das Feld ist immer sichtbar, unter 4− (Sek I) bzw. unter 4 Punkten (MSS) wird es hervorgehoben und als „fehlt noch“ markiert, solange es leer ist.
 - Auf dem **Ergebniszettel** steht die Verbalbeurteilung **anstelle** der Note. Schalter je Ergebnis „Note auf dem Zettel zeigen“ (`results[sid].showGrade`), voreingestellt aus, wenn eine Verbalbeurteilung vorhanden ist. Intern rechnet die App die Note weiter (Leistungsbogen, Lehrerlisten, Notenübersicht).
 - Nur neue Felder → kein neues `SCHEMA`; `migrate()` muss nichts tun (Felder fehlen = leer).
+
+**Entwurf der Oberfläche (`/impeccable shape`, 19.11.2026, Fragen V1–V3 entschieden):**
+
+- **V1 Ort:** eigene Karte **„Verbalbeurteilungen“** im Reiter „Tests“ direkt unter der Karte „Ergebnisse“. Die Ergebnistabelle bleibt unverändert, mit ihren Tastaturwegen. Die Karte erscheint nur, wenn unter den angezeigten Personen jemand mit I-Status ist (beim Nachschreibtermin also nur die gezeigten).
+  - Kopf: „Verbalbeurteilungen“, dazu als Marke „n fehlt noch“, wenn es solche gibt.
+  - Je Person ein Block: Name, Note wie in der Tabelle mit Punkten („Note 5 · 5 von 20 P.“) oder der Status („fehlt“, „nachschreiben“), ein mehrzeiliges Textfeld und der Haken „Note auf dem Zettel zeigen“.
+  - **„fehlt noch“:** Note unter 4− (Sek I) bzw. unter 4 Punkten (MSS), also `p < 4` in beiden Stufen, und das Textfeld leer. Dann sind der Block mit Warnfarbe und das Wort „fehlt noch“ markiert, nie nur die Farbe. Bei Status ohne Note gibt es keine Warnung.
+  - In der Tabelle unter der Notenmarke der Person ein kleiner Text: „verbal fehlt“ (Warnung) bzw. „verbal ✓“. Klick darauf springt zum Textfeld.
+  - Speichern beim Verlassen des Textfelds (`change`), nicht bei jedem Tastendruck. Fokus und Scrollstelle bleiben beim Neuzeichnen (`data-focus-key`).
+  - Haken: gespeichert wird nur `showGrade: true`. Ohne Text gibt es nichts zu ersetzen, dann steht auf dem Zettel die Note, und der Haken ist ausgegraut mit dem Hinweis „erst mit Verbalbeurteilung“.
+- **V2 Teile:** **eine** Verbalbeurteilung je Arbeit, auch bei getrennt benoteten Teilen.
+- **V3 Zettel:** Ist eine Verbalbeurteilung da und der Haken aus, bleibt auf dem **Ergebniszettel** die Tabelle mit den Punkten je Aufgabe. Prozent, Note und Teilnoten entfallen, an ihrer Stelle steht „Verbalbeurteilung:“ mit dem Text (Zeilenumbrüche bleiben). Dasselbe gilt für den **Moodle-Einzelbogen mit Note**. Gilt nur, solange die Person den I-Status hat.
+- **Unverändert:** Notenberechnung, Notenübersicht, Lehrerlisten (Ergebnisliste mit „(I)“ und Note), Leistungsbogen, Statistik (I-Personen zählen weiter nicht).
+- **Nie:** Beamer-Ansicht, Excel-Schülerliste, Scripto-CSV. `tools/entschluesseln.py`: Verbalbeurteilung als eigene Spalte in der CSV der Ergebnisse.
+- **Designs und Zugänglichkeit:** alle sechs Designs. Das Textfeld hat ein sichtbares Label mit dem Namen, die Warnung hat Text und Zeichen. Touch 44 px für den Haken.
+- **Tests:** Karte nur mit I-Status; „fehlt noch“ bei `p < 4` und leer, nicht bei Status; Speichern; Zettel und Moodle-Bogen mit und ohne Haken und ohne I-Status; Teile mit einem Text; Beamer ohne Text; CSV des Notfallwerkzeugs.
 
 ### AD) Personenregister (Schema 5)
 

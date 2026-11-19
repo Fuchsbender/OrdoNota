@@ -1247,6 +1247,95 @@ def run_makeup_check(br, base):
            res["unlinked"] and res["ownCol"] == 1 and res["relinked"] and res["orphan"] and not br.errors, str(res) + " " + "; ".join(br.errors))
 
 
+def run_verbal_check(br, base):
+    print("Verbalbeurteilung bei I-Status (Karte, fehlt noch, Zettel, Moodle-Bogen, Beamer):")
+    br.call("Emulation.setDeviceMetricsOverride", width=1600, height=1000, deviceScaleFactor=1, mobile=False)
+    br.open(f"{base}/index.html?demo")
+    br.wait(APP_READY, 30)
+    br.errors = []
+    res = br.eval("""(async () => {
+        const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
+        window.print = () => {};   // bleibt ersetzt: NM.print ruft window.print erst nach 50 ms auf
+        const G = NM.grades, out = {};
+        const c = NM.app.db().courses[0], lvl = G.courseLevel(c);
+        const a = c.assessments.find((x) => x.kind === 'test' && Object.values(x.test.results).some((r) => Object.keys(r.scores || {}).length));
+        NM.app.state.ui.testId[c.id] = a.id;
+        NM.app.select({ courseId: c.id, tab: 'tests', half: a.half }); await wait();
+        if (NM.app.currentHalf(c) !== a.half) { NM.app.setHalf(c, a.half); await wait(); }
+        out.noCard = !document.querySelector('.verbal-card');
+        const graded = NM.model.activeStudents(c).map((s) => [s, G.testResult(a.test, s.id, lvl)]).filter(([, r]) => r.p !== null).sort((x, y) => x[1].p - y[1].p);
+        const [low, high] = [graded[0][0], graded[graded.length - 1][0]];
+        out.pLow = G.testResult(a.test, low.id, lvl).p; out.pHigh = G.testResult(a.test, high.id, lvl).p;
+        low.iStatus = true; high.iStatus = true; NM.app.commit(); await wait();
+        const card = () => document.querySelector('.verbal-card');
+        const item = (s) => card().querySelector(`[data-verbal="${s.id}"]`);
+        out.card = [!!card(), card().querySelectorAll('.verbal-item').length];
+        out.count = (card().querySelector('.verbal-count') || {}).textContent || '';
+        out.flagLow = !!item(low).querySelector('.verbal-flag') && item(low).textContent.includes('fehlt noch');
+        out.flagHigh = !!item(high).querySelector('.verbal-flag');
+        out.hints = [...document.querySelectorAll('.grid-table .verbal-hint')].map((b) => b.textContent);
+        out.label = item(low).querySelector('label.verbal-name').getAttribute('for') === item(low).querySelector('textarea').id;
+        out.showDisabled = item(low).querySelector('.verbal-show input').disabled;
+        // Text eintragen (change), gespeichert ohne Leerzeichen am Ende
+        const ta = item(low).querySelector('textarea');
+        ta.value = 'Löst Grundaufgaben sicher.\\nSachrechnen mit Hilfe.  '; ta.dispatchEvent(new Event('change')); await wait();
+        out.saved = a.test.results[low.id].verbal;
+        out.after = [(card().querySelector('.verbal-count') || {}).textContent || '', !!item(low).querySelector('.verbal-flag'), item(low).querySelector('.verbal-show input').disabled];
+        out.hintsAfter = [...document.querySelectorAll('.grid-table .verbal-hint')].map((b) => b.textContent);
+        // Hinweis in der Tabelle springt zum Textfeld
+        document.querySelector('.grid-table .verbal-hint').click(); await wait(50);
+        out.jump = document.activeElement === item(low).querySelector('textarea');
+        // Note unverändert, Statistik ohne I-Personen wie vorher
+        out.pSame = G.testResult(a.test, low.id, lvl).p === out.pLow;
+        // Zettel: Text statt Prozent und Note
+        const slip = (s) => [...document.querySelectorAll('#print-root .p-slip')].find((x) => x.textContent.includes(NM.model.studentName(s)));
+        NM.print.test(c, a, 'students');
+        const sl = slip(low);
+        out.slip = [!!sl.querySelector('.p-verbal'), sl.querySelector('.p-verbal-text').textContent, /Note|%/.test(sl.textContent), !!sl.querySelector('.p-slip-table')];
+        out.slipOther = /Note/.test(slip(high).textContent) && !slip(high).querySelector('.p-verbal');
+        // Haken „Note auf dem Zettel zeigen“
+        const cb = item(low).querySelector('.verbal-show input'); cb.checked = true; cb.dispatchEvent(new Event('change')); await wait();
+        out.showSaved = a.test.results[low.id].showGrade === true;
+        NM.print.test(c, a, 'students');
+        out.slipShow = /Note/.test(slip(low).textContent) && !slip(low).querySelector('.p-verbal');
+        delete a.test.results[low.id].showGrade;
+        // Moodle-Bogen mit Note: ohne Note und Prozent, mit Text; ohne Note-Option kein Text
+        NM.print.moodle(c, a, { sid: low.id, withGrade: true });
+        const mr = document.querySelector('#print-root .p-mr');
+        out.moodle = [!!mr.querySelector('.p-verbal'), !!mr.querySelector('.p-mr-grade'), mr.textContent.includes('Prozent')];
+        NM.print.moodle(c, a, { sid: low.id, withGrade: false });
+        out.moodleNoGrade = !document.querySelector('#print-root .p-verbal');
+        // Ohne I-Status: wieder Note auf dem Zettel, Karte weg, Text bleibt gespeichert
+        delete low.iStatus; NM.app.commit(); await wait();
+        NM.print.test(c, a, 'students');
+        out.noI = [/Note/.test(slip(low).textContent), !slip(low).querySelector('.p-verbal'), !card() || !card().querySelector(`[data-verbal="${low.id}"]`), a.test.results[low.id].verbal.startsWith('Löst')];
+        low.iStatus = true; NM.app.commit(); await wait();
+        // Status ohne Note: keine Warnung
+        a.test.results[high.id].status = 'fehlt'; NM.app.commit(); await wait();
+        out.statusNoFlag = !item(high).querySelector('.verbal-flag') && item(high).textContent.includes('fehlt') ;
+        delete a.test.results[high.id].status; NM.app.commit(); await wait();
+        // Beamer: kein Text
+        [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Beamer').click(); await wait();
+        const bm = document.querySelector('.beamer');
+        out.beamer = !!bm && !bm.textContent.includes('Grundaufgaben') && !bm.textContent.includes('Verbal');
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); await wait();
+        if (document.querySelector('.beamer')) document.querySelector('.beamer').remove();
+        NM.app.state.dirty = false;
+        return out; })()""")
+    r = res or {}
+    report("Karte nur mit I-Status: ohne keine, mit zwei Personen zwei Blöcke", r.get("noCard") and r.get("card") == [True, 2], str(res))
+    report("„fehlt noch“ bei Note unter 4 und leerem Text (Kopf, Block, Tabelle), nicht bei guter Note", r.get("pLow", 9) < 4 and r.get("pHigh", 0) >= 4 and r.get("count") == "1 fehlt noch" and r.get("flagLow") and not r.get("flagHigh") and r.get("hints") == ["verbal fehlt"], str(res))
+    report("Textfeld mit Label; Haken ohne Text gesperrt", r.get("label") and r.get("showDisabled"), str(res))
+    report("Text speichern: Warnung weg, Haken frei, Hinweis „verbal ✓“, Sprung zum Textfeld", r.get("saved") == "Löst Grundaufgaben sicher.\nSachrechnen mit Hilfe." and r.get("after") == ["", False, False] and r.get("hintsAfter") == ["verbal ✓"] and r.get("jump"), str(res))
+    report("Note wird weiter berechnet (unverändert)", r.get("pSame"), str(res))
+    report("Ergebniszettel: Punkte bleiben, Text statt Prozent und Note; andere mit Note", r.get("slip") == [True, "Löst Grundaufgaben sicher.\nSachrechnen mit Hilfe.", False, True] and r.get("slipOther"), str(res))
+    report("„Note auf dem Zettel zeigen“ gespeichert und wirkt", r.get("showSaved") and r.get("slipShow"), str(res))
+    report("Moodle-Bogen mit Note: Text statt Note und Prozent; ohne Note kein Text", r.get("moodle") == [True, False, False] and r.get("moodleNoGrade"), str(res))
+    report("Ohne I-Status: Note auf dem Zettel, kein Block, Text bleibt gespeichert", r.get("noI") == [True, True, True, True], str(res))
+    report("Status ohne Note: keine Warnung; Beamer ohne Verbalbeurteilung", r.get("statusNoFlag") and r.get("beamer"), str(res))
+    report("Verbalbeurteilung ohne JavaScript-Fehler", not br.errors, "; ".join(br.errors)[:500])
+
+
 def qr_lesen(art, inhalt, endung):
     """QR-Codes mit zxing-cpp lesen (tests/qr_lesen.py in eigener uv-Umgebung). Liefert (Ergebnis, Fehlertext)."""
     tmp = tempfile.mkdtemp(prefix="nm-qr-")
@@ -2775,6 +2864,13 @@ def run_decrypt_tool(br, base):
             zf = [z.rstrip("\n").split(";") for z in f]
         i1, i2 = zf[0].index("Fehlstunden HJ1 (E/U/offen)"), zf[0].index("Fehlstunden HJ2 (E/U/offen)")
         report("CSV: Fehlzeiten je Halbjahr in Unterrichtsstunden", [zf[1][i1], zf[2][i1], zf[1][i2], zf[2][i2]] == ["3 (2/1/0)", "2 (0/0/2)", "", "1 (0/1/0)"], str(zf))
+        # Verbalbeurteilung (2.3.0): eigene Spalte hinter der Arbeit, nur wenn es dort eine gibt
+        kurs["assessments"][0]["test"]["results"]["a"]["verbal"] = "Löst Grundaufgaben sicher. "
+        pfad = tool.schreibe_csv({"years": [], "courses": [kurs]}, tmp)[0]
+        with open(pfad, encoding="utf-8-sig") as f:
+            zv = [z.rstrip("\n").split(";") for z in f]
+        iv = [i for i, k in enumerate(zv[0]) if k.endswith("– Verbalbeurteilung")]
+        report("CSV: Verbalbeurteilung als eigene Spalte hinter der Arbeit (nur dort)", len(iv) == 1 and iv[0] == 5 and zv[1][5] == "Löst Grundaufgaben sicher." and zv[2][5] == "" and zv[1][6] == "fehlt [S-7F3K9Q]", str(zv))
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
@@ -2785,7 +2881,7 @@ def main():
         run_epo_material_check, run_attendance_check, run_epo_tiles_check, run_print_head_check,
         run_draw_check, run_draw_pools_check, run_random_check, run_timer_check, run_tools_layout_check,
         run_tools_menu_check, run_pomodoro_check, run_transition_check, run_sidebar_check,
-        run_tests_view_check, run_task_add_click_check, run_makeup_check, run_unreachable_check,
+        run_tests_view_check, run_task_add_click_check, run_makeup_check, run_verbal_check, run_unreachable_check,
         run_tabs_check, run_tab_order_check, run_overview_fold_check, run_settings_layout_check,
         run_theme_check, run_demo_link_check, run_old_db_check, run_parts_check, run_print_menu_check,
         run_pres_check, run_group_check, run_groups_tab_check, run_moodle_check, run_scripto_check,

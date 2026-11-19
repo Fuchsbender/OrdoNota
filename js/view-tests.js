@@ -46,7 +46,7 @@
     const t = cur.test;
     const moodleCards = [t.moodle ? moodleCard(course, db, cur, null) : null, ...(G.hasParts(t) ? t.parts.filter((x) => x.moodle).map((x) => moodleCard(course, db, cur, x)) : [])];
     const scriptoCard = NM.scripto.dataOf(course, cur) ? scriptoCardFor(course, db, cur) : null;
-    view.append(...[metaCard(course, cur, level), ...moodleCards, scriptoCard, G.hasParts(t) ? partsCard(course, db, cur, level) : null, tasksCard(course, db, cur), h('div', { class: 'test-layout' }, resultsCard(course, cur, level), keyCard(course, cur, level))].filter(Boolean));
+    view.append(...[metaCard(course, cur, level), ...moodleCards, scriptoCard, G.hasParts(t) ? partsCard(course, db, cur, level) : null, tasksCard(course, db, cur), h('div', { class: 'test-layout' }, h('div', { class: 'tests-main' }, resultsCard(course, cur, level), verbalCard(course, cur, level)), keyCard(course, cur, level))].filter(Boolean));
   }
 
   function metaCard(course, a, level) {
@@ -242,7 +242,7 @@
       { id: 'list', icon: 'file-text', label: 'Ergebnisliste', group: 'teacher', tip: 'Alle Personen mit Punkten je Aufgabe, Summe, Prozent und Note' + (ka ? ', mit Spalte „Unterschrift“' : '') + '; darunter Notenspiegel und Notenschlüssel.', run: () => NM.print.test(course, a, 'list') },
       G.hasParts(t) ? { id: 'parts', icon: 'puzzle', label: 'Ergebnisse nach Teilen', group: 'teacher', tip: 'Kompakt: je Person Punkte, Prozent und (bei getrennter Benotung) Note jedes Teils sowie gesamt; darunter Notenspiegel und Schlüssel.', run: () => NM.print.test(course, a, 'parts') } : null,
       { id: 'key', icon: 'chart-bar', label: 'Notenschlüssel und Notenspiegel', group: 'teacher', tip: 'Punktschwellen je Note und Verteilung der Noten mit Statistik und Drittelparagraph – ohne Namen, z. B. für Klassenbuch oder Fachleitung.', run: () => NM.print.test(course, a, 'key') },
-      { id: 'students', icon: 'scissors', label: 'Ergebniszettel zum Ausschneiden', group: 'students', tip: 'Je Person ein Abschnitt mit erreichten und möglichen Punkten je Aufgabe, Prozent und Note – mehrere pro Blatt.', run: () => NM.print.test(course, a, 'students') },
+      { id: 'students', icon: 'scissors', label: 'Ergebniszettel zum Ausschneiden', group: 'students', tip: 'Je Person ein Abschnitt mit erreichten und möglichen Punkten je Aufgabe, Prozent und Note – mehrere pro Blatt. Bei I-Status mit Verbalbeurteilung steht der Text statt Prozent und Note.', run: () => NM.print.test(course, a, 'students') },
       NM.scripto.dataOf(course, a) ? { id: 'scripto', icon: 'bookmark', label: 'Trennblätter für OrdoScripto', group: 'teacher', tip: 'Je Person eine A4-Seite mit Name, Klasse und QR-Code (Test- und Schüler-ID) – vor die Arbeit legen und mit einscannen; wahlweise nur für die Nachschreibenden.', run: () => scriptoPrint(course, a) } : null,
       NM.moodle.hasData(t) ? { id: 'moodle', icon: 'message', label: 'Moodle-Rückmeldung je Person', group: 'students', tip: 'Je Person eine Seite mit Frage, gegebener Antwort, Lösung und Punkten; Note wahlweise, Felder für Datum und Unterschrift.', run: () => moodlePrint(course, a) } : null,
     ]);
@@ -712,7 +712,7 @@
         ]),
         h('td', { class: 'num strong' }, res.score === null ? '' : fmtScore(res.score)),
         h('td', { class: 'num muted' }, res.score === null || !max ? '' : fmtNum((res.score / max) * 100, 0)),
-        h('td', { class: 'center' }, res.p === null ? (r.status ? h('span', { class: 'muted small' }, UI.STATUS_SHORT[r.status]) : '') : UI.gradeBadge(res.p, level)),
+        h('td', { class: 'center' }, res.p === null ? (r.status ? h('span', { class: 'muted small' }, UI.STATUS_SHORT[r.status]) : '') : UI.gradeBadge(res.p, level), s.iStatus ? verbalHint(s, t, res) : null),
         h(
           'td',
           null,
@@ -799,6 +799,111 @@
   }
 
   /** Fehlt die Person in der Arbeit (fehlt/Nachschreiben, auch nur in einem Teil)? */
+  /** Personen mit I-Status unter den angezeigten (beim Nachschreibtermin nur die gezeigten). */
+  function verbalStudents(course, a) {
+    const orig = G.makeupTarget(course, a);
+    const showAll = !!((NM.app.state.ui.makeupAll || {})[a.id]);
+    return M.activeStudents(course).filter((s) => s.iStatus && (!orig || showAll || missedIn(orig.test, s.id) || G.hasTestEntry(a.test, s.id)));
+  }
+
+  /** Kleiner Hinweis unter der Note in der Ergebnistabelle; springt zum Textfeld der Karte „Verbalbeurteilungen“. */
+  function verbalHint(s, t, res) {
+    const missing = G.verbalMissing(s, t, res);
+    const done = !!G.verbalText(t, s.id);
+    if (!missing && !done) return null;
+    return h(
+      'button',
+      {
+        type: 'button',
+        class: 'verbal-hint' + (missing ? ' missing' : ''),
+        title: missing ? 'Verbalbeurteilung fehlt noch – zum Textfeld' : 'Verbalbeurteilung vorhanden – zum Textfeld',
+        onclick: () => {
+          const el = document.querySelector(`[data-focus-key="ts-verbal-${CSS.escape(s.id)}"]`);
+          if (el) {
+            el.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+            el.focus({ preventScroll: true });
+          }
+        },
+      },
+      missing ? 'verbal fehlt' : 'verbal ✓'
+    );
+  }
+
+  /** Karte „Verbalbeurteilungen“: je Person mit I-Status Note, Text und „Note auf dem Zettel zeigen“ (2.3.0). */
+  function verbalCard(course, a, level) {
+    const t = a.test;
+    const list = verbalStudents(course, a);
+    if (!list.length) return null;
+    const max = G.testMaxScore(t);
+    const items = list.map((s) => ({ s, res: G.testResult(t, s.id, level), r: t.results[s.id] || {} }));
+    const open = items.filter((x) => G.verbalMissing(x.s, t, x.res)).length;
+    const result = (x) => {
+      if (x.res.p === null) return x.r.status ? UI.STATUS_SHORT[x.r.status] : 'noch keine Note';
+      return [UI.gradeBadge(x.res.p, level), x.res.score !== null && max ? ` ${fmtScore(x.res.score)} von ${fmtScore(max)} P.` : ''];
+    };
+    const blocks = items.map((x) => {
+      const { s } = x;
+      const text = G.verbalText(t, s.id);
+      const missing = G.verbalMissing(s, t, x.res);
+      const ensure = () => (t.results[s.id] = t.results[s.id] || { scores: {} });
+      const fieldId = 'verbal-' + s.id;
+      return h(
+        'div',
+        { class: 'verbal-item' + (missing ? ' missing' : ''), 'data-verbal': s.id },
+        h(
+          'div',
+          { class: 'verbal-head' },
+          h('label', { class: 'verbal-name', for: fieldId }, M.studentName(s)),
+          h('span', { class: 'verbal-result' }, result(x)),
+          missing ? h('span', { class: 'verbal-flag' }, icon('alert-triangle'), ' fehlt noch') : null
+        ),
+        h('textarea', {
+          id: fieldId,
+          class: 'input verbal-text',
+          rows: 3,
+          'data-focus-key': `ts-verbal-${s.id}`,
+          placeholder: 'Was kann die Person schon, woran arbeitet sie weiter?',
+          value: x.r.verbal || '',
+          onchange: (e) => {
+            const r = ensure();
+            const v = e.target.value;
+            if (v.trim()) r.verbal = v.replace(/\s+$/, '');
+            else delete r.verbal;
+            NM.app.commit();
+          },
+        }),
+        h(
+          'label',
+          { class: 'check verbal-show' + (text ? '' : ' off'), title: text ? null : 'Erst mit Verbalbeurteilung: ohne Text steht auf dem Zettel die Note.' },
+          h('input', {
+            type: 'checkbox',
+            checked: !!x.r.showGrade,
+            disabled: !text,
+            'data-focus-key': `ts-showgrade-${s.id}`,
+            onchange: (e) => {
+              const r = ensure();
+              if (e.target.checked) r.showGrade = true;
+              else delete r.showGrade;
+              NM.app.commit();
+            },
+          }),
+          h('span', null, 'Note auf dem Zettel zeigen', text ? null : h('span', { class: 'muted small' }, ' (erst mit Verbalbeurteilung)'))
+        )
+      );
+    });
+    return h(
+      'div',
+      { class: 'card verbal-card' },
+      h(
+        'div',
+        { class: 'card-head' },
+        h('div', { class: 'inline wrap' }, h('h2', null, 'Verbalbeurteilungen'), open ? h('span', { class: 'verbal-count' }, `${open} fehlt noch`) : null),
+        h('span', { class: 'muted small' }, 'Für Personen mit I-Status. Steht auf dem Ergebniszettel statt der Note.')
+      ),
+      blocks
+    );
+  }
+
   function missedIn(test, sid) {
     const r = (test.results || {})[sid] || {};
     return r.status === 'fehlt' || r.status === 'nachschreiben' || Object.values(r.partStatus || {}).some((v) => v === 'fehlt' || v === 'nachschreiben');
