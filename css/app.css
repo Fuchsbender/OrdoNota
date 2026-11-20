@@ -468,6 +468,10 @@ details.details-card[open] > summary { margin-bottom: 0.75rem; }
 .name-clip, .name-text { display: block; overflow: hidden; text-overflow: ellipsis; }
 .name-last .name-clip { width: 8.375rem; }
 .name-first .name-clip { width: 6.875rem; }
+/* Langer Vorname wird gekürzt, „I“ und Kürzel des Nachteilsausgleichs bleiben sichtbar */
+.name-first .name-clip { display: flex; align-items: center; }
+.name-first .name-text { min-width: 3rem; }
+.name-first .i-mark, .name-first .na-mark { flex: none; }
 .table .sticky-col.name-last { border-right: 0; }
 .table .sticky-col.name-first { left: 9.375rem; }
 /* Mit Fotos: Nachnamenspalte um das Foto (40 px + 6 px Abstand) breiter, Vorname rückt entsprechend nach */

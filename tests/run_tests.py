@@ -1617,6 +1617,11 @@ def run_ausgleich_check(br, base):
         const pBefore = G.testResult(a.test, s.id, lvl).p;
         const marks = () => [...document.querySelectorAll('#view .na-mark')].map((m) => m.textContent);
         out.testMarks = marks();
+        // Langer Vorname: Name wird gekürzt, Kürzel bleiben ganz in der Zelle sichtbar
+        const first0 = s.first; s.first = 'Maximiliane-Charlotte'; NM.app.commit(); await wait();
+        const mk = document.querySelector('#view .na-mark'), cell = mk.closest('td').getBoundingClientRect(), mr = mk.getBoundingClientRect();
+        out.longName = mr.width > 0 && mr.right <= cell.right + 0.5 && mr.left >= cell.left;
+        s.first = first0; NM.app.commit(); await wait();
         out.col = [!!document.querySelector('th.col-ausgleich'), document.querySelectorAll('[data-ausgleich]').length, !!document.querySelector(`[data-ausgleich="${s.id}"]`), !document.querySelector(`[data-ausgleich="${other.id}"]`)];
         const box = document.querySelector(`[data-ausgleich="${s.id}"]`); box.checked = true; box.dispatchEvent(new Event('change')); await wait();
         out.ticked = [a.test.results[s.id].ausgleich === true, G.testResult(a.test, s.id, lvl).p === pBefore, !!document.querySelector(`[data-ausgleich="${s.id}"]`).checked];
@@ -1657,6 +1662,7 @@ def run_ausgleich_check(br, base):
     report("Dialog: leer, „alle Fächer“ vorgewählt, Kürzel nur bei „Sonstiges“; Speichern legt LRS an", r.get("empty") and r.get("dlg") == [True, True, True, True] and r.get("saved") == [True, 1, "lrs", 0, "25 % mehr Zeit"] and r.get("item", [0])[0] == 1 and "alle Fächer" in r.get("item", [0, ""])[1], str(res))
     report("Dialog: „Sonstiges“ braucht Kürzel, ohne „alle Fächer“ mindestens ein Fach aus den Kursen", r.get("textShown") and r.get("needText") and r.get("needSubject") and r.get("subjects", [False])[0] and len(r.get("subjects", [0, []])[1]) >= 1 and r.get("saved2", [False])[0:3] == [True, 2, "ADHS"], str(res))
     report("Punkteeingabe: Kürzel, Spalte „Ausgleich“ nur in passenden Zeilen, Haken gespeichert, Note unverändert", r.get("testMarks") == ["LRS", "ADHS"] and r.get("col") == [True, 1, True, True] and r.get("ticked") == [True, True, True] and "25 % mehr Zeit" in r.get("title", ""), str(res))
+    report("Langer Vorname: Kürzel bleibt sichtbar", r.get("longName"), str(res))
     report("Ausdrucke (Ergebniszettel, Kursliste) ohne Nachteilsausgleich", r.get("printTest") == [True, True] and r.get("printCourse") == [True, True], str(res))
     report("Kürzel in Übersicht und Kursliste, nicht in „Ziehen“", r.get("overview") and r.get("courseList") and r.get("draw"), str(res))
     report("Abgelaufen oder anderes Fach: keine Markierung, keine Spalte, Haken bleibt gespeichert; im Register gedämpft", r.get("gone") == [0, False, True] and r.get("old", [0])[0] == 1 and "abgelaufen" in r.get("old", [0, ""])[1], str(res))

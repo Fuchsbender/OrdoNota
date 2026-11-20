@@ -196,7 +196,7 @@
         { class: 'sticky-col name-cell name-last', title },
         h('span', { class: 'name-clip' }, pic, h('span', { class: 'name-text' }, nr ? h('span', { class: 'row-nr' }, nr) : null, s.last || ''))
       ),
-      h('td', { class: 'sticky-col name-cell name-first', title }, h('span', { class: 'name-clip' }, s.first || '', s.iStatus ? h('span', { class: 'i-mark', title: 'I-Status' }, 'I') : null, course ? ausgleichMarks(s, course) : null)),
+      h('td', { class: 'sticky-col name-cell name-first', title }, h('span', { class: 'name-clip' }, h('span', { class: 'name-text' }, s.first || ''), s.iStatus ? h('span', { class: 'i-mark', title: 'I-Status' }, 'I') : null, course ? ausgleichMarks(s, course) : null)),
     ];
   }
 
