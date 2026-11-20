@@ -608,7 +608,10 @@
   // m = Material vergessen (seit 1.44), Standard 0: wird nur gezählt
   const EPO_DEFAULT_POINTS = { '--': 0, '-': 1, '0': 2, '+': 3, '++': 4, u: -1, h: -2, m: 0 };
 
-  /** Standardtabelle %→Punkte. MSS: 5-%-Schritte („mehr als“). Sek I: wie Test-Schlüssel („ab“). */
+  /**
+   * Tabelle „Wie Testschlüssel“ (bis 2.7 der Standard, gilt auch für Blöcke ohne Tabelle).
+   * MSS: 5-%-Schritte („mehr als“). Sek I: wie Test-Schlüssel mit LIMIT („ab“).
+   */
   function epoDefaultTable(level, limit) {
     if (level === 'mss') {
       const mins = [0];
@@ -616,6 +619,80 @@
       return { strict: true, mins };
     }
     return { strict: false, mins: keyPercents('sek1', limit) };
+  }
+
+  // Eingebaute Vorlagen (seit 2.8). shift in Tendenzen: Mild −1, Streng +1.
+  const EPO_PRESETS = [
+    { id: 'bef', name: '0 = befriedigend', shift: 0 },
+    { id: 'mild', name: 'Mild', shift: -1 },
+    { id: 'streng', name: 'Streng', shift: 1 },
+    { id: 'test', name: 'Wie Testschlüssel' },
+  ];
+  const EPO_STANDARD_PRESET = 'bef';
+
+  /**
+   * Tabelle einer eingebauten Vorlage. Notenskala statt Testschlüssel: immer ++ → 14, + → 11, 0 → 08, - → 05, -- → 02,
+   * dazwischen linear (Punkte = 2 + 0,12 · %). Schwellen „ab“, ungerundet; 02 ab 0 %, 01 ab −9,99 % (00 bei −10 % und weniger).
+   * Die 15 ab 97,5 % (Mild 95,83 %; Streng 100 %, dort die 14 ab 97,5 %).
+   */
+  function epoPresetTable(id, level, limit) {
+    const pre = EPO_PRESETS.find((x) => x.id === id);
+    if (!pre) return null;
+    if (id === 'test') return epoDefaultTable(level, limit);
+    const mins = [-100, -9.99, 0];
+    for (let p = 3; p <= 15; p++) mins.push(Math.max(0, ((p - 2.5 + pre.shift) * 25) / 3));
+    if (id === 'bef') mins[15] = 97.5;
+    if (id === 'streng') {
+      mins[14] = 97.5;
+      mins[15] = 100;
+    }
+    return { strict: false, mins };
+  }
+
+  /**
+   * Alle Vorlagen für eine Stufe: eingebaute und eigene (settings.epoPresets mit passender Stufe).
+   * @returns Array → {id, name, own, table: {strict, mins}, points}
+   */
+  function epoPresetList(settings, level, limit) {
+    const list = EPO_PRESETS.map((x) => ({ id: x.id, name: x.name, own: false, table: epoPresetTable(x.id, level, limit), points: Object.assign({}, EPO_DEFAULT_POINTS) }));
+    for (const x of (settings && settings.epoPresets) || []) {
+      if (x.level !== level) continue;
+      list.push({ id: x.id, name: x.name, own: true, table: { strict: !!x.strict, mins: x.mins.slice() }, points: Object.assign({}, EPO_DEFAULT_POINTS, x.points) });
+    }
+    return list;
+  }
+
+  /** Vorlage, die für neue Blöcke der Stufe gilt (Einstellung, sonst „0 = befriedigend“). */
+  function epoStandardPreset(settings, level, limit) {
+    const list = epoPresetList(settings, level, limit);
+    const id = settings && settings.epoDefault && settings.epoDefault[level];
+    return list.find((x) => x.id === id) || list.find((x) => x.id === EPO_STANDARD_PRESET);
+  }
+
+  /** Schreibt Tabelle und Punkte einer Vorlage in den Block (Kopien). */
+  function epoApplyPreset(epo, preset) {
+    epo.table = { strict: !!preset.table.strict, mins: preset.table.mins.slice() };
+    epo.points = Object.assign({}, EPO_DEFAULT_POINTS, preset.points);
+  }
+
+  function sameEpoSetup(epo, preset, level) {
+    const t = epo.table;
+    if (!t || !!t.strict !== !!preset.table.strict) return false;
+    for (let p = 1; p <= maxPoints(level); p++) if (!(Math.abs(Number(t.mins[p]) - preset.table.mins[p]) < 0.005)) return false;
+    const pts = Object.assign({}, EPO_DEFAULT_POINTS, epo.points || {});
+    return Object.keys(EPO_DEFAULT_POINTS).every((k) => Number(pts[k]) === Number(preset.points[k]));
+  }
+
+  /** Vorlage, nach der der Block gerade rechnet, oder null („angepasst“). Vergleicht Tabelle (bis zur höchsten Stufe, auf 0,005 %) und Punkte. */
+  function epoCurrentPreset(epo, settings, level) {
+    return epoPresetList(settings, level, epo.limit).find((x) => sameEpoSetup(epo, x, level)) || null;
+  }
+
+  /** Rechnet der Block noch wie der alte Standard („Wie Testschlüssel“), ohne dass das bestätigt ist? Dann zeigt die App einen Hinweis. */
+  function epoNeedsReview(epo, level) {
+    if (epo.keepTable) return false;
+    const t = { id: 'test', table: epoDefaultTable(level, epo.limit), points: Object.assign({}, EPO_DEFAULT_POINTS) };
+    return !epo.table || sameEpoSetup(epo, t, level);
   }
 
   /**
@@ -824,6 +901,14 @@
     EPO_RATINGS,
     EPO_DEFAULT_POINTS,
     epoDefaultTable,
+    EPO_PRESETS,
+    EPO_STANDARD_PRESET,
+    epoPresetTable,
+    epoPresetList,
+    epoStandardPreset,
+    epoApplyPreset,
+    epoCurrentPreset,
+    epoNeedsReview,
     parseEpoCell,
     epoCellText,
     epoCellEmpty,

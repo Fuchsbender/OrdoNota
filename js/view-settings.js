@@ -7,7 +7,7 @@
   function render(view, { db }) {
     view.append(
       h('div', { class: 'view-head' }, h('h1', null, 'Einstellungen')),
-      h('div', { class: 'masonry' }, securityCard(db), defaultsCard(db), printCard(db), storageCard(db), yearsCard(db), tabsCard(db), displayCard(db), pomodoroCard(db), infoCard())
+      h('div', { class: 'masonry' }, securityCard(db), defaultsCard(db), epoCard(db), printCard(db), storageCard(db), yearsCard(db), tabsCard(db), displayCard(db), pomodoroCard(db), infoCard())
     );
   }
 
@@ -177,6 +177,71 @@
         )
       ),
       h('p', { class: 'muted small' }, 'Bestehende Tests behalten ihre Werte; jeder Test lässt sich einzeln anpassen.')
+    );
+  }
+
+  // ---------- EPO-Umrechnung (seit 2.8) ----------
+
+  const LEVEL_NAME = { sek1: 'Sek I', mss: 'MSS' };
+
+  function epoCard(db) {
+    const s = db.settings;
+    const G = NM.grades;
+    const pick = (level) =>
+      h(
+        'label',
+        { class: 'field' },
+        h('span', null, `Neue Blöcke ${LEVEL_NAME[level]}`),
+        h(
+          'select',
+          {
+            class: 'input',
+            'data-epo-default': level,
+            onchange: (e) => {
+              s.epoDefault[level] = e.target.value;
+              NM.app.commit();
+            },
+          },
+          G.epoPresetList(s, level, level === 'mss' ? s.limitMss : s.limitSek1).map((x) => h('option', { value: x.id, selected: x.id === G.epoStandardPreset(s, level, 50).id }, x.own ? `${x.name} (eigene)` : x.name))
+        )
+      );
+    const rename = async (x) => {
+      const name = ((await promptDialog('Vorlage umbenennen', 'Neuer Name:', x.name)) || '').trim();
+      if (!name) return;
+      x.name = name;
+      NM.app.commit();
+    };
+    const remove = async (x) => {
+      if (!(await confirmDialog('Vorlage löschen', `„${x.name}“ löschen? EPO-Blöcke, die danach rechnen, behalten ihre Werte und zeigen dann „angepasst“.`, { okLabel: 'Löschen', danger: true }))) return;
+      s.epoPresets = s.epoPresets.filter((y) => y !== x);
+      for (const lvl of ['sek1', 'mss']) if (s.epoDefault[lvl] === x.id) s.epoDefault[lvl] = G.EPO_STANDARD_PRESET;
+      NM.app.commit();
+    };
+    const own = s.epoPresets;
+    return h(
+      'div',
+      { class: 'card' },
+      h('h2', null, 'EPO-Umrechnung'),
+      h('p', { class: 'muted small' }, 'Vorlage für neue EPO-Blöcke. „0 = befriedigend“: Wer immer 0 hat, bekommt eine 3 (08 Punkte), immer + eine 2, immer - eine 4.'),
+      h('div', { class: 'form-grid' }, pick('sek1'), pick('mss')),
+      h('h3', null, 'Eigene Vorlagen'),
+      own.length
+        ? h(
+            'ul',
+            { class: 'epo-preset-list' },
+            own.map((x) =>
+              h(
+                'li',
+                { 'data-epo-own': x.id },
+                h('span', { class: 'grow' }, x.name),
+                h('span', { class: 'muted small' }, LEVEL_NAME[x.level]),
+                h('button', { class: 'icon-btn', 'aria-label': 'Umbenennen: ' + x.name, title: 'Umbenennen', onclick: () => rename(x) }, icon('pencil')),
+                h('button', { class: 'icon-btn', 'aria-label': 'Löschen: ' + x.name, title: 'Löschen', onclick: () => remove(x) }, icon('trash'))
+              )
+            )
+          )
+        : h('p', { class: 'muted small' }, 'Noch keine. Eine eigene Vorlage entsteht im EPO-Block unter „Einstellungen dieses EPO-Blocks“ mit „Als Vorlage speichern“.'),
+      h('p', { class: 'muted small' }, 'Bestehende Blöcke behalten ihre Werte; jeder Block lässt sich einzeln umstellen.')
     );
   }
 

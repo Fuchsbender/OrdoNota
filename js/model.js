@@ -12,7 +12,7 @@
   // 5 (2.4): Personenregister (db.people, students[].personId) – ältere Versionen würden neue Kurseinträge
   //    ohne Person anlegen und Personen beim Löschen nicht aufräumen.
   const SCHEMA = 5;
-  const APP_VERSION = '2.7.0';
+  const APP_VERSION = '2.8.0';
 
   class NewerSchemaError extends Error {}
 
@@ -129,6 +129,8 @@
         pomodoro: Object.assign({}, POMODORO_DEFAULTS),
         scriptoSeq: 0, // seit 1.41: zuletzt vergebene laufende Nummer der OrdoScripto-Test-IDs (T-<Jahr>-NNNN)
         print: printDefaults(), // seit 1.47: Druckkopf (Schulname, Lehrkraft, Logo als Data-URL)
+        epoPresets: [], // seit 2.8: eigene EPO-Vorlagen [{ id, name, level: 'sek1'|'mss', strict, mins: [16 Zahlen], points }]
+        epoDefault: { sek1: 'bef', mss: 'bef' }, // seit 2.8: Vorlage für neue EPO-Blöcke je Stufe (id einer eingebauten oder eigenen Vorlage)
       },
       criteriaPool: pool,
       presTemplates: defaultPresTemplates(pool),
@@ -136,6 +138,20 @@
       courses: [],
       people: [], // seit Schema 5: Personenregister (js/people.js)
     };
+  }
+
+  /** Eigene EPO-Vorlagen: nur Einträge mit id, Name, Stufe und 16 Schwellen; Punkte als Zahlen. */
+  function cleanEpoPresets(list) {
+    if (!Array.isArray(list)) return [];
+    const out = [];
+    for (const x of list) {
+      if (!x || typeof x !== 'object' || !x.id || !['sek1', 'mss'].includes(x.level) || !Array.isArray(x.mins) || x.mins.length < 16) continue;
+      if (!x.mins.every((m) => Number.isFinite(Number(m)))) continue;
+      const points = {};
+      for (const [k, v] of Object.entries(x.points && typeof x.points === 'object' ? x.points : {})) if (k in G.EPO_DEFAULT_POINTS && Number.isFinite(Number(v))) points[k] = Number(v);
+      out.push(Object.assign({}, x, { id: String(x.id), name: String(x.name || 'Vorlage'), strict: !!x.strict, mins: x.mins.map(Number), points }));
+    }
+    return out;
   }
 
   /** Ältere Datenbanken auf den aktuellen Stand bringen. */
@@ -159,6 +175,9 @@
     if (!Array.isArray(db.settings.tabOrder)) db.settings.tabOrder = [];
     // 1.47: Druckkopf
     db.settings.print = cleanPrint(db.settings.print);
+    // 2.8: EPO-Vorlagen
+    db.settings.epoPresets = cleanEpoPresets(db.settings.epoPresets);
+    db.settings.epoDefault = Object.assign({ sek1: 'bef', mss: 'bef' }, db.settings.epoDefault && typeof db.settings.epoDefault === 'object' ? db.settings.epoDefault : {});
     // 1.20: Kriterienpool für Präsentationen (Startbestand nur, wenn es noch keinen gibt)
     if (!Array.isArray(db.criteriaPool)) db.criteriaPool = defaultCriteriaPool();
     // 1.21: Vorlagen für Präsentationen (benannte Kriteriensätze); 1.22: mit Standardvorlagen
@@ -317,6 +336,9 @@
         } else if (a.kind === 'epo') {
           if (!Array.isArray(body.lessons) || !isObj(body.entries)) { add('fehler', aw, 'Stunden oder Einträge fehlen'); continue; }
           orphan(body.entries, aw);
+          const top = G.maxPoints(G.courseLevel(c));
+          if (body.table && (!Array.isArray(body.table.mins) || body.table.mins.length <= top || !body.table.mins.slice(1, top + 1).every((m) => Number.isFinite(Number(m)))))
+            add('fehler', aw, 'Umrechnung Prozent → Note unvollständig');
         } else if (a.kind === 'pres') {
           if (!Array.isArray(body.criteria) || !isObj(body.results)) { add('fehler', aw, 'Kriterien oder Ergebnisse fehlen'); continue; }
           dup(body.criteria, 'Kriterium', aw);
@@ -345,6 +367,22 @@
         if (n) add('hinweis', where, `Gruppen „${gs.name}“: ${n} nicht mehr vorhandene Person(en)`);
       }
       for (const sp of c.seatingPlans || []) orphan(sp.pos, `Sitzplan „${sp.name}“`);
+    }
+    // 2.8: eigene EPO-Vorlagen
+    const st = db.settings || {};
+    if (st.epoPresets !== undefined) {
+      if (!Array.isArray(st.epoPresets)) add('fehler', 'Einstellungen', 'EPO-Vorlagen sind keine Liste');
+      else {
+        dup(st.epoPresets, 'EPO-Vorlage', 'Einstellungen');
+        for (const x of st.epoPresets) {
+          if (!x || !['sek1', 'mss'].includes(x.level)) add('fehler', 'Einstellungen', `EPO-Vorlage „${(x && x.name) || '?'}“ ohne gültige Stufe`);
+          else if (!Array.isArray(x.mins) || x.mins.length < 16 || !x.mins.every((m) => Number.isFinite(Number(m)))) add('fehler', 'Einstellungen', `EPO-Vorlage „${x.name}“: Schwellen unvollständig`);
+        }
+      }
+    }
+    for (const lvl of ['sek1', 'mss']) {
+      const id = st.epoDefault && st.epoDefault[lvl];
+      if (id && !G.epoPresetList(st, lvl, 50).some((x) => x.id === id)) add('hinweis', 'Einstellungen', `Standardvorlage für neue EPO-Blöcke (${lvl === 'mss' ? 'MSS' : 'Sek I'}) gibt es nicht mehr (es gilt „0 = befriedigend“)`);
     }
     return out;
   }
@@ -434,9 +472,10 @@
     for (const a of course.assessments || []) {
       if (a.test && Number(a.test.limit) === limit(from)) a.test.limit = limit(to);
       if (a.epo) {
-        const isDefault = !a.epo.table || JSON.stringify(a.epo.table) === JSON.stringify(G.epoDefaultTable(from, a.epo.limit));
+        // eingebaute Vorlage der alten Stufe → dieselbe Vorlage der neuen Stufe; eigene Tabellen bleiben
+        const cur = a.epo.table ? G.epoCurrentPreset(a.epo, {}, from) : { id: 'test' };
         if (Number(a.epo.limit) === limit(from)) a.epo.limit = limit(to);
-        if (isDefault) a.epo.table = G.epoDefaultTable(to, a.epo.limit);
+        if (cur) a.epo.table = G.epoPresetTable(cur.id, to, a.epo.limit);
       }
     }
   }
@@ -636,14 +675,17 @@
       name: 'EPO',
       date: todayISO(),
       weight: 1,
-      epo: {
-        limit,
-        points: Object.assign({}, G.EPO_DEFAULT_POINTS),
-        table: G.epoDefaultTable(level, limit),
-        lessons: [],
-        entries: {},
-      },
+      epo: newEpoBody(level, limit, settings),
     };
+  }
+
+  /** Inhalt eines neuen EPO-Blocks mit der Standardvorlage der Stufe. „Wie Testschlüssel“ als Standard ist bewusst gewählt: kein Hinweis. */
+  function newEpoBody(level, limit, settings) {
+    const epo = { limit, lessons: [], entries: {} };
+    const pre = G.epoStandardPreset(settings, level, limit);
+    G.epoApplyPreset(epo, pre);
+    if (pre.id === 'test') epo.keepTable = true;
+    return epo;
   }
 
   /** Neue Präsentationsbewertung; criteria: Kriterien (Kopie aus dem Pool, mit eigener id). */

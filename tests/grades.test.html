@@ -129,6 +129,50 @@
   eq('EPO ohne m: Anzahl 0', G.epoResult({ lessons: [{ id: 'l1' }], entries: { s: { l1: { r: '+', hw: '' } } } }, 's', 'mss').m, 0);
   eq('EPO Sek I nutzt Sek-I-Schlüssel', G.label(G.epoResult(Object.assign({ limit: 50 }, epo), 'sa', 'sek1').p, 'sek1'), '3-');
 
+  // EPO-Vorlagen (2.8): 12 Stunden, max. 48 P
+  function epo12(syms, extra = []) {
+    const lessons = Array.from({ length: 12 }, (_, i) => ({ id: 'l' + i }));
+    const row = {};
+    lessons.forEach((l, i) => (row[l.id] = { r: syms[i % syms.length], hw: extra[i] || '' }));
+    return { lessons, entries: { s: row } };
+  }
+  function withPreset(e, id, level, limit = 50) {
+    e.limit = limit;
+    G.epoApplyPreset(e, G.epoPresetList({}, level, limit).find((x) => x.id === id));
+    return e;
+  }
+  const pOf = (syms, id, level, extra) => G.epoResult(withPreset(epo12(syms, extra), id, level), 's', level).p;
+  for (const lvl of ['sek1', 'mss']) {
+    eq(`Vorlage 0=bef ${lvl}: immer ++/+/0/-/--`, ['++', '+', '0', '-', '--'].map((x) => pOf([x], 'bef', lvl)), [lvl === 'mss' ? 15 : 14, 11, 8, 5, 2]);
+    eq(`Vorlage Mild ${lvl}: immer ++/+/0/-/--`, ['++', '+', '0', '-', '--'].map((x) => pOf([x], 'mild', lvl)), [lvl === 'mss' ? 15 : 14, 12, 9, 6, 3]);
+    eq(`Vorlage Streng ${lvl}: immer +/0/-/--`, ['+', '0', '-', '--'].map((x) => pOf([x], 'streng', lvl)), [10, 7, 4, 2]);
+    eq(`Vorlage 0=bef ${lvl}: -- mit 2× h (−8,33 %) → 01, mit h h u (−10,4 %) → 00`, [pOf(['--'], 'bef', lvl, ['h', 'h']), pOf(['--'], 'bef', lvl, ['h', 'h', 'u'])], [1, 0]);
+  }
+  eq('Vorlage 0=bef MSS: immer ++ → 15, 11× ++ + 1× + → 15', [pOf(['++'], 'bef', 'mss'), pOf(['++', '++', '++', '++', '++', '++', '++', '++', '++', '++', '++', '+'], 'bef', 'mss')], [15, 15]);
+  eq('Vorlage 0=bef MSS: 10× ++ + 2× + (95,8 %) → 14', pOf(['++', '++', '++', '++', '++', '+'], 'bef', 'mss'), 14);
+  eq('Vorlage Streng MSS: nur 100 % → 15, 47/48 → 14', [pOf(['++'], 'streng', 'mss'), pOf(['++', '++', '++', '++', '++', '++', '++', '++', '++', '++', '++', '+'], 'streng', 'mss')], [15, 14]);
+  eq('Vorlage Sek I endet bei 14', pOf(['++'], 'bef', 'sek1'), 14);
+  eq('Vorlage 0=bef: genau −10 % → 00', G.epoResult({ table: G.epoPresetTable('bef', 'mss'), lessons: [{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }, { id: 'e' }], entries: { s: { a: { r: '--', hw: 'h' }, b: { r: '--', hw: '' }, c: { r: '--', hw: '' }, d: { r: '--', hw: '' }, e: { r: '--', hw: '' } } } }, 's', 'mss').p, 0);
+  eq('Vorlage Wie Testschlüssel = alte Tabelle', [G.epoPresetTable('test', 'sek1', 40), G.epoPresetTable('test', 'mss', 45)], [G.epoDefaultTable('sek1', 40), G.epoDefaultTable('mss', 45)]);
+  eq('Wie Testschlüssel Sek I: immer 0 → 4-', pOf(['0'], 'test', 'sek1'), 4);
+  const own = { epoPresets: [{ id: 'x1', name: 'Meine', level: 'mss', strict: false, mins: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], points: { u: -3 } }], epoDefault: { mss: 'x1', sek1: 'gibtsnicht' } };
+  eq('Vorlagenliste: eigene nur für ihre Stufe', [G.epoPresetList(own, 'mss', 45).map((x) => x.id), G.epoPresetList(own, 'sek1', 50).length], [['bef', 'mild', 'streng', 'test', 'x1'], 4]);
+  eq('Standardvorlage: Einstellung, sonst 0=bef', [G.epoStandardPreset(own, 'mss', 45).id, G.epoStandardPreset(own, 'sek1', 50).id, G.epoStandardPreset({}, 'mss', 45).id], ['x1', 'bef', 'bef']);
+  const ep = { limit: 45 };
+  G.epoApplyPreset(ep, G.epoPresetList(own, 'mss', 45).find((x) => x.id === 'x1'));
+  eq('Eigene Vorlage anwenden: Tabelle und Punkte', [ep.table.mins[15], ep.points.u, ep.points['++']], [15, -3, 4]);
+  eq('Geltende Vorlage erkannt', G.epoCurrentPreset(ep, own, 'mss').id, 'x1');
+  ep.table.mins[15] = 15.004;
+  eq('Kleine Rundung bleibt dieselbe Vorlage', G.epoCurrentPreset(ep, own, 'mss').id, 'x1');
+  ep.points.h = -3;
+  eq('Andere Punkte → angepasst', G.epoCurrentPreset(ep, own, 'mss'), null);
+  const sk = withPreset(epo12(['0']), 'bef', 'sek1');
+  sk.table.mins[15] = 1;
+  eq('Sek I vergleicht ohne die 15', G.epoCurrentPreset(sk, {}, 'sek1').id, 'bef');
+  const old = { limit: 50, table: G.epoDefaultTable('sek1', 50), points: Object.assign({}, G.EPO_DEFAULT_POINTS) };
+  eq('Hinweis: alte Standardtabelle', [G.epoNeedsReview(old, 'sek1'), G.epoNeedsReview(Object.assign({}, old, { keepTable: true }), 'sek1'), G.epoNeedsReview(withPreset(epo12(['0']), 'bef', 'sek1'), 'sek1'), G.epoNeedsReview({ limit: 50 }, 'sek1')], [true, false, false, true]);
+  eq('Kein Hinweis bei eigener Tabelle', G.epoNeedsReview(Object.assign({}, old, { table: { strict: false, mins: [0, 10, 20] } }), 'sek1'), false);
+
   // Kursrechnung
   const course = {
     jahrgang: 8, wKa: 50, wOther: 50,

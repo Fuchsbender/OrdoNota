@@ -560,6 +560,73 @@ def run_epo_material_check(br, base):
            and not br.errors, str(res) + "; ".join(br.errors))
 
 
+def run_epo_presets_check(br, base):
+    """EPO-Vorlagen (2.8): Hinweis bei alter Tabelle mit „So lassen“/„Neue Vorlage anwenden“, Vorlage anwenden, als Vorlage speichern, Einstellungen."""
+    br.open(f"{base}/index.html?demo")
+    br.wait(APP_READY, 30)
+    br.errors = []
+    res = br.eval("""(async () => {
+        const wait = () => new Promise((r) => setTimeout(r, 150));
+        const G = NM.grades, M = NM.model;
+        const db = NM.app.db();
+        const c = db.courses[0];
+        const level = G.courseLevel(c);
+        NM.app.state.ui.epoCfgOpen = true;
+        NM.app.select({ courseId: c.id, tab: 'epo' }); await wait();
+        const blocks = c.assessments.filter((x) => x.kind === 'epo' && x.half === NM.app.currentHalf(c));
+        const a = blocks.find((x) => x.id === (NM.app.state.ui.epoId || {})[c.id]) || blocks[blocks.length - 1];
+        if (!a) return { noBlock: true };
+        const out = {};
+        out.newIsBef = (G.epoCurrentPreset(a.epo, db.settings, level) || {}).id === 'bef' && !document.querySelector('.epo-review');
+        const old = () => { a.epo.table = G.epoDefaultTable(level, a.epo.limit); a.epo.points = Object.assign({}, G.EPO_DEFAULT_POINTS); delete a.epo.keepTable; NM.app.commit(); };
+        old(); await wait();
+        const note = document.querySelector('.epo-review');
+        out.notice = !!note && note.textContent.includes('immer 0') && note.textContent.includes('0 = befriedigend');
+        out.status = (document.querySelector('[data-epo-current]') || {}).textContent.includes('Wie Testschlüssel');
+        out.limitShown = level !== 'sek1' || !document.querySelector('[data-epo-limit]').hidden;
+        document.querySelector('[data-epo-review="keep"]').click(); await wait();
+        out.keep = a.epo.keepTable === true && !document.querySelector('.epo-review');
+        old(); await wait();
+        document.querySelector('[data-epo-review="apply"]').click(); await wait();
+        out.apply = (G.epoCurrentPreset(a.epo, db.settings, level) || {}).id === 'bef' && !document.querySelector('.epo-review') && !a.epo.keepTable;
+        out.limitHidden = level !== 'sek1' || document.querySelector('[data-epo-limit]').hidden;
+        // Vorlage wählen und anwenden
+        const sel = document.querySelector('[data-epo-preset]');
+        sel.value = 'mild'; sel.dispatchEvent(new Event('change'));
+        document.querySelector('[data-epo-apply]').click(); await wait();
+        out.mild = (G.epoCurrentPreset(a.epo, db.settings, level) || {}).id === 'mild';
+        // Anpassen → „angepasst“, negative Grenze erlaubt
+        const inp = document.querySelector('[data-focus-key="epo-table-1"]');
+        inp.value = '-20'; inp.dispatchEvent(new Event('change')); await wait();
+        out.custom = a.epo.table.mins[1] === -20 && G.epoCurrentPreset(a.epo, db.settings, level) === null && document.querySelector('[data-epo-current]').textContent.startsWith('Angepasst');
+        // Als Vorlage speichern
+        document.querySelector('[data-epo-save]').click(); await wait();
+        const name = document.querySelector('dialog input'); name.value = 'Testvorlage'; document.querySelector('dialog .btn-primary').click(); await wait();
+        const own = db.settings.epoPresets.find((x) => x.name === 'Testvorlage');
+        out.saved = !!own && own.level === level && own.mins.length === 16 && own.mins[1] === -20 && (G.epoCurrentPreset(a.epo, db.settings, level) || {}).id === own.id;
+        out.inSelect = [...document.querySelectorAll('[data-epo-preset] option')].some((o) => o.value === own.id);
+        // Einstellungen: Standard wählen, Vorlage umbenennen und löschen
+        NM.app.select({ tab: 'settings' }); await wait();
+        const def = document.querySelector('[data-epo-default="' + level + '"]');
+        def.value = own.id; def.dispatchEvent(new Event('change')); await wait();
+        const e2 = M.newEpo(c, NM.app.currentHalf(c), db.settings);
+        out.defaultUsed = e2.epo.table.mins[1] === -20;
+        out.listed = !!document.querySelector('[data-epo-own="' + own.id + '"]');
+        document.querySelector('[data-epo-own="' + own.id + '"] [aria-label^="Umbenennen"]').click(); await wait();
+        document.querySelector('dialog input').value = 'Neu'; document.querySelector('dialog .btn-primary').click(); await wait();
+        out.renamed = own.name === 'Neu';
+        document.querySelector('[data-epo-own="' + own.id + '"] [aria-label^="Löschen"]').click(); await wait();
+        document.querySelector('dialog .btn-danger').click(); await wait();
+        out.deleted = !db.settings.epoPresets.length && db.settings.epoDefault[level] === 'bef' && a.epo.table.mins[1] === -20;
+        out.empty = document.querySelector('.card h2') && [...document.querySelectorAll('.card')].some((x) => x.textContent.includes('Noch keine. Eine eigene Vorlage'));
+        out.check = !M.check(db).some((x) => x.where === 'Einstellungen');
+        NM.app.state.dirty = false;
+        return out; })()""")
+    keys = ["newIsBef", "notice", "status", "limitShown", "keep", "apply", "limitHidden", "mild", "custom", "saved", "inSelect", "defaultUsed", "listed", "renamed", "deleted", "empty", "check"]
+    report("EPO-Vorlagen: Hinweis bei alter Tabelle (So lassen / anwenden), Vorlage anwenden, angepasst, speichern, Standard, umbenennen, löschen",
+           bool(res) and all(res.get(k) for k in keys) and not br.errors, str(res) + "; ".join(br.errors))
+
+
 def run_attendance_check(br, base):
     """Fehlzeiten: „Heute abwesend“ wird gespeichert, EPO-k ⇄ Fehlzeit, Karte (reihum, + Tag), Notenübersicht, Ausdruck."""
     br.open(f"{base}/index.html?demo")
@@ -2431,7 +2498,7 @@ def run_settings_layout_check(br, base):
             return r; })()""")
         out[width] = res
     br.call("Emulation.clearDeviceMetricsOverride")
-    ok = all(r and r["cards"] == 9 and r["gap"] <= 20 and r["selOk"] and r["chipOk"] for r in out.values())
+    ok = all(r and r["cards"] == 10 and r["gap"] <= 20 and r["selOk"] and r["chipOk"] for r in out.values())
     report("Einstellungen ohne Lücken bei 1570/2560 px, Auswahllisten nicht abgeschnitten, Kürzel „MSS12“ passt", ok and not br.errors, str(out) + "; ".join(br.errors))
 
 
@@ -3476,7 +3543,7 @@ def run_decrypt_tool(br, base):
 def main():
     blocks = [
         run_test_pages, run_app_smoke, run_sort_check, run_course_check, run_seat_beamer_check,
-        run_epo_material_check, run_attendance_check, run_epo_tiles_check, run_print_head_check,
+        run_epo_material_check, run_epo_presets_check, run_attendance_check, run_epo_tiles_check, run_print_head_check,
         run_draw_check, run_draw_pools_check, run_random_check, run_timer_check, run_tools_layout_check,
         run_tools_menu_check, run_pomodoro_check, run_transition_check, run_sidebar_check,
         run_tests_view_check, run_task_add_click_check, run_makeup_check, run_verbal_check, run_ausgleich_check, run_notes_check, run_foerder_check, run_people_check, run_people_page_check, run_unreachable_check,

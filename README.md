@@ -60,7 +60,7 @@ Ausprobieren ohne echte Daten: **„Demo ansehen“** auf dem Startbildschirm od
 
 **Präsentationen** – je Kriterium 0–3 Punkte × Gewicht; Summe über den Testschlüssel (LIMIT, eigene Schwellen) in eine Note. Bei Gruppen gilt je Kriterium die eigene Bewertung, sonst der Gruppenwert.
 
-**Mitarbeit/EPO** – je Stunde `++ + 0 - --` (4…0 Punkte), `k` = abwesend (zählt nicht), Zusatz `u` (HA unvollständig, −1) bzw. `h` (HA vergessen, −2), dazu `m` (Material vergessen, nur gezählt), z. B. `+h` oder `0hm`. Prozent = Punkte / (anwesende Stunden × 4). MSS: 5-%-Stufen wie bisher; Sek I: Sek-I-Schlüssel. Alles je Block einstellbar.
+**Mitarbeit/EPO** – je Stunde `++ + 0 - --` (4…0 Punkte), `k` = abwesend (zählt nicht), Zusatz `u` (HA unvollständig, −1) bzw. `h` (HA vergessen, −2), dazu `m` (Material vergessen, nur gezählt), z. B. `+h` oder `0hm`. Prozent = Punkte / (anwesende Stunden × 4). Umrechnung über **Vorlagen** (seit 2.8): Standard „0 = befriedigend“ (immer 0 → 3 bzw. 08, immer + → 2, immer ++ → 1), dazu „Mild“, „Streng“, „Wie Testschlüssel“ (bisherige Rechnung) und eigene Vorlagen; die Vorlage für neue Blöcke steht unter Einstellungen. Ältere Blöcke behalten ihre Rechnung und zeigen einen Hinweis zum Umstellen. Alles je Block einstellbar.
 
 **Zeugnisnote**
 - Jede Einzelnote hat Gewicht 1 (änderbar).

@@ -1,7 +1,7 @@
 /* OrdoNota – Reiter „Mitarbeit/EPO“: Bewertung über eine feste Zahl von Unterrichtsstunden. */
 (function (NM) {
   'use strict';
-  const { h, icon, toast, confirmDialog, modal, parseNum, uid, fmtNum, fmtDate, fmtDateShort, todayISO } = NM.util;
+  const { h, icon, toast, confirmDialog, modal, parseNum, promptDialog, uid, fmtNum, fmtDate, fmtDateShort, todayISO } = NM.util;
   const G = NM.grades;
   const M = NM.model;
   const UI = NM.ui;
@@ -39,7 +39,7 @@
       view.appendChild(UI.emptyState('Noch kein EPO-Block in ' + half, 'Ein EPO-Block umfasst eine Reihe von Unterrichtsstunden. Pro Stunde vergeben Sie ++, +, 0, - oder -- (dazu ggf. Hausaufgaben-Vermerke). Daraus wird eine Note berechnet, die automatisch in die Notenübersicht einfließt.', null, 'notes'));
       return;
     }
-    view.append(metaCard(course, cur), gridCard(course, cur, level), configCard(course, cur, level));
+    view.append(...[metaCard(course, cur), reviewNotice(cur, level, db), gridCard(course, cur, level), configCard(course, cur, level, db)].filter(Boolean));
   }
 
   function sortedLessons(epo) {
@@ -527,10 +527,79 @@
     return { '++': 'pp', '+': 'p', '0': 'z', '-': 'm', '--': 'mm', k: 'k' }[c.r] || 'none';
   }
 
-  function configCard(course, a, level) {
+  /** Note für „immer 0“ nach einer Vorlage (für den Hinweis). */
+  function zeroGrade(preset, level) {
+    const r = G.epoResult({ table: preset.table, points: preset.points, lessons: [{ id: 'x' }], entries: { s: { x: { r: '0', hw: '' } } } }, 's', level);
+    return level === 'mss' ? `${String(r.p).padStart(2, '0')} Punkte` : `eine ${G.label(r.p, level)}`;
+  }
+
+  /** Hinweis für Blöcke, die noch wie der alte Standard („Wie Testschlüssel“) rechnen (seit 2.8). */
+  function reviewNotice(a, level, db) {
+    const epo = a.epo;
+    if (!G.epoNeedsReview(epo, level)) return null;
+    const std = G.epoStandardPreset(db.settings, level, epo.limit);
+    if (std.id === 'test') return null;
+    const test = G.epoPresetList({}, level, epo.limit).find((x) => x.id === 'test');
+    return h(
+      'div',
+      { class: 'notice warn key-warn epo-review' },
+      h('div', null, icon('alert-triangle'), ` Dieser Block rechnet noch wie ein Testschlüssel: Wer immer 0 hat, bekommt ${zeroGrade(test, level)}. Mit der Vorlage „${std.name}“ ist es ${zeroGrade(std, level)}.`),
+      h(
+        'div',
+        { class: 'key-warn-fixes' },
+        h(
+          'button',
+          {
+            class: 'btn btn-sm btn-primary',
+            'data-epo-review': 'apply',
+            onclick: () => {
+              applyPreset(epo, std);
+              toast(`Vorlage „${std.name}“ angewendet.`);
+            },
+          },
+          'Neue Vorlage anwenden'
+        ),
+        h(
+          'button',
+          {
+            class: 'btn btn-sm',
+            'data-epo-review': 'keep',
+            title: 'Der Block rechnet weiter wie bisher; der Hinweis erscheint für diesen Block nicht mehr.',
+            onclick: () => {
+              epo.keepTable = true;
+              NM.app.commit();
+            },
+          },
+          'So lassen'
+        )
+      )
+    );
+  }
+
+  /** Vorlage in den Block schreiben. „Wie Testschlüssel“ gilt dann als bewusst gewählt (kein Hinweis). */
+  function applyPreset(epo, preset) {
+    G.epoApplyPreset(epo, preset);
+    if (preset.id === 'test') epo.keepTable = true;
+    else delete epo.keepTable;
+    NM.app.commit();
+  }
+
+  async function savePreset(db, epo, level) {
+    const name = ((await promptDialog('Als Vorlage speichern', `Name der Vorlage (gilt für ${level === 'mss' ? 'die MSS' : 'die Sek I'}; Tabelle und Punkte je Symbol werden übernommen):`, 'Eigene Vorlage')) || '').trim();
+    if (!name) return;
+    const mins = epo.table.mins.slice(0, 16).map(Number);
+    while (mins.length < 16) mins.push(100);
+    db.settings.epoPresets.push({ id: uid(), name, level, strict: !!epo.table.strict, mins, points: Object.assign({}, G.EPO_DEFAULT_POINTS, epo.points) });
+    NM.app.commit();
+    toast(`Vorlage „${name}“ gespeichert. Umbenennen und Löschen unter Einstellungen.`);
+  }
+
+  function configCard(course, a, level, db) {
     const epo = a.epo;
     epo.points = Object.assign({}, G.EPO_DEFAULT_POINTS, epo.points);
     epo.table = epo.table || G.epoDefaultTable(level, epo.limit);
+    const presets = G.epoPresetList(db.settings, level, epo.limit);
+    const cur = G.epoCurrentPreset(epo, db.settings, level);
     const ptsInputs = ['++', '+', '0', '-', '--', 'u', 'h', 'm'].map((k) =>
       h(
         'label',
@@ -570,7 +639,7 @@
               'aria-label': `Grenze in Prozent für ${G.label(p, level)}`,
               onchange: (e) => {
                 const v = parseNum(e.target.value);
-                if (v === null || v === undefined || v < 0 || v > 100) return toast('Bitte 0–100 eingeben.', 'error');
+                if (v === null || v === undefined || v < -100 || v > 100) return toast('Bitte eine Zahl von −100 bis 100 eingeben.', 'error');
                 epo.table.mins[p] = v;
                 NM.app.commit();
               },
@@ -580,6 +649,38 @@
         )
       );
     }
+    const pickId = (cur || G.epoStandardPreset(db.settings, level, epo.limit)).id;
+    const limitField =
+      level === 'sek1'
+        ? h(
+            'label',
+            { class: 'field narrow', hidden: pickId !== 'test', 'data-epo-limit': '' },
+            h('span', null, 'LIMIT 4- (%)'),
+            h('input', {
+              class: 'input',
+              type: 'number',
+              value: epo.limit,
+              onchange: (e) => {
+                const v = parseNum(e.target.value);
+                if (!(v >= 20 && v <= 80)) return toast('LIMIT bitte zwischen 20 und 80 %.', 'error');
+                epo.limit = v;
+                applyPreset(epo, G.epoPresetList({}, level, v).find((x) => x.id === 'test'));
+              },
+            })
+          )
+        : null;
+    const sel = h(
+      'select',
+      {
+        class: 'input',
+        'data-epo-preset': '',
+        onchange: (e) => {
+          if (limitField) limitField.hidden = e.target.value !== 'test';
+        },
+      },
+      h('optgroup', { label: 'Eingebaut' }, presets.filter((x) => !x.own).map((x) => h('option', { value: x.id, selected: x.id === pickId }, x.name))),
+      presets.some((x) => x.own) ? h('optgroup', { label: 'Eigene' }, presets.filter((x) => x.own).map((x) => h('option', { value: x.id, selected: x.id === pickId }, x.name))) : null
+    );
     return h(
       'details',
       {
@@ -590,7 +691,7 @@
           NM.app.saveUi();
         },
       },
-      h('summary', null, h('h2', null, 'Einstellungen dieses EPO-Blocks'), h('span', { class: 'muted small' }, 'Punkte je Symbol, Umrechnung % → Note')),
+      h('summary', null, h('h2', null, 'Einstellungen dieses EPO-Blocks'), h('span', { class: 'muted small' }, `Punkte je Symbol, Umrechnung % → Note · ${cur ? cur.name : 'angepasst'}`)),
       h(
         'div',
         { class: 'grid-2' },
@@ -599,6 +700,33 @@
           'div',
           null,
           h('h3', null, 'Umrechnung Prozent → ', level === 'mss' ? 'Punkte' : 'Note'),
+          h(
+            'div',
+            { class: 'form-row wrap epo-preset-row' },
+            h('label', { class: 'field' }, h('span', null, 'Vorlage'), sel),
+            limitField,
+            h(
+              'button',
+              {
+                class: 'btn',
+                'data-epo-apply': '',
+                title: 'Tabelle und Punkte je Symbol aus der Vorlage übernehmen',
+                onclick: () => {
+                  const pre = presets.find((x) => x.id === sel.value);
+                  if (!pre) return;
+                  applyPreset(epo, pre);
+                  toast(`Vorlage „${pre.name}“ angewendet.`);
+                },
+              },
+              'Anwenden'
+            )
+          ),
+          h(
+            'div',
+            { class: 'epo-preset-status' },
+            h('span', { class: 'muted small', 'data-epo-current': '' }, cur ? `Es gilt die Vorlage „${cur.name}“.` : 'Angepasst: Die Werte entsprechen keiner Vorlage.'),
+            h('button', { class: 'btn btn-sm', 'data-epo-save': '', title: 'Tabelle und Punkte je Symbol als eigene Vorlage speichern', onclick: () => savePreset(db, epo, level) }, 'Als Vorlage speichern')
+          ),
           h(
             'div',
             { class: 'form-row' },
@@ -614,41 +742,6 @@
                 },
               }),
               ' Schwelle muss überschritten werden („mehr als“)'
-            )
-          ),
-          h(
-            'div',
-            { class: 'form-row' },
-            level === 'sek1'
-              ? h(
-                  'label',
-                  { class: 'field narrow' },
-                  h('span', null, 'LIMIT 4- (%)'),
-                  h('input', {
-                    class: 'input',
-                    type: 'number',
-                    value: epo.limit,
-                    onchange: (e) => {
-                      const v = parseNum(e.target.value);
-                      if (!(v >= 20 && v <= 80)) return toast('LIMIT bitte zwischen 20 und 80 %.', 'error');
-                      epo.limit = v;
-                      epo.table = G.epoDefaultTable(level, v);
-                      NM.app.commit();
-                    },
-                  })
-                )
-              : null,
-            h(
-              'button',
-              {
-                class: 'btn btn-sm',
-                onclick: () => {
-                  epo.table = G.epoDefaultTable(level, epo.limit);
-                  epo.points = Object.assign({}, G.EPO_DEFAULT_POINTS);
-                  NM.app.commit();
-                },
-              },
-              'Standard wiederherstellen'
             )
           ),
           h('div', { class: 'table-wrap short' }, h('table', { class: 'table compact' }, h('tbody', null, rows)))

@@ -147,6 +147,35 @@
   ok('EPO mit Standard-Umrechnung → MSS-Umrechnung (5-%-Stufen, „mehr als“)', e1.epo.limit === 45 && JSON.stringify(e1.epo.table) === JSON.stringify(G.epoDefaultTable('mss', 45)));
   ok('EPO mit eigener Umrechnung bleibt', e2.epo.table.mins.join() === '0,10,20');
 
+  // 2.8: EPO-Vorlagen
+  {
+    const mins = Array.from({ length: 16 }, (_, i) => i * 5);
+    const db = M.migrate({ schema: 1, settings: { epoPresets: [{ id: 'v1', name: 'Meine', level: 'mss', strict: 1, mins: mins.map(String), points: { u: '-3', x: 5 } }, { id: 'v2', name: 'kaputt', level: 'abc', mins }, { id: 'v3', level: 'sek1', mins: [1, 2] }], epoDefault: { mss: 'v1' } }, years: [], courses: [] });
+    const ps = db.settings.epoPresets;
+    ok('Vorlagen: ungültige entfernt, Zahlen bereinigt', ps.length === 1 && ps[0].strict === true && ps[0].mins[3] === 15 && ps[0].points.u === -3 && !('x' in ps[0].points));
+    ok('Standard je Stufe ergänzt', db.settings.epoDefault.sek1 === 'bef' && db.settings.epoDefault.mss === 'v1');
+    ok('Neue Datenbank: keine eigenen Vorlagen, Standard 0 = befriedigend', M.newDb().settings.epoPresets.length === 0 && M.newDb().settings.epoDefault.mss === 'bef');
+    const c8 = M.newCourse('y', { klasse: '8a', fach: 'M', jahrgang: 8 });
+    const e = M.newEpo(c8, 'HJ1', M.newDb().settings);
+    ok('Neuer Block Sek I: Vorlage 0 = befriedigend, kein Hinweis', G.epoCurrentPreset(e.epo, {}, 'sek1').id === 'bef' && !G.epoNeedsReview(e.epo, 'sek1') && !e.epo.keepTable);
+    const c12 = M.newCourse('y', { klasse: '12', fach: 'M', jahrgang: 12, type: 'gk' });
+    const em = M.newEpo(c12, '12/1', db.settings);
+    ok('Neuer Block MSS: eigene Standardvorlage', em.epo.table.strict === true && em.epo.table.mins[15] === 75 && em.epo.points.u === -3);
+    const st = Object.assign(M.newDb().settings, { epoDefault: { sek1: 'test', mss: 'bef' } });
+    const et = M.newEpo(c8, 'HJ1', st);
+    ok('Standard „Wie Testschlüssel“: alte Tabelle mit keepTable', JSON.stringify(et.epo.table) === JSON.stringify(G.epoDefaultTable('sek1', 50)) && et.epo.keepTable === true && !G.epoNeedsReview(et.epo, 'sek1'));
+    // Stufenwechsel mit eingebauter Vorlage
+    const sw = M.migrate({ schema: 1, settings: { limitSek1: 50, limitMss: 45 }, years: [], courses: [{ id: 'g', klasse: 'GK', jahrgang: 7, type: 'gk', students: [], assessments: [{ id: 'e', kind: 'epo', half: 'HJ1', cat: 'other', epo: Object.assign({ limit: 50, lessons: [], entries: {} }, { table: G.epoPresetTable('streng', 'sek1', 50), points: Object.assign({}, G.EPO_DEFAULT_POINTS) }) }] }] }).courses[0];
+    ok('Stufenwechsel: Streng bleibt Streng (mit 15 bei 100 %)', G.epoCurrentPreset(sw.assessments[0].epo, {}, 'mss').id === 'streng' && sw.assessments[0].epo.table.mins[15] === 100);
+    // Prüfen
+    const bad = M.newDb();
+    bad.settings.epoPresets = [{ id: 'a', name: 'A', level: 'mss', mins: [1, 2] }, { id: 'a', name: 'B', level: 'x', mins }];
+    bad.settings.epoDefault = { sek1: 'weg', mss: 'bef' };
+    const res = M.check(bad).map((x) => x.text).join(' | ');
+    ok('Prüfen: kaputte Vorlagen und fehlende Standardvorlage gemeldet', res.includes('Schwellen unvollständig') && res.includes('doppelt') && res.includes('ohne gültige Stufe') && res.includes('gibt es nicht mehr'));
+    ok('Prüfen: neue Datenbank ohne Meldung zu Vorlagen', !M.check(M.newDb()).some((x) => x.where === 'Einstellungen'));
+  }
+
   // 1.40: Nachschreibtermine
   {
     const settings = M.newDb().settings;

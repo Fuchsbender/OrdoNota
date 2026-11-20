@@ -534,7 +534,7 @@ Heute gibt es keine kursübergreifende Person: Jeder Kurs hat eigene `course.stu
 - **Trennen:** Der Förderplan bleibt bei der bisherigen Person (wie in 6.6). **Zusammenführen:** Die Fassungen werden zusammengelegt. Das Notfallwerkzeug schreibt `Foerderplaene.csv` (eine Zeile je Fassung).
 - **Nie** auf Beamer oder Vollbild, nie im Ausdruck, nie im Excel-Export.
 
-## AH) EPO-Umrechnung: Vorlagen statt Testschlüssel (geklärt am 20.11.2026, noch nicht umgesetzt)
+## AH) EPO-Umrechnung: Vorlagen statt Testschlüssel (geklärt am 20.11.2026, umgesetzt in 2.8.0, noch nicht veröffentlicht)
 
 **Problem:** Die Standardtabelle `epoDefaultTable` rechnet wie ein Testschlüssel. „Immer 0“ = 2 von 4 Punkten = 50 % ergibt in Sek I 4- (LIMIT 50 %) und in der MSS 05 („mehr als 50“ für 06). Die Symbole sind aber eine Notenskala, deren Mitte „befriedigend“ ist.
 
@@ -572,6 +572,12 @@ Heute gibt es keine kursübergreifende Person: Jeder Kurs hat eigene `course.stu
 | 00 | sonst | sonst | sonst |
 
 Probe mit 12 Stunden (max. 48 P), „0 = befriedigend“: immer `0` (24 P) → 08, immer `+` (36 P) → 11, 11× `++` + 1× `+` (47 P) → 15, immer `--` (0 P) → 02, immer `--` + `h` + `h` (−4 P, −8,33 %) → 01, −5 P (−10,4 %) → 00.
+
+**Gestaltung (`/impeccable shape`, 20.11.2026, ohne eigene Interviewrunde, weil grill-me alles geklärt hat):**
+- **Block, Karte „Einstellungen dieses EPO-Blocks“, Spalte Umrechnung:** oben die Zeile „Vorlage“ (Auswahl aus den eingebauten und den eigenen Vorlagen der Stufe) mit „Anwenden“. Dahinter steht leise „gilt: …“ oder „angepasst“. Daneben „Als Vorlage speichern“ (Name per Dialog). Die Auswahl steht auf der geltenden Vorlage, bei „angepasst“ auf dem Standard der Stufe. LIMIT nur bei „Wie Testschlüssel“ (Sek I). Die Tabelle zeigt weiter 15/14 bis 01 und nimmt −100 bis 100 an.
+- **Hinweis für alte Blöcke:** gelbe Leiste (`notice warn`, wie die Schlüsselwarnung bei Tests) über der Eintragstabelle, also sichtbar ohne die Einstellungen aufzuklappen. Ein Satz mit dem Beispiel „immer 0“, dazu „Neue Vorlage anwenden“ (wendet den Standard der Stufe an) und „So lassen“. Erscheint nur, wenn der Block genau „Wie Testschlüssel“ rechnet und `keepTable` fehlt. Wer „Wie Testschlüssel“ bewusst anwendet oder als Standard gewählt hat, bekommt `keepTable` und keinen Hinweis.
+- **Einstellungen:** eigene Karte „EPO-Umrechnung“ nach „Standardwerte für neue Tests“: zwei Auswahlen „Neue Blöcke Sek I“ und „Neue Blöcke MSS“, darunter die eigenen Vorlagen als Liste (Name, Stufe, Umbenennen, Löschen). Ohne eigene Vorlagen ein kurzer Satz, wo man sie anlegt. Löschen fragt nach; Blöcke behalten ihre Werte und zeigen dann „angepasst“. War die Vorlage Standard, gilt wieder „0 = befriedigend“.
+- **Umsetzung von 8:** Die Schwelle für 01 ist −9,99 % („ab“), 00 gilt bei −10 % und weniger. Die Schwellen der eingebauten Vorlagen werden ungerundet gespeichert (z. B. 4,1666… %), damit genau getroffene Grenzen wie in der linearen Rechnung nach oben zählen; angezeigt werden 2 Nachkommastellen.
 
 **Tests:** `epoResult` mit allen drei Vorlagen und der Probe oben (Sek I und MSS), negative Schwellen, Vergleich „angepasst“, eigene Vorlagen in `migrate()`/`check()`, Hinweis und „So lassen“ bei alten Blöcken, Jahrgangswechsel Sek I ↔ MSS (`model.js:437` erkennt bisher nur die alte Standardtabelle). Datenmodell: nur zusätzliche Felder (`settings` für Vorlagen und Standard, `epo.keepTable`), also kein neues `SCHEMA`; `tools/entschluesseln.py` mitziehen. Doku: DOKUMENTATION.md Abschnitte 8, 16, 24, 25.1, 26.4 und README. Version: Minor. UI: vorher `/impeccable shape` für Vorlagenauswahl, Hinweis und Einstellungen.
 
