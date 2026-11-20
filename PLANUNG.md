@@ -525,6 +525,15 @@ Heute gibt es keine kursübergreifende Person: Jeder Kurs hat eigene `course.stu
 - In der Detailansicht der Person (AF), Fassungen nebeneinander vergleichbar.
 - Hat eine Person einen Förderplan, in einem Kurs aber keinen I-Status: dezenter Hinweis in der Kursliste („Förderplan vorhanden, I-Status nicht gesetzt“). Nichts automatisch.
 
+**Oberfläche (impeccable shape, 20.11.2026, vom Nutzer gewählt):**
+- **Datenmodell abweichend vom Entwurf:** **mehrere Förderschwerpunkte** je Fassung: `foerderplaene: [ { id, datum, schwerpunkte: ["lernen", …], sonst?, von?, bis?, ziele, massnahmen } ]`. Mindestens ein Schwerpunkt; „Sonstiges“ braucht einen Freitext (`sonst`). `von`/`bis` sind optionale Tagesdaten (ISO).
+- **Seite „Personen“:** Der Abschnitt „Förderplan“ steht nach „Notizen“. Er zeigt die **geltende Fassung** (die mit dem neuesten Datum) ganz: „Gilt seit TT.MM.JJJJ“, Schwerpunkte, Zeitraum, dann Ziele und Maßnahmen als Absätze. Darunter „Fortschreiben …“ und „Ändern“. **Frühere Fassungen** stehen eingeklappt darunter (`details`, eine Zeile je Fassung: Datum · Schwerpunkte); aufgeklappt zeigen sie den vollen Text und „Ändern“. Ohne Plan: „Kein Förderplan eingetragen.“ und „Förderplan anlegen …“.
+- **Fenster** (breit, `modal`): Datum (heute), Schwerpunkte als Haken (Lernen, Sprache, emotionale und soziale Entwicklung, ganzheitliche Entwicklung, körperliche und motorische Entwicklung, Hören, Sehen, Sonstiges mit Freitext), Zeitraum von/bis, Ziele, Maßnahmen (je mehrzeilig). **„Fortschreiben …“ füllt alles mit der geltenden Fassung vor**, Datum heute, und legt beim Speichern eine **neue** Fassung an. „Ändern“ korrigiert die gewählte Fassung, dort auch „Fassung löschen“ (mit Rückfrage). Strg+Enter speichert wie bei den Notizen.
+- **Vergleich:** „Fassungen vergleichen …“ (ab zwei Fassungen) öffnet ein breites Fenster mit zwei Spalten. Je Spalte wählt man oben die Fassung; vorgewählt sind links die vorherige und rechts die geltende. Die Zeilen sind Datum, Schwerpunkte, Zeitraum, Ziele und Maßnahmen. Unter 700 px stehen die Spalten untereinander. Es ist nur eine Ansicht, Änderungen werden nicht markiert.
+- **Hinweis in der Kursliste** („Kurs & Schüler“): In der Spalte „I-Status“ erscheint ein dezenter Hinweis, wenn die Person einen Förderplan hat, der I-Status im Kurs aber nicht gesetzt ist („Förderplan vorhanden, I-Status nicht gesetzt“). Er ist als Knopf gebaut und springt zur Person. Sonst gibt es keine Markierung, auch kein Kürzel.
+- **Trennen:** Der Förderplan bleibt bei der bisherigen Person (wie in 6.6). **Zusammenführen:** Die Fassungen werden zusammengelegt. Das Notfallwerkzeug schreibt `Foerderplaene.csv` (eine Zeile je Fassung).
+- **Nie** auf Beamer oder Vollbild, nie im Ausdruck, nie im Excel-Export.
+
 ## C) Gamification des Pomodoro-Timers (zurückgestellt, erst auf Nachfrage des Nutzers)
 
 **Vor Beginn die offenen Fragen unten mit dem Nutzer klären.** C ergänzt nur Felder → kein neues `SCHEMA`; `migrate()` und `tools/entschluesseln.py` (CSV-Ausgabe) mitziehen.
