@@ -1754,6 +1754,20 @@ def run_notes_check(br, base):
         q(`[data-overview-notes="${s.id}"]`).click(); await wait();
         q('[data-note-all]').click(); await wait(300);
         out.jump = [NM.app.state.ui.tab === 'people', NM.app.state.ui.personId === pid, !dialog(), notes().length === 3, document.querySelectorAll('.note-list .note-item').length === 3];
+        // Tastatur: Strg+Enter speichert (Feld wieder fokussiert), Esc bricht Ändern ab, Strg+Enter im Dialog
+        const key = (el, k, ctrl = false) => el.dispatchEvent(new KeyboardEvent('keydown', { key: k, ctrlKey: ctrl, bubbles: true, cancelable: true }));
+        const tk = q('[data-note-new-text]'); tk.value = 'Per Tastatur'; tk.dispatchEvent(new Event('input')); key(tk, 'Enter', true); await wait();
+        out.kbSave = [notes().length === 4, document.activeElement === q('[data-note-new-text]'), q('[data-note-new-text]').value === ''];
+        const kn = notes().find((n) => n.text === 'Per Tastatur');
+        q(`[data-note-edit="${kn.id}"]`).click(); await wait();
+        q('[data-note-edit-text]').value = 'verworfen'; key(q('[data-note-edit-text]'), 'Escape'); await wait();
+        out.kbEsc = [!q('.note-editing'), kn.text === 'Per Tastatur', document.activeElement === q(`[data-note-edit="${kn.id}"]`)];
+        NM.app.select({ courseId: c.id, tab: 'seating' }); await wait();
+        q(`.seat-card[data-sid="${s.id}"]`).focus(); key(q(`.seat-card[data-sid="${s.id}"]`), 'n'); await wait();
+        key(q('[data-note-quick-text]'), 'Enter', true); await wait();
+        out.kbEmpty = !!dialog() && notes().length === 4;
+        q('[data-note-quick-text]').value = 'Schnell per Tastatur'; key(q('[data-note-quick-text]'), 'Enter', true); await wait();
+        out.kbQuick = !dialog() && notes().length === 5;
         // Ausdrucke ohne Notizen
         NM.print.course(c, NM.app.currentHalf(c));
         const pr1 = q('#print-root').textContent;
@@ -1771,6 +1785,7 @@ def run_notes_check(br, base):
     report("Sitzplan-Beamer ohne Notizen", r.get("beamer"), str(res))
     report("Notenübersicht: Symbol nur mit Notizen, Hinweis ohne Text, Dialog mit Verlauf und neuer Notiz", r.get("icon") == [True, True, True, True] and r.get("dlg") == [True, 2, True] and r.get("dlgSaved"), str(res))
     report("Notenübersicht: „Alle Notizen auf der Seite Personen“ öffnet die Person", r.get("jump") == [True, True, True, True, True], str(res))
+    report("Tastatur: Strg+Enter speichert (Fokus zurück, Feld leer), Esc bricht Ändern ab, Strg+Enter im Dialog mit Prüfung", r.get("kbSave") == [True, True, True] and r.get("kbEsc") == [True, True, True] and r.get("kbEmpty") and r.get("kbQuick"), str(res))
     report("Ausdrucke ohne Notizen; Datenbank ohne Fehler", r.get("print") and r.get("fehler") == [], str(res))
     report("Notizverlauf ohne JavaScript-Fehler", not br.errors, "; ".join(br.errors)[:500])
 

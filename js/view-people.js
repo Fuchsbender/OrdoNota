@@ -335,13 +335,14 @@
     const draft = (view.draft[p.id] = view.draft[p.id] || { datum: NM.util.todayISO(), courseId: courses.some((c) => c.id === cur) ? cur : '', text: '' });
     const date = h('input', { class: 'input', type: 'date', value: draft.datum, 'aria-label': 'Datum der Notiz', 'data-note-new-datum': '', onchange: (e) => (draft.datum = e.target.value) });
     const course = courseSelect(db, courses, draft.courseId, { 'aria-label': 'Kurs der Notiz', 'data-note-new-kurs': '', onchange: (e) => (draft.courseId = e.target.value) });
-    const text = h('textarea', { class: 'input', rows: 3, 'aria-label': 'Neue Notiz', placeholder: 'Neue Notiz …', 'data-focus-key': 'note-new-' + p.id, 'data-note-new-text': '', oninput: (e) => (draft.text = e.target.value) }, draft.text);
+    const text = h('textarea', { class: 'input', rows: 3, 'aria-label': 'Neue Notiz (Strg+Enter speichert)', placeholder: 'Neue Notiz …', 'data-focus-key': 'note-new-' + p.id, 'data-note-new-text': '', oninput: (e) => (draft.text = e.target.value), onkeydown: (e) => ctrlEnter(e, save) }, draft.text);
     const save = () => {
       if (!text.value.trim()) return toast('Bitte einen Text eintragen.', 'error'), text.focus();
       P.setNotiz(db, p.id, { datum: date.value, courseId: course.value, text: text.value });
       view.draft[p.id] = { datum: NM.util.todayISO(), courseId: course.value, text: '' };
       NM.app.commit();
       toast('Notiz gespeichert.', 'success');
+      focusLater('note-new-' + p.id);
     };
     const composer = h(
       'div',
@@ -379,7 +380,7 @@
         h('span', { class: 'note-meta' }, fmtDate(n.datum), ' · ', noteCourse(db, n)),
         h('p', { class: 'note-text' }, n.text)
       ),
-      h('button', { type: 'button', class: 'btn btn-sm', 'data-note-edit': n.id, 'aria-label': 'Notiz vom ' + fmtDate(n.datum) + ' ändern', onclick: () => ((view.editNote = n.id), NM.app.rerender(), focusLater('note-edit-' + n.id)) }, icon('pencil'), ' Ändern')
+      h('button', { type: 'button', class: 'btn btn-sm', 'data-note-edit': n.id, 'data-focus-key': 'note-edit-btn-' + n.id, 'aria-label': 'Notiz vom ' + fmtDate(n.datum) + ' ändern', onclick: () => ((view.editNote = n.id), NM.app.rerender(), focusLater('note-edit-' + n.id)) }, icon('pencil'), ' Ändern')
     );
   }
 
@@ -388,8 +389,25 @@
     const course = courseSelect(db, noteCourses(db, p, n), n.courseId || '', { 'aria-label': 'Kurs der Notiz', 'data-note-edit-kurs': '' });
     // Kurs gelöscht: Auswahl behält ihn als „gelöschter Kurs“, damit Speichern nichts verliert
     if (n.courseId && !(db.courses || []).some((c) => c.id === n.courseId)) course.prepend(h('option', { value: n.courseId, selected: true }, 'gelöschter Kurs'));
-    const text = h('textarea', { class: 'input', rows: 4, 'aria-label': 'Text der Notiz', 'data-focus-key': 'note-edit-' + n.id, 'data-note-edit-text': '' }, n.text);
-    const close = () => ((view.editNote = null), NM.app.rerender());
+    const close = () => ((view.editNote = null), NM.app.rerender(), focusLater('note-edit-btn-' + n.id));
+    const save = () => {
+      if (!text.value.trim()) return toast('Bitte einen Text eintragen oder die Notiz löschen.', 'error'), text.focus();
+      P.setNotiz(db, p.id, { id: n.id, datum: date.value, courseId: course.value, text: text.value });
+      view.editNote = null;
+      NM.app.commit();
+      focusLater('note-edit-btn-' + n.id);
+    };
+    const text = h('textarea', {
+      class: 'input',
+      rows: 4,
+      'aria-label': 'Text der Notiz (Strg+Enter speichert, Esc bricht ab)',
+      'data-focus-key': 'note-edit-' + n.id,
+      'data-note-edit-text': '',
+      onkeydown: (e) => {
+        if (e.key === 'Escape') return e.preventDefault(), close();
+        ctrlEnter(e, save);
+      },
+    }, n.text);
     return h(
       'li',
       { class: 'note-item note-editing', 'data-note-id': n.id },
@@ -407,12 +425,7 @@
               type: 'button',
               class: 'btn btn-primary btn-sm',
               'data-note-edit-save': '',
-              onclick: () => {
-                if (!text.value.trim()) return toast('Bitte einen Text eintragen oder die Notiz löschen.', 'error'), text.focus();
-                P.setNotiz(db, p.id, { id: n.id, datum: date.value, courseId: course.value, text: text.value });
-                view.editNote = null;
-                NM.app.commit();
-              },
+              onclick: save,
             },
             'Speichern'
           ),
@@ -439,6 +452,19 @@
     );
   }
 
+  /** Strg+Enter (Mac: Cmd+Enter) im Textfeld speichert. */
+  function ctrlEnter(e, fn) {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      fn();
+    }
+  }
+
+  /** In einem Dialog: Strg+Enter löst den Hauptknopf aus (mit seiner Prüfung). */
+  function ctrlEnterSubmit(e) {
+    ctrlEnter(e, () => e.target.closest('form').requestSubmit());
+  }
+
   function focusLater(key) {
     setTimeout(() => {
       const el = document.querySelector(`[data-focus-key="${key}"]`);
@@ -452,7 +478,7 @@
     const p = P.byId(db, s.personId);
     if (!p) return toast('Person nicht im Register.', 'error');
     const date = h('input', { class: 'input', type: 'date', value: NM.util.todayISO(), 'data-note-quick-datum': '' });
-    const text = h('textarea', { class: 'input', rows: 4, 'data-note-quick-text': '', placeholder: 'Was ist passiert?' });
+    const text = h('textarea', { class: 'input', rows: 4, 'data-note-quick-text': '', placeholder: 'Was ist passiert?', 'aria-description': 'Strg+Enter speichert', onkeydown: ctrlEnterSubmit });
     const v = await modal({
       title: 'Notiz: ' + M.studentName(s),
       body: h(
@@ -481,7 +507,7 @@
     if (!p) return toast('Person nicht im Register.', 'error');
     const list = P.notizen(p, course.id);
     const date = h('input', { class: 'input', type: 'date', value: NM.util.todayISO(), 'aria-label': 'Datum der neuen Notiz', 'data-note-dlg-datum': '' });
-    const text = h('textarea', { class: 'input', rows: 3, 'aria-label': 'Neue Notiz', placeholder: 'Neue Notiz …', 'data-note-dlg-text': '' });
+    const text = h('textarea', { class: 'input', rows: 3, 'aria-label': 'Neue Notiz (Strg+Enter speichert)', placeholder: 'Neue Notiz …', 'data-note-dlg-text': '', onkeydown: ctrlEnterSubmit });
     let jump = false;
     const v = await modal({
       title: 'Notizen: ' + M.studentName(s),
