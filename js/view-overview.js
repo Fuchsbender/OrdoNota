@@ -271,7 +271,7 @@
             onSet: (v) => setOverride(course, half, s.id, v),
           })
         ),
-        h('td', { class: 'result' }, overrideReasonBtn(course, half, s, r), commentBtn(course, s)),
+        h('td', { class: 'result' }, overrideReasonBtn(course, half, s, r), commentBtn(course, s), notesBtn(course, s)),
         attOn ? attCell(course, half, s) : null
       );
     });
@@ -358,6 +358,15 @@
     );
   }
 
+  /** Notizen dieses Kurses (2.6): Symbol nur, wenn es welche gibt; Hinweis ohne Text (Anzahl, letztes Datum). */
+  function notesBtn(course, s) {
+    const p = NM.people.byId(NM.app.db(), s.personId);
+    const list = NM.people.notizen(p, course.id);
+    if (!list.length) return null;
+    const label = (list.length === 1 ? '1 Notiz' : list.length + ' Notizen') + ', letzte am ' + NM.util.fmtDate(list[0].datum);
+    return h('button', { class: 'icon-btn has-note note-btn', title: label, 'aria-label': 'Notizen: ' + label, 'data-overview-notes': s.id, onclick: () => NM.views.people.courseNotesDialog(course, s) }, icon('notes'));
+  }
+
   function commentBtn(course, s) {
     const c = course.comments[s.id] || '';
     return h(
@@ -428,7 +437,7 @@
             onSet: (v) => setOverride(course, 'Jahr', s.id, v),
           })
         ),
-        h('td', { class: 'result' }, overrideReasonBtn(course, 'Jahr', s, y), commentBtn(course, s))
+        h('td', { class: 'result' }, overrideReasonBtn(course, 'Jahr', s, y), commentBtn(course, s), notesBtn(course, s))
       );
     });
     return h(

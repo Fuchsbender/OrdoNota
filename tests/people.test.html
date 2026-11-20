@@ -196,6 +196,47 @@
     ok('Ausgleich: check ohne Fehler', M.check(db).filter((x) => x.level === 'fehler').length === 0);
   }
 
+  // ---------- Notizverlauf (2.6) ----------
+  {
+    const db = M.migrate(fresh());
+    ok('Notizen: Migration setzt leere Liste', db.people.every((p) => Array.isArray(p.notizen) && !p.notizen.length));
+    const c7 = db.courses[0], c8 = db.courses[1];
+    const s8 = c8.students[1], pid = s8.personId;          // Klein Noah in 8b
+    throws('Notiz: leerer Text ist ein Fehler', () => P.setNotiz(db, pid, { text: '   ' }));
+    const n1 = P.setNotiz(db, pid, { datum: '2026-11-10', courseId: c8.id, text: ' Unruhig ' });
+    const n2 = P.setNotiz(db, pid, { datum: '2026-11-18', text: 'Elterngespräch' });
+    const n3 = P.setNotiz(db, pid, { datum: '2026-11-10', courseId: c8.id, text: 'Später am selben Tag' });
+    const n4 = P.setNotiz(db, pid, { datum: 'quatsch', courseId: c8.id, text: 'ohne gültiges Datum' });
+    ok('Notiz: Text getrimmt, Kurs nur wenn gesetzt', n1.text === 'Unruhig' && n1.courseId === c8.id && !('courseId' in n2));
+    ok('Notiz: ungültiges Datum → heute', n4.datum === today);
+    const p = P.byId(db, pid);
+    const order = P.notizen(p).map((n) => n.id);
+    ok('Notizen: neueste oben, bei gleichem Datum die spätere zuerst', order.join() === [n4.id, n2.id, n3.id, n1.id].join());
+    ok('Notizen: Filter nach Kurs und „ohne Kurs“', P.notizen(p, c8.id).length === 3 && P.notizen(p, 'none').map((n) => n.id).join() === n2.id && P.notizen(p, 'all').length === 4);
+    const e = P.setNotiz(db, pid, { id: n1.id, datum: '2026-11-11', courseId: '', text: 'Geändert' });
+    ok('Notiz ändern: gleiche id, Kurs entfernt', e.id === n1.id && !('courseId' in e) && p.notizen.length === 4 && p.notizen.find((n) => n.id === n1.id).text === 'Geändert');
+    P.removeNotiz(db, pid, n4.id);
+    ok('removeNotiz', p.notizen.length === 3 && !p.notizen.some((n) => n.id === n4.id));
+    ok('notizen: Person ohne Liste → leer', P.notizen({ id: 'x' }).length === 0 && P.notizen(null).length === 0);
+    // Zusammenführen: Klein Noah aus 7b in die Person aus 8b
+    const p7 = c7.students[1].personId;
+    P.setNotiz(db, p7, { datum: '2025-12-01', courseId: c7.id, text: 'Aus 7b' });
+    P.merge(db, pid, p7);
+    ok('Zusammenführen: Notizen beider Personen bleiben', P.byId(db, pid).notizen.length === 4);
+    // Trennen: Notizen zum Kurs 7b gehen mit, ohne Kurs und 8b bleiben
+    const e7 = c7.students[1];
+    const neu = P.split(db, pid, [e7.id]);
+    ok('Trennen: Notizen zum abgetrennten Kurs gehen mit', neu.notizen.length === 1 && neu.notizen[0].text === 'Aus 7b' && P.byId(db, pid).notizen.length === 3 && P.byId(db, pid).notizen.every((n) => n.courseId !== c7.id));
+    const mia8 = c8.students[0].personId, mia7 = c7.students[0].personId;  // Fischer Mia: zwei Personen
+    P.merge(db, mia8, mia7);
+    const neuMia = P.split(db, mia8, [c7.students[0].id]);
+    ok('Trennen ohne passende Notizen: neue Person ohne Notizliste', !('notizen' in neuMia));
+    const d = JSON.parse(JSON.stringify(db)); d.people[0].notizen = [null, { id: 'a' }, { id: 'b', text: 'gut', datum: '2026-01-01' }];
+    M.migrate(d);
+    ok('Migration: kaputte Notizen fallen weg, gültige bleiben', d.people[0].notizen.length === 1 && d.people[0].notizen[0].id === 'b');
+    ok('Notizen: check ohne Fehler', M.check(db).filter((x) => x.level === 'fehler').length === 0);
+  }
+
   lines.unshift(fails === 0 ? 'ALLE TESTS BESTANDEN' : fails + ' FEHLGESCHLAGEN');
   document.getElementById('out').textContent = lines.join('\n');
   document.title = 'fertig';

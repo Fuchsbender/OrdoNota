@@ -75,12 +75,14 @@
           tabindex: '0',
           'aria-pressed': s.id === selectedSid ? 'true' : 'false',
           'aria-label': M.studentName(s) + (seated ? `, Reihe ${at.y + 1}, Platz ${at.x + 1}` : ', ohne Platz'),
-          title: M.studentName(s) + ' – anklicken und Strg+V fügt ein kopiertes Foto ein',
+          title: M.studentName(s) + ' – anklicken und Strg+V fügt ein kopiertes Foto ein, N legt eine Notiz an',
         },
         // ohne Foto: blasses Personensymbol als Platzhalter
         show ? h('img', { class: 'seat-photo' + (pic ? '' : ' seat-photo-empty'), src: pic ? s.photo : M.PERSON_ICON, alt: '', draggable: 'false' }) : null,
         h('span', { class: 'seat-name' }, names[s.id]),
-        pic ? h('button', { class: 'seat-photo-del', title: 'Foto entfernen', 'aria-label': 'Foto entfernen', onclick: () => removePhoto(course, s) }, '×') : null
+        pic ? h('button', { class: 'seat-photo-del', title: 'Foto entfernen', 'aria-label': 'Foto entfernen', onclick: () => removePhoto(course, s) }, '×') : null,
+        // 2.6: Notiz zur Person (nur im Editor, nie in der Beamer-Ansicht)
+        h('button', { type: 'button', class: 'seat-note-btn', title: 'Notiz zu ' + M.studentName(s) + ' (N)', 'aria-label': 'Notiz zu ' + M.studentName(s), 'data-seat-note': s.id, onclick: () => NM.views.people.quickNoteDialog(course, s) }, icon('notes'))
       );
     };
 
@@ -423,6 +425,11 @@
       if (!cardEl || e.altKey || e.ctrlKey || e.metaKey) return;
       const sid = cardEl.dataset.sid;
       const seated = !!cardEl.closest('.seat-cell');
+      if (e.key === 'n' || e.key === 'N') {
+        e.preventDefault();
+        const s = course.students.find((x) => x.id === sid);
+        return s && NM.views.people.quickNoteDialog(course, s);
+      }
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
         if (seated) return toggleSelected(sid);
@@ -458,7 +465,7 @@
   function enableDrag(root, course, st) {
     root.addEventListener('pointerdown', (e) => {
       const cardEl = e.target.closest('.seat-card');
-      if (!cardEl || e.button > 0 || e.target.closest('.seat-photo-del')) return;
+      if (!cardEl || e.button > 0 || e.target.closest('.seat-photo-del, .seat-note-btn')) return;
       e.preventDefault();
       const sid = cardEl.dataset.sid;
       const r = cardEl.getBoundingClientRect();

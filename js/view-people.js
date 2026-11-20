@@ -1,5 +1,6 @@
 /* OrdoNota – Seite „Personen“ (Personenregister, seit 2.4.0): Liste, Person, Zusammenführen, Trennen,
- * Nachteilsausgleich (2.5, Gesundheitsdaten – nur hier und als Kürzel in Eingabe und Übersicht).
+ * Nachteilsausgleich (2.5, Gesundheitsdaten – nur hier und als Kürzel in Eingabe und Übersicht),
+ * Notizverlauf (2.6, intern – nie gedruckt, nie auf dem Beamer; Dialoge auch für Sitzplan und Notenübersicht).
  * Eigene Seite ohne Kursreiter (state.ui.tab = 'people'). Das Register erscheint nie auf dem Beamer und nie im Ausdruck.
  * Die Logik steht rein in js/people.js; hier nur Oberfläche.
  */
@@ -10,7 +11,7 @@
   const P = NM.people;
 
   // Nur für diese Sitzung: Suche, Filter, und ob auf schmalen Bildschirmen die Person (statt der Liste) gezeigt wird
-  const view = { q: '', filter: 'all', detail: false };
+  const view = { q: '', filter: 'all', detail: false, notePid: null, noteFilter: 'all', editNote: null, draft: {} };
 
   const yearOf = (db, c) => (db.years || []).find((y) => y.id === c.yearId);
   const shortYear = (name) => String(name || '').replace(/^20(\d\d)\/(\d\d)$/, '$1/$2');
@@ -189,6 +190,7 @@
           )
         : h('p', { class: 'muted' }, 'Steht in keinem Kurs.'),
       ausgleichSection(db, p),
+      notesSection(db, p),
       h(
         'div',
         { class: 'inline people-actions' },
@@ -296,6 +298,224 @@
     P.setAusgleich(db, p.id, { id: a && a.id, art: art.value, text: text.value, faecher: allBox.checked ? [] : picked(), massnahmen: massnahmen.value, bis: bis.value });
     NM.app.commit();
     toast(a ? 'Nachteilsausgleich geändert.' : 'Nachteilsausgleich eingetragen.', 'success');
+  }
+
+  // ---------- Notizverlauf (2.6) ----------
+
+  /** Kurs einer Notiz kurz („8b M“), „ohne Kurs“ oder „gelöschter Kurs“. */
+  function noteCourse(db, n) {
+    if (!n.courseId) return 'ohne Kurs';
+    const c = (db.courses || []).find((x) => x.id === n.courseId);
+    return c ? courseLabel(db, c) : 'gelöschter Kurs';
+  }
+
+  /** Kurse für die Auswahl: Kurse der Person (ohne doppelte), dazu der Kurs der Notiz, falls es ihn noch gibt. */
+  function noteCourses(db, p, n) {
+    const seen = new Set();
+    const out = [];
+    for (const e of sortedEntries(db, p.id)) if (!seen.has(e.course.id)) seen.add(e.course.id) && out.push(e.course);
+    const c = n && n.courseId && (db.courses || []).find((x) => x.id === n.courseId);
+    if (c && !seen.has(c.id)) out.push(c);
+    return out;
+  }
+
+  function courseSelect(db, courses, value, attrs) {
+    return h(
+      'select',
+      Object.assign({ class: 'input' }, attrs),
+      h('option', { value: '', selected: !value }, 'ohne Kurs'),
+      courses.map((c) => h('option', { value: c.id, selected: value === c.id }, courseLabel(db, c)))
+    );
+  }
+
+  function notesSection(db, p) {
+    if (view.notePid !== p.id) Object.assign(view, { notePid: p.id, noteFilter: 'all', editNote: null });
+    const courses = noteCourses(db, p, null);
+    const cur = NM.app.state.ui.courseId;
+    const draft = (view.draft[p.id] = view.draft[p.id] || { datum: NM.util.todayISO(), courseId: courses.some((c) => c.id === cur) ? cur : '', text: '' });
+    const date = h('input', { class: 'input', type: 'date', value: draft.datum, 'aria-label': 'Datum der Notiz', 'data-note-new-datum': '', onchange: (e) => (draft.datum = e.target.value) });
+    const course = courseSelect(db, courses, draft.courseId, { 'aria-label': 'Kurs der Notiz', 'data-note-new-kurs': '', onchange: (e) => (draft.courseId = e.target.value) });
+    const text = h('textarea', { class: 'input', rows: 3, 'aria-label': 'Neue Notiz', placeholder: 'Neue Notiz …', 'data-focus-key': 'note-new-' + p.id, 'data-note-new-text': '', oninput: (e) => (draft.text = e.target.value) }, draft.text);
+    const save = () => {
+      if (!text.value.trim()) return toast('Bitte einen Text eintragen.', 'error'), text.focus();
+      P.setNotiz(db, p.id, { datum: date.value, courseId: course.value, text: text.value });
+      view.draft[p.id] = { datum: NM.util.todayISO(), courseId: course.value, text: '' };
+      NM.app.commit();
+      toast('Notiz gespeichert.', 'success');
+    };
+    const composer = h(
+      'div',
+      { class: 'note-new' },
+      h('div', { class: 'note-meta-fields' }, date, course),
+      text,
+      h('div', { class: 'note-new-actions' }, h('button', { type: 'button', class: 'btn btn-primary btn-sm', 'data-note-save': '', onclick: save }, 'Notiz speichern'))
+    );
+    const filterOpts = [['all', 'Alle Kurse'], ...courses.map((c) => [c.id, courseLabel(db, c)]), ['none', 'ohne Kurs']];
+    const shown = P.notizen(p, view.noteFilter);
+    const total = P.notizenOf(p).length;
+    const filter = total
+      ? h(
+          'select',
+          { class: 'input input-sm note-filter', 'aria-label': 'Notizen nach Kurs filtern', 'data-note-filter': '', onchange: (e) => ((view.noteFilter = e.target.value), NM.app.rerender()) },
+          filterOpts.map(([v, l]) => h('option', { value: v, selected: view.noteFilter === v }, l))
+        )
+      : null;
+    return [
+      h('div', { class: 'note-head' }, h('h3', null, 'Notizen ', total ? h('span', { class: 'muted' }, `(${total})`) : null), filter),
+      composer,
+      shown.length
+        ? h('ul', { class: 'plain note-list' }, shown.map((n) => (view.editNote === n.id ? noteEditItem(db, p, n) : noteItem(db, p, n))))
+        : h('p', { class: 'muted' }, total ? 'Keine Notizen für diese Auswahl.' : 'Noch keine Notizen.'),
+    ];
+  }
+
+  function noteItem(db, p, n) {
+    return h(
+      'li',
+      { class: 'note-item', 'data-note-id': n.id },
+      h(
+        'div',
+        { class: 'note-body' },
+        h('span', { class: 'note-meta' }, fmtDate(n.datum), ' · ', noteCourse(db, n)),
+        h('p', { class: 'note-text' }, n.text)
+      ),
+      h('button', { type: 'button', class: 'btn btn-sm', 'data-note-edit': n.id, 'aria-label': 'Notiz vom ' + fmtDate(n.datum) + ' ändern', onclick: () => ((view.editNote = n.id), NM.app.rerender(), focusLater('note-edit-' + n.id)) }, icon('pencil'), ' Ändern')
+    );
+  }
+
+  function noteEditItem(db, p, n) {
+    const date = h('input', { class: 'input', type: 'date', value: n.datum, 'aria-label': 'Datum der Notiz', 'data-note-edit-datum': '' });
+    const course = courseSelect(db, noteCourses(db, p, n), n.courseId || '', { 'aria-label': 'Kurs der Notiz', 'data-note-edit-kurs': '' });
+    // Kurs gelöscht: Auswahl behält ihn als „gelöschter Kurs“, damit Speichern nichts verliert
+    if (n.courseId && !(db.courses || []).some((c) => c.id === n.courseId)) course.prepend(h('option', { value: n.courseId, selected: true }, 'gelöschter Kurs'));
+    const text = h('textarea', { class: 'input', rows: 4, 'aria-label': 'Text der Notiz', 'data-focus-key': 'note-edit-' + n.id, 'data-note-edit-text': '' }, n.text);
+    const close = () => ((view.editNote = null), NM.app.rerender());
+    return h(
+      'li',
+      { class: 'note-item note-editing', 'data-note-id': n.id },
+      h(
+        'div',
+        { class: 'note-body' },
+        h('div', { class: 'note-meta-fields' }, date, course),
+        text,
+        h(
+          'div',
+          { class: 'inline note-edit-actions' },
+          h(
+            'button',
+            {
+              type: 'button',
+              class: 'btn btn-primary btn-sm',
+              'data-note-edit-save': '',
+              onclick: () => {
+                if (!text.value.trim()) return toast('Bitte einen Text eintragen oder die Notiz löschen.', 'error'), text.focus();
+                P.setNotiz(db, p.id, { id: n.id, datum: date.value, courseId: course.value, text: text.value });
+                view.editNote = null;
+                NM.app.commit();
+              },
+            },
+            'Speichern'
+          ),
+          h('button', { type: 'button', class: 'btn btn-sm', onclick: close }, 'Abbrechen'),
+          h(
+            'button',
+            {
+              type: 'button',
+              class: 'btn btn-sm btn-danger note-delete',
+              'data-note-delete': '',
+              onclick: async () => {
+                if (!(await confirmDialog('Notiz löschen', 'Notiz vom ' + fmtDate(n.datum) + ' löschen?', { okLabel: 'Löschen', danger: true }))) return;
+                P.removeNotiz(db, p.id, n.id);
+                view.editNote = null;
+                NM.app.commit();
+                toast('Notiz gelöscht.', 'success');
+              },
+            },
+            icon('trash'),
+            ' Löschen'
+          )
+        )
+      )
+    );
+  }
+
+  function focusLater(key) {
+    setTimeout(() => {
+      const el = document.querySelector(`[data-focus-key="${key}"]`);
+      if (el) el.focus();
+    }, 0);
+  }
+
+  /** Schnelleintrag (Sitzplan): Datum heute, Kurs fest. */
+  async function quickNoteDialog(course, s) {
+    const db = NM.app.db();
+    const p = P.byId(db, s.personId);
+    if (!p) return toast('Person nicht im Register.', 'error');
+    const date = h('input', { class: 'input', type: 'date', value: NM.util.todayISO(), 'data-note-quick-datum': '' });
+    const text = h('textarea', { class: 'input', rows: 4, 'data-note-quick-text': '', placeholder: 'Was ist passiert?' });
+    const v = await modal({
+      title: 'Notiz: ' + M.studentName(s),
+      body: h(
+        'div',
+        { class: 'note-quick' },
+        h('p', { class: 'muted small' }, M.courseTitle(course), ' · nur für Sie, wird nie gedruckt'),
+        h('label', { class: 'field' }, h('span', null, 'Datum'), date),
+        h('label', { class: 'field' }, h('span', null, 'Notiz'), text)
+      ),
+      onOpen: () => text.focus(),
+      buttons: [
+        { label: 'Abbrechen', value: false },
+        { label: 'Notiz speichern', value: true, kind: 'primary', validate: () => !!text.value.trim() || (toast('Bitte einen Text eintragen.', 'error'), text.focus(), false) },
+      ],
+    });
+    if (v !== true) return;
+    P.setNotiz(db, p.id, { datum: date.value, courseId: course.id, text: text.value });
+    NM.app.commit();
+    toast('Notiz gespeichert.', 'success');
+  }
+
+  /** Notizen eines Kurses (Notenübersicht): Verlauf, neue Notiz, Sprung zur Seite „Personen“. */
+  async function courseNotesDialog(course, s) {
+    const db = NM.app.db();
+    const p = P.byId(db, s.personId);
+    if (!p) return toast('Person nicht im Register.', 'error');
+    const list = P.notizen(p, course.id);
+    const date = h('input', { class: 'input', type: 'date', value: NM.util.todayISO(), 'aria-label': 'Datum der neuen Notiz', 'data-note-dlg-datum': '' });
+    const text = h('textarea', { class: 'input', rows: 3, 'aria-label': 'Neue Notiz', placeholder: 'Neue Notiz …', 'data-note-dlg-text': '' });
+    let jump = false;
+    const v = await modal({
+      title: 'Notizen: ' + M.studentName(s),
+      wide: true,
+      body: h(
+        'div',
+        { class: 'note-dlg' },
+        h('p', { class: 'muted small' }, M.courseTitle(course), ' · nur für Sie, wird nie gedruckt'),
+        h('div', { class: 'note-new' }, h('div', { class: 'note-meta-fields' }, date), text),
+        list.length
+          ? h('ul', { class: 'plain note-list note-dlg-list' }, list.map((n) => h('li', { class: 'note-item' }, h('div', { class: 'note-body' }, h('span', { class: 'note-meta' }, fmtDate(n.datum)), h('p', { class: 'note-text' }, n.text)))))
+          : h('p', { class: 'muted' }, 'Noch keine Notizen in diesem Kurs.'),
+        h('button', { type: 'button', class: 'link note-all', 'data-note-all': '', onclick: (e) => ((jump = true), e.target.closest('dialog').querySelector('[data-note-close]').click()) }, 'Alle Notizen auf der Seite Personen ›')
+      ),
+      buttons: [
+        { label: 'Schließen', value: false },
+        { label: 'Notiz speichern', value: true, kind: 'primary', validate: () => !!text.value.trim() || (toast('Bitte einen Text eintragen.', 'error'), text.focus(), false) },
+      ],
+      onOpen: (dlg) => {
+        dlg.querySelector('.modal-actions .btn').setAttribute('data-note-close', '');
+        text.focus();
+      },
+    });
+    if (v === true) {
+      P.setNotiz(db, p.id, { datum: date.value, courseId: course.id, text: text.value });
+      NM.app.commit();
+      toast('Notiz gespeichert.', 'success');
+    }
+    if (jump) {
+      Object.assign(view, { notePid: p.id, noteFilter: 'all', editNote: null, detail: true });
+      NM.app.state.ui.personId = p.id;
+      NM.app.saveUi();
+      NM.app.select({ tab: 'people' });
+    }
   }
 
   function back() {
@@ -437,5 +657,5 @@
   }
 
   NM.views = NM.views || {};
-  NM.views.people = { render, courseLabel, courseLine };
+  NM.views.people = { render, courseLabel, courseLine, quickNoteDialog, courseNotesDialog };
 })((globalThis.NM = globalThis.NM || {}));

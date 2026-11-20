@@ -15,7 +15,7 @@ Aufruf:
     python3 entschluesseln.py DATEI.nmdb                  (fragt nach dem Passwort)
     python3 entschluesseln.py DATEI.nmdb --wiederherstellung
     python3 entschluesseln.py DATEI.nmdb -o ausgabe.json
-    python3 entschluesseln.py DATEI.nmdb --csv ordner/     (zusätzlich eine CSV je Kurs und das Personenregister)
+    python3 entschluesseln.py DATEI.nmdb --csv ordner/     (zusätzlich eine CSV je Kurs, das Personenregister und ggf. Notizen.csv)
 
 ACHTUNG: Die Ausgabe ist NICHT verschlüsselt. Nach Gebrauch löschen.
 """
@@ -262,6 +262,21 @@ def schreibe_csv(daten, ordner):
         with open(pfad, "w", newline="", encoding="utf-8-sig") as f:
             csv.writer(f, delimiter=";").writerows(zeilen)
         pfade.append(pfad)
+        # 2.6: Notizverlauf als eigene Datei, je Notiz eine Zeile (neueste zuerst je Person)
+        kurs_titel = {k.get("id"): f'{jahre.get(k.get("yearId"), "")} {k.get("klasse", "")} {k.get("fach", "")}'.strip()
+                      for k in daten.get("courses", [])}
+        notizen = [["Person", "Nachname", "Vorname", "Datum", "Kurs", "Notiz"]]
+        for p in sorted(personen, key=lambda p: (p.get("last", ""), p.get("first", ""))):
+            liste = [n for n in (p.get("notizen") or []) if isinstance(n, dict)]
+            for n in sorted(liste, key=lambda n: n.get("datum", ""), reverse=True):
+                kid = n.get("courseId")
+                kurs = "" if not kid else kurs_titel.get(kid, "gelöschter Kurs")
+                notizen.append([p.get("id", ""), p.get("last", ""), p.get("first", ""), n.get("datum", ""), kurs, n.get("text", "")])
+        if len(notizen) > 1:
+            pfad = os.path.join(ordner, "Notizen.csv")
+            with open(pfad, "w", newline="", encoding="utf-8-sig") as f:
+                csv.writer(f, delimiter=";").writerows(notizen)
+            pfade.append(pfad)
     return pfade
 
 

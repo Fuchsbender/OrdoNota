@@ -1670,6 +1670,111 @@ def run_ausgleich_check(br, base):
     report("Nachteilsausgleich ohne JavaScript-Fehler", not br.errors, "; ".join(br.errors)[:500])
 
 
+def run_notes_check(br, base):
+    print("Notizverlauf (Personen, Sitzplan mit Taste N, Notenübersicht, nie auf Beamer und Ausdruck):")
+    br.call("Emulation.setDeviceMetricsOverride", width=1600, height=1000, deviceScaleFactor=1, mobile=False)
+    br.open(f"{base}/index.html?demo")
+    br.wait(APP_READY, 30)
+    br.errors = []
+    res = br.eval("""(async () => {
+        const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
+        window.print = () => {};
+        const db = NM.app.db(), P = NM.people, out = {};
+        const btn = (text, root = document) => [...root.querySelectorAll('button')].find((b) => b.textContent.trim().startsWith(text));
+        const dialog = () => document.querySelector('dialog.modal');
+        const q = (sel) => document.querySelector(sel);
+        const c = db.courses[0], s = NM.model.activeStudents(c)[2], other = NM.model.activeStudents(c)[3], pid = s.personId;
+        const notes = () => P.notizenOf(P.byId(db, pid));
+        NM.app.select({ courseId: c.id, tab: 'overview' }); await wait();
+        out.noIcon = !q('[data-overview-notes]');
+        // Seite „Personen“: Eingabefeld oben, Kurs vorgewählt
+        NM.app.select({ tab: 'people' }); await wait();
+        q(`[data-person="${pid}"]`).click(); await wait();
+        out.empty = q('.people-card').textContent.includes('Noch keine Notizen.');
+        out.preset = [q('[data-note-new-kurs]').value === c.id, q('[data-note-new-datum]').value === NM.util.todayISO()];
+        q('[data-note-save]').click(); await wait();
+        out.needText = notes().length === 0;
+        const ta = q('[data-note-new-text]'); ta.value = 'Heute sehr unruhig.\\nNach Gespräch besser.'; ta.dispatchEvent(new Event('input'));
+        q('[data-note-save]').click(); await wait();
+        out.saved = [notes().length, notes()[0].courseId === c.id, notes()[0].text, q('[data-note-new-text]').value];
+        // zweite Notiz ohne Kurs, älteres Datum
+        const d = q('[data-note-new-datum]'); d.value = '2026-09-01'; d.dispatchEvent(new Event('change'));
+        const k = q('[data-note-new-kurs]'); k.value = ''; k.dispatchEvent(new Event('change'));
+        const t2 = q('[data-note-new-text]'); t2.value = 'Elterngespräch'; t2.dispatchEvent(new Event('input'));
+        q('[data-note-save]').click(); await wait();
+        const metas = () => [...document.querySelectorAll('.note-list .note-meta')].map((m) => m.textContent);
+        out.list = metas();
+        const f = q('[data-note-filter]'); f.value = 'none'; f.dispatchEvent(new Event('change')); await wait();
+        out.filterNone = metas();
+        const f2 = q('[data-note-filter]'); f2.value = c.id; f2.dispatchEvent(new Event('change')); await wait();
+        out.filterCourse = metas().length;
+        const f3 = q('[data-note-filter]'); f3.value = 'all'; f3.dispatchEvent(new Event('change')); await wait();
+        // Ändern an Ort und Stelle
+        const first = notes().find((n) => n.text === 'Elterngespräch');
+        q(`[data-note-edit="${first.id}"]`).click(); await wait();
+        out.editFocus = document.activeElement === q('[data-note-edit-text]');
+        q('[data-note-edit-text]').value = 'Elterngespräch mit der Mutter';
+        q('[data-note-edit-save]').click(); await wait();
+        out.edited = [notes().find((n) => n.id === first.id).text, !q('.note-editing')];
+        // Löschen mit Rückfrage
+        q(`[data-note-edit="${first.id}"]`).click(); await wait();
+        q('[data-note-delete]').click(); await wait();
+        btn('Löschen', dialog()).click(); await wait();
+        out.deleted = notes().length;
+        // Sitzplan: Knopf nur an ausgewählter/fokussierter Karte, Taste N
+        NM.app.select({ courseId: c.id, tab: 'seating' }); await wait();
+        const card = q(`.seat-card[data-sid="${s.id}"]`), nb = () => q(`[data-seat-note="${s.id}"]`);
+        out.hidden = getComputedStyle(nb()).display === 'none';
+        card.focus(); await wait(50);
+        out.shownFocus = getComputedStyle(nb()).display !== 'none';
+        card.dispatchEvent(new KeyboardEvent('keydown', { key: 'n', bubbles: true })); await wait();
+        out.quick = [!!dialog(), document.activeElement === q('[data-note-quick-text]'), dialog() && dialog().textContent.includes(NM.model.courseTitle(c))];
+        q('[data-note-quick-text]').value = 'Hat Material vergessen.';
+        btn('Notiz speichern', dialog()).click(); await wait();
+        out.quickSaved = [notes().length, notes().some((n) => n.text === 'Hat Material vergessen.' && n.courseId === c.id)];
+        // Knopf öffnet denselben Dialog, Abbrechen ändert nichts
+        nb().click(); await wait();
+        out.btnDialog = !!dialog(); btn('Abbrechen', dialog()).click(); await wait();
+        out.cancel = notes().length === 2;
+        // Beamer-Ansicht des Sitzplans ohne Notizen
+        q('[data-seat-beamer]').click(); await wait();
+        out.beamer = !!q('.seat-beamer') && !q('.seat-beamer .seat-note-btn') && !q('.seat-beamer').textContent.includes('unruhig');
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); await wait();
+        if (q('.seat-beamer')) q('.seat-beamer').remove();
+        // Notenübersicht: Symbol nur bei Notizen, Hinweis ohne Text, Dialog
+        NM.app.select({ courseId: c.id, tab: 'overview' }); await wait();
+        const ib = q(`[data-overview-notes="${s.id}"]`);
+        out.icon = [!!ib, !q(`[data-overview-notes="${other.id}"]`), ib && ib.title.startsWith('2 Notizen, letzte am'), ib && !/unruhig|Material/.test(ib.title)];
+        ib.click(); await wait();
+        out.dlg = [!!dialog(), dialog().querySelectorAll('.note-item').length, dialog().textContent.includes('Hat Material vergessen.')];
+        q('[data-note-dlg-text]').value = 'Aus der Übersicht';
+        btn('Notiz speichern', dialog()).click(); await wait();
+        out.dlgSaved = notes().length === 3 && q(`[data-overview-notes="${s.id}"]`).title.startsWith('3 Notizen');
+        // Sprung zur Seite „Personen“
+        q(`[data-overview-notes="${s.id}"]`).click(); await wait();
+        q('[data-note-all]').click(); await wait(300);
+        out.jump = [NM.app.state.ui.tab === 'people', NM.app.state.ui.personId === pid, !dialog(), notes().length === 3, document.querySelectorAll('.note-list .note-item').length === 3];
+        // Ausdrucke ohne Notizen
+        NM.print.course(c, NM.app.currentHalf(c));
+        const pr1 = q('#print-root').textContent;
+        NM.print.seating(c);
+        const pr2 = q('#print-root').textContent;
+        out.print = !/unruhig|Material vergessen|Aus der Übersicht/.test(pr1 + pr2);
+        out.fehler = NM.model.check(db).filter((x) => x.level === 'fehler').map((x) => x.text);
+        NM.app.state.dirty = false;
+        return out; })()""")
+    r = res or {}
+    report("Personen: leer, Kurs und Datum vorgewählt, leerer Text wird nicht gespeichert", r.get("noIcon") and r.get("empty") and r.get("preset") == [True, True] and r.get("needText"), str(res))
+    report("Personen: Notiz gespeichert (mit Kurs), Feld danach leer; Verlauf neueste oben, Filter", r.get("saved") == [1, True, "Heute sehr unruhig.\nNach Gespräch besser.", ""] and len(r.get("list", [])) == 2 and "ohne Kurs" in r.get("list", ["", ""])[1] and r.get("filterNone", [""])[0].endswith("ohne Kurs") and len(r.get("filterNone", [])) == 1 and r.get("filterCourse") == 1, str(res))
+    report("Personen: Ändern an Ort und Stelle, Löschen mit Rückfrage", r.get("editFocus") and r.get("edited") == ["Elterngespräch mit der Mutter", True] and r.get("deleted") == 1, str(res))
+    report("Sitzplan: Notiz-Knopf nur an gewählter/fokussierter Karte, Taste N öffnet Dialog mit Kurs, Speichern/Abbrechen", r.get("hidden") and r.get("shownFocus") and r.get("quick") == [True, True, True] and r.get("quickSaved") == [2, True] and r.get("btnDialog") and r.get("cancel"), str(res))
+    report("Sitzplan-Beamer ohne Notizen", r.get("beamer"), str(res))
+    report("Notenübersicht: Symbol nur mit Notizen, Hinweis ohne Text, Dialog mit Verlauf und neuer Notiz", r.get("icon") == [True, True, True, True] and r.get("dlg") == [True, 2, True] and r.get("dlgSaved"), str(res))
+    report("Notenübersicht: „Alle Notizen auf der Seite Personen“ öffnet die Person", r.get("jump") == [True, True, True, True, True], str(res))
+    report("Ausdrucke ohne Notizen; Datenbank ohne Fehler", r.get("print") and r.get("fehler") == [], str(res))
+    report("Notizverlauf ohne JavaScript-Fehler", not br.errors, "; ".join(br.errors)[:500])
+
+
 def qr_lesen(art, inhalt, endung):
     """QR-Codes mit zxing-cpp lesen (tests/qr_lesen.py in eigener uv-Umgebung). Liefert (Ergebnis, Fehlertext)."""
     tmp = tempfile.mkdtemp(prefix="nm-qr-")
@@ -3228,6 +3333,17 @@ def run_decrypt_tool(br, base):
         with open(reg_pfad, encoding="utf-8-sig") as f:
             zr = [z.rstrip("\n").split(";") for z in f]
         report("CSV: Nachteilsausgleich als Spalte im Personenregister", zr[0][-1] == "Nachteilsausgleich" and zr[1][-1] == "" and zr[2][-1] == "LRS (Deutsch, E) bis 2027-07-31: 25 % mehr Zeit | ADHS (alle Fächer)", str(zr))
+        # Notizverlauf (2.6.0): eigene Datei Notizen.csv, neueste zuerst, Kurs oder „gelöschter Kurs“
+        personen[0]["notizen"] = [{"id": "n1", "datum": "2026-11-10", "courseId": "k1", "text": "Unruhig"},
+                                  {"id": "n2", "datum": "2026-11-18", "text": "Elterngespräch"},
+                                  {"id": "n3", "datum": "2026-10-01", "courseId": "weg", "text": "Alt"}]
+        pfade = tool.schreibe_csv({"years": [{"id": "y", "name": "2026/27"}], "courses": [{"id": "k1", "yearId": "y", "klasse": "8b", "fach": "M", "students": [], "assessments": []}], "people": personen}, tmp)
+        nz_pfad = next((x for x in pfade if x.endswith("Notizen.csv")), None)
+        zn = []
+        if nz_pfad:
+            with open(nz_pfad, encoding="utf-8-sig") as f:
+                zn = [z.rstrip("\n").split(";") for z in f]
+        report("CSV: Notizen.csv mit Datum, Kurs und Text (neueste zuerst)", zn and zn[0] == ["Person", "Nachname", "Vorname", "Datum", "Kurs", "Notiz"] and [z[3:] for z in zn[1:]] == [["2026-11-18", "", "Elterngespräch"], ["2026-11-10", "2026/27 8b M", "Unruhig"], ["2026-10-01", "gelöschter Kurs", "Alt"]], str(zn))
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
@@ -3238,7 +3354,7 @@ def main():
         run_epo_material_check, run_attendance_check, run_epo_tiles_check, run_print_head_check,
         run_draw_check, run_draw_pools_check, run_random_check, run_timer_check, run_tools_layout_check,
         run_tools_menu_check, run_pomodoro_check, run_transition_check, run_sidebar_check,
-        run_tests_view_check, run_task_add_click_check, run_makeup_check, run_verbal_check, run_ausgleich_check, run_people_check, run_people_page_check, run_unreachable_check,
+        run_tests_view_check, run_task_add_click_check, run_makeup_check, run_verbal_check, run_ausgleich_check, run_notes_check, run_people_check, run_people_page_check, run_unreachable_check,
         run_tabs_check, run_tab_order_check, run_overview_fold_check, run_settings_layout_check,
         run_theme_check, run_demo_link_check, run_old_db_check, run_parts_check, run_print_menu_check,
         run_pres_check, run_group_check, run_groups_tab_check, run_moodle_check, run_scripto_check,

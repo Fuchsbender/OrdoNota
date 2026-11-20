@@ -12,7 +12,7 @@
   // 5 (2.4): Personenregister (db.people, students[].personId) – ältere Versionen würden neue Kurseinträge
   //    ohne Person anlegen und Personen beim Löschen nicht aufräumen.
   const SCHEMA = 5;
-  const APP_VERSION = '2.5.0';
+  const APP_VERSION = '2.6.0';
 
   class NewerSchemaError extends Error {}
 
@@ -209,6 +209,9 @@
       if (!Array.isArray(p.ausgleiche)) p.ausgleiche = [];
       p.ausgleiche = p.ausgleiche.filter((a) => a && typeof a === 'object' && a.id);
       for (const a of p.ausgleiche) if (!Array.isArray(a.faecher)) a.faecher = [];
+      // 2.6: Notizverlauf (fehlt = keine Notizen)
+      if (!Array.isArray(p.notizen)) p.notizen = [];
+      p.notizen = p.notizen.filter((n) => n && typeof n === 'object' && n.id && typeof n.text === 'string');
     }
     db.schema = SCHEMA;
     db.savedWith = APP_VERSION;

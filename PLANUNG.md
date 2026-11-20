@@ -332,7 +332,7 @@ Mit dem Nutzer am 18.11.2026 geklärt (grill-me, alle Empfehlungen angenommen). 
   - [x] **AD-1** Datenmodell, Umstellung, `NM.people`, Sicherung, Kopieren, Löschen, Notfallwerkzeug (19.11.2026)
   - [x] **AD-2** Seite „Personen“, Zusammenführen und Trennen, Abgleich beim Einfügen, Namen ändern → 2.4.0 (19.11.2026)
 - [x] **AE** Nachteilsausgleich – erledigt in 2.5.0 (20.11.2026), Oberfläche wie unten beschrieben
-- [ ] **AF** Notizverlauf
+- [x] **AF** Notizverlauf – erledigt in 2.6.0 (20.11.2026), Oberfläche wie unten beschrieben
 - [ ] **AG** Förderplan
 - [ ] später: Kompetenzanalysen und Kompetenzverlauf (eigener grill-me-Durchgang, baut auf AD auf)
 

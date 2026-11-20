@@ -3,6 +3,7 @@
  * db.people: [ { id, last, first, created, orphanSince?, ausgleiche? } ], jeder Kurseintrag course.students[].personId.
  * ausgleiche (2.5, Nachteilsausgleich, Gesundheitsdaten): [ { id, art: 'lrs' | 'dyskalkulie' | 'sonst', text?, faecher: [..], massnahmen, bis? } ]
  * – faecher leer = alle Fächer, bis = letzter gültiger Tag (ISO-Datum). Nie auf Beamer, Ausdrucke oder in die Excel-Schülerliste.
+ * notizen (2.6, Notizverlauf, intern): [ { id, datum, text, courseId? } ] – nie gedruckt, nie auf dem Beamer.
  * Name, Foto, Mail-Adresse, I-Status, Einstufung und „Aktiv“ bleiben am Kurseintrag; Noten bleiben am Kurs.
  * Später hängen an der Person weitere Listen (Notizen, Ausgleiche, Förderpläne), die beim Zusammenführen
  * zusammengelegt werden.
@@ -197,7 +198,8 @@
 
   /**
    * Kurseinträge (ids der course.students) von der Person abtrennen; sie werden zu einer neuen Person mit dem
-   * Namen des ersten gewählten Eintrags. Alles, was an der Person hängt, bleibt bei der bisherigen.
+   * Namen des ersten gewählten Eintrags. Was an der Person hängt, bleibt bei der bisherigen – außer Notizen
+   * zu einem der abgetrennten Kurse (seit 2.6), die gehen mit.
    */
   function split(db, pid, studentIds) {
     const all = entries(db, pid);
@@ -207,6 +209,13 @@
     const p = newPerson(chosen[0].student.last, chosen[0].student.first);
     list(db).push(p);
     for (const e of chosen) e.student.personId = p.id;
+    // 2.6: Notizen zu einem abgetrennten Kurs gehen mit, Notizen ohne Kurs bleiben
+    const old = byId(db, pid);
+    const moved = new Set(chosen.map((e) => e.course.id));
+    if (old && Array.isArray(old.notizen) && old.notizen.some((n) => n.courseId && moved.has(n.courseId))) {
+      p.notizen = old.notizen.filter((n) => n.courseId && moved.has(n.courseId));
+      old.notizen = old.notizen.filter((n) => !(n.courseId && moved.has(n.courseId)));
+    }
     ensure(db);
     return p;
   }
@@ -309,6 +318,47 @@
     if (p && Array.isArray(p.ausgleiche)) p.ausgleiche = p.ausgleiche.filter((a) => a.id !== aid);
   }
 
+  // ---------- Notizverlauf (2.6) ----------
+  const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+  function notizenOf(p) {
+    return p && Array.isArray(p.notizen) ? p.notizen : [];
+  }
+
+  /**
+   * Notizen einer Person, neueste oben (Datum, bei gleichem Datum die später angelegte zuerst).
+   * courseId: undefined/'all' = alle, 'none' = ohne Kurs, sonst nur dieser Kurs.
+   */
+  function notizen(p, courseId = 'all') {
+    const all = notizenOf(p);
+    return all
+      .map((n, i) => [n, i])
+      .filter(([n]) => courseId === 'all' || courseId === undefined || (courseId === 'none' ? !n.courseId : n.courseId === courseId))
+      .sort((a, b) => (a[0].datum === b[0].datum ? b[1] - a[1] : String(b[0].datum) < String(a[0].datum) ? -1 : 1))
+      .map(([n]) => n);
+  }
+
+  /** Notiz anlegen oder ändern (gleiche id). Leerer Text → Fehler. */
+  function setNotiz(db, pid, data) {
+    const p = byId(db, pid);
+    if (!p) throw new Error('Person nicht gefunden.');
+    const text = String(data.text || '').trim();
+    if (!text) throw new Error('Die Notiz ist leer.');
+    const n = { id: data.id || NM.util.uid(), datum: ISO_DAY.test(data.datum || '') ? data.datum : today(), text };
+    if (data.courseId) n.courseId = data.courseId;
+    if (!Array.isArray(p.notizen)) p.notizen = [];
+    const i = p.notizen.findIndex((x) => x.id === n.id);
+    if (i >= 0) p.notizen[i] = n;
+    else p.notizen.push(n);
+    return n;
+  }
+
+  function removeNotiz(db, pid, nid) {
+    const p = byId(db, pid);
+    if (p && Array.isArray(p.notizen)) p.notizen = p.notizen.filter((n) => n.id !== nid);
+  }
+
   NM.people = { nameKey, list, byId, index, entries, ensure, matches, shareCourse, suggestPairs, merge, mergePairs, split, remove, orphansIf,
-    AUSGLEICH_ARTEN, AUSGLEICH_KURZ_MAX, ausgleichKurz, ausgleichName, ausgleichAbgelaufen, ausgleichPasst, ausgleicheOf, ausgleicheFuer, faecherDerPerson, setAusgleich, removeAusgleich };
+    AUSGLEICH_ARTEN, AUSGLEICH_KURZ_MAX, ausgleichKurz, ausgleichName, ausgleichAbgelaufen, ausgleichPasst, ausgleicheOf, ausgleicheFuer, faecherDerPerson, setAusgleich, removeAusgleich,
+    notizenOf, notizen, setNotiz, removeNotiz };
 })((globalThis.NM = globalThis.NM || {}));
