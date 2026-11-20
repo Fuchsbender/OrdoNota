@@ -944,7 +944,9 @@ ul.plain.fp-older-list > li { display: block; padding: 0.125rem 0; border-bottom
 
 .fp-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 1.25rem; }
 .fp-col { min-width: 0; border-top: 1px solid var(--border); padding-top: 0.5rem; }
-@media (max-width: 700px) { .fp-compare { grid-template-columns: 1fr; } .fp-compare .fp-col-head:nth-child(2) { order: 2; } .fp-compare .fp-col:nth-child(4) { order: 3; } }
+/* Auswahl bleibt beim Scrollen langer Fassungen oben stehen */
+.fp-col-head { position: sticky; top: 0; z-index: 1; padding-bottom: 0.375rem; background: var(--bg-card); }
+@media (max-width: 700px) { .fp-compare { grid-template-columns: 1fr; } .fp-compare .fp-col-head { position: static; } .fp-compare .fp-col-head:nth-child(2) { order: 2; } .fp-compare .fp-col:nth-child(4) { order: 3; } }
 .people-empty { color: var(--text-dim); }
 .merge-list li, .merge-pick li { padding: 0.25rem 0; border-top: 1px solid var(--border); }
 .merge-list li:first-child, .merge-pick li:first-child { border-top: 0; }
