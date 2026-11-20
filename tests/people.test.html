@@ -237,6 +237,41 @@
     ok('Notizen: check ohne Fehler', M.check(db).filter((x) => x.level === 'fehler').length === 0);
   }
 
+  // ---------- Förderplan (2.7) ----------
+  {
+    const db = M.migrate(fresh());
+    ok('Förderplan: Migration setzt leere Liste', db.people.every((p) => Array.isArray(p.foerderplaene) && !p.foerderplaene.length));
+    const pid = db.courses[1].students[2].personId;  // Lang Sophie
+    throws('Förderplan: ohne Schwerpunkt ist ein Fehler', () => P.setFoerderplan(db, pid, { schwerpunkte: [] }));
+    throws('Förderplan: „Sonstiges“ ohne Text ist ein Fehler', () => P.setFoerderplan(db, pid, { schwerpunkte: ['sonst'], sonst: '  ' }));
+    throws('Förderplan: „bis“ vor „von“ ist ein Fehler', () => P.setFoerderplan(db, pid, { schwerpunkte: ['lernen'], von: '2026-09-01', bis: '2026-08-01' }));
+    ok('Förderplan: Fehler legen nichts an', P.foerderplaeneOf(P.byId(db, pid)).length === 0);
+    const f1 = P.setFoerderplan(db, pid, { datum: '2025-09-04', schwerpunkte: ['sprache', 'lernen', 'quatsch'], ziele: ' Lesen ', massnahmen: 'Training', von: '2025-09-01', bis: 'kaputt' });
+    ok('Förderplan: Schwerpunkte in fester Reihenfolge, Unbekanntes fällt weg, Text getrimmt, kaputtes Datum fällt weg', f1.schwerpunkte.join() === 'lernen,sprache' && f1.ziele === 'Lesen' && f1.von === '2025-09-01' && !('bis' in f1) && !('sonst' in f1));
+    const f2 = P.setFoerderplan(db, pid, { datum: '2026-02-10', schwerpunkte: ['lernen', 'sonst'], sonst: ' Autismus ', ziele: 'Lesen 2' });
+    const f3 = P.setFoerderplan(db, pid, { datum: '2026-02-10', schwerpunkte: ['lernen'], ziele: 'am selben Tag später' });
+    const p = P.byId(db, pid);
+    ok('Förderplan: neueste gilt (bei gleichem Datum die spätere)', P.geltenderFoerderplan(p).id === f3.id && P.foerderplaene(p).map((f) => f.id).join() === [f3.id, f2.id, f1.id].join());
+    ok('schwerpunktText mit Sonstigem', P.schwerpunktText(f2) === 'Lernen, Autismus' && P.schwerpunktText(f1) === 'Lernen, Sprache');
+    const e = P.setFoerderplan(db, pid, { id: f2.id, datum: '2026-02-11', schwerpunkte: ['emsoz'], sonst: 'weg' });
+    ok('Fassung ändern: gleiche id, „sonst“ entfernt, neue Reihenfolge', e.id === f2.id && !('sonst' in e) && p.foerderplaene.length === 3 && P.geltenderFoerderplan(p).id === f2.id);
+    P.removeFoerderplan(db, pid, f2.id);
+    ok('removeFoerderplan', p.foerderplaene.length === 2 && P.geltenderFoerderplan(p).id === f3.id);
+    ok('geltenderFoerderplan: ohne Plan null', P.geltenderFoerderplan({ id: 'x' }) === null && P.geltenderFoerderplan(null) === null);
+    // Zusammenführen legt zusammen, Trennen lässt den Plan bei der bisherigen Person
+    const mia8 = db.courses[1].students[0].personId, mia7 = db.courses[0].students[0].personId;
+    P.setFoerderplan(db, mia7, { schwerpunkte: ['hoeren'] });
+    P.setFoerderplan(db, mia8, { schwerpunkte: ['sehen'] });
+    P.merge(db, mia8, mia7);
+    ok('Zusammenführen: Fassungen beider Personen bleiben', P.byId(db, mia8).foerderplaene.length === 2);
+    const neu = P.split(db, mia8, [db.courses[0].students[0].id]);
+    ok('Trennen: Förderplan bleibt bei der bisherigen Person', P.byId(db, mia8).foerderplaene.length === 2 && !('foerderplaene' in neu));
+    const d = JSON.parse(JSON.stringify(db)); d.people[0].foerderplaene = [null, { datum: 'x' }, { id: 'k', datum: '2026-01-01' }];
+    M.migrate(d);
+    ok('Migration: kaputte Fassungen fallen weg, Schwerpunktliste ergänzt', d.people[0].foerderplaene.length === 1 && Array.isArray(d.people[0].foerderplaene[0].schwerpunkte));
+    ok('Förderplan: check ohne Fehler', M.check(db).filter((x) => x.level === 'fehler').length === 0);
+  }
+
   lines.unshift(fails === 0 ? 'ALLE TESTS BESTANDEN' : fails + ' FEHLGESCHLAGEN');
   document.getElementById('out').textContent = lines.join('\n');
   document.title = 'fertig';

@@ -1790,6 +1790,106 @@ def run_notes_check(br, base):
     report("Notizverlauf ohne JavaScript-Fehler", not br.errors, "; ".join(br.errors)[:500])
 
 
+def run_foerder_check(br, base):
+    print("Förderplan (Anlegen, Fortschreiben, Ändern, Vergleich, Hinweis in der Kursliste, nie im Ausdruck):")
+    br.call("Emulation.setDeviceMetricsOverride", width=1600, height=1000, deviceScaleFactor=1, mobile=False)
+    br.open(f"{base}/index.html?demo")
+    br.wait(APP_READY, 30)
+    br.errors = []
+    res = br.eval("""(async () => {
+        const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
+        window.print = () => {};
+        const db = NM.app.db(), P = NM.people, out = {};
+        const btn = (text, root = document) => [...root.querySelectorAll('button')].find((b) => b.textContent.trim().startsWith(text));
+        const dialog = () => document.querySelector('dialog.modal');
+        const q = (sel, root = document) => root.querySelector(sel);
+        const c = db.courses[0], s = NM.model.activeStudents(c).find((x) => !x.iStatus), pid = s.personId;
+        const plans = () => P.foerderplaene(P.byId(db, pid));
+        NM.app.select({ courseId: c.id, tab: 'course' }); await wait();
+        out.noHint = !q('[data-fp-hint]');
+        // Anlegen
+        P.byId(db, pid) && NM.views.people.open(pid); await wait();
+        out.empty = [q('.people-card').textContent.includes('Kein Förderplan eingetragen.'), !q('[data-fp-compare]')];
+        q('[data-fp-new]').click(); await wait();
+        let d = dialog();
+        btn('Speichern', d).click(); await wait();
+        out.needSp = !!dialog() && plans().length === 0;
+        q('[data-fp-sp="sonst"]', d).click(); await wait(50);
+        out.sonstShown = !q('[data-fp-sonst]', d).hidden;
+        btn('Speichern', d).click(); await wait();
+        out.needSonst = !!dialog() && plans().length === 0;
+        q('[data-fp-sp="sonst"]', d).click(); q('[data-fp-sp="lernen"]', d).click();
+        q('[data-fp-datum]', d).value = '2026-02-10';
+        q('[data-fp-von]', d).value = '2026-02-01'; q('[data-fp-bis]', d).value = '2026-07-31';
+        q('[data-fp-text="ziele"]', d).value = 'Liest kurze Texte sinnentnehmend.';
+        q('[data-fp-text="massnahmen"]', d).value = 'Täglich 10 Minuten Lesetraining.';
+        btn('Speichern', d).click(); await wait();
+        out.saved = [!dialog(), plans().length, plans()[0] && plans()[0].schwerpunkte.join()];
+        const cur = () => q('.fp-current');
+        out.shown = [cur().textContent.includes('Gilt seit 10.02.2026'), cur().textContent.includes('Lernen'), cur().textContent.includes('01.02.2026 – 31.07.2026'), cur().textContent.includes('Lesetraining')];
+        // Fortschreiben: vorausgefüllt, neue Fassung
+        q('[data-fp-continue]').click(); await wait();
+        d = dialog();
+        out.prefill = [q('[data-fp-text="ziele"]', d).value === 'Liest kurze Texte sinnentnehmend.', q('[data-fp-sp="lernen"]', d).checked, q('[data-fp-datum]', d).value === NM.util.todayISO(), q('[data-fp-von]', d).value === ''];
+        q('[data-fp-sp="sprache"]', d).click();
+        q('[data-fp-text="ziele"]', d).value = 'Liest längere Texte sinnentnehmend.';
+        q('[data-fp-text="ziele"]', d).dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true, bubbles: true, cancelable: true })); await wait();
+        out.continued = [!dialog(), plans().length, plans()[0].ziele, plans()[1].ziele === 'Liest kurze Texte sinnentnehmend.', plans()[0].schwerpunkte.join()];
+        out.older = [!!q('.fp-older'), q('.fp-older summary').textContent, q('.fp-current').textContent.includes('längere')];
+        // Frühere Fassung aufklappen bleibt nach Neuzeichnen offen
+        q('.fp-older').open = true; q('.fp-older').dispatchEvent(new Event('toggle')); NM.app.rerender(); await wait();
+        out.keepOpen = q('.fp-older').open;
+        // Vergleich
+        q('[data-fp-compare]').click(); await wait();
+        d = dialog();
+        const cols = () => [...d.querySelectorAll('.fp-col')].map((x) => x.textContent);
+        out.cmp = [d.querySelectorAll('.fp-col').length, cols()[0].includes('kurze'), cols()[1].includes('längere'), cols()[1].includes('Sprache')];
+        const sel = q('[data-fp-cmp="0"]', d); sel.value = plans()[0].id; sel.dispatchEvent(new Event('change')); await wait(50);
+        out.cmpSwitch = cols()[0].includes('längere');
+        btn('Schließen', d).click(); await wait();
+        // Ändern der älteren Fassung und Löschen
+        const old = plans()[1];
+        q(`.fp-version[data-fp-id="${old.id}"]`).open = true; await wait(50);
+        q(`[data-fp-edit="${old.id}"]`).click(); await wait();
+        d = dialog();
+        out.editPrefill = q('[data-fp-datum]', d).value === '2026-02-10' && q('[data-fp-von]', d).value === '2026-02-01';
+        q('[data-fp-text="massnahmen"]', d).value = 'Geändert';
+        btn('Speichern', d).click(); await wait();
+        out.edited = [plans().length, plans()[1].massnahmen, plans()[1].id === old.id];
+        // Hinweis in der Kursliste: Plan, aber kein I-Status
+        NM.app.select({ courseId: c.id, tab: 'course' }); await wait();
+        const hint = q(`[data-fp-hint="${s.id}"]`);
+        out.hint = [!!hint, document.querySelectorAll('[data-fp-hint]').length, hint && hint.title.startsWith('Förderplan vorhanden, I-Status nicht gesetzt')];
+        s.iStatus = true; NM.app.commit(); await wait();
+        out.hintGone = !q(`[data-fp-hint="${s.id}"]`);
+        delete s.iStatus; NM.app.commit(); await wait();
+        q(`[data-fp-hint="${s.id}"]`).click(); await wait();
+        out.jump = [NM.app.state.ui.tab === 'people', NM.app.state.ui.personId === pid, !!q('.fp-current')];
+        // Fassung löschen
+        q(`[data-fp-edit="${plans()[0].id}"]`).click(); await wait();
+        btn('Fassung löschen', dialog()).click(); await wait();
+        btn('Löschen', dialog()).click(); await wait();
+        out.deleted = [plans().length, !q('[data-fp-compare]'), !q('.fp-older')];
+        // Nie im Ausdruck, nicht in Übersicht, Punkteeingabe, Ziehen
+        NM.print.course(c, NM.app.currentHalf(c));
+        const pr = q('#print-root').textContent;
+        out.print = !/Lesetraining|sinnentnehmend|Förderplan/.test(pr);
+        const views = [];
+        for (const tab of ['overview', 'tests', 'draw', 'seating']) { NM.app.select({ courseId: c.id, tab }); await wait(); views.push(!/Förderplan|sinnentnehmend/.test(q('#view').textContent)); }
+        out.views = views;
+        out.fehler = NM.model.check(db).filter((x) => x.level === 'fehler').map((x) => x.text);
+        NM.app.state.dirty = false;
+        return out; })()""")
+    r = res or {}
+    report("Anlegen: leer, Schwerpunkt Pflicht, „Sonstiges“ braucht Text, Speichern zeigt die geltende Fassung", r.get("noHint") and r.get("empty") == [True, True] and r.get("needSp") and r.get("sonstShown") and r.get("needSonst") and r.get("saved") == [True, 1, "lernen"] and r.get("shown") == [True, True, True, True], str(res))
+    report("Fortschreiben: vorausgefüllt (Datum heute), neue Fassung mit Strg+Enter, alte bleibt, frühere eingeklappt", r.get("prefill") == [True, True, True, True] and r.get("continued") == [True, 2, "Liest längere Texte sinnentnehmend.", True, "lernen,sprache"] and r.get("older") == [True, "Frühere Fassungen (1)", True] and r.get("keepOpen"), str(res))
+    report("Vergleich: zwei Spalten (vorherige links, geltende rechts), Auswahl wechselt", r.get("cmp") == [2, True, True, True] and r.get("cmpSwitch"), str(res))
+    report("Ändern einer früheren Fassung, Löschen mit Rückfrage", r.get("editPrefill") and r.get("edited") == [2, "Geändert", True] and r.get("deleted") == [1, True, True], str(res))
+    report("Kursliste: Hinweis nur bei Plan ohne I-Status, springt zur Person", r.get("hint") == [True, 1, True] and r.get("hintGone") and r.get("jump") == [True, True, True], str(res))
+    report("Nie im Ausdruck, nicht in Übersicht, Tests, Ziehen, Sitzplan; Datenbank ohne Fehler", r.get("print") and r.get("views") == [True, True, True, True] and r.get("fehler") == [], str(res))
+    report("Förderplan ohne JavaScript-Fehler", not br.errors, "; ".join(br.errors)[:500])
+
+
 def qr_lesen(art, inhalt, endung):
     """QR-Codes mit zxing-cpp lesen (tests/qr_lesen.py in eigener uv-Umgebung). Liefert (Ergebnis, Fehlertext)."""
     tmp = tempfile.mkdtemp(prefix="nm-qr-")
@@ -3359,6 +3459,16 @@ def run_decrypt_tool(br, base):
             with open(nz_pfad, encoding="utf-8-sig") as f:
                 zn = [z.rstrip("\n").split(";") for z in f]
         report("CSV: Notizen.csv mit Datum, Kurs und Text (neueste zuerst)", zn and zn[0] == ["Person", "Nachname", "Vorname", "Datum", "Kurs", "Notiz"] and [z[3:] for z in zn[1:]] == [["2026-11-18", "", "Elterngespräch"], ["2026-11-10", "2026/27 8b M", "Unruhig"], ["2026-10-01", "gelöschter Kurs", "Alt"]], str(zn))
+        # Förderplan (2.7.0): eigene Datei Foerderplaene.csv, neueste zuerst, „gilt“ nur bei der neuesten
+        personen[0]["foerderplaene"] = [{"id": "f1", "datum": "2025-09-04", "schwerpunkte": ["lernen"], "ziele": "Lesen", "massnahmen": "Training"},
+                                        {"id": "f2", "datum": "2026-02-10", "schwerpunkte": ["lernen", "sonst"], "sonst": "Autismus", "von": "2026-02-01", "bis": "2026-07-31", "ziele": "Lesen 2", "massnahmen": ""}]
+        pfade = tool.schreibe_csv({"years": [], "courses": [], "people": personen}, tmp)
+        fp_pfad = next((x for x in pfade if x.endswith("Foerderplaene.csv")), None)
+        zf2 = []
+        if fp_pfad:
+            with open(fp_pfad, encoding="utf-8-sig") as f:
+                zf2 = [z.rstrip("\n").split(";") for z in f]
+        report("CSV: Foerderplaene.csv mit Schwerpunkten, Zeitraum, „gilt“ bei der neuesten", zf2 and zf2[0][3:6] == ["Datum", "gilt", "Schwerpunkte"] and [z[3:9] for z in zf2[1:]] == [["2026-02-10", "ja", "Lernen, Autismus", "2026-02-01", "2026-07-31", "Lesen 2"], ["2025-09-04", "", "Lernen", "", "", "Lesen"]], str(zf2))
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
@@ -3369,7 +3479,7 @@ def main():
         run_epo_material_check, run_attendance_check, run_epo_tiles_check, run_print_head_check,
         run_draw_check, run_draw_pools_check, run_random_check, run_timer_check, run_tools_layout_check,
         run_tools_menu_check, run_pomodoro_check, run_transition_check, run_sidebar_check,
-        run_tests_view_check, run_task_add_click_check, run_makeup_check, run_verbal_check, run_ausgleich_check, run_notes_check, run_people_check, run_people_page_check, run_unreachable_check,
+        run_tests_view_check, run_task_add_click_check, run_makeup_check, run_verbal_check, run_ausgleich_check, run_notes_check, run_foerder_check, run_people_check, run_people_page_check, run_unreachable_check,
         run_tabs_check, run_tab_order_check, run_overview_fold_check, run_settings_layout_check,
         run_theme_check, run_demo_link_check, run_old_db_check, run_parts_check, run_print_menu_check,
         run_pres_check, run_group_check, run_groups_tab_check, run_moodle_check, run_scripto_check,

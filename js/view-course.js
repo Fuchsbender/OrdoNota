@@ -234,7 +234,8 @@
               NM.app.commit();
             },
           }),
-          UI.ausgleichMarks(s, course)
+          UI.ausgleichMarks(s, course),
+          fpHint(s)
         ),
         h(
           'td',
@@ -452,6 +453,26 @@
     const title = M.courseTitle(course);
     download(safeFilename(`Schuelerliste_${title}_${year ? year.name : ''}.xlsx`), NM.xlsx.workbook({ sheet: title, rows, widths: [6, 22, 18, 9, 7] }));
     toast('Schülerliste als Excel-Datei gespeichert (Download-Ordner). Sie enthält Namen – bitte vertraulich behandeln.', 'success', 5000);
+  }
+
+  /** 2.7: Förderplan vorhanden, I-Status hier nicht gesetzt → dezenter Hinweis mit Sprung zur Person. */
+  function fpHint(s) {
+    if (s.iStatus) return null;
+    const p = NM.people.byId(NM.app.db(), s.personId);
+    if (!NM.people.geltenderFoerderplan(p)) return null;
+    const text = 'Förderplan vorhanden, I-Status nicht gesetzt';
+    return h(
+      'button',
+      {
+        type: 'button',
+        class: 'fp-hint',
+        title: text + ' – zur Person',
+        'aria-label': text + ': ' + M.studentName(s) + ' – zur Person',
+        'data-fp-hint': s.id,
+        onclick: () => NM.views.people.open(p.id),
+      },
+      icon('alert-circle')
+    );
   }
 
   async function removeStudent(course, s) {

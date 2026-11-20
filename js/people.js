@@ -4,6 +4,8 @@
  * ausgleiche (2.5, Nachteilsausgleich, Gesundheitsdaten): [ { id, art: 'lrs' | 'dyskalkulie' | 'sonst', text?, faecher: [..], massnahmen, bis? } ]
  * – faecher leer = alle Fächer, bis = letzter gültiger Tag (ISO-Datum). Nie auf Beamer, Ausdrucke oder in die Excel-Schülerliste.
  * notizen (2.6, Notizverlauf, intern): [ { id, datum, text, courseId? } ] – nie gedruckt, nie auf dem Beamer.
+ * foerderplaene (2.7, Gesundheitsdaten): [ { id, datum, schwerpunkte: [..], sonst?, von?, bis?, ziele, massnahmen } ],
+ * je Fortschreibung eine Fassung; die mit dem neuesten Datum gilt. Nie gedruckt, nie auf dem Beamer.
  * Name, Foto, Mail-Adresse, I-Status, Einstufung und „Aktiv“ bleiben am Kurseintrag; Noten bleiben am Kurs.
  * Später hängen an der Person weitere Listen (Notizen, Ausgleiche, Förderpläne), die beim Zusammenführen
  * zusammengelegt werden.
@@ -358,7 +360,75 @@
     if (p && Array.isArray(p.notizen)) p.notizen = p.notizen.filter((n) => n.id !== nid);
   }
 
+  // ---------- Förderplan (2.7) ----------
+  const SCHWERPUNKTE = [
+    ['lernen', 'Lernen'],
+    ['sprache', 'Sprache'],
+    ['emsoz', 'emotionale und soziale Entwicklung'],
+    ['ganzheitlich', 'ganzheitliche Entwicklung'],
+    ['motorik', 'körperliche und motorische Entwicklung'],
+    ['hoeren', 'Hören'],
+    ['sehen', 'Sehen'],
+    ['sonst', 'Sonstiges'],
+  ];
+
+  function foerderplaeneOf(p) {
+    return p && Array.isArray(p.foerderplaene) ? p.foerderplaene : [];
+  }
+
+  /** Fassungen, neueste zuerst (Datum, bei gleichem Datum die später angelegte). Die erste gilt. */
+  function foerderplaene(p) {
+    return foerderplaeneOf(p)
+      .map((f, i) => [f, i])
+      .sort((a, b) => (a[0].datum === b[0].datum ? b[1] - a[1] : String(b[0].datum) < String(a[0].datum) ? -1 : 1))
+      .map(([f]) => f);
+  }
+
+  function geltenderFoerderplan(p) {
+    return foerderplaene(p)[0] || null;
+  }
+
+  /** Schwerpunkte als Text („Lernen, Sprache“); „Sonstiges“ mit seinem Freitext. */
+  function schwerpunktText(f) {
+    return (f.schwerpunkte || [])
+      .map((k) => (k === 'sonst' ? String(f.sonst || '').trim() || 'Sonstiges' : (SCHWERPUNKTE.find(([x]) => x === k) || [k, k])[1]))
+      .join(', ');
+  }
+
+  /**
+   * Fassung anlegen oder ändern (gleiche id). Mindestens ein Schwerpunkt, „Sonstiges“ mit Freitext,
+   * „bis“ nicht vor „von“. Unbekannte Schwerpunkte fallen weg.
+   */
+  function setFoerderplan(db, pid, data) {
+    const p = byId(db, pid);
+    if (!p) throw new Error('Person nicht gefunden.');
+    const known = new Set(SCHWERPUNKTE.map(([k]) => k));
+    const sp = SCHWERPUNKTE.map(([k]) => k).filter((k) => (data.schwerpunkte || []).includes(k) && known.has(k));
+    if (!sp.length) throw new Error('Bitte mindestens einen Förderschwerpunkt wählen.');
+    const sonst = String(data.sonst || '').trim();
+    if (sp.includes('sonst') && !sonst) throw new Error('Bitte den sonstigen Förderschwerpunkt benennen.');
+    const day = (v) => (ISO_DAY.test(v || '') ? v : '');
+    const f = { id: data.id || NM.util.uid(), datum: day(data.datum) || today(), schwerpunkte: sp };
+    if (sp.includes('sonst')) f.sonst = sonst;
+    if (day(data.von)) f.von = data.von;
+    if (day(data.bis)) f.bis = data.bis;
+    if (f.von && f.bis && f.bis < f.von) throw new Error('„Bis“ liegt vor „von“.');
+    f.ziele = String(data.ziele || '').trim();
+    f.massnahmen = String(data.massnahmen || '').trim();
+    if (!Array.isArray(p.foerderplaene)) p.foerderplaene = [];
+    const i = p.foerderplaene.findIndex((x) => x.id === f.id);
+    if (i >= 0) p.foerderplaene[i] = f;
+    else p.foerderplaene.push(f);
+    return f;
+  }
+
+  function removeFoerderplan(db, pid, fid) {
+    const p = byId(db, pid);
+    if (p && Array.isArray(p.foerderplaene)) p.foerderplaene = p.foerderplaene.filter((f) => f.id !== fid);
+  }
+
   NM.people = { nameKey, list, byId, index, entries, ensure, matches, shareCourse, suggestPairs, merge, mergePairs, split, remove, orphansIf,
     AUSGLEICH_ARTEN, AUSGLEICH_KURZ_MAX, ausgleichKurz, ausgleichName, ausgleichAbgelaufen, ausgleichPasst, ausgleicheOf, ausgleicheFuer, faecherDerPerson, setAusgleich, removeAusgleich,
-    notizenOf, notizen, setNotiz, removeNotiz };
+    notizenOf, notizen, setNotiz, removeNotiz,
+    SCHWERPUNKTE, foerderplaeneOf, foerderplaene, geltenderFoerderplan, schwerpunktText, setFoerderplan, removeFoerderplan };
 })((globalThis.NM = globalThis.NM || {}));

@@ -1,6 +1,7 @@
 /* OrdoNota – Seite „Personen“ (Personenregister, seit 2.4.0): Liste, Person, Zusammenführen, Trennen,
  * Nachteilsausgleich (2.5, Gesundheitsdaten – nur hier und als Kürzel in Eingabe und Übersicht),
- * Notizverlauf (2.6, intern – nie gedruckt, nie auf dem Beamer; Dialoge auch für Sitzplan und Notenübersicht).
+ * Notizverlauf (2.6, intern – nie gedruckt, nie auf dem Beamer; Dialoge auch für Sitzplan und Notenübersicht),
+ * Förderplan (2.7, Gesundheitsdaten – Fassungen, Fortschreiben, Vergleich; nie gedruckt, nie auf dem Beamer).
  * Eigene Seite ohne Kursreiter (state.ui.tab = 'people'). Das Register erscheint nie auf dem Beamer und nie im Ausdruck.
  * Die Logik steht rein in js/people.js; hier nur Oberfläche.
  */
@@ -11,7 +12,7 @@
   const P = NM.people;
 
   // Nur für diese Sitzung: Suche, Filter, und ob auf schmalen Bildschirmen die Person (statt der Liste) gezeigt wird
-  const view = { q: '', filter: 'all', detail: false, notePid: null, noteFilter: 'all', editNote: null, draft: {} };
+  const view = { q: '', filter: 'all', detail: false, notePid: null, noteFilter: 'all', editNote: null, draft: {}, fpOpen: new Set() };
 
   const yearOf = (db, c) => (db.years || []).find((y) => y.id === c.yearId);
   const shortYear = (name) => String(name || '').replace(/^20(\d\d)\/(\d\d)$/, '$1/$2');
@@ -191,6 +192,7 @@
         : h('p', { class: 'muted' }, 'Steht in keinem Kurs.'),
       ausgleichSection(db, p),
       notesSection(db, p),
+      foerderSection(db, p),
       h(
         'div',
         { class: 'inline people-actions' },
@@ -472,6 +474,173 @@
     }, 0);
   }
 
+  // ---------- Förderplan (2.7) ----------
+
+  function zeitraum(f) {
+    if (f.von && f.bis) return fmtDate(f.von) + ' – ' + fmtDate(f.bis);
+    if (f.von) return 'ab ' + fmtDate(f.von);
+    if (f.bis) return 'bis ' + fmtDate(f.bis);
+    return '';
+  }
+
+  /** Ziele und Maßnahmen einer Fassung (Überschrift + Text, leer = „–“). */
+  function fpTexts(f) {
+    const block = (label, text) => [h('h4', { class: 'fp-label' }, label), h('p', { class: 'fp-text' + (text ? '' : ' muted') }, text || '–')];
+    return [block('Ziele', f.ziele), block('Maßnahmen', f.massnahmen)];
+  }
+
+  function fpMeta(f, current) {
+    const z = zeitraum(f);
+    return h('p', { class: 'fp-meta' }, current ? 'Gilt seit ' : '', fmtDate(f.datum), ' · ', h('strong', null, P.schwerpunktText(f)), z ? ' · Zeitraum ' + z : '');
+  }
+
+  function foerderSection(db, p) {
+    const list = P.foerderplaene(p);
+    const cur = list[0];
+    const head = h(
+      'div',
+      { class: 'note-head' },
+      h('h3', null, 'Förderplan ', list.length > 1 ? h('span', { class: 'muted' }, `(${list.length} Fassungen)`) : null),
+      list.length > 1 ? h('button', { type: 'button', class: 'btn btn-sm', 'data-fp-compare': '', onclick: () => fpCompare(db, p) }, 'Fassungen vergleichen …') : null
+    );
+    if (!cur)
+      return [
+        head,
+        h('p', { class: 'muted' }, 'Kein Förderplan eingetragen.'),
+        h('button', { type: 'button', class: 'btn btn-sm', 'data-fp-new': '', onclick: () => fpDialog(db, p, 'new') }, 'Förderplan anlegen …'),
+      ];
+    const older = list.slice(1);
+    return [
+      head,
+      h(
+        'div',
+        { class: 'fp-current', 'data-fp-id': cur.id },
+        fpMeta(cur, true),
+        fpTexts(cur),
+        h(
+          'div',
+          { class: 'inline fp-actions' },
+          h('button', { type: 'button', class: 'btn btn-sm', 'data-fp-continue': '', title: 'Neue Fassung, vorausgefüllt mit der geltenden', onclick: () => fpDialog(db, p, 'continue', cur) }, 'Fortschreiben …'),
+          h('button', { type: 'button', class: 'btn btn-sm', 'data-fp-edit': cur.id, onclick: () => fpDialog(db, p, 'edit', cur) }, icon('pencil'), ' Ändern')
+        )
+      ),
+      older.length
+        ? h(
+            'details',
+            { class: 'fp-older', open: view.fpOpen.has('older-' + p.id), ontoggle: (e) => toggleOpen('older-' + p.id, e.target.open) },
+            h('summary', null, `Frühere Fassungen (${older.length})`),
+            h(
+              'ul',
+              { class: 'plain fp-older-list' },
+              older.map((f) =>
+                h(
+                  'li',
+                  null,
+                  h(
+                    'details',
+                    { class: 'fp-version', 'data-fp-id': f.id, open: view.fpOpen.has(f.id), ontoggle: (e) => toggleOpen(f.id, e.target.open) },
+                    h('summary', null, fmtDate(f.datum), ' · ', P.schwerpunktText(f)),
+                    h('div', { class: 'fp-version-body' }, fpMeta(f, false), fpTexts(f), h('button', { type: 'button', class: 'btn btn-sm', 'data-fp-edit': f.id, onclick: () => fpDialog(db, p, 'edit', f) }, icon('pencil'), ' Ändern'))
+                  )
+                )
+              )
+            )
+          )
+        : null,
+    ];
+  }
+
+  function toggleOpen(key, open) {
+    if (open) view.fpOpen.add(key);
+    else view.fpOpen.delete(key);
+  }
+
+  /** Fassung anlegen ('new'), fortschreiben ('continue', vorausgefüllt, neue Fassung) oder ändern ('edit'). */
+  async function fpDialog(db, p, mode, base = null) {
+    const src = base || {};
+    const boxes = P.SCHWERPUNKTE.map(([k, l]) => ({ k, cb: h('input', { type: 'checkbox', checked: (src.schwerpunkte || []).includes(k), 'data-fp-sp': k }), l }));
+    const sonst = h('input', { class: 'input', value: src.sonst || '', 'data-fp-sonst': '', 'aria-label': 'Sonstiger Förderschwerpunkt', placeholder: 'Welcher?' });
+    const sonstBox = boxes.find((b) => b.k === 'sonst').cb;
+    const syncSonst = () => (sonst.hidden = !sonstBox.checked);
+    sonstBox.addEventListener('change', syncSonst);
+    syncSonst();
+    const datum = h('input', { class: 'input', type: 'date', value: mode === 'edit' ? src.datum : NM.util.todayISO(), 'data-fp-datum': '' });
+    const von = h('input', { class: 'input', type: 'date', value: mode === 'edit' ? src.von || '' : '', 'data-fp-von': '' });
+    const bis = h('input', { class: 'input', type: 'date', value: mode === 'edit' ? src.bis || '' : '', 'data-fp-bis': '' });
+    const area = (v, key, rows) => h('textarea', { class: 'input', rows, 'data-fp-text': key, onkeydown: ctrlEnterSubmit }, v || '');
+    const ziele = area(src.ziele, 'ziele', 5);
+    const massnahmen = area(src.massnahmen, 'massnahmen', 5);
+    const data = () => ({ id: mode === 'edit' ? src.id : null, datum: datum.value, schwerpunkte: boxes.filter((b) => b.cb.checked).map((b) => b.k), sonst: sonst.value, von: von.value, bis: bis.value, ziele: ziele.value, massnahmen: massnahmen.value });
+    // Prüfen wie beim Speichern, ohne zu speichern (Kopie der Person)
+    const valid = () => {
+      try {
+        P.setFoerderplan({ people: [{ id: 'probe' }] }, 'probe', data());
+        return true;
+      } catch (err) {
+        return toast(err.message, 'error'), false;
+      }
+    };
+    const title = { new: 'Förderplan anlegen', continue: 'Förderplan fortschreiben', edit: 'Fassung ändern' }[mode] + ': ' + personName(p);
+    const buttons = [{ label: 'Abbrechen', value: false }];
+    if (mode === 'edit') buttons.push({ label: 'Fassung löschen', value: 'delete', kind: 'danger' });
+    buttons.push({ label: mode === 'continue' ? 'Als neue Fassung speichern' : 'Speichern', value: true, kind: 'primary', validate: valid });
+    const v = await modal({
+      title,
+      wide: true,
+      body: h(
+        'div',
+        { class: 'fp-form' },
+        mode === 'continue' ? h('p', { class: 'muted small' }, 'Vorausgefüllt mit der Fassung vom ' + fmtDate(src.datum) + '. Sie bleibt unverändert erhalten.') : null,
+        h('label', { class: 'field fp-date' }, h('span', null, mode === 'edit' ? 'Datum der Fassung' : 'Datum der neuen Fassung'), datum),
+        h('fieldset', { class: 'na-fieldset' }, h('legend', null, 'Förderschwerpunkte'), h('div', { class: 'fp-sp' }, boxes.map((b) => h('label', { class: 'check' }, b.cb, ' ', b.l))), sonst),
+        h('div', { class: 'fp-range' }, h('label', { class: 'field' }, h('span', null, 'Zeitraum von (optional)'), von), h('label', { class: 'field' }, h('span', null, 'bis (optional)'), bis)),
+        h('label', { class: 'field' }, h('span', null, 'Ziele'), ziele),
+        h('label', { class: 'field' }, h('span', null, 'Maßnahmen'), massnahmen),
+        h('p', { class: 'muted small' }, 'Der offizielle Plan liegt in der Schulakte. Hier nur die Arbeitsfassung, nie gedruckt, nie auf dem Beamer.')
+      ),
+      buttons,
+    });
+    if (v === 'delete') {
+      if (!(await confirmDialog('Fassung löschen', 'Fassung vom ' + fmtDate(src.datum) + ' bei ' + personName(p) + ' löschen?', { okLabel: 'Löschen', danger: true }))) return;
+      P.removeFoerderplan(db, p.id, src.id);
+      NM.app.commit();
+      return toast('Fassung gelöscht.', 'success');
+    }
+    if (v !== true) return;
+    P.setFoerderplan(db, p.id, data());
+    NM.app.commit();
+    toast(mode === 'continue' ? 'Neue Fassung gespeichert.' : 'Förderplan gespeichert.', 'success');
+  }
+
+  /** Zwei Fassungen nebeneinander (nur Ansicht). Vorgewählt: links die vorherige, rechts die geltende. */
+  async function fpCompare(db, p) {
+    const list = P.foerderplaene(p);
+    if (list.length < 2) return;
+    const pick = [list[1].id, list[0].id];
+    const grid = h('div', { class: 'fp-compare' });
+    const select = (i) =>
+      h(
+        'select',
+        { class: 'input', 'aria-label': i ? 'Fassung rechts' : 'Fassung links', 'data-fp-cmp': String(i), onchange: (e) => ((pick[i] = e.target.value), fill()) },
+        list.map((f, k) => h('option', { value: f.id, selected: pick[i] === f.id }, fmtDate(f.datum) + (k === 0 ? ' (gilt)' : '')))
+      );
+    const col = (f) =>
+      h(
+        'div',
+        { class: 'fp-col' },
+        h('p', { class: 'fp-meta' }, h('strong', null, P.schwerpunktText(f))),
+        h('p', { class: 'fp-meta' }, zeitraum(f) ? 'Zeitraum ' + zeitraum(f) : 'ohne Zeitraum'),
+        fpTexts(f)
+      );
+    const heads = [select(0), select(1)];
+    function fill() {
+      const f = pick.map((id) => list.find((x) => x.id === id));
+      grid.replaceChildren(h('div', { class: 'fp-col-head' }, heads[0]), h('div', { class: 'fp-col-head' }, heads[1]), col(f[0]), col(f[1]));
+    }
+    fill();
+    await modal({ title: 'Förderplan vergleichen: ' + personName(p), wide: true, body: grid, buttons: [{ label: 'Schließen', value: true, kind: 'primary' }] });
+  }
+
   /** Schnelleintrag (Sitzplan): Datum heute, Kurs fest. */
   async function quickNoteDialog(course, s) {
     const db = NM.app.db();
@@ -536,12 +705,15 @@
       NM.app.commit();
       toast('Notiz gespeichert.', 'success');
     }
-    if (jump) {
-      Object.assign(view, { notePid: p.id, noteFilter: 'all', editNote: null, detail: true });
-      NM.app.state.ui.personId = p.id;
-      NM.app.saveUi();
-      NM.app.select({ tab: 'people' });
-    }
+    if (jump) open(p.id);
+  }
+
+  /** Seite „Personen“ mit dieser Person öffnen (auch schmal: gleich die Person statt der Liste). */
+  function open(pid) {
+    Object.assign(view, { notePid: pid, noteFilter: 'all', editNote: null, detail: true });
+    NM.app.state.ui.personId = pid;
+    NM.app.saveUi();
+    NM.app.select({ tab: 'people' });
   }
 
   function back() {
@@ -683,5 +855,5 @@
   }
 
   NM.views = NM.views || {};
-  NM.views.people = { render, courseLabel, courseLine, quickNoteDialog, courseNotesDialog };
+  NM.views.people = { render, courseLabel, courseLine, quickNoteDialog, courseNotesDialog, open };
 })((globalThis.NM = globalThis.NM || {}));

@@ -15,7 +15,7 @@ Aufruf:
     python3 entschluesseln.py DATEI.nmdb                  (fragt nach dem Passwort)
     python3 entschluesseln.py DATEI.nmdb --wiederherstellung
     python3 entschluesseln.py DATEI.nmdb -o ausgabe.json
-    python3 entschluesseln.py DATEI.nmdb --csv ordner/     (zusätzlich eine CSV je Kurs, das Personenregister und ggf. Notizen.csv)
+    python3 entschluesseln.py DATEI.nmdb --csv ordner/     (zusätzlich eine CSV je Kurs, das Personenregister und ggf. Notizen.csv, Foerderplaene.csv)
 
 ACHTUNG: Die Ausgabe ist NICHT verschlüsselt. Nach Gebrauch löschen.
 """
@@ -276,6 +276,22 @@ def schreibe_csv(daten, ordner):
             pfad = os.path.join(ordner, "Notizen.csv")
             with open(pfad, "w", newline="", encoding="utf-8-sig") as f:
                 csv.writer(f, delimiter=";").writerows(notizen)
+            pfade.append(pfad)
+        # 2.7: Förderplan-Fassungen (Gesundheitsdaten), je Fassung eine Zeile, neueste zuerst
+        sp_namen = {"lernen": "Lernen", "sprache": "Sprache", "emsoz": "emotionale und soziale Entwicklung",
+                    "ganzheitlich": "ganzheitliche Entwicklung", "motorik": "körperliche und motorische Entwicklung",
+                    "hoeren": "Hören", "sehen": "Sehen"}
+        plaene = [["Person", "Nachname", "Vorname", "Datum", "gilt", "Schwerpunkte", "von", "bis", "Ziele", "Maßnahmen"]]
+        for p in sorted(personen, key=lambda p: (p.get("last", ""), p.get("first", ""))):
+            liste = sorted([f for f in (p.get("foerderplaene") or []) if isinstance(f, dict)], key=lambda f: f.get("datum", ""), reverse=True)
+            for i, fp in enumerate(liste):
+                sp = ", ".join((fp.get("sonst") or "Sonstiges") if k == "sonst" else sp_namen.get(k, k) for k in fp.get("schwerpunkte") or [])
+                plaene.append([p.get("id", ""), p.get("last", ""), p.get("first", ""), fp.get("datum", ""), "ja" if i == 0 else "",
+                               sp, fp.get("von", ""), fp.get("bis", ""), fp.get("ziele", ""), fp.get("massnahmen", "")])
+        if len(plaene) > 1:
+            pfad = os.path.join(ordner, "Foerderplaene.csv")
+            with open(pfad, "w", newline="", encoding="utf-8-sig") as f:
+                csv.writer(f, delimiter=";").writerows(plaene)
             pfade.append(pfad)
     return pfade
 
