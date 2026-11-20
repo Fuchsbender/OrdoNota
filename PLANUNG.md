@@ -331,9 +331,9 @@ Mit dem Nutzer am 18.11.2026 geklärt (grill-me, alle Empfehlungen angenommen). 
 - [x] **AD** Personenregister (Schema 5, Migration, Zusammenführen), 2.4.0 (19.11.2026, gepusht, Release v2.4.0)
   - [x] **AD-1** Datenmodell, Umstellung, `NM.people`, Sicherung, Kopieren, Löschen, Notfallwerkzeug (19.11.2026)
   - [x] **AD-2** Seite „Personen“, Zusammenführen und Trennen, Abgleich beim Einfügen, Namen ändern → 2.4.0 (19.11.2026)
-- [x] **AE** Nachteilsausgleich – erledigt in 2.5.0 (20.11.2026), Oberfläche wie unten beschrieben
-- [x] **AF** Notizverlauf – erledigt in 2.6.0 (20.11.2026), Oberfläche wie unten beschrieben
-- [x] **AG** Förderplan – erledigt in 2.7.0 (20.11.2026), Oberfläche wie unten beschrieben (Hinweis in der Kursliste als Symbol statt Text, damit die Spalte schmal bleibt)
+- [x] **AE** Nachteilsausgleich – erledigt in 2.5.0 (20.11.2026), gepusht, Release v2.7.0, Oberfläche wie unten beschrieben
+- [x] **AF** Notizverlauf – erledigt in 2.6.0 (20.11.2026), gepusht, Release v2.7.0, Oberfläche wie unten beschrieben
+- [x] **AG** Förderplan – erledigt in 2.7.0 (20.11.2026), gepusht, Release v2.7.0, Oberfläche wie unten beschrieben (Hinweis in der Kursliste als Symbol statt Text, damit die Spalte schmal bleibt)
 - [ ] später: Kompetenzanalysen und Kompetenzverlauf (eigener grill-me-Durchgang, baut auf AD auf)
 
 **Ablauf je Buchstabe** (Projekte-CLAUDE.md): Oberfläche vorher mit `/impeccable shape` planen und bestätigen lassen → umsetzen (Hauptsitzung oder `code-umsetzen`) → Impeccable-Detektor über die geänderten UI-Dateien → `/impeccable polish` (bei Formularen auch `harden`) → Tests (`code-testlauf`) → Doku (DOKUMENTATION.md, README.md), Version (Minor), hier als erledigt abhaken → lokaler Commit. Pushen nur auf Ansage, vorher `code-pruefen`.
