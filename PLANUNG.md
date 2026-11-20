@@ -534,7 +534,7 @@ Heute gibt es keine kursübergreifende Person: Jeder Kurs hat eigene `course.stu
 - **Trennen:** Der Förderplan bleibt bei der bisherigen Person (wie in 6.6). **Zusammenführen:** Die Fassungen werden zusammengelegt. Das Notfallwerkzeug schreibt `Foerderplaene.csv` (eine Zeile je Fassung).
 - **Nie** auf Beamer oder Vollbild, nie im Ausdruck, nie im Excel-Export.
 
-## AH) EPO-Umrechnung: Vorlagen statt Testschlüssel (geklärt am 20.11.2026, umgesetzt in 2.8.0, noch nicht veröffentlicht)
+## AH) EPO-Umrechnung: Vorlagen statt Testschlüssel – erledigt in 2.8.0 (veröffentlicht am 20.11.2026)
 
 **Problem:** Die Standardtabelle `epoDefaultTable` rechnet wie ein Testschlüssel. „Immer 0“ = 2 von 4 Punkten = 50 % ergibt in Sek I 4- (LIMIT 50 %) und in der MSS 05 („mehr als 50“ für 06). Die Symbole sind aber eine Notenskala, deren Mitte „befriedigend“ ist.
 
