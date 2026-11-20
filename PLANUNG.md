@@ -496,6 +496,14 @@ Heute gibt es keine kursübergreifende Person: Jeder Kurs hat eigene `course.stu
 - **Je Arbeit** ein Haken „Ausgleich gewährt“ (`results[sid].ausgleich: true`), damit festgehalten ist, dass der Ausgleich gewährt wurde. Die App rechnet **nichts** automatisch um und ändert nichts an der Statistik.
 - Nicht im Vollbild, nicht auf Zetteln, nicht in der Excel-Schülerliste (siehe Datenschutz oben).
 
+**Oberfläche (impeccable shape, 20.11.2026, vom Nutzer gewählt):**
+- **Erfassen:** In der Detailansicht der Person (`detailCard`, `js/view-people.js`) kommt nach „Kurse“ der Abschnitt „Nachteilsausgleich“. Er zeigt eine kurze Liste mit einer Zeile je Ausgleich: Kürzel · Fächer · „bis TT.MM.JJJJ“. Darunter steht die Maßnahme, einzeilig und abgeschnitten. Abgelaufene Ausgleiche sind gedämpft und tragen „abgelaufen“. Jede Zeile hat „Ändern“. Darunter steht der Knopf „Ausgleich hinzufügen …“. Gibt es keinen Ausgleich, steht dort „Kein Nachteilsausgleich eingetragen.“
+- **Dialog** (`modal`) mit Art (LRS / Dyskalkulie / Sonstiges, bei „Sonstiges“ eine Bezeichnung als Freitext, die als Kürzel dient, höchstens 6 Zeichen), Fächern, Maßnahmen (mehrzeilig) und „gültig bis“ (optional). Beim Ändern gibt es zusätzlich „Löschen“ mit Rückfrage.
+- **Fächer:** Haken „alle Fächer“ (Standard). Nimmt man ihn heraus, erscheinen Haken für die Fächer aus den Kursen der Person, ohne doppelte Einträge. Verglichen wird ohne Rücksicht auf Groß- und Kleinschreibung und Leerzeichen. Hat ein Kurs kein Fach, greifen dort nur Ausgleiche für „alle Fächer“. Kommt ein Kurs mit neuem Fach dazu, hakt man es nach.
+- **Kürzel** (LRS, DK, Freitext) dezent neben dem „I“ in `UI.nameCells`. Es erscheint in der Punkteeingabe, in der Notenübersicht und in der Kursliste, nur wenn der Ausgleich gültig ist und zum Fach passt. Beim Darüberfahren steht im `title` die Art und die Maßnahme. **Nicht** in „Ziehen“ (`view-draw.js`, wird gezeigt), nicht im Beamer-Vollbild, nicht in Ausdrucken (`print.js` hängt nur „(I)“ an) und nicht im Excel-Export der Kursliste. `nameCells` bekommt dafür eine Option, die die Markierung abschaltet.
+- **Haken „Ausgleich gewährt“:** In der Punkteeingabe von Arbeiten (nicht bei Präsentationen) gibt es eine schmale Spalte „Ausgleich“, nach dem Muster der Spalte „Unterschrift“. Die Spalte erscheint nur, wenn jemand im Kurs einen gültigen, passenden Ausgleich hat, und der Haken nur in diesen Zeilen. Standard: nicht gesetzt. Der Haken ändert keine Rechnung und keine Statistik.
+- **Filter** auf der Personen-Seite: kein eigener Filter in AE. Kommt später mit AF/AG, wenn mehr Merkmale an der Person hängen.
+
 ### AF) Notizverlauf
 
 - Neben der vorhandenen „Bemerkung zur Person“ (`course.comments`, erscheint auf dem Leistungsbogen) – sie bleibt unverändert. Die Notizen sind intern und werden nie gedruckt.
