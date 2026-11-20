@@ -1,4 +1,5 @@
-/* OrdoNota – Seite „Personen“ (Personenregister, seit 2.4.0): Liste, Person, Zusammenführen, Trennen.
+/* OrdoNota – Seite „Personen“ (Personenregister, seit 2.4.0): Liste, Person, Zusammenführen, Trennen,
+ * Nachteilsausgleich (2.5, Gesundheitsdaten – nur hier und als Kürzel in Eingabe und Übersicht).
  * Eigene Seite ohne Kursreiter (state.ui.tab = 'people'). Das Register erscheint nie auf dem Beamer und nie im Ausdruck.
  * Die Logik steht rein in js/people.js; hier nur Oberfläche.
  */
@@ -187,6 +188,7 @@
             h('table', { class: 'table compact people-courses' }, h('thead', null, h('tr', null, h('th', null, 'Schuljahr'), h('th', null, 'Kurs'), h('th', null, 'Name im Kurs'), h('th', null, ''))), h('tbody', null, rows))
           )
         : h('p', { class: 'muted' }, 'Steht in keinem Kurs.'),
+      ausgleichSection(db, p),
       h(
         'div',
         { class: 'inline people-actions' },
@@ -195,6 +197,105 @@
         !es.length ? h('button', { class: 'btn btn-danger', 'data-person-remove': '', onclick: () => removePerson(db, p) }, icon('trash'), ' Aus dem Register löschen') : null
       )
     );
+  }
+
+  // ---------- Nachteilsausgleich (2.5) ----------
+
+  function faecherText(a) {
+    return a.faecher && a.faecher.length ? a.faecher.join(', ') : 'alle Fächer';
+  }
+
+  function ausgleichSection(db, p) {
+    const list = P.ausgleicheOf(p);
+    const items = list.map((a) => {
+      const old = P.ausgleichAbgelaufen(a);
+      return h(
+        'li',
+        { class: 'na-item' + (old ? ' na-old' : ''), 'data-ausgleich-id': a.id },
+        h(
+          'div',
+          { class: 'na-text' },
+          h(
+            'span',
+            { class: 'na-line' },
+            h('span', { class: 'na-kurz' }, P.ausgleichKurz(a)),
+            h('span', null, ' · ', faecherText(a)),
+            a.bis ? h('span', { class: old ? 'na-expired' : '' }, ' · ', old ? 'abgelaufen am ' : 'bis ', fmtDate(a.bis)) : null
+          ),
+          a.massnahmen ? h('span', { class: 'na-massnahmen', title: a.massnahmen }, a.massnahmen) : null
+        ),
+        h('button', { type: 'button', class: 'btn btn-sm', 'data-ausgleich-edit': a.id, 'aria-label': 'Nachteilsausgleich ' + P.ausgleichName(a) + ' ändern', onclick: () => ausgleichDialog(db, p, a) }, icon('pencil'), ' Ändern')
+      );
+    });
+    return [
+      h('h3', null, 'Nachteilsausgleich'),
+      list.length ? h('ul', { class: 'plain na-list' }, items) : h('p', { class: 'muted' }, 'Kein Nachteilsausgleich eingetragen.'),
+      h('button', { type: 'button', class: 'btn btn-sm', 'data-ausgleich-add': '', onclick: () => ausgleichDialog(db, p, null) }, 'Ausgleich hinzufügen …'),
+    ];
+  }
+
+  async function ausgleichDialog(db, p, a) {
+    const cur = a || { art: 'lrs', faecher: [], massnahmen: '' };
+    const art = h(
+      'select',
+      { class: 'input', 'data-na-art': '' },
+      P.AUSGLEICH_ARTEN.map(([v, l]) => h('option', { value: v, selected: cur.art === v }, l))
+    );
+    const text = h('input', { class: 'input', maxlength: String(P.AUSGLEICH_KURZ_MAX), value: cur.text || '', 'data-na-text': '', placeholder: 'z. B. ADHS' });
+    const textField = h('label', { class: 'field' }, h('span', null, 'Kürzel (höchstens ' + P.AUSGLEICH_KURZ_MAX + ' Zeichen)'), text);
+    // Fächer: „alle Fächer“ oder Haken aus den Kursen der Person (dazu Fächer, die schon eingetragen sind)
+    const known = P.faecherDerPerson(db, p.id);
+    for (const f of cur.faecher || []) if (!known.some((k) => k.toLowerCase() === String(f).toLowerCase())) known.push(f);
+    const chosen = new Set((cur.faecher || []).map((f) => String(f).toLowerCase()));
+    const allBox = h('input', { type: 'checkbox', checked: !chosen.size, 'data-na-alle': '' });
+    const subjectBoxes = known.map((f) => ({ f, cb: h('input', { type: 'checkbox', checked: chosen.has(f.toLowerCase()), 'data-na-fach': f }) }));
+    const subjectList = h(
+      'div',
+      { class: 'na-faecher' },
+      subjectBoxes.length ? subjectBoxes.map(({ f, cb }) => h('label', { class: 'check' }, cb, ' ', f)) : h('p', { class: 'muted small' }, 'Die Kurse der Person haben kein Fach eingetragen.')
+    );
+    const massnahmen = h('textarea', { class: 'input', rows: 3, 'data-na-massnahmen': '', placeholder: 'z. B. 25 % mehr Zeit, Rechtschreibung wird nicht bewertet' }, cur.massnahmen || '');
+    const bis = h('input', { class: 'input', type: 'date', value: cur.bis || '', 'data-na-bis': '' });
+    const sync = () => {
+      textField.hidden = art.value !== 'sonst';
+      subjectList.hidden = allBox.checked;
+    };
+    art.addEventListener('change', sync);
+    allBox.addEventListener('change', sync);
+    sync();
+    const picked = () => subjectBoxes.filter(({ cb }) => cb.checked).map(({ f }) => f);
+    const valid = () => {
+      if (art.value === 'sonst' && !text.value.trim()) return toast('Bitte ein Kürzel eintragen.', 'error'), text.focus(), false;
+      if (!allBox.checked && !picked().length) return toast('Bitte mindestens ein Fach wählen oder „alle Fächer“.', 'error'), false;
+      return true;
+    };
+    const buttons = [{ label: 'Abbrechen', value: false }];
+    if (a) buttons.push({ label: 'Löschen', value: 'delete', kind: 'danger' });
+    buttons.push({ label: 'Speichern', value: true, kind: 'primary', validate: valid });
+    const v = await modal({
+      title: (a ? 'Nachteilsausgleich ändern' : 'Nachteilsausgleich hinzufügen') + ': ' + personName(p),
+      body: h(
+        'div',
+        { class: 'na-form' },
+        h('label', { class: 'field' }, h('span', null, 'Art'), art),
+        textField,
+        h('fieldset', { class: 'na-fieldset' }, h('legend', null, 'Fächer'), h('label', { class: 'check' }, allBox, ' alle Fächer'), subjectList),
+        h('label', { class: 'field' }, h('span', null, 'Maßnahmen'), massnahmen),
+        h('label', { class: 'field' }, h('span', null, 'Gültig bis (leer = ohne Ende)'), bis),
+        h('p', { class: 'muted small' }, 'Das Kürzel erscheint in der Punkteeingabe, der Notenübersicht und der Kursliste, nie auf dem Beamer und nie im Ausdruck. Die App rechnet nichts um.')
+      ),
+      buttons,
+    });
+    if (v === 'delete') {
+      if (!(await confirmDialog('Nachteilsausgleich löschen', P.ausgleichName(a) + ' bei ' + personName(p) + ' löschen? Die Haken „Ausgleich gewährt“ an den Arbeiten bleiben.', { okLabel: 'Löschen', danger: true }))) return;
+      P.removeAusgleich(db, p.id, a.id);
+      NM.app.commit();
+      return toast('Nachteilsausgleich gelöscht.', 'success');
+    }
+    if (v !== true) return;
+    P.setAusgleich(db, p.id, { id: a && a.id, art: art.value, text: text.value, faecher: allBox.checked ? [] : picked(), massnahmen: massnahmen.value, bis: bis.value });
+    NM.app.commit();
+    toast(a ? 'Nachteilsausgleich geändert.' : 'Nachteilsausgleich eingetragen.', 'success');
   }
 
   function back() {

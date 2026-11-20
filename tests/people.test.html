@@ -163,6 +163,39 @@
     ok('check: Schema 5 ohne Register ist ein Fehler', M.check(db4).some((x) => x.level === 'fehler' && x.where === 'Personenregister'));
   }
 
+  // ---------- Nachteilsausgleich (2.5) ----------
+  {
+    const db = M.migrate(fresh());
+    ok('Ausgleich: Migration setzt leere Liste', db.people.every((p) => Array.isArray(p.ausgleiche) && !p.ausgleiche.length));
+    const s = db.courses[1].students[0], pid = s.personId;  // Fischer Mia, in 7b und 8b (Fach M)
+    const a = P.setAusgleich(db, pid, { art: 'lrs', faecher: [], massnahmen: '  25 % mehr Zeit ', bis: '' });
+    ok('Ausgleich: angelegt, bereinigt, ohne „bis“ und ohne Text', a.id && a.art === 'lrs' && a.massnahmen === '25 % mehr Zeit' && !('bis' in a) && !('text' in a) && a.faecher.length === 0);
+    ok('Ausgleich: Kürzel LRS / DK / Freitext gekürzt', P.ausgleichKurz(a) === 'LRS' && P.ausgleichKurz({ art: 'dyskalkulie' }) === 'DK' && P.ausgleichKurz({ art: 'sonst', text: 'Autismus' }) === 'Autism');
+    ok('Ausgleich: alle Fächer passt auch zu Kurs ohne Fach', P.ausgleichPasst(a, 'M') && P.ausgleichPasst(a, ''));
+    const b = P.setAusgleich(db, pid, { art: 'sonst', text: ' ADHS ', faecher: ['Deutsch', ' deutsch', 'M '], massnahmen: '', bis: '2026-01-31' });
+    ok('Ausgleich: Fächer ohne doppelte, Kürzel getrimmt', b.text === 'ADHS' && b.faecher.join('|') === 'Deutsch|M');
+    ok('Ausgleich: Fach ohne Groß-/Kleinschreibung, Kurs ohne Fach passt nicht', P.ausgleichPasst(b, 'm') && P.ausgleichPasst(b, ' DEUTSCH ') && !P.ausgleichPasst(b, 'E') && !P.ausgleichPasst(b, ''));
+    ok('Ausgleich: abgelaufen nach „bis“, am Tag selbst noch gültig', P.ausgleichAbgelaufen(b, '2026-02-01') && !P.ausgleichAbgelaufen(b, '2026-01-31') && !P.ausgleichAbgelaufen(a, '2099-01-01'));
+    const c8 = db.courses[1];
+    ok('ausgleicheFuer: nur gültige und passende', P.ausgleicheFuer(db, s, c8, '2026-01-15').length === 2 && P.ausgleicheFuer(db, s, c8, '2026-03-01').length === 1 && P.ausgleicheFuer(db, c8.students[2], c8).length === 0);
+    ok('ausgleicheFuer: ohne db oder Person leer', P.ausgleicheFuer(null, s, c8).length === 0 && P.ausgleicheFuer(db, {}, c8).length === 0);
+    // Ändern: Art wechseln entfernt Text, leeres „bis“ entfernt Datum, id bleibt
+    const b2 = P.setAusgleich(db, pid, { id: b.id, art: 'dyskalkulie', text: 'x', faecher: ['M'], massnahmen: 'Taschenrechner', bis: '' });
+    ok('Ausgleich ändern: gleiche id, Text und „bis“ entfernt', b2.id === b.id && P.byId(db, pid).ausgleiche.length === 2 && !('text' in b2) && !('bis' in b2) && b2.art === 'dyskalkulie');
+    ok('Ausgleich: unbekannte Art wird „Sonstiges“, ungültiges Datum fällt weg', (() => { const x = P.setAusgleich(db, pid, { art: 'quatsch', text: 'Q', bis: '31.01.2027' }); const r = x.art === 'sonst' && !('bis' in x); P.removeAusgleich(db, pid, x.id); return r; })());
+    ok('faecherDerPerson: Fächer aus den Kursen, ohne doppelte', P.faecherDerPerson(db, pid).join('|') === 'M');
+    // Zusammenführen legt die Listen zusammen, Trennen lässt sie bei der Person
+    const other = db.courses[0].students[0].personId;  // Fischer Mia in 7b (eigene Person nach Migration)
+    P.setAusgleich(db, other, { art: 'lrs', faecher: [], massnahmen: 'alt' });
+    P.merge(db, pid, other);
+    ok('Zusammenführen: Ausgleiche beider Personen bleiben', P.byId(db, pid).ausgleiche.length === 3);
+    P.removeAusgleich(db, pid, a.id);
+    ok('removeAusgleich', P.byId(db, pid).ausgleiche.length === 2 && !P.byId(db, pid).ausgleiche.some((x) => x.id === a.id));
+    const back = M.migrate(JSON.parse(JSON.stringify(db)));
+    ok('Migration: Ausgleiche bleiben erhalten, kaputte Einträge fallen weg', (() => { const d = JSON.parse(JSON.stringify(db)); d.people[0].ausgleiche = [null, { art: 'lrs' }, { id: 'k', art: 'lrs' }]; M.migrate(d); return d.people[0].ausgleiche.length === 1 && Array.isArray(d.people[0].ausgleiche[0].faecher); })() && P.byId(back, pid).ausgleiche.length === 2);
+    ok('Ausgleich: check ohne Fehler', M.check(db).filter((x) => x.level === 'fehler').length === 0);
+  }
+
   lines.unshift(fails === 0 ? 'ALLE TESTS BESTANDEN' : fails + ' FEHLGESCHLAGEN');
   document.getElementById('out').textContent = lines.join('\n');
   document.title = 'fertig';

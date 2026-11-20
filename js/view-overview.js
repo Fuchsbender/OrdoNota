@@ -249,7 +249,7 @@
       return h(
         'tr',
         { class: r.override !== null ? 'overridden' : '' },
-        UI.nameCells(s, ri + 1),
+        UI.nameCells(s, ri + 1, { course }),
         showKa ? kaCols.map((a) => cell(a, s, ri)) : null,
         showKa ? h('td', { class: 'num avg-col' }, UI.valueText(r.ka, level)) : null,
         otherCols.map((a) => (a === BUNDLE ? bundleCell(drawCols, s, level) : cell(a, s, ri))),
@@ -408,7 +408,7 @@
       return h(
         'tr',
         { class: y.override !== null ? 'overridden' : '' },
-        UI.nameCells(s, ri + 1),
+        UI.nameCells(s, ri + 1, { course }),
         halfCell(r1),
         halfCell(r2),
         h('td', { class: 'num result' }, h('span', { class: 'raw' }, UI.valueText(y.raw, level)), ' ', UI.gradeBadge(y.rounded, level)),

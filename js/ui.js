@@ -180,8 +180,10 @@
   /**
    * Zwei feste Namensspalten (Nachname, Vorname mit Markierung „I“); nr = laufende Nummer vor dem Nachnamen.
    * photo: Foto (oder Personensymbol als Platzhalter) vor dem Nachnamen – die Tabelle braucht dann die Klasse „with-photos“.
+   * course: nur dann erscheinen Kürzel für Nachteilsausgleiche (Gesundheitsdaten) – also nie in Ansichten,
+   * die gezeigt werden (Ziehen, Vollbild) und nie im Ausdruck.
    */
-  function nameCells(s, nr, { photo = false } = {}) {
+  function nameCells(s, nr, { photo = false, course = null } = {}) {
     const title = NM.model.studentName(s);
     const pic = !photo
       ? null
@@ -194,8 +196,16 @@
         { class: 'sticky-col name-cell name-last', title },
         h('span', { class: 'name-clip' }, pic, h('span', { class: 'name-text' }, nr ? h('span', { class: 'row-nr' }, nr) : null, s.last || ''))
       ),
-      h('td', { class: 'sticky-col name-cell name-first', title }, h('span', { class: 'name-clip' }, s.first || '', s.iStatus ? h('span', { class: 'i-mark', title: 'I-Status' }, 'I') : null)),
+      h('td', { class: 'sticky-col name-cell name-first', title }, h('span', { class: 'name-clip' }, s.first || '', s.iStatus ? h('span', { class: 'i-mark', title: 'I-Status' }, 'I') : null, course ? ausgleichMarks(s, course) : null)),
     ];
+  }
+
+  /** Kürzel der gültigen Nachteilsausgleiche (LRS, DK …) eines Kurseintrags, Maßnahme im Hinweis. */
+  function ausgleichMarks(s, course) {
+    const P = NM.people;
+    return P.ausgleicheFuer(NM.app.db(), s, course).map((a) =>
+      h('span', { class: 'na-mark', title: 'Nachteilsausgleich: ' + P.ausgleichName(a) + (a.massnahmen ? ' – ' + a.massnahmen : '') }, P.ausgleichKurz(a))
+    );
   }
 
   // ---------- Sortierbare Tabellen ----------
@@ -391,6 +401,7 @@
     valueText,
     gradeInput,
     nameCells,
+    ausgleichMarks,
     numberInput,
     statusSelect,
     STATUS,

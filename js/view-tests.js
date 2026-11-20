@@ -597,6 +597,24 @@
   }
 
   /** „Unterschriften 9 / 11“ – gezählt werden Personen mit Note (nicht fehlend/nachschreibend). */
+  /** Haken „Ausgleich gewährt“ (results[sid].ausgleich) – nur Vermerk, keine Rechnung. */
+  function ausgleichBox(s, r, list) {
+    const what = list.map((a) => NM.people.ausgleichName(a) + (a.massnahmen ? ': ' + a.massnahmen : '')).join('; ');
+    return h('input', {
+      type: 'checkbox',
+      checked: !!r.ausgleich,
+      'data-focus-key': `ts-ausgleich-${s.id}`,
+      'data-ausgleich': s.id,
+      title: 'Nachteilsausgleich gewährt? (' + what + ')',
+      'aria-label': 'Nachteilsausgleich gewährt: ' + M.studentName(s),
+      onchange: (e) => {
+        if (e.target.checked) r.ausgleich = true;
+        else delete r.ausgleich;
+        NM.app.commit();
+      },
+    });
+  }
+
   function signCount(t, students) {
     const due = students.filter((s) => (t.results[s.id] || {}).signed || !['fehlt', 'nachschreiben'].includes((t.results[s.id] || {}).status) && Object.values((t.results[s.id] || {}).scores || {}).some((v) => v !== '' && v !== null && v !== undefined));
     const n = due.filter((s) => (t.results[s.id] || {}).signed).length;
@@ -640,6 +658,10 @@
       NM.app.rerender();
     };
     const results = new Map(all.map((s) => [s.id, G.testResult(t, s.id, level)]));
+    // Nachteilsausgleich (2.5): Spalte nur, wenn jemand einen gültigen, zum Fach passenden Ausgleich hat
+    const db = NM.app.db();
+    const naMap = new Map(all.map((s) => [s.id, NM.people.ausgleicheFuer(db, s, course)]).filter(([, l]) => l.length));
+    const na = naMap.size > 0;
     const score = (s, task) => ((t.results[s.id] || {}).scores || {})[task.id];
     const sort = UI.sorter('test', {
       ...Object.fromEntries(t.tasks.map((task) => ['task:' + task.id, { get: (s) => score(s, task), first: 'desc' }])),
@@ -656,6 +678,7 @@
       grade: { get: (s) => results.get(s.id).p, first: 'desc' },
       status: { get: (s) => UI.STATUS_SHORT[(t.results[s.id] || {}).status] || null, first: 'asc' },
       signed: { get: (s) => ((t.results[s.id] || {}).signed ? 1 : 0), first: 'asc' },
+      ausgleich: { get: (s) => (!naMap.has(s.id) ? null : (t.results[s.id] || {}).ausgleich ? 1 : 0), first: 'asc' },
     });
     // Klassen-/Kursarbeit: Unterschrift der Eltern gesehen (nur Vermerk, ohne Einfluss auf die Note)
     const sign = a.cat === 'ka';
@@ -673,7 +696,8 @@
       h('th', { class: 'num' }, sort.head('pct', '%')),
       h('th', { class: 'center' }, sort.head('grade', 'Note')),
       h('th', { class: 'col-tight' }, sort.head('status', 'Status')),
-      sign ? h('th', { class: 'center col-tight', title: 'Unterschrift unter der Arbeit gesehen' }, sort.head('signed', 'Unterschrift')) : null
+      sign ? h('th', { class: 'center col-tight', title: 'Unterschrift unter der Arbeit gesehen' }, sort.head('signed', 'Unterschrift')) : null,
+      na ? h('th', { class: 'center col-tight col-ausgleich', title: 'Nachteilsausgleich bei dieser Arbeit gewährt (nur Vermerk, ändert keine Note)' }, sort.head('ausgleich', 'Ausgleich')) : null
     );
     const rows = students.map((s, ri) => {
       const r = (t.results[s.id] = t.results[s.id] || { scores: {} });
@@ -684,7 +708,7 @@
       return h(
         'tr',
         { class: blocked ? 'row-muted' : '' },
-        UI.nameCells(s),
+        UI.nameCells(s, null, { course }),
         groups.map((g, gi) => [
           g.tasks.map((task) =>
             h(
@@ -738,7 +762,8 @@
                 },
               })
             )
-          : null
+          : null,
+        na ? h('td', { class: 'center col-ausgleich' }, naMap.has(s.id) ? ausgleichBox(s, r, naMap.get(s.id)) : null) : null
       );
     });
     // Aufgabenschnitt
@@ -754,7 +779,7 @@
         g.part ? h('td', { class: 'part-col' }) : null,
         g.part && sep ? h('td', { class: 'part-col' }) : null,
       ]),
-      h('td', { colspan: sign ? 5 : 4 })
+      h('td', { colspan: 4 + (sign ? 1 : 0) + (na ? 1 : 0) })
     );
     return h(
       'div',

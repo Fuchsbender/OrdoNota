@@ -237,10 +237,27 @@ def schreibe_csv(daten, ordner):
             for s in kurs.get("students", []):
                 if s.get("personId"):
                     kurse_je.setdefault(s["personId"], []).append(titel)
-        zeilen = [["Person", "Nachname", "Vorname", "angelegt", "Kurse", "seit (in keinem Kurs)"]]
+        # 2.5: Nachteilsausgleiche (Gesundheitsdaten) als eine Spalte: „LRS (Deutsch, Englisch) bis 2027-07-31: Maßnahmen“
+        arten = {"lrs": "LRS", "dyskalkulie": "Dyskalkulie"}
+
+        def ausgleiche(p):
+            teile = []
+            for a in p.get("ausgleiche") or []:
+                if not isinstance(a, dict):
+                    continue
+                t = arten.get(a.get("art"), (a.get("text") or "").strip() or "Sonstiges")
+                t += f' ({", ".join(a.get("faecher") or []) or "alle Fächer"})'
+                if a.get("bis"):
+                    t += f' bis {a["bis"]}'
+                if (a.get("massnahmen") or "").strip():
+                    t += ": " + a["massnahmen"].strip()
+                teile.append(t)
+            return " | ".join(teile)
+
+        zeilen = [["Person", "Nachname", "Vorname", "angelegt", "Kurse", "seit (in keinem Kurs)", "Nachteilsausgleich"]]
         for p in sorted(personen, key=lambda p: (p.get("last", ""), p.get("first", ""))):
             zeilen.append([p.get("id", ""), p.get("last", ""), p.get("first", ""), p.get("created", ""),
-                           " | ".join(kurse_je.get(p.get("id"), [])), p.get("orphanSince", "")])
+                           " | ".join(kurse_je.get(p.get("id"), [])), p.get("orphanSince", ""), ausgleiche(p)])
         pfad = os.path.join(ordner, "Personenregister.csv")
         with open(pfad, "w", newline="", encoding="utf-8-sig") as f:
             csv.writer(f, delimiter=";").writerows(zeilen)

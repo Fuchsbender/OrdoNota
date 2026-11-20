@@ -233,7 +233,8 @@
               else delete s.iStatus;
               NM.app.commit();
             },
-          })
+          }),
+          UI.ausgleichMarks(s, course)
         ),
         h(
           'td',

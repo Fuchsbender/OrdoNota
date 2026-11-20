@@ -1,6 +1,8 @@
 /* OrdoNota – Personenregister (seit Schema 5): kursübergreifende Personen. Rein, ohne DOM.
  *
- * db.people: [ { id, last, first, created, orphanSince? } ], jeder Kurseintrag course.students[].personId.
+ * db.people: [ { id, last, first, created, orphanSince?, ausgleiche? } ], jeder Kurseintrag course.students[].personId.
+ * ausgleiche (2.5, Nachteilsausgleich, Gesundheitsdaten): [ { id, art: 'lrs' | 'dyskalkulie' | 'sonst', text?, faecher: [..], massnahmen, bis? } ]
+ * – faecher leer = alle Fächer, bis = letzter gültiger Tag (ISO-Datum). Nie auf Beamer, Ausdrucke oder in die Excel-Schülerliste.
  * Name, Foto, Mail-Adresse, I-Status, Einstufung und „Aktiv“ bleiben am Kurseintrag; Noten bleiben am Kurs.
  * Später hängen an der Person weitere Listen (Notizen, Ausgleiche, Förderpläne), die beim Zusammenführen
  * zusammengelegt werden.
@@ -226,5 +228,87 @@
     return list(db).filter((p) => left.has(p.id) && left.get(p.id) === 0);
   }
 
-  NM.people = { nameKey, list, byId, index, entries, ensure, matches, shareCourse, suggestPairs, merge, mergePairs, split, remove, orphansIf };
+  // ---------- Nachteilsausgleich (2.5) ----------
+  const AUSGLEICH_ARTEN = [
+    ['lrs', 'LRS (Lese-Rechtschreib-Schwäche)'],
+    ['dyskalkulie', 'Dyskalkulie'],
+    ['sonst', 'Sonstiges'],
+  ];
+  const AUSGLEICH_KURZ_MAX = 6;
+
+  /** Kürzel eines Ausgleichs für die Markierung neben dem Namen. */
+  function ausgleichKurz(a) {
+    if (a.art === 'lrs') return 'LRS';
+    if (a.art === 'dyskalkulie') return 'DK';
+    return String(a.text || '').trim().slice(0, AUSGLEICH_KURZ_MAX) || 'NA';
+  }
+
+  /** Lange Bezeichnung (Dialog, Liste, Hinweis beim Darüberfahren). */
+  function ausgleichName(a) {
+    if (a.art === 'lrs') return 'LRS';
+    if (a.art === 'dyskalkulie') return 'Dyskalkulie';
+    return String(a.text || '').trim() || 'Nachteilsausgleich';
+  }
+
+  /** Abgelaufen, wenn „gültig bis“ vor dem Tag `day` (ISO, Standard heute) liegt. */
+  function ausgleichAbgelaufen(a, day = today()) {
+    return !!a.bis && String(a.bis) < day;
+  }
+
+  /** Gilt der Ausgleich im Fach `fach`? Leere Fächerliste = alle Fächer; ein Kurs ohne Fach passt nur dazu. */
+  function ausgleichPasst(a, fach) {
+    const list = Array.isArray(a.faecher) ? a.faecher.map(norm).filter(Boolean) : [];
+    if (!list.length) return true;
+    const f = norm(fach);
+    return !!f && list.includes(f);
+  }
+
+  function ausgleicheOf(p) {
+    return p && Array.isArray(p.ausgleiche) ? p.ausgleiche : [];
+  }
+
+  /** Gültige, zum Fach des Kurses passende Ausgleiche eines Kurseintrags. */
+  function ausgleicheFuer(db, student, course, day = today()) {
+    if (!db || !student || !student.personId) return [];
+    return ausgleicheOf(byId(db, student.personId)).filter((a) => !ausgleichAbgelaufen(a, day) && ausgleichPasst(a, course && course.fach));
+  }
+
+  /** Fächer aus den Kursen einer Person (ohne doppelte, in der Schreibweise des ersten Kurses), sortiert. */
+  function faecherDerPerson(db, pid) {
+    const seen = new Map();
+    for (const e of entries(db, pid)) {
+      const f = String(e.course.fach || '').trim();
+      if (f && !seen.has(norm(f))) seen.set(norm(f), f);
+    }
+    return [...seen.values()].sort((a, b) => a.localeCompare(b, 'de'));
+  }
+
+  /** Ausgleich anlegen oder ersetzen (gleiche id). Bereinigt die Felder, gibt den gespeicherten Eintrag zurück. */
+  function setAusgleich(db, pid, data) {
+    const p = byId(db, pid);
+    if (!p) throw new Error('Person nicht gefunden.');
+    const art = AUSGLEICH_ARTEN.some(([k]) => k === data.art) ? data.art : 'sonst';
+    const a = { id: data.id || NM.util.uid(), art };
+    if (art === 'sonst') a.text = String(data.text || '').trim().slice(0, AUSGLEICH_KURZ_MAX);
+    const fs = new Map();
+    for (const f of Array.isArray(data.faecher) ? data.faecher : []) if (norm(f) && !fs.has(norm(f))) fs.set(norm(f), String(f).trim());
+    a.faecher = [...fs.values()];
+    a.massnahmen = String(data.massnahmen || '').trim();
+    if (data.bis && /^\d{4}-\d{2}-\d{2}$/.test(data.bis)) a.bis = data.bis;
+    if (!Array.isArray(p.ausgleiche)) p.ausgleiche = [];
+    const i = p.ausgleiche.findIndex((x) => x.id === a.id);
+    if (i >= 0) p.ausgleiche[i] = Object.assign({}, p.ausgleiche[i], a, a.bis ? {} : { bis: undefined }, art === 'sonst' ? {} : { text: undefined });
+    else p.ausgleiche.push(a);
+    const saved = p.ausgleiche[i >= 0 ? i : p.ausgleiche.length - 1];
+    for (const k of Object.keys(saved)) if (saved[k] === undefined) delete saved[k];
+    return saved;
+  }
+
+  function removeAusgleich(db, pid, aid) {
+    const p = byId(db, pid);
+    if (p && Array.isArray(p.ausgleiche)) p.ausgleiche = p.ausgleiche.filter((a) => a.id !== aid);
+  }
+
+  NM.people = { nameKey, list, byId, index, entries, ensure, matches, shareCourse, suggestPairs, merge, mergePairs, split, remove, orphansIf,
+    AUSGLEICH_ARTEN, AUSGLEICH_KURZ_MAX, ausgleichKurz, ausgleichName, ausgleichAbgelaufen, ausgleichPasst, ausgleicheOf, ausgleicheFuer, faecherDerPerson, setAusgleich, removeAusgleich };
 })((globalThis.NM = globalThis.NM || {}));

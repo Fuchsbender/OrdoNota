@@ -1566,6 +1566,104 @@ def run_verbal_check(br, base):
     report("Verbalbeurteilung ohne JavaScript-Fehler", not br.errors, "; ".join(br.errors)[:500])
 
 
+def run_ausgleich_check(br, base):
+    print("Nachteilsausgleich (Dialog, Kürzel, Spalte „Ausgleich“, nie in Ziehen und Ausdruck):")
+    br.call("Emulation.setDeviceMetricsOverride", width=1600, height=1000, deviceScaleFactor=1, mobile=False)
+    br.open(f"{base}/index.html?demo")
+    br.wait(APP_READY, 30)
+    br.errors = []
+    res = br.eval("""(async () => {
+        const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
+        window.print = () => {};
+        const db = NM.app.db(), P = NM.people, G = NM.grades, out = {};
+        const btn = (text, root = document) => [...root.querySelectorAll('button')].find((b) => b.textContent.trim().startsWith(text));
+        const dialog = () => document.querySelector('dialog.modal');
+        const c = db.courses[0], lvl = G.courseLevel(c);
+        const a = c.assessments.find((x) => x.kind === 'test' && Object.values(x.test.results).some((r) => Object.keys(r.scores || {}).length));
+        const s = NM.model.activeStudents(c).find((x) => G.testResult(a.test, x.id, lvl).p !== null);
+        const other = NM.model.activeStudents(c).find((x) => x !== s);
+        const pid = s.personId;
+        // Dialog: anlegen mit „alle Fächer“
+        NM.app.select({ tab: 'people' }); await wait();
+        document.querySelector(`[data-person="${pid}"]`).click(); await wait();
+        out.empty = document.querySelector('.people-card').textContent.includes('Kein Nachteilsausgleich eingetragen.');
+        document.querySelector('[data-ausgleich-add]').click(); await wait();
+        let d = dialog();
+        out.dlg = [!!d, d.querySelector('[data-na-alle]').checked, d.querySelector('.na-faecher').hidden, d.querySelector('[data-na-text]').closest('label').hidden];
+        d.querySelector('[data-na-massnahmen]').value = '25 % mehr Zeit';
+        btn('Speichern', d).click(); await wait();
+        const list = () => P.byId(db, pid).ausgleiche;
+        out.saved = [!dialog(), list().length, list()[0].art, list()[0].faecher.length, list()[0].massnahmen];
+        out.item = [document.querySelectorAll('.na-item').length, (document.querySelector('.na-item') || {}).textContent || ''];
+        // Sonstiges ohne Kürzel und ohne Fach: bleibt offen
+        document.querySelector('[data-ausgleich-add]').click(); await wait();
+        d = dialog();
+        const art = d.querySelector('[data-na-art]'); art.value = 'sonst'; art.dispatchEvent(new Event('change'));
+        out.textShown = !d.querySelector('[data-na-text]').closest('label').hidden;
+        btn('Speichern', d).click(); await wait();
+        out.needText = !!dialog() && list().length === 1;
+        d.querySelector('[data-na-text]').value = 'ADHS';
+        const alle = d.querySelector('[data-na-alle]'); alle.checked = false; alle.dispatchEvent(new Event('change'));
+        out.subjects = [!d.querySelector('.na-faecher').hidden, [...d.querySelectorAll('[data-na-fach]')].map((x) => x.dataset.naFach)];
+        btn('Speichern', d).click(); await wait();
+        out.needSubject = !!dialog() && list().length === 1;
+        const fb = d.querySelector('[data-na-fach]'); if (fb) fb.checked = true;
+        btn('Speichern', d).click(); await wait();
+        out.saved2 = [!dialog(), list().length, list()[1].text, list()[1].faecher];
+        // Kürzel in Punkteeingabe, Spalte nur für s
+        NM.app.state.ui.testId[c.id] = a.id;
+        NM.app.select({ courseId: c.id, tab: 'tests', half: a.half }); await wait();
+        if (NM.app.currentHalf(c) !== a.half) { NM.app.setHalf(c, a.half); await wait(); }
+        const pBefore = G.testResult(a.test, s.id, lvl).p;
+        const marks = () => [...document.querySelectorAll('#view .na-mark')].map((m) => m.textContent);
+        out.testMarks = marks();
+        out.col = [!!document.querySelector('th.col-ausgleich'), document.querySelectorAll('[data-ausgleich]').length, !!document.querySelector(`[data-ausgleich="${s.id}"]`), !document.querySelector(`[data-ausgleich="${other.id}"]`)];
+        const box = document.querySelector(`[data-ausgleich="${s.id}"]`); box.checked = true; box.dispatchEvent(new Event('change')); await wait();
+        out.ticked = [a.test.results[s.id].ausgleich === true, G.testResult(a.test, s.id, lvl).p === pBefore, !!document.querySelector(`[data-ausgleich="${s.id}"]`).checked];
+        out.title = (document.querySelector('#view .na-mark') || {}).title || '';
+        // Ausdruck: keine Kürzel
+        NM.print.test(c, a, 'students');
+        const pr1 = document.getElementById('print-root');
+        out.printTest = [!pr1.querySelector('.na-mark'), !/LRS|ADHS|mehr Zeit/.test(pr1.textContent)];
+        NM.print.course(c, a.half);
+        const pr2 = document.getElementById('print-root');
+        out.printCourse = [!pr2.querySelector('.na-mark'), !/LRS|ADHS|mehr Zeit/.test(pr2.textContent)];
+        // Übersicht und Kursliste: Kürzel; Ziehen: keins
+        NM.app.select({ courseId: c.id, tab: 'overview' }); await wait();
+        out.overview = marks().length >= 2;
+        NM.app.select({ courseId: c.id, tab: 'course' }); await wait();
+        out.courseList = marks().length >= 2;
+        NM.app.select({ courseId: c.id, tab: 'draw' }); await wait();
+        out.draw = marks().length === 0 && !document.querySelector('#view').textContent.includes('LRS');
+        // Abgelaufen und nicht passendes Fach: keine Markierung, keine Spalte
+        const yest = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
+        P.setAusgleich(db, pid, Object.assign({}, list()[0], { bis: yest }));
+        P.setAusgleich(db, pid, Object.assign({}, list()[1], { faecher: ['Fach-das-es-nicht-gibt'] }));
+        NM.app.commit();
+        NM.app.select({ courseId: c.id, tab: 'tests', half: a.half }); await wait();
+        out.gone = [marks().length, !!document.querySelector('th.col-ausgleich'), a.test.results[s.id].ausgleich === true];
+        NM.app.select({ tab: 'people' }); await wait();
+        document.querySelector(`[data-person="${pid}"]`).click(); await wait();
+        out.old = [document.querySelectorAll('.na-item.na-old').length, (document.querySelector('.na-old') || {}).textContent || ''];
+        // Löschen über den Dialog (mit Rückfrage)
+        document.querySelector('[data-ausgleich-edit]').click(); await wait();
+        btn('Löschen', dialog()).click(); await wait();
+        btn('Löschen', dialog()).click(); await wait();
+        out.deleted = [list().length, document.querySelectorAll('.na-item').length];
+        out.fehler = NM.model.check(db).filter((x) => x.level === 'fehler').map((x) => x.text);
+        NM.app.state.dirty = false;
+        return out; })()""")
+    r = res or {}
+    report("Dialog: leer, „alle Fächer“ vorgewählt, Kürzel nur bei „Sonstiges“; Speichern legt LRS an", r.get("empty") and r.get("dlg") == [True, True, True, True] and r.get("saved") == [True, 1, "lrs", 0, "25 % mehr Zeit"] and r.get("item", [0])[0] == 1 and "alle Fächer" in r.get("item", [0, ""])[1], str(res))
+    report("Dialog: „Sonstiges“ braucht Kürzel, ohne „alle Fächer“ mindestens ein Fach aus den Kursen", r.get("textShown") and r.get("needText") and r.get("needSubject") and r.get("subjects", [False])[0] and len(r.get("subjects", [0, []])[1]) >= 1 and r.get("saved2", [False])[0:3] == [True, 2, "ADHS"], str(res))
+    report("Punkteeingabe: Kürzel, Spalte „Ausgleich“ nur in passenden Zeilen, Haken gespeichert, Note unverändert", r.get("testMarks") == ["LRS", "ADHS"] and r.get("col") == [True, 1, True, True] and r.get("ticked") == [True, True, True] and "25 % mehr Zeit" in r.get("title", ""), str(res))
+    report("Ausdrucke (Ergebniszettel, Kursliste) ohne Nachteilsausgleich", r.get("printTest") == [True, True] and r.get("printCourse") == [True, True], str(res))
+    report("Kürzel in Übersicht und Kursliste, nicht in „Ziehen“", r.get("overview") and r.get("courseList") and r.get("draw"), str(res))
+    report("Abgelaufen oder anderes Fach: keine Markierung, keine Spalte, Haken bleibt gespeichert; im Register gedämpft", r.get("gone") == [0, False, True] and r.get("old", [0])[0] == 1 and "abgelaufen" in r.get("old", [0, ""])[1], str(res))
+    report("Löschen mit Rückfrage; Datenbank ohne Fehler", r.get("deleted") == [1, 1] and r.get("fehler") == [], str(res))
+    report("Nachteilsausgleich ohne JavaScript-Fehler", not br.errors, "; ".join(br.errors)[:500])
+
+
 def qr_lesen(art, inhalt, endung):
     """QR-Codes mit zxing-cpp lesen (tests/qr_lesen.py in eigener uv-Umgebung). Liefert (Ergebnis, Fehlertext)."""
     tmp = tempfile.mkdtemp(prefix="nm-qr-")
@@ -3114,6 +3212,16 @@ def run_decrypt_tool(br, base):
             zv = [z.rstrip("\n").split(";") for z in f]
         iv = [i for i, k in enumerate(zv[0]) if k.endswith("– Verbalbeurteilung")]
         report("CSV: Verbalbeurteilung als eigene Spalte hinter der Arbeit (nur dort)", len(iv) == 1 and iv[0] == 5 and zv[1][5] == "Löst Grundaufgaben sicher." and zv[2][5] == "" and zv[1][6] == "fehlt [S-7F3K9Q]", str(zv))
+        # Nachteilsausgleich (2.5.0): Spalte im Personenregister
+        personen = [{"id": "p1", "last": "Muster", "first": "Mia", "created": "2026-08-20",
+                     "ausgleiche": [{"id": "x", "art": "lrs", "faecher": ["Deutsch", "E"], "massnahmen": "25 % mehr Zeit", "bis": "2027-07-31"},
+                                    {"id": "y", "art": "sonst", "text": "ADHS", "faecher": [], "massnahmen": ""}]},
+                    {"id": "p2", "last": "Beispiel", "first": "Ben", "created": "2026-08-20"}]
+        pfade = tool.schreibe_csv({"years": [], "courses": [], "people": personen}, tmp)
+        reg_pfad = next(x for x in pfade if x.endswith("Personenregister.csv"))
+        with open(reg_pfad, encoding="utf-8-sig") as f:
+            zr = [z.rstrip("\n").split(";") for z in f]
+        report("CSV: Nachteilsausgleich als Spalte im Personenregister", zr[0][-1] == "Nachteilsausgleich" and zr[1][-1] == "" and zr[2][-1] == "LRS (Deutsch, E) bis 2027-07-31: 25 % mehr Zeit | ADHS (alle Fächer)", str(zr))
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
@@ -3124,7 +3232,7 @@ def main():
         run_epo_material_check, run_attendance_check, run_epo_tiles_check, run_print_head_check,
         run_draw_check, run_draw_pools_check, run_random_check, run_timer_check, run_tools_layout_check,
         run_tools_menu_check, run_pomodoro_check, run_transition_check, run_sidebar_check,
-        run_tests_view_check, run_task_add_click_check, run_makeup_check, run_verbal_check, run_people_check, run_people_page_check, run_unreachable_check,
+        run_tests_view_check, run_task_add_click_check, run_makeup_check, run_verbal_check, run_ausgleich_check, run_people_check, run_people_page_check, run_unreachable_check,
         run_tabs_check, run_tab_order_check, run_overview_fold_check, run_settings_layout_check,
         run_theme_check, run_demo_link_check, run_old_db_check, run_parts_check, run_print_menu_check,
         run_pres_check, run_group_check, run_groups_tab_check, run_moodle_check, run_scripto_check,

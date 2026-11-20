@@ -12,7 +12,7 @@
   // 5 (2.4): Personenregister (db.people, students[].personId) – ältere Versionen würden neue Kurseinträge
   //    ohne Person anlegen und Personen beim Löschen nicht aufräumen.
   const SCHEMA = 5;
-  const APP_VERSION = '2.4.0';
+  const APP_VERSION = '2.5.0';
 
   class NewerSchemaError extends Error {}
 
@@ -204,6 +204,12 @@
     }
     // Schema 5: Personenregister – jeder Kurseintrag bekommt eine Person (eigene, nichts wird zusammengeführt)
     NM.people.ensure(db, { created: typeof db.created === 'string' && db.created ? db.created.slice(0, 10) : undefined });
+    // 2.5: Nachteilsausgleiche an der Person (fehlt = keiner); kaputte Einträge fallen weg
+    for (const p of db.people) {
+      if (!Array.isArray(p.ausgleiche)) p.ausgleiche = [];
+      p.ausgleiche = p.ausgleiche.filter((a) => a && typeof a === 'object' && a.id);
+      for (const a of p.ausgleiche) if (!Array.isArray(a.faecher)) a.faecher = [];
+    }
     db.schema = SCHEMA;
     db.savedWith = APP_VERSION;
     return db;
