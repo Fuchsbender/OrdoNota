@@ -534,6 +534,47 @@ Heute gibt es keine kursübergreifende Person: Jeder Kurs hat eigene `course.stu
 - **Trennen:** Der Förderplan bleibt bei der bisherigen Person (wie in 6.6). **Zusammenführen:** Die Fassungen werden zusammengelegt. Das Notfallwerkzeug schreibt `Foerderplaene.csv` (eine Zeile je Fassung).
 - **Nie** auf Beamer oder Vollbild, nie im Ausdruck, nie im Excel-Export.
 
+## AH) EPO-Umrechnung: Vorlagen statt Testschlüssel (geklärt am 20.11.2026, noch nicht umgesetzt)
+
+**Problem:** Die Standardtabelle `epoDefaultTable` rechnet wie ein Testschlüssel. „Immer 0“ = 2 von 4 Punkten = 50 % ergibt in Sek I 4- (LIMIT 50 %) und in der MSS 05 („mehr als 50“ für 06). Die Symbole sind aber eine Notenskala, deren Mitte „befriedigend“ ist.
+
+**Entscheidungen des Nutzers (20.11.2026):**
+1. **Anker:** Wer immer dasselbe Symbol hat, bekommt `++` → 1 (14), `+` → 2 (11), `0` → 3 (08), `-` → 4 (05), `--` → 5 (02). Dazwischen linear: Punkte = 2 + 0,12 · Prozent, gerundet. Sek I und MSS nutzen dieselben Stufen (Sek I endet bei 14).
+2. **Umsetzung über `epo.table`:** Eine Vorlage füllt die vorhandene Tabelle (Schwellen „ab“) und die Punkte je Symbol. `epoResult` und die Ausdrucke bleiben, wie sie sind, und man kann weiter von Hand anpassen.
+3. **Eingebaute Vorlagen:** „0 = befriedigend“ (neuer Standard), „Mild“ und „Streng“ (um eine Tendenz = 8,33 % verschoben) und „Wie Testschlüssel“ (die bisherige Rechnung: Sek I mit LIMIT, MSS in 5-%-Schritten „mehr als“).
+4. **Bestehende Blöcke** behalten ihre Tabelle. Blöcke mit der alten Standardtabelle zeigen einen Hinweis mit „Neue Vorlage anwenden“ und „So lassen“. „So lassen“ blendet ihn für diesen Block dauerhaft aus (neues Feld am Block, z. B. `epo.keepTable: true`; `migrate()`/`check()` ziehen mit).
+5. **Eigene Vorlagen:** in `db.settings` (verschlüsselt, auf allen Geräten), jeweils für Sek I **oder** MSS. Inhalt: Tabelle (`mins`, `strict`) und Punkte je Symbol (`++` … `--`, `u`, `h`, `m`). Anlegen mit „Als Vorlage speichern“ im Block, Umbenennen und Löschen unter Einstellungen.
+6. **Standard für neue Blöcke** wählbar unter Einstellungen, getrennt für Sek I und MSS (auch eine eigene Vorlage). Voreinstellung: „0 = befriedigend“.
+7. **Bedienung im Block:** „Standard wiederherstellen“ wird ersetzt durch die Auswahl „Vorlage: …“ mit „Anwenden“. Daneben steht die geltende Vorlage oder „angepasst“, ermittelt durch Vergleich (kein Feld dafür). Das LIMIT-Feld erscheint nur bei „Wie Testschlüssel“.
+8. **Unter 0 %** (nur durch Abzüge u/h/m): 5- (01) unter 0 % bis über −10 %, 6 (00) bei −10 % und weniger. Die Tabelle muss dafür negative Schwellen annehmen (Eingabe −100 bis 100, bisher 0–100 in `view-epo.js`). Damit „bei −10 % schon 6“ mit „ab“ gilt, liegt die Schwelle für 01 knapp über −10 % (oder 01 bekommt eine eigene „mehr als“-Regel; beim Bauen entscheiden und testen).
+9. **Die 15 (MSS)** gibt es ab 97,5 %, ein Schnitzer ist ab 10 Stunden erlaubt (12 Stunden: 47/48 = 97,92 %). Bei Streng gibt es die 15 nur bei 100 %, die 14 ab 97,5 %.
+10. **Ausdrucke** nennen die Vorlage nicht.
+
+**Schwellen („ab“, in %; Sek I genauso ohne 15):**
+
+| Punkte | Mild | 0 = befriedigend | Streng |
+|---|---|---|---|
+| 15 | 95,83 | 97,5 | 100 |
+| 14 | 87,5 | 95,83 | 97,5 |
+| 13 | 79,17 | 87,5 | 95,83 |
+| 12 | 70,83 | 79,17 | 87,5 |
+| 11 | 62,5 | 70,83 | 79,17 |
+| 10 | 54,17 | 62,5 | 70,83 |
+| 09 | 45,83 | 54,17 | 62,5 |
+| 08 | 37,5 | 45,83 | 54,17 |
+| 07 | 29,17 | 37,5 | 45,83 |
+| 06 | 20,83 | 29,17 | 37,5 |
+| 05 | 12,5 | 20,83 | 29,17 |
+| 04 | 4,17 | 12,5 | 20,83 |
+| 03 | 0 | 4,17 | 12,5 |
+| 02 | (wie 03) | 0 | 0 |
+| 01 | über −10 | über −10 | über −10 |
+| 00 | sonst | sonst | sonst |
+
+Probe mit 12 Stunden (max. 48 P), „0 = befriedigend“: immer `0` (24 P) → 08, immer `+` (36 P) → 11, 11× `++` + 1× `+` (47 P) → 15, immer `--` (0 P) → 02, immer `--` + `h` + `h` (−4 P, −8,33 %) → 01, −5 P (−10,4 %) → 00.
+
+**Tests:** `epoResult` mit allen drei Vorlagen und der Probe oben (Sek I und MSS), negative Schwellen, Vergleich „angepasst“, eigene Vorlagen in `migrate()`/`check()`, Hinweis und „So lassen“ bei alten Blöcken, Jahrgangswechsel Sek I ↔ MSS (`model.js:437` erkennt bisher nur die alte Standardtabelle). Datenmodell: nur zusätzliche Felder (`settings` für Vorlagen und Standard, `epo.keepTable`), also kein neues `SCHEMA`; `tools/entschluesseln.py` mitziehen. Doku: DOKUMENTATION.md Abschnitte 8, 16, 24, 25.1, 26.4 und README. Version: Minor. UI: vorher `/impeccable shape` für Vorlagenauswahl, Hinweis und Einstellungen.
+
 ## C) Gamification des Pomodoro-Timers (zurückgestellt, erst auf Nachfrage des Nutzers)
 
 **Vor Beginn die offenen Fragen unten mit dem Nutzer klären.** C ergänzt nur Felder → kein neues `SCHEMA`; `migrate()` und `tools/entschluesseln.py` (CSV-Ausgabe) mitziehen.
