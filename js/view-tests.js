@@ -1420,7 +1420,7 @@
 
   function moodleCard(course, db, a, part) {
     const mo = part ? part.moodle : a.test.moodle;
-    const kindLabel = { answers: 'Antworten', grades: 'Bewertungen' };
+    const kindLabel = { answers: 'Antworten', grades: 'Bewertungen', komp: 'Kompetenzen' };
     return h(
       'div',
       { class: 'card' },
@@ -1433,13 +1433,263 @@
       h(
         'div',
         { class: 'inline wrap' },
-        (mo.files || []).map((f) => h('button', { class: 'btn btn-sm', title: 'Gespeicherte Originaldatei herunterladen', onclick: () => NM.util.download(f.name, f.text, 'text/csv;charset=utf-8') }, icon('download'), ` ${kindLabel[f.kind] || 'CSV'}: ${f.name}`)),
-        h('button', { class: 'btn btn-sm', title: 'z. B. nach Korrekturen in Moodle: Punkte neu übernehmen, eigene Aufgaben und Einstellungen bleiben', onclick: () => moodleImport(course, db, a.half, a, part ? part.id : null) }, icon('upload'), ' Erneut importieren')
+        (mo.files || []).map((f) =>
+          h('button', { class: 'btn btn-sm', title: 'Gespeicherte Originaldatei herunterladen', onclick: () => NM.util.download(f.name, f.text, f.kind === 'komp' ? 'application/json;charset=utf-8' : 'text/csv;charset=utf-8') }, icon('download'), ` ${kindLabel[f.kind] || 'CSV'}: ${f.name}`)
+        ),
+        h('button', { class: 'btn btn-sm', title: 'z. B. nach Korrekturen in Moodle: Punkte neu übernehmen, eigene Aufgaben und Einstellungen bleiben', onclick: () => moodleImport(course, db, a.half, a, part ? part.id : null) }, icon('upload'), ' Erneut importieren'),
+        (mo.files || []).some((f) => f.kind === 'answers')
+          ? h('button', { class: 'btn btn-sm', 'data-comp-companion': '', title: 'Begleitdatei aus dem Bauskript einlesen: Kompetenzen je Frage, Punkte bleiben', onclick: () => companionImport(course, db, a, part) }, icon('upload'), ' Kompetenzen zuordnen')
+          : null
       ),
       (mo.files || []).some((f) => f.kind === 'grades')
         ? null
         : h('p', { class: 'muted small' }, 'Ohne Bewertungen-CSV: Punkte per Textvergleich (Antwort = richtige Antwort). Korrekturen, die in Moodle von Hand vorgenommen wurden, fehlen.')
     );
+  }
+
+  /**
+   * Abschnitt „Kompetenzen“ für den Moodle-Import: Fragen der Begleitdatei zuordnen, unbekannte Kennungen klären.
+   * set(parsed) zeichnet neu, apply() legt bei Bedarf Katalog und Kennungen an und liefert { nr: [kennung] } (oder null).
+   */
+  function companionPlan(course, db, test, part) {
+    const C = NM.competencies;
+    const MO = NM.moodle;
+    const box = h('div', { class: 'comp-import', 'data-comp-import': '' });
+    let parsed = null;
+    let rows = [];
+    let choice = {}; // kennung → '' (weglassen) | 'add:<Bereich>' | 'map:<Kennung>'
+    let useCat = true;
+    const before = test ? MO.tasksByNr(test, part) : {};
+
+    function info() {
+      const comp = parsed.companion;
+      const cur = C.forCourse(db, course);
+      if (cur) return { cat: cur, mode: 'course' };
+      const known = comp.katalog.id ? C.byId(db, comp.katalog.id) : null;
+      if (known) return { cat: known, mode: 'known' };
+      const tpl = C.TEMPLATES.find((x) => x.catalog.id === comp.katalog.id);
+      if (tpl) return { cat: tpl.catalog, mode: 'template', tpl };
+      return { cat: null, mode: 'none' };
+    }
+    const active = () => {
+      const i = info();
+      return i.cat && (i.mode === 'course' || useCat) ? i : null;
+    };
+    /** Unbekannte Kennungen der zugeordneten Fragen: [{ id, nrs }] */
+    function unknown(cat) {
+      const out = new Map();
+      for (const r of rows) {
+        if (r.frage === null) continue;
+        for (const id of parsed.companion.fragen[r.frage].kompetenzen) if (!C.find(cat, id)) out.set(id, (out.get(id) || []).concat(r.nr));
+      }
+      return [...out].map(([id, nrs]) => ({ id, nrs }));
+    }
+    const statusText = { ambig: 'nicht eindeutig', none: 'kein Treffer', random: 'verschiedene Texte (Zufallsfrage?)' };
+
+    function draw() {
+      clear(box);
+      const comp = parsed && parsed.companion;
+      if (!comp) return;
+      const i = info();
+      const notes = [];
+      if (i.mode === 'known' || i.mode === 'template')
+        notes.push(
+          h(
+            'label',
+            { class: 'check' },
+            h('input', { type: 'checkbox', checked: useCat, 'data-comp-use-cat': '', onchange: (e) => ((useCat = e.target.checked), draw()) }),
+            i.mode === 'known' ? ` Katalog „${i.cat.name}“ für den Kurs übernehmen` : ` Vorlage „${i.tpl.label}“ übernehmen und für den Kurs wählen`
+          )
+        );
+      if (i.mode === 'none')
+        notes.push(
+          h(
+            'div',
+            { class: 'alert alert-warn' },
+            `Der Kurs hat keinen Kompetenzkatalog, und den Katalog „${comp.katalog.id || '?'}“ der Begleitdatei gibt es in OrdoNota nicht. Die Kompetenzen werden nicht übernommen. Katalog zuerst unter Einstellungen → Kompetenzkataloge importieren.`
+          )
+        );
+      if (i.mode === 'course' && comp.katalog.id && comp.katalog.id !== i.cat.id)
+        notes.push(h('div', { class: 'alert alert-warn' }, `Die Begleitdatei nutzt den Katalog „${comp.katalog.id}“, der Kurs „${i.cat.name}“ (${i.cat.id}). Unbekannte Kennungen unten zuordnen.`));
+      else if (i.cat && comp.katalog.version !== null && comp.katalog.version > (i.cat.version || 0))
+        notes.push(h('div', { class: 'alert alert-warn' }, `Die Begleitdatei wurde mit Version ${comp.katalog.version} des Katalogs gebaut, in OrdoNota ist Version ${i.cat.version || 0}. Fehlen Kennungen, den Katalog neu importieren.`));
+      const act = active();
+      const allNoText = rows.length && rows.every((r) => r.status === 'notext');
+      const hits = rows.filter((r) => r.frage !== null).length;
+      const head = h(
+        'p',
+        { class: 'small' },
+        `✓ Begleitdatei${comp.test ? ` „${comp.test}“` : ''}: ${comp.fragen.length} Fragen, Katalog ${comp.katalog.id || '?'}${comp.katalog.version !== null ? ` (Version ${comp.katalog.version})` : ''}`,
+        rows.length && !allNoText ? h('br') : null,
+        rows.length && !allNoText ? `${hits} von ${rows.length} Moodle-Fragen zugeordnet` : null
+      );
+      box.append(h('h3', { class: 'comp-import-title' }, 'Kompetenzen'), head, ...notes);
+      if (!rows.length) return;
+      if (allNoText) return box.append(h('div', { class: 'alert alert-warn' }, 'Für die Kompetenzen braucht es die Antworten-CSV: Dort steht der Fragetext, über den OrdoNota die Fragen zuordnet.'));
+      const opts = (r) => [
+        h('option', { value: '' }, '— keine —'),
+        comp.fragen.map((f, k) => h('option', { value: String(k), selected: r.frage === k }, f.name || `Frage ${k + 1}`)),
+      ];
+      const chips = (r) => {
+        if (r.frage === null) {
+          const old = (before[r.nr] && before[r.nr].competencies) || [];
+          return old.length ? h('span', { class: 'muted small' }, 'bleibt: ' + old.join(', ')) : null;
+        }
+        const ids = comp.fragen[r.frage].kompetenzen;
+        const old = (before[r.nr] && before[r.nr].competencies) || [];
+        const changed = old.length && old.join('|') !== ids.join('|');
+        return [
+          ids.length ? ids.map((id) => h('span', { class: 'chip' + (act && !C.find(act.cat, id) ? ' chip-unknown' : ''), title: act && C.find(act.cat, id) ? C.find(act.cat, id).name : 'nicht im Katalog' }, id)) : h('span', { class: 'muted small' }, 'keine'),
+          changed ? h('div', { class: 'muted small' }, 'ersetzt: ' + old.join(', ')) : null,
+        ];
+      };
+      const tr = (r) =>
+        h(
+          'tr',
+          { 'data-comp-row': r.nr, class: r.frage === null ? 'comp-unmatched' : null },
+          h('td', { class: 'num' }, 'F' + r.nr),
+          h('td', { class: 'comp-qtext', title: r.text }, r.text.length > 70 ? r.text.slice(0, 69) + '…' : r.text),
+          h(
+            'td',
+            null,
+            h(
+              'select',
+              {
+                class: 'input input-sm',
+                'aria-label': `Frage aus der Begleitdatei für F${r.nr}`,
+                'data-comp-frage': r.nr,
+                onchange: (e) => {
+                  r.frage = e.target.value === '' ? null : Number(e.target.value);
+                  r.status = r.frage === null ? 'none' : 'hand';
+                  draw();
+                },
+              },
+              opts(r)
+            ),
+            statusText[r.status] && r.frage === null ? h('div', { class: 'comp-status small' }, statusText[r.status]) : null
+          ),
+          h('td', { class: 'comp-chips' }, chips(r))
+        );
+      box.append(
+        h(
+          'div',
+          { class: 'table-wrap short' },
+          h(
+            'table',
+            { class: 'table compact comp-import-table' },
+            h('thead', null, h('tr', null, h('th', { class: 'num' }, 'Moodle'), h('th', null, 'Fragetext'), h('th', null, 'Frage aus der Begleitdatei'), h('th', null, 'Kompetenzen'))),
+            h('tbody', null, rows.map(tr))
+          )
+        )
+      );
+      if (!act) return;
+      const unk = unknown(act.cat);
+      if (!unk.length) return;
+      const entries = C.entries(act.cat);
+      box.append(
+        h('p', { class: 'small comp-unknown-head' }, `Nicht im Katalog „${act.cat.name}“:`),
+        h(
+          'ul',
+          { class: 'comp-unknown-list' },
+          unk.map(({ id, nrs }) =>
+            h(
+              'li',
+              { 'data-comp-unknown': id },
+              h('span', { class: 'chip chip-unknown' }, id),
+              h('span', { class: 'muted small' }, nrs.map((n) => 'F' + n).join(', ')),
+              h(
+                'select',
+                { class: 'input input-sm', 'aria-label': `Was passiert mit ${id}?`, onchange: (e) => ((choice[id] = e.target.value), draw()) },
+                h('option', { value: '' }, 'weglassen'),
+                act.cat.bereiche.length
+                  ? h('optgroup', { label: 'in den Katalog aufnehmen' }, act.cat.bereiche.map((b) => h('option', { value: 'add:' + b.id, selected: choice[id] === 'add:' + b.id }, `aufnehmen in „${b.name}“`)))
+                  : null,
+                entries.length ? h('optgroup', { label: 'statt dessen' }, entries.map((e) => h('option', { value: 'map:' + e.id, selected: choice[id] === 'map:' + e.id }, `${e.id} ${e.name}`))) : null
+              )
+            )
+          )
+        )
+      );
+    }
+
+    return {
+      el: box,
+      set(p) {
+        parsed = p;
+        rows = p && p.companion ? MO.matchCompanion(p, p.companion) : [];
+        choice = {};
+        draw();
+      },
+      has: () => !!(parsed && parsed.companion),
+      /** Katalog wählen bzw. anlegen, unbekannte Kennungen aufnehmen; Ergebnis { nr: [kennung] } oder null. */
+      apply() {
+        if (!parsed || !parsed.companion || !rows.length) return null;
+        const act = active();
+        if (!act) return null;
+        let cat = act.cat;
+        if (act.mode === 'template') cat = C.addFromTemplate(db, act.tpl.key);
+        if (act.mode !== 'course') course.catalogId = cat.id;
+        const map = {};
+        for (const { id } of unknown(act.cat)) {
+          const v = choice[id] || '';
+          if (v.startsWith('add:')) map[id] = C.addWithId(cat, v.slice(4), id) ? id : '';
+          else if (v.startsWith('map:')) map[id] = v.slice(4);
+          else map[id] = '';
+        }
+        return MO.companionCompetencies(parsed.companion, rows, map);
+      },
+    };
+  }
+
+  /** Dialog an der Karte „Moodle“: nur die Begleitdatei einlesen, Fragetexte aus der gespeicherten Antworten-CSV. */
+  async function companionImport(course, db, a, part) {
+    const MO = NM.moodle;
+    const owner = part || a.test;
+    const mo = owner.moodle;
+    const stored = (mo.files || []).filter((f) => f.kind !== 'komp');
+    const plan = companionPlan(course, db, a.test, part);
+    const err = h('div');
+    let parsed = null;
+    const fileInput = h('input', {
+      type: 'file',
+      accept: '.json,application/json',
+      onchange: async (e) => {
+        const f = e.target.files[0];
+        if (!f) return;
+        parsed = MO.parseExport(stored.concat([{ name: f.name, text: await f.text() }]));
+        clear(err);
+        err.append(...parsed.warnings.filter((w) => !/^„[^“]*\.csv“/.test(w)).map((w) => h('div', { class: 'alert alert-danger' }, w)));
+        plan.set(parsed);
+      },
+    });
+    const v = await modal({
+      title: part ? `Kompetenzen zuordnen – ${part.name}` : `Kompetenzen zuordnen: ${a.name}`,
+      wide: true,
+      body: h(
+        'div',
+        null,
+        h('p', { class: 'small' }, 'Die Begleitdatei schreibt das Bauskript neben die Moodle-XML. OrdoNota ordnet ihre Fragen über den Fragetext in der gespeicherten Antworten-CSV zu. Punkte bleiben unverändert.'),
+        UI.dropzone(fileInput, 'Begleitdatei hierher ziehen', 'JSON: „Moodle-Test – … (Kompetenzen).json“'),
+        err,
+        plan.el
+      ),
+      buttons: [
+        { label: 'Abbrechen', value: null },
+        {
+          label: 'Übernehmen',
+          value: 'ok',
+          kind: 'primary',
+          validate: () => (plan.has() ? true : (toast('Bitte zuerst die Begleitdatei wählen.', 'error'), false)),
+        },
+      ],
+    });
+    if (v !== 'ok') return;
+    const byNr = plan.apply();
+    const n = byNr ? MO.setCompetencies(a.test, part, byNr) : 0;
+    const komp = parsed.files.find((f) => f.kind === 'komp');
+    mo.files = stored.concat(komp ? [komp] : []);
+    NM.app.commit();
+    toast(byNr ? `Kompetenzen bei ${n} ${n === 1 ? 'Aufgabe' : 'Aufgaben'} geändert.` : 'Kompetenzen nicht übernommen (kein Katalog).', 'info', 5000);
   }
 
   /** Dialog: Moodle-CSV-Dateien wählen, Personen zuordnen, in einen neuen (target = null) oder bestehenden Test (ggf. in einen Teil) übernehmen. */
@@ -1451,6 +1701,7 @@
     let parsed = null;
     let map = new Map();
     const box = h('div');
+    const plan = companionPlan(course, db, target ? target.test : null, part);
     const name = h('input', { class: 'input' });
     // Bisherige eigene Aufgaben (ohne Moodle-Frage) des Tests bzw. Teils: ersetzen? Vorausgewählt, solange keine Punkte eingetragen sind
     const filled = (v) => v !== null && v !== undefined && v !== '';
@@ -1463,7 +1714,7 @@
     const replaceWarn = h('div', { class: 'alert alert-danger', hidden: !(replace.checked && scored.length) }, `Eingetragene Punkte in ${scored.map((x) => x.name).join(', ')} werden gelöscht.`);
     const fileInput = h('input', {
       type: 'file',
-      accept: '.csv,text/csv',
+      accept: '.csv,text/csv,.json,application/json',
       multiple: true,
       onchange: async (e) => {
         const files = await Promise.all([...e.target.files].map(async (f) => ({ name: f.name, text: await f.text() })));
@@ -1471,6 +1722,7 @@
         map = MO.matchStudents(parsed.persons, students);
         if (!target || adopt) name.value = parsed.title;
         renderMap();
+        plan.set(parsed);
       },
     });
 
@@ -1489,7 +1741,18 @@
               kinds.includes('grades') ? '✓ Bewertungen-CSV (Punkte je Frage, mit Korrekturen aus Moodle)' : '– keine Bewertungen-CSV: Punkte per Textvergleich, Korrekturen in Moodle fehlen',
               h('br'),
               `${parsed.questions.length} Fragen · ${parsed.persons.length} Personen`
+            ),
+        Object.keys(parsed.pending).length
+          ? h(
+              'div',
+              { class: 'alert alert-warn', 'data-moodle-pending': '' },
+              'In Moodle noch nicht bewertet (zählt vorerst 0 Punkte): ',
+              Object.entries(parsed.pending)
+                .map(([nr, n]) => `F${nr} bei ${n} ${n === 1 ? 'Person' : 'Personen'}`)
+                .join(', '),
+              '. Nach der Bewertung in Moodle erneut importieren.'
             )
+          : null
       );
       if (!parsed.persons.length) return;
       const assigned = new Set(map.values());
@@ -1536,7 +1799,7 @@
         again ? h('p', { class: 'small' }, 'Die Punkte der Moodle-Fragen werden ersetzt. Eigene Aufgaben, Notenschlüssel und Einstellungen bleiben erhalten.') : null,
         part && !again ? h('p', { class: 'small' }, `Jede Moodle-Frage wird eine Aufgabe (F1, F2, …) im Teil „${part.name}“. Die anderen Teile bleiben unverändert.`) : null,
         target && !part && !again ? h('p', { class: 'small' }, 'Jede Moodle-Frage wird eine Aufgabe (F1, F2, …) dieses Tests.' + (adopt ? ' Bezeichnung und Datum kommen aus Moodle.' : '')) : null,
-        UI.dropzone(fileInput, 'CSV-Dateien hierher ziehen', 'Eine oder beide: Antworten und Bewertungen'),
+        UI.dropzone(fileInput, 'Dateien hierher ziehen', 'Antworten- und Bewertungen-CSV, dazu wahlweise die Begleitdatei (JSON) mit den Kompetenzen'),
         !target || adopt ? h('label', { class: 'field' }, h('span', null, 'Bezeichnung'), name) : null,
         own.length
           ? h(
@@ -1547,7 +1810,8 @@
               replaceWarn
             )
           : null,
-        box
+        box,
+        plan.el
       ),
       buttons: [
         { label: 'Abbrechen', value: null },
@@ -1564,11 +1828,17 @@
       ],
     });
     if (v !== 'ok') return;
-    const sum = MO.applyImport(course, target, parsed, map, { half, settings: db.settings, name: name.value.trim(), partId, replace: own.length > 0 && replace.checked, adopt });
+    const competencies = plan.apply();
+    const sum = MO.applyImport(course, target, parsed, map, { half, settings: db.settings, name: name.value.trim(), partId, replace: own.length > 0 && replace.checked, adopt, competencies });
     NM.app.state.ui.testId[course.id] = sum.assessment.id;
     NM.app.saveUi();
     NM.app.commit();
-    toast(`Moodle-Import: ${sum.imported} Ergebnisse übernommen` + (sum.missing.length ? `, ${sum.missing.length} × „fehlt“` : '') + '.', 'info', 5000);
+    toast(
+      `Moodle-Import: ${sum.imported} Ergebnisse übernommen` + (sum.missing.length ? `, ${sum.missing.length} × „fehlt“` : '') + (competencies ? `, Kompetenzen bei ${sum.competencies} ${sum.competencies === 1 ? 'Aufgabe' : 'Aufgaben'}` : '') + '.',
+      'info',
+      5000
+    );
+    if (plan.has() && !competencies) toast('Kompetenzen aus der Begleitdatei nicht übernommen (kein Katalog).', 'warn', 7000);
     if (sum.mismatch.length) toast(`Hinweis: Bei ${sum.mismatch.join(', ')} weicht die Summe der Fragenpunkte (gerundet) von der Moodle-Bewertung ab.`, 'warn', 9000);
   }
 

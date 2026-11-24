@@ -89,6 +89,9 @@
       const b = C.addBereich(cat);
       ok('neuer Bereich', b.id === 'B1' && cat.bereiche.length === 3);
       ok('erste Kompetenz im leeren Bereich', C.addKompetenz(cat, 'B1').id === 'B11');
+      const v1 = cat.version;
+      ok('aufnehmen mit Kennung (Begleitdatei)', C.addWithId(cat, 'L', 'M-L9').name === 'M-L9' && C.find(cat, 'M-L9').bereich === 'L' && cat.version === v1 + 1);
+      ok('aufnehmen: vergebene oder ungültige Kennung abgelehnt', C.addWithId(cat, 'L', 'M-K1') === null && C.addWithId(cat, 'L', 'ä b') === null && C.addWithId(cat, 'X', 'M-X1') === null);
 
       withCourse(db, [task('a1', 2, { competencies: ['M-K1', 'M-L3'] }), task('a2', 1, { competencies: ['M-K2.1'] })], cat.id);
       ok('usedIds', [...C.usedIds(db, cat.id)].sort().join() === 'M-K1,M-K2.1,M-L3');

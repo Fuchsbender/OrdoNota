@@ -160,6 +160,71 @@
     ok('Ersetzen löscht die Punkte der entfernten Aufgaben', again.test.tasks.length === 3 && Object.keys(again.test.results[c4.students[0].id].scores).every((id) => again.test.tasks.some((x) => x.id === id)));
   }
 
+  // 2.10: Begleitdatei mit Kompetenzen (Fälle wie im echten Export: Lücken, Bild, Tabelle in Großbuchstaben, „: “ im Text, andere Reihenfolge)
+  {
+    const H = 'Nachname,Vorname,E-Mail-Adresse,Status,Begonnen,Beendet,Dauer,"Bewertung/6,00"';
+    const q = [
+      'Löse die Gleichung. Gib nur die Zahl an.  x = _____',
+      'Gegeben sind Zahlen: Welche davon sind Primzahlen?: 4; 7; 9; 11',
+      '[Abbildung zur Aufgabe] Lies den Scheitelpunkt ab.',
+      'Ergänze die Tabelle. X 1 2 3 F(X) 2 4 ?',
+      'Beschreibe, wie viele Nullstellen eine Parabel haben kann.',
+    ];
+    const cells = (texts) => texts.map((t, i) => `"${t}",-,-`).join(',');
+    const ans = [
+      H + ',' + q.map((_, i) => `Frage ${i + 1},Antwort ${i + 1},Richtige Antwort ${i + 1}`).join(','),
+      'Muster,Max,max@example.org,Beendet,24. November 2026  12:21,x,x,"Bisher nicht bewertet",' + cells(q),
+      'Probe,Pia,pia@example.org,Beendet,24. November 2026  12:21,x,x,"5,00",' + cells(q.slice(0, 4).concat(['Eine andere Zufallsfrage?'])),
+    ].join('\n');
+    const gr = [
+      H + ',"F 1 /1,00","F 2 /1,00","F 3 /1,00","F 4 /1,00","F 5 /2,00"',
+      'Muster,Max,max@example.org,Beendet,24. November 2026  12:21,x,x,"Bisher nicht bewertet",1,1,1,1,"Bewertung notwendig"',
+      'Probe,Pia,pia@example.org,Beendet,24. November 2026  12:21,x,x,"5,00",1,1,1,0,2',
+      'Gesamtdurchschnitt,,,,,,,"5,00","1,00","1,00","1,00","0,50","2,00"',
+    ].join('\n');
+    const companion = {
+      format: 'ordonota-moodle-kompetenzen', formatVersion: 1, katalog: { id: 'mathe-sek1', version: 1 }, test: 'Probe', zusatz: 'wird übergangen',
+      fragen: [
+        { name: 'KT-04 Tabelle', textanfang: 'Ergänze die Tabelle. X 1 2 3 F(X) 2 4 ?', kompetenzen: ['M-L3', 'M-K4'] },
+        { name: 'KT-01 Gleichung', textanfang: 'Löse die Gleichung. Gib nur die Zahl an. x = _____', kompetenzen: ['M-K6', 'M-K6', 'M-L1'] },
+        { name: 'KT-02 Primzahlen', textanfang: 'Gegeben sind Zahlen: Welche davon sind Primzahlen?', kompetenzen: ['M-L1', 'M-K2.1'] },
+        { name: 'KT-03 Scheitel', textanfang: '[abbildung zur aufgabe] lies den scheitelpunkt ab.', kompetenzen: ['M-L3'] },
+        { name: 'KT-05 Freitext', textanfang: 'Beschreibe, wie viele Nullstellen', kompetenzen: [] },
+      ],
+    };
+    const files = [{ name: 'K-Antworten.csv', text: ans }, { name: 'K-Bewertungen.csv', text: gr }, { name: 'Moodle-Test – Probe (Kompetenzen).json', text: JSON.stringify(companion) }];
+    const pk = MO.parseExport(files);
+    ok('Begleitdatei: erkannt und gespeichert, kein Warnhinweis', pk.companion && pk.files.map((f) => f.kind).sort().join() === 'answers,grades,komp' && !pk.warnings.length);
+    ok('Begleitdatei: doppelte Kennung zusammengefasst, Zusatzfelder übergangen', pk.companion.fragen[1].kompetenzen.join() === 'M-K6,M-L1' && !('zusatz' in pk.companion));
+    ok('„Bewertung notwendig“: als offen gezählt, Durchschnittszeile ignoriert', pk.pending[5] === 1 && Object.keys(pk.pending).length === 1 && pk.persons.length === 2);
+    const rowsK = MO.matchCompanion(pk, pk.companion);
+    ok('Abgleich: Lücke, „: “ im Text, Tabelle, andere Reihenfolge', rowsK[0].frage === 1 && rowsK[1].frage === 2 && rowsK[3].frage === 0 && rowsK.slice(0, 4).every((r) => r.status === 'ok'));
+    ok('Abgleich: ohne Treffer ohne Groß-/Kleinschreibung', rowsK[2].frage === 3);
+    ok('Abgleich: verschiedene Texte in einer Nummer → keine Zuordnung', rowsK[4].frage === null && rowsK[4].status === 'random');
+    // Mehrdeutig und längster Treffer
+    const amb = { fragen: [{ textanfang: 'Löse die Gleichung.', kompetenzen: [] }, { textanfang: 'Löse die Gleichung.', kompetenzen: [] }, { textanfang: 'Löse', kompetenzen: [] }] };
+    ok('Abgleich: gleich lange Treffer → nicht eindeutig', MO.matchCompanion(pk, amb)[0].status === 'ambig');
+    amb.fragen[1].textanfang = 'Löse die Gleichung. Gib nur';
+    ok('Abgleich: längster Treffer gewinnt', MO.matchCompanion(pk, amb)[0].frage === 1);
+    ok('Abgleich: ohne Antworten-CSV kein Text', MO.matchCompanion(MO.parseExport([files[1], files[2]]), pk.companion).every((r) => r.status === 'notext'));
+    const byNr = MO.companionCompetencies(pk.companion, rowsK, { 'M-K2.1': 'M-K2', 'M-K4': '' });
+    ok('Kompetenzen je Nummer: ersetzt, weggelassen, ohne Zuordnung fehlt', byNr[1].join() === 'M-K6,M-L1' && byNr[2].join() === 'M-L1,M-K2' && byNr[4].join() === 'M-L3' && !(5 in byNr));
+    // Übernehmen in einen Test, Hand-Kompetenz einer nicht zugeordneten Frage bleibt
+    const c5 = M.newCourse(db.years[0].id, { klasse: '9b', fach: 'Mathematik', jahrgang: 9, type: 'sek1' });
+    c5.students = M.parseNames('Muster, Max\nProbe, Pia');
+    const s5 = MO.applyImport(c5, null, pk, MO.matchStudents(pk.persons, c5.students), { half: 'HJ1', settings: db.settings, competencies: byNr });
+    const t5 = s5.assessment.test;
+    ok('Import: Kompetenzen an den Aufgaben, Freitext ohne', s5.competencies === 4 && t5.tasks[0].competencies.join() === 'M-K6,M-L1' && t5.tasks[4].competencies === undefined);
+    t5.tasks[4].competencies = ['M-K1'];
+    MO.applyImport(c5, s5.assessment, MO.parseExport(files.slice(0, 2)), MO.matchStudents(pk.persons, c5.students), {});
+    ok('Erneut ohne Begleitdatei: Kompetenzen und gespeicherte Begleitdatei bleiben', t5.tasks[4].competencies.join() === 'M-K1' && t5.tasks[0].competencies.join() === 'M-K6,M-L1' && t5.moodle.files.some((f) => f.kind === 'komp'));
+    ok('setCompetencies: leere Liste entfernt das Feld', MO.setCompetencies(t5, null, { 1: [] }) === 1 && t5.tasks[0].competencies === undefined);
+    // Fehler in der Begleitdatei
+    const bad = (t) => { try { MO.parseCompanion(t); return ''; } catch (e) { return e.message; } };
+    ok('Begleitdatei: falsches Format und neue Formatversion abgelehnt', bad('{"format":"x"}').includes('keine Begleitdatei') && bad('{"format":"ordonota-moodle-kompetenzen","formatVersion":2,"fragen":[]}').includes('Formatversion 2') && bad('kein json').includes('JSON'));
+    ok('Begleitdatei: kaputte Datei als Warnung', MO.parseExport([files[0], { name: 'x.json', text: '{kaputt' }]).warnings.length === 1);
+  }
+
   document.getElementById('out').textContent = (fails ? `${fails} FEHLGESCHLAGEN` : 'ALLE TESTS BESTANDEN') + '\n\n' + lines.join('\n');
 </script>
 </body>

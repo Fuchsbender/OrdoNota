@@ -751,6 +751,21 @@ body.grp-dragging, body.grp-dragging * { cursor: grabbing !important; }
 .comp-table input[type="checkbox"] { width: 1.05rem; height: 1.05rem; margin: 0; cursor: pointer; }
 .comp-table input[type="checkbox"]:disabled { cursor: not-allowed; }
 .task-comp { padding: 0 0.25rem; white-space: nowrap; }
+.comp-import { display: grid; gap: 0.5rem; margin-top: 0.75rem; }
+.comp-import:empty { display: none; }
+.comp-import-title { margin: 0.5rem 0 0; padding-top: 0.75rem; border-top: 1px solid var(--border); font-size: 0.9375rem; }
+.comp-import p { margin: 0; }
+.comp-import-table td { vertical-align: top; white-space: normal; }
+.comp-import-table td.num { white-space: nowrap; }
+.comp-import-table .comp-qtext { min-width: 10rem; font-size: 0.8125rem; }
+.comp-import-table select { max-width: 13rem; }
+.comp-import-table .comp-chips { min-width: 7rem; }
+.comp-import-table tr.comp-unmatched td { background: var(--gold-soft); }
+.comp-import-table .comp-chips .chip { margin: 0 0.25rem 0.25rem 0; display: inline-block; }
+.comp-status { color: var(--gold); margin-top: 0.125rem; }
+.chip.chip-unknown { border-style: dashed; border-color: var(--gold); color: var(--gold); }
+.comp-unknown-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.375rem; }
+.comp-unknown-list li { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
 .tools-list li .check { flex: 1; margin: 0; }
 .tools-list li .check::before { content: counter(tabpos) ". "; color: var(--text-dim); }
 .warn-text { color: var(--gold); }
@@ -808,6 +823,7 @@ body.no-grade-colors .dist-bar { background: var(--accent); }
 .alert { padding: 0.625rem 0.75rem; border-radius: var(--radius-s); font-size: 0.8125rem; }
 .alert-danger { background: var(--bad-soft); color: var(--bad); }
 .alert-ok { background: var(--ok-soft); color: var(--ok); }
+.alert-warn { background: var(--gold-soft); color: var(--gold); }
 
 /* ---------- EPO ---------- */
 

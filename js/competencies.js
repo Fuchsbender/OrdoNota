@@ -276,6 +276,16 @@
     return k;
   }
 
+  /** Kompetenz mit vorgegebener Kennung aufnehmen (z. B. aus einer Begleitdatei); Bezeichnung = Kennung. null, wenn ungültig oder vergeben. */
+  function addWithId(cat, bereichId, id) {
+    const b = cat.bereiche.find((x) => x.id === bereichId);
+    if (!b || !ID_RE.test(String(id || '')) || allIds(cat).has(id)) return null;
+    const k = { id, name: id };
+    b.kompetenzen.push(k);
+    bump(cat);
+    return k;
+  }
+
   function addTeil(cat, kompId) {
     const loc = locate(cat, kompId);
     if (!loc || loc.parent) return null;
@@ -472,6 +482,7 @@
     addFromTemplate,
     addEmpty,
     addKompetenz,
+    addWithId,
     addTeil,
     addBereich,
     bump,

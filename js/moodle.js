@@ -112,10 +112,23 @@
    * Ohne Bewertungen-CSV zählt jede Frage 1 Punkt, wenn Antwort und richtige Antwort übereinstimmen.
    */
   function parseExport(files) {
-    const out = { files: [], questions: [], attempts: [], persons: [], totalMax: null, title: '', warnings: [] };
+    const out = { files: [], questions: [], attempts: [], persons: [], totalMax: null, title: '', warnings: [], texts: {}, pending: {}, companion: null };
     let answers = null;
     let grades = null;
     for (const f of files) {
+      if (/\.json$/i.test(f.name) || /^\s*\{/.test(String(f.text).replace(/^\uFEFF/, ''))) {
+        if (out.companion) {
+          out.warnings.push(`„${f.name}“ wird ignoriert: Es wurde schon eine Begleitdatei gewählt.`);
+          continue;
+        }
+        try {
+          out.companion = parseCompanion(f.text);
+          out.files.push({ name: f.name, kind: 'komp', text: f.text });
+        } catch (e) {
+          out.warnings.push(`„${f.name}“: ${e.message}`);
+        }
+        continue;
+      }
       const rows = parseCsv(f.text);
       if (!rows.length) continue;
       const col = columns(rows[0]);
@@ -166,14 +179,19 @@
     const used = new Set();
     const attempt = (p, aRow, gRow) => {
       const finished = norm(p.status).includes('beendet') || norm(p.status).includes('abgeschlossen');
-      const a = { last: p.last, first: p.first, email: p.email, finished, status: p.status, date: parseDate(p.startedRaw), scores: {}, answers: {}, total: null };
+      const a = { last: p.last, first: p.first, email: p.email, finished, status: p.status, date: parseDate(p.startedRaw), scores: {}, answers: {}, total: null, pending: [] };
       for (const { nr, max } of out.questions) {
         if (aRow) {
           const c = answers.col;
           const given = cell(answers, aRow, c.antwort[nr]);
           a.answers[nr] = { q: questionText(cell(answers, aRow, c.frage[nr])), a: given === '-' ? '' : given, c: cell(answers, aRow, c.richtig[nr]) };
         }
-        if (gRow) a.scores[nr] = num(cell(grades, gRow, grades.col.punkte[nr].i));
+        if (gRow) {
+          const raw = cell(grades, gRow, grades.col.punkte[nr].i);
+          a.scores[nr] = num(raw);
+          // z. B. Freitext: „Bewertung notwendig“ – in Moodle noch nicht bewertet
+          if (a.scores[nr] === null && raw !== '' && raw !== '-') a.pending.push(nr);
+        }
         else if (aRow) {
           const x = a.answers[nr];
           a.scores[nr] = x.a === '' ? null : x.c !== '' && answerNorm(x.a) === answerNorm(x.c) ? max : 0;
@@ -189,6 +207,10 @@
       for (const r of answers.rows.slice(1)) {
         const p = person(answers, r);
         if (!p.email && !p.status) continue;
+        for (const { nr } of out.questions) {
+          const q = normText(cell(answers, r, answers.col.frage[nr]));
+          if (q && q !== '-') (out.texts[nr] = out.texts[nr] || []).includes(q) || out.texts[nr].push(q);
+        }
         const k = keyOf(p);
         used.add(k);
         out.attempts.push(attempt(p, r, gradeRows.get(k)));
@@ -205,7 +227,108 @@
       if (better) byPerson.set(k, a);
     }
     out.persons = [...byPerson.values()].sort((x, y) => x.last.localeCompare(y.last, 'de') || x.first.localeCompare(y.first, 'de'));
+    for (const p of out.persons) if (p.finished) for (const nr of p.pending) out.pending[nr] = (out.pending[nr] || 0) + 1;
     return out;
+  }
+
+  // ---------- Begleitdatei (Kompetenzen aus moodle.py) ----------
+
+  const COMPANION_FORMAT = 'ordonota-moodle-kompetenzen';
+
+  /** Leerraum (auch geschützte Leerzeichen) zusammenfassen, wie Moodle es in der CSV tut. */
+  const normText = (s) => String(s === undefined || s === null ? '' : s).replace(/[\s  ]+/g, ' ').trim();
+
+  /** Begleitdatei lesen: { katalog: { id, version }, test, fragen: [{ name, textanfang, kompetenzen }] }; unbekannte Felder werden übergangen. */
+  function parseCompanion(text) {
+    let d;
+    try {
+      d = JSON.parse(String(text).replace(/^﻿/, ''));
+    } catch (e) {
+      throw new Error('Die Datei ist kein gültiges JSON.');
+    }
+    if (!d || d.format !== COMPANION_FORMAT) throw new Error('Das ist keine Begleitdatei mit Kompetenzen (ordonota-moodle-kompetenzen).');
+    if (d.formatVersion !== 1) throw new Error(`Die Begleitdatei hat Formatversion ${d.formatVersion}, OrdoNota kennt nur 1. Bitte OrdoNota aktualisieren.`);
+    if (!Array.isArray(d.fragen)) throw new Error('In der Begleitdatei fehlt die Liste „fragen“.');
+    const k = d.katalog && typeof d.katalog === 'object' ? d.katalog : {};
+    const str = (v) => (typeof v === 'string' ? v : '');
+    return {
+      katalog: { id: str(k.id).trim(), version: Number.isFinite(Number(k.version)) ? Number(k.version) : null },
+      test: str(d.test).trim(),
+      fragen: d.fragen
+        .filter((f) => f && typeof f === 'object')
+        .map((f) => ({
+          name: str(f.name).trim(),
+          textanfang: normText(f.textanfang),
+          kompetenzen: [...new Set((Array.isArray(f.kompetenzen) ? f.kompetenzen : []).filter((x) => typeof x === 'string' && x.trim()).map((x) => x.trim()))],
+        })),
+    };
+  }
+
+  /**
+   * Moodle-Fragen den Fragen der Begleitdatei zuordnen: Der CSV-Text muss mit `textanfang` beginnen (nach dem Zusammenfassen
+   * des Leerraums; ohne Treffer ohne Groß-/Kleinschreibung). Bei mehreren Treffern gilt der längste, gleich lange → nicht eindeutig.
+   * Ergebnis je Frage: { nr, text, frage (Index oder null), status: 'ok' | 'ambig' | 'none' | 'random' | 'notext' }.
+   *   random = in derselben Nummer stehen verschiedene Texte (Zufallsfragen), notext = keine Antworten-CSV.
+   */
+  function matchCompanion(parsed, companion) {
+    const fragen = companion ? companion.fragen : [];
+    const find = (t, fold) => {
+      const f = fold ? (x) => x.toLocaleLowerCase('de') : (x) => x;
+      const tt = f(t);
+      let best = [];
+      let len = 0;
+      fragen.forEach((q, i) => {
+        if (!q.textanfang || !tt.startsWith(f(q.textanfang))) return;
+        if (q.textanfang.length > len) (best = [i]), (len = q.textanfang.length);
+        else if (q.textanfang.length === len) best.push(i);
+      });
+      return best;
+    };
+    return parsed.questions.map(({ nr }) => {
+      const texts = parsed.texts[nr] || [];
+      if (!texts.length) return { nr, text: '', frage: null, status: 'notext' };
+      if (texts.length > 1) return { nr, text: texts[0], frage: null, status: 'random' };
+      let hit = find(texts[0], false);
+      if (!hit.length) hit = find(texts[0], true);
+      return { nr, text: texts[0], frage: hit.length === 1 ? hit[0] : null, status: hit.length === 1 ? 'ok' : hit.length ? 'ambig' : 'none' };
+    });
+  }
+
+  /**
+   * Kompetenzen je Moodle-Nummer aus der Zuordnung. choice: { kennung: '' (weglassen) | andere Kennung }; fehlt eine
+   * Kennung in choice, bleibt sie, wie sie ist. Zeilen ohne Frage (frage = null) fehlen im Ergebnis.
+   */
+  function companionCompetencies(companion, rows, choice = {}) {
+    const out = {};
+    for (const r of rows) {
+      if (r.frage === null || r.frage === undefined || !companion.fragen[r.frage]) continue;
+      const ids = companion.fragen[r.frage].kompetenzen.map((id) => (Object.prototype.hasOwnProperty.call(choice, id) ? choice[id] : id)).filter(Boolean);
+      out[r.nr] = [...new Set(ids)];
+    }
+    return out;
+  }
+
+  /** Aufgaben eines Tests (bzw. eines Teils) zu den Moodle-Nummern: { nr: task }. */
+  function tasksByNr(test, part) {
+    const inPart = (x) => !part || x.partId === part.id || (part === test.parts[0] && !test.parts.some((y) => y.id === x.partId));
+    const out = {};
+    for (const x of test.tasks) if (x.moodleNr !== undefined && inPart(x) && !out[x.moodleNr]) out[x.moodleNr] = x;
+    return out;
+  }
+
+  /** Kompetenzen an die Aufgaben schreiben (byNr aus companionCompetencies); leere Liste entfernt das Feld. Gibt die Anzahl geänderter Aufgaben zurück. */
+  function setCompetencies(test, part, byNr) {
+    const tasks = tasksByNr(test, part);
+    let n = 0;
+    for (const [nr, ids] of Object.entries(byNr || {})) {
+      const t = tasks[nr];
+      if (!t) continue;
+      const before = (t.competencies || []).join('|');
+      if (ids.length) t.competencies = ids.slice();
+      else delete t.competencies;
+      if ((t.competencies || []).join('|') !== before) n++;
+    }
+    return n;
   }
 
   // ---------- Zuordnung ----------
@@ -247,8 +370,9 @@
    * Kursmitglieder ohne beendeten Versuch bekommen „fehlt“, sofern noch keine Punkte eingetragen sind.
    * replace: bisherige Aufgaben (des Tests bzw. des Teils), die nicht zu einer Moodle-Frage gehören, samt Punkten entfernen.
    * adopt (bestehender Test): Bezeichnung (name) und Datum des Moodle-Versuchs übernehmen, z. B. bei einem frisch angelegten Test.
+   * competencies: { nr: [kennung, …] } aus companionCompetencies – ersetzt die Kompetenzen dieser Aufgaben, die übrigen bleiben.
    */
-  function applyImport(course, a, parsed, map, { half, settings, name, date, cat, partId = null, replace = false, adopt = false } = {}) {
+  function applyImport(course, a, parsed, map, { half, settings, name, date, cat, partId = null, replace = false, adopt = false, competencies = null } = {}) {
     const isNew = !a;
     if (isNew) {
       a = M.newTest(course, half, settings);
@@ -286,7 +410,9 @@
     }
     const owner = part || t;
     const moodle = (owner.moodle = owner.moodle || { answers: {} });
-    moodle.files = parsed.files.map((f) => ({ name: f.name, kind: f.kind, text: f.text }));
+    // Eine früher importierte Begleitdatei bleibt, wenn diesmal keine dabei ist
+    const keepKomp = parsed.files.some((f) => f.kind === 'komp') ? [] : (moodle.files || []).filter((f) => f.kind === 'komp');
+    moodle.files = parsed.files.map((f) => ({ name: f.name, kind: f.kind, text: f.text })).concat(keepKomp);
     moodle.importedAt = new Date().toISOString();
     moodle.totalMax = parsed.totalMax;
 
@@ -343,6 +469,7 @@
     const curPrec = precOwner.precision !== undefined ? precOwner.precision : t.precision;
     // Genauigkeit aus Moodle übernehmen (neuer Test bzw. alle eigenen Aufgaben ersetzt), sonst nur feiner stellen
     if (isNew || (replace && (!part || G.separateParts(t))) || prec < Number(curPrec)) precOwner.precision = prec;
+    if (competencies) summary.competencies = setCompetencies(t, part, competencies);
     if (isNew) course.assessments.push(a);
     summary.assessment = a;
     return summary;
@@ -376,5 +503,5 @@
     };
   }
 
-  NM.moodle = { parseCsv, parseExport, parseDate, questionText, matchStudents, applyImport, precisionFor, hasData, answersOf, mergeData };
+  NM.moodle = { parseCsv, parseExport, parseDate, questionText, normText, parseCompanion, matchCompanion, companionCompetencies, tasksByNr, setCompetencies, matchStudents, applyImport, precisionFor, hasData, answersOf, mergeData };
 })((globalThis.NM = globalThis.NM || {}));

@@ -1098,6 +1098,22 @@ MOODLE_GRADES = "\n".join([
 ])
 
 
+# 2.10: Begleitdatei mit Kompetenzen (erfunden; Fälle wie im echten Export: Lücke, „: “ im Text, Freitext „Bewertung notwendig“)
+KOMP_HEAD = 'Nachname,Vorname,E-Mail-Adresse,Status,Begonnen,Beendet,Dauer,"Bewertung/3,00"'
+KOMP_ANSWERS = "\n".join([
+    KOMP_HEAD + ",Frage 1,Antwort 1,Richtige Antwort 1,Frage 2,Antwort 2,Richtige Antwort 2",
+    'Muster,Max,max@example.org,Beendet,24. November 2026  12:21,x,x,"Bisher nicht bewertet","Gegeben sind Zahlen: Welche davon sind Primzahlen?: 4; 7; 9",7,7,"Beschreibe, wie viele Nullstellen eine Parabel haben kann.",-,-',
+])
+KOMP_GRADES = "\n".join([
+    KOMP_HEAD + ',"F 1 /1,00","F 2 /2,00"',
+    'Muster,Max,max@example.org,Beendet,24. November 2026  12:21,x,x,"Bisher nicht bewertet",1,"Bewertung notwendig"',
+])
+def komp_companion(first):
+    return json.dumps({"format": "ordonota-moodle-kompetenzen", "formatVersion": 1, "katalog": {"id": "mathe-sek1", "version": 1}, "test": "Probe",
+        "fragen": [{"name": "KT-05 Freitext", "textanfang": "Beschreibe, wie viele Nullstellen", "kompetenzen": ["M-K1"]},
+                   {"name": "KT-02 Primzahlen", "textanfang": "Gegeben sind Zahlen: Welche davon sind Primzahlen?", "kompetenzen": first}]}, ensure_ascii=False)
+
+
 def run_pomodoro_check(br, base):
     print("Pomodoro-Timer (Einstellung, Kopfzeile, Phasen):")
     br.open(f"{base}/index.html?demo")
@@ -3289,6 +3305,59 @@ def run_moodle_check(br, base):
     report("Moodle: Import im Test (Aufgaben ersetzen/behalten), Zuordnung, „fehlt“, Ausdruck mit/ohne Note, erneuter Import", ok and not br.errors, str(res) + "; ".join(br.errors))
 
 
+def run_moodle_comp_check(br, base):
+    print("Moodle-Import mit Begleitdatei (Kompetenzen):")
+    br.open(f"{base}/index.html?demo")
+    br.wait(APP_READY, 30)
+    br.errors = []
+    res = br.eval("""(async (answers, grades, comp1, comp2) => {
+        const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
+        const click = (t, root = document) => [...root.querySelectorAll('button')].find((b) => b.textContent.includes(t)).click();
+        const pick = async (files) => {
+            const inp = document.querySelector('dialog input[type=file]');
+            const dt = new DataTransfer();
+            files.forEach(([name, text]) => dt.items.add(new File([text], name, { type: 'text/plain' })));
+            inp.files = dt.files; inp.dispatchEvent(new Event('change')); await wait(400);
+        };
+        const q = (sel) => document.querySelector('dialog ' + sel);
+        const out = {};
+        const db = NM.app.db();
+        const c = db.courses.find((x) => x.klasse === '8b');
+        NM.app.select({ courseId: c.id, tab: 'tests' }); await wait();
+        click('+ Neuer Test'); await wait();
+        click('Moodle-CSV'); await wait();
+        await pick([['K-Antworten.csv', answers], ['K-Bewertungen.csv', grades], ['Moodle-Test – Probe (Kompetenzen).json', comp1]]);
+        out.dialog = [document.querySelectorAll('dialog [data-comp-row]').length, q('[data-comp-frage="1"]').value, q('[data-comp-frage="2"]').value,
+            [...document.querySelectorAll('dialog [data-comp-unknown]')].map((x) => x.dataset.compUnknown).join(), !!q('[data-moodle-pending]'), (q('[data-moodle-pending]') || {}).textContent || ''];
+        const sel = q('[data-comp-unknown="M-K2.1"] select');
+        sel.value = 'add:K'; sel.dispatchEvent(new Event('change')); await wait();
+        q('.btn-primary').click(); await wait();
+        const a = c.assessments[c.assessments.length - 1];
+        const cat = NM.competencies.forCourse(db, c);
+        out.applied = [a.test.tasks.map((t) => (t.competencies || []).join('+')).join('|'), !!NM.competencies.find(cat, 'M-K2.1'), a.test.moodle.files.map((f) => f.kind).sort().join()];
+        // Nachträglich über die Karte „Moodle“: nur die Begleitdatei, F1 bekommt andere Kompetenzen
+        NM.app.rerender(); await wait();
+        document.querySelector('[data-comp-companion]').click(); await wait();
+        await pick([['Moodle-Test – Probe (Kompetenzen).json', comp2]]);
+        out.replaced = (q('[data-comp-row="1"]') || {}).textContent || '';
+        q('.btn-primary').click(); await wait();
+        out.after = [a.test.tasks[0].competencies.join('+'), a.test.moodle.files.filter((f) => f.kind === 'komp').length, a.test.moodle.files.length];
+        // Kurs ohne Katalog: Katalog der Begleitdatei für den Kurs übernehmen (die Demo hat nur einen Sek-I-Kurs)
+        const c0 = c;
+        delete c0.catalogId; NM.app.rerender(); await wait();
+        click('+ Neuer Test'); await wait();
+        click('Moodle-CSV'); await wait();
+        await pick([['K-Antworten.csv', answers], ['K-Bewertungen.csv', grades], ['Moodle-Test – Probe (Kompetenzen).json', comp1]]);
+        out.useCat = !!(q('[data-comp-use-cat]') || {}).checked;
+        q('.btn-primary').click(); await wait();
+        out.c0 = [c0.catalogId, c0.assessments[c0.assessments.length - 1].test.tasks[1].competencies.join('+')];
+        return out; })(%s, %s, %s, %s)""" % (json.dumps(KOMP_ANSWERS), json.dumps(KOMP_GRADES), json.dumps(komp_companion(["M-L1", "M-K2.1"])), json.dumps(komp_companion(["M-K1"]))))
+    ok = bool(res) and res["dialog"][:5] == [2, "1", "0", "M-K2.1", True] and "F2 bei 1 Person" in res["dialog"][5] \
+        and res["applied"] == ["M-L1+M-K2.1|M-K1", True, "answers,grades,komp"] \
+        and "ersetzt: M-L1, M-K2.1" in res["replaced"] and res["after"] == ["M-K1", 1, 3] \
+        and res["useCat"] is True and res["c0"] == ["mathe-sek1", "M-K1"]
+    report("Moodle mit Begleitdatei: Abgleich, unbekannte Kennung aufnehmen, „Bewertung notwendig“, nachträglich zuordnen, Katalog übernehmen", ok and not br.errors, str(res) + "; ".join(br.errors))
+
 def run_launcher_check(br, base):
     """Startprogramm (launcher/): Go-Tests, echter Server, App legt Datenbank an und speichert in den Ordner."""
     print("Startprogramm (launcher/):")
@@ -3637,7 +3706,7 @@ def main():
         run_tests_view_check, run_competency_check, run_task_add_click_check, run_makeup_check, run_verbal_check, run_ausgleich_check, run_notes_check, run_foerder_check, run_people_check, run_people_page_check, run_unreachable_check,
         run_tabs_check, run_tab_order_check, run_overview_fold_check, run_settings_layout_check,
         run_theme_check, run_demo_link_check, run_old_db_check, run_parts_check, run_print_menu_check,
-        run_pres_check, run_group_check, run_groups_tab_check, run_moodle_check, run_scripto_check,
+        run_pres_check, run_group_check, run_groups_tab_check, run_moodle_check, run_moodle_comp_check, run_scripto_check,
         run_decrypt_tool, run_launcher_check,
     ]
     srv, base = serve()
