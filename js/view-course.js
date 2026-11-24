@@ -9,7 +9,7 @@
   function render(view, { course, db }) {
     view.append(
       h('div', { class: 'view-head' }, h('h1', null, M.courseTitle(course)), h('span', { class: 'pill' }, G.courseLevel(course) === 'mss' ? 'MSS · Punkte 00–15' : 'Sek I · Noten 1–6')),
-      h('div', { class: 'grid-2' }, courseCard(course), studentsCard(course)),
+      h('div', { class: 'grid-2' }, courseCard(course, db), studentsCard(course)),
       attendanceCard(course),
       tabsCard(course, db),
       dangerCard(course, db)
@@ -20,11 +20,40 @@
     return h('label', { class: 'field' + (cls ? ' ' + cls : '') }, h('span', null, label), input);
   }
 
-  function courseCard(course) {
+  function courseCard(course, db) {
     const set = (k) => (e) => {
       course[k] = e.target.value;
       NM.app.commit();
     };
+    // 2.9: Kompetenzkatalog des Kurses; beim Eintragen des Fachs vorbelegt, solange keiner gewählt ist
+    const C = NM.competencies;
+    const setFach = (e) => {
+      course.fach = e.target.value;
+      if (!course.catalogId) {
+        const id = C.guessForFach(db, course.fach);
+        if (id) {
+          course.catalogId = id;
+          toast(`Kompetenzkatalog „${C.byId(db, id).name}“ gewählt (änderbar unter „Kompetenzkatalog“).`, 'info', 5000);
+        }
+      }
+      NM.app.commit();
+    };
+    const cats = C.catalogs(db);
+    const catalog = h(
+      'select',
+      {
+        class: 'input',
+        'data-course-catalog': '',
+        onchange: (e) => {
+          if (e.target.value) course.catalogId = e.target.value;
+          else delete course.catalogId;
+          NM.app.commit();
+        },
+      },
+      h('option', { value: '', selected: !course.catalogId }, '— keiner —'),
+      cats.map((c) => h('option', { value: c.id, selected: course.catalogId === c.id }, c.name)),
+      course.catalogId && !C.byId(db, course.catalogId) ? h('option', { value: course.catalogId, selected: true }, `${course.catalogId} (fehlt)`) : null
+    );
     const jahrgang = h(
       'select',
       { class: 'input', onchange: (e) => changeJahrgang(course, Number(e.target.value)) },
@@ -93,7 +122,13 @@
         'div',
         { class: 'form-grid' },
         field('Klasse / Stufe', h('input', { class: 'input', value: course.klasse, placeholder: 'z. B. 8b oder MSS 12', 'data-focus-key': 'course-klasse', onchange: set('klasse') })),
-        field('Fach', h('input', { class: 'input', value: course.fach, placeholder: 'z. B. Mathe', onchange: set('fach') })),
+        field('Fach', h('input', { class: 'input', value: course.fach, placeholder: 'z. B. Mathe', onchange: setFach })),
+        h(
+          'label',
+          { class: 'field', title: cats.length ? 'Aus diesem Katalog wählen Sie in den Tests die Kompetenzen je Aufgabe.' : 'Kataloge legen Sie unter Einstellungen → Kompetenzkataloge an.' },
+          h('span', null, 'Kompetenzkatalog'),
+          catalog
+        ),
         field('Jahrgangsstufe', jahrgang),
         field('Kursart', type),
         field('Gewicht Klassen-/Kursarbeiten (%)', pct('wKa', 'wOther')),
@@ -792,6 +827,7 @@
     copy.wHalf2 = course.wHalf2;
     copy.einstufung = M.courseEinstufung(course);
     if (course.tabs) copy.tabs = Object.assign({}, course.tabs);
+    if (course.catalogId) copy.catalogId = course.catalogId; // 2.9: Kompetenzkatalog
     if (withStudents.checked)
       copy.students = M.activeStudents(course).map((s) => Object.assign({ id: uid(), last: s.last, first: s.first, active: true }, s.personId ? { personId: s.personId } : {}, s.einstufung ? { einstufung: s.einstufung } : {})); // dieselben Personen im Register (Schema 5)
     db.courses.push(copy);

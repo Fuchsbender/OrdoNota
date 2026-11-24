@@ -46,7 +46,7 @@
     const t = cur.test;
     const moodleCards = [t.moodle ? moodleCard(course, db, cur, null) : null, ...(G.hasParts(t) ? t.parts.filter((x) => x.moodle).map((x) => moodleCard(course, db, cur, x)) : [])];
     const scriptoCard = NM.scripto.dataOf(course, cur) ? scriptoCardFor(course, db, cur) : null;
-    view.append(...[metaCard(course, cur, level), ...moodleCards, scriptoCard, G.hasParts(t) ? partsCard(course, db, cur, level) : null, tasksCard(course, db, cur), h('div', { class: 'test-layout' }, h('div', { class: 'tests-main' }, resultsCard(course, cur, level), verbalCard(course, cur, level)), keyCard(course, cur, level))].filter(Boolean));
+    view.append(...[metaCard(course, cur, level), ...moodleCards, scriptoCard, G.hasParts(t) ? partsCard(course, db, cur, level) : null, tasksCard(course, db, cur), competenciesCard(course, db, cur), h('div', { class: 'test-layout' }, h('div', { class: 'tests-main' }, resultsCard(course, cur, level), verbalCard(course, cur, level)), keyCard(course, cur, level))].filter(Boolean));
   }
 
   function metaCard(course, a, level) {
@@ -493,6 +493,7 @@
 
   function tasksCard(course, db, a) {
     const t = a.test;
+    const cat = NM.competencies.forCourse(db, course);
     const max = G.testMaxScore(t);
     const bonusMax = t.tasks.filter((x) => x.bonus).reduce((s, x) => s + (Number(x.max) || 0), 0);
     const add = (part, bonus) =>
@@ -531,13 +532,87 @@
           'div',
           { class: part ? 'task-group' : null },
           part ? h('div', { class: 'task-group-head' }, h('strong', null, part.name), h('span', { class: 'muted small' }, ` · ${fmtScore(G.testMaxScore({ tasks }))} Punkte`)) : null,
-          h('div', { class: 'tasks' }, tasks.map((task) => taskItem(t, task)), add(part, false), add(part, true))
+          h('div', { class: 'tasks' }, tasks.map((task) => taskItem(t, task, cat)), add(part, false), add(part, true))
         )
       )
     );
   }
 
-  function taskItem(t, task) {
+  // ---------- Kompetenzen je Aufgabe (seit 2.9, PLANUNG.md AI) ----------
+
+  /** Karte „Kompetenzen“: Raster Aufgaben × Kompetenzen des Kurskatalogs; nur mit Katalog am Kurs. */
+  function competenciesCard(course, db, a) {
+    const C = NM.competencies;
+    const cat = C.forCourse(db, course);
+    if (!cat) return null;
+    const t = a.test;
+    const usedHere = new Set(t.tasks.flatMap((x) => x.competencies || []));
+    // Ausgeblendete nur, solange eine Aufgabe dieses Tests sie trägt
+    const cols = C.entries(cat).filter((e) => !e.hidden || usedHere.has(e.id));
+    const bereichName = new Map(cat.bereiche.map((b) => [b.id, b.name]));
+    const pts = C.pointsPer(cat, t.tasks);
+    const colClass = (e, i) =>
+      ['comp-col', e.level === 'teil' ? 'comp-teil' : '', e.hidden ? 'comp-hidden' : '', i === 0 || cols[i - 1].bereich !== e.bereich ? 'comp-first' : ''].filter(Boolean).join(' ');
+    const colTitle = (e) => `${e.id} ${e.name}${e.level === 'teil' ? ' (Teil von ' + e.parent + ')' : ''} · ${bereichName.get(e.bereich)}${e.hidden ? ' · ausgeblendet' : ''}`;
+    const cell = (task, e, i) => {
+      const on = (task.competencies || []).includes(e.id);
+      return h(
+        'td',
+        { class: colClass(e, i) },
+        h('input', {
+          type: 'checkbox',
+          checked: on,
+          disabled: e.hidden && !on,
+          'aria-label': `${task.name}: ${e.id} ${e.name}`,
+          'data-focus-key': `comp-${task.id}-${e.id}`,
+          'data-comp': e.id,
+          onchange: (ev) => {
+            C.toggleTask(task, e.id, ev.target.checked);
+            NM.app.commit();
+          },
+        })
+      );
+    };
+    const row = (task) =>
+      h(
+        'tr',
+        { 'data-comp-task': task.id, class: task.bonus ? 'comp-bonus' : null },
+        h('th', { class: 'sticky-col comp-task', scope: 'row' }, h('span', { class: 'comp-task-name' }, task.name), h('span', { class: 'muted small' }, ` ${fmtScore(task.max)} P.${task.bonus ? ' · Bonus' : ''}`)),
+        cols.map((e, i) => cell(task, e, i))
+      );
+    const body = [];
+    for (const { part, tasks } of G.taskGroups(t)) {
+      if (part) body.push(h('tr', { class: 'comp-part' }, h('th', { class: 'sticky-col', scope: 'rowgroup' }, part.name), cols.map((e, i) => h('td', { class: colClass(e, i) }))));
+      for (const task of tasks) body.push(row(task));
+    }
+    const foot = cols.map((e, i) => {
+      const v = pts.get(e.id) || 0;
+      const few = e.level === 'komp' && v > 0 && v < C.FEW_POINTS;
+      return h('td', { class: colClass(e, i) + (few ? ' comp-few' : ''), title: few ? 'wenig Daten: weniger als 3 mögliche Punkte' : null }, v ? fmtScore(v) : '–');
+    });
+    const none = !usedHere.size;
+    return h(
+      'div',
+      { class: 'card', 'data-comp-card': '' },
+      h('div', { class: 'card-head' }, h('h2', null, 'Kompetenzen'), h('span', { class: 'muted' }, `Katalog: ${cat.name}`)),
+      none ? h('p', { class: 'muted small' }, 'Haken setzen: Welche Kompetenzen prüft eine Aufgabe? Mehrere je Aufgabe sind möglich. Die Punkte der Aufgabe zählen bei jeder.') : null,
+      cols.length
+        ? h(
+            'div',
+            { class: 'table-wrap comp-wrap', 'data-scroll-key': 'comp-grid' },
+            h(
+              'table',
+              { class: 'table compact comp-table' },
+              h('thead', null, h('tr', null, h('th', { class: 'sticky-col', scope: 'col' }, 'Aufgabe'), cols.map((e, i) => h('th', { class: colClass(e, i), scope: 'col', title: colTitle(e) }, C.short(e.id))))),
+              h('tbody', null, body),
+              h('tfoot', null, h('tr', null, h('th', { class: 'sticky-col', scope: 'row' }, 'Punkte je Kompetenz'), foot))
+            )
+          )
+        : h('p', { class: 'muted small' }, `Der Katalog „${cat.name}“ enthält noch keine Kompetenzen (Einstellungen → Kompetenzkataloge).`)
+    );
+  }
+
+  function taskItem(t, task, cat) {
     return h(
       'div',
       { class: 'task' + (task.bonus ? ' bonus' : '') },
@@ -577,6 +652,9 @@
         }),
         'Bonus'
       ),
+      cat && task.competencies && task.competencies.length
+        ? h('span', { class: 'task-comp muted small', title: 'Kompetenzen (ändern in der Karte „Kompetenzen“)' }, task.competencies.map((id) => NM.competencies.short(id)).join(' · '))
+        : null,
       h(
         'button',
         {

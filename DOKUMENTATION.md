@@ -141,7 +141,7 @@ Der Browser merkt sich den Datenordner. Beim nächsten Start erscheint direkt **
 
 ### 3.5 Demo-Modus
 
-**„Demo ansehen“** (auf dem Startbildschirm und unter Einstellungen → Hinweise) oder die Adresse `index.html?demo` öffnet die App mit Beispieldaten (Kurs 8b Mathe, Sek I, und MSS 12 M LK). Enthalten sind u. a. Arbeiten in Teilen (8b, 2. HJ: „KA 2 – Geometrie“, zwei Teile gemeinsam bepunktet; MSS 12: „Kursarbeit 2 – Analysis“, drei Teile getrennt benotet mit Gewicht 1 : 2 : 1, eine Person mit fehlendem Teil) und Präsentationen (8b, 2. HJ: „Referat Statistik“ und „HA vorstellen“ nach der Standardvorlage, „Gruppenpräsentation Zufall“ mit drei Gruppen, Personenkriterien und einer Abweichung; Reiter „Gruppen“: „Stationenlernen Prozent“ mit Aufträgen und einer Regel; MSS 12: „Kurzvortrag Extremwerte“). Der Knopf öffnet die Demo in einem neuen Fenster, auch im Startprogramm, wo sich die Adresse nicht ändern lässt; die eigene Datenbank bleibt dabei offen und unverändert. Die Demo merkt sich ihren gewählten Reiter und Kurs getrennt (`nm.ui.demo`). Statt echter Fotos hat jede Person ein Personensymbol, damit sich Sitzplan und Fotoanzeige im EPO ausprobieren lassen. **Nichts wird gespeichert.** Der Demo-Modus eignet sich zum Ausprobieren und Kennenlernen. Zum Ausprobieren des Moodle-Imports (Abschnitt 7.7) liegen im Ordner `demo/` eine Antworten- und eine Bewertungen-CSV, deren Namen zum Kurs 8b Mathe passen.
+**„Demo ansehen“** (auf dem Startbildschirm und unter Einstellungen → Hinweise) oder die Adresse `index.html?demo` öffnet die App mit Beispieldaten (Kurs 8b Mathe, Sek I, und MSS 12 M LK). Enthalten sind u. a. Arbeiten in Teilen (8b, 2. HJ: „KA 2 – Geometrie“, zwei Teile gemeinsam bepunktet; MSS 12: „Kursarbeit 2 – Analysis“, drei Teile getrennt benotet mit Gewicht 1 : 2 : 1, eine Person mit fehlendem Teil) und Präsentationen (8b, 2. HJ: „Referat Statistik“ und „HA vorstellen“ nach der Standardvorlage, „Gruppenpräsentation Zufall“ mit drei Gruppen, Personenkriterien und einer Abweichung; Reiter „Gruppen“: „Stationenlernen Prozent“ mit Aufträgen und einer Regel; MSS 12: „Kurzvortrag Extremwerte“). Kurs 8b hat den Kompetenzkatalog „Mathematik Sek I“; in „KA 1 – Terme“ sind den Aufgaben Kompetenzen zugeordnet (Abschnitt 7.11). Der Knopf öffnet die Demo in einem neuen Fenster, auch im Startprogramm, wo sich die Adresse nicht ändern lässt; die eigene Datenbank bleibt dabei offen und unverändert. Die Demo merkt sich ihren gewählten Reiter und Kurs getrennt (`nm.ui.demo`). Statt echter Fotos hat jede Person ein Personensymbol, damit sich Sitzplan und Fotoanzeige im EPO ausprobieren lassen. **Nichts wird gespeichert.** Der Demo-Modus eignet sich zum Ausprobieren und Kennenlernen. Zum Ausprobieren des Moodle-Imports (Abschnitt 7.7) liegen im Ordner `demo/` eine Antworten- und eine Bewertungen-CSV, deren Namen zum Kurs 8b Mathe passen.
 
 ### 3.6 Start mit dem Startprogramm (ohne Rückfrage)
 
@@ -247,6 +247,7 @@ Technisch schreibt die App dazu die Datei `notenmanager.lock.json` in den Dateno
 |---|---|
 | Klasse / Stufe | z. B. „8b“ oder „MSS 12“ |
 | Fach | z. B. „Mathe“, „M LK“ |
+| Kompetenzkatalog (seit 2.9) | Katalog, aus dem Sie in den Tests die Kompetenzen je Aufgabe wählen (siehe 7.11), oder „— keiner —“. Tragen Sie das Fach ein, solange kein Katalog gewählt ist, wählt die App den Katalog mit passendem Fach („Mathe“ passt zu „Mathematik“) und meldet das. Beim Kopieren des Kurses wird der Katalog übernommen. |
 | Jahrgangsstufe | 5–13. **Ab 11 wird in MSS-Punkten gerechnet.** Bestimmt auch die Halbjahre. |
 | Kursart | Setzt die Standardgewichtung (siehe Tabelle). Kursart und Jahrgang werden passend gehalten: Wählen Sie „MSS-Leistungskurs“ oder „MSS-Grundkurs“ bei Jahrgang 5–10, springt der Jahrgang auf 11 (bzw. 12/13, wenn das unter „Klasse / Stufe“ steht, z. B. „MSS 12“); „Sek I“ bei Jahrgang 11–13 setzt ihn auf 10. Ein Hinweis zeigt die Änderung an. |
 | Gewicht Klassen-/Kursarbeiten (%) | Anteil der schriftlichen Arbeiten. Das andere Feld passt sich automatisch an (Summe 100 %). |
@@ -541,6 +542,19 @@ Ist in einem Kurs jemand mit I-Status (siehe 6), steht unter den Ergebnissen ein
 - **Was gleich bleibt:** Die Note wird weiter berechnet und erscheint in der Notenübersicht, in Ergebnisliste und Notenliste (mit „(I)“) und im Leistungsbogen. In die Statistik zählt sie weiterhin nicht.
 - **Was nie erscheint:** Die Verbalbeurteilung steht nicht in der Beamer-Ansicht, nicht in der Excel-Schülerliste und nicht in der Import-CSV für OrdoScripto. Das Notfallwerkzeug gibt sie in der CSV als eigene Spalte hinter der Arbeit aus.
 - Wird der I-Status entfernt, bleibt der Text gespeichert, wirkt aber nicht mehr.
+
+### 7.11 Kompetenzen je Aufgabe (seit 2.9)
+
+Hat der Kurs einen **Kompetenzkatalog** (siehe 6.1 und 12), steht unter „Aufgaben“ die Karte **„Kompetenzen“**: ein Raster mit den Aufgaben als Zeilen und den Kompetenzen des Katalogs als Spalten (Kurzkennung wie „K2“, die volle Bezeichnung steht im Tooltip). Ein Haken bedeutet: Diese Aufgabe prüft diese Kompetenz. Eine Aufgabe kann mehrere Kompetenzen haben; ihre Punkte zählen dann bei jeder voll.
+
+- **Punkte je Kompetenz:** Die Fußzeile zählt die möglichen Punkte je Spalte, Bonusaufgaben eingeschlossen. Eine Kompetenz zählt auch die Aufgaben ihrer Teilkompetenzen (jede Aufgabe einmal). Hat eine Kompetenz weniger als 3 mögliche Punkte, ist die Zahl gelb markiert („wenig Daten“).
+- **Arbeit in Teilen:** Die Zeilen sind nach Teil gruppiert wie in der Karte „Aufgaben“.
+- **Aufgabenkacheln:** Dort stehen die gewählten Kürzel klein zur Information (z. B. „K6 · L1“).
+- **Ausgeblendete Kompetenzen** (siehe 12) erscheinen nur, solange eine Aufgabe dieses Tests sie trägt; dort lässt sich der Haken nur noch entfernen.
+- **Nachschreibtermin:** übernimmt die Zuordnung mit den Aufgaben.
+- **Reiner Kompetenztest:** Soll ein Test nicht in die Note eingehen, setzen Sie wie bisher „nicht gewertet“ (siehe 7.1). Die Auswertung nach Kompetenzen und die Übernahme aus Moodle folgen in den nächsten Versionen (Planung: PLANUNG.md, Abschnitt AI).
+
+Auf dem Tablet lässt sich das Raster waagerecht verschieben; die Spalte mit den Aufgaben bleibt stehen.
 
 ## 8. Reiter „Mitarbeit/EPO“
 
@@ -899,6 +913,7 @@ So eignet sich derselbe Bogen für Elterngespräche (z. B. ohne Bemerkung) und f
 | | Bereich (Klassen-/Kursarbeit oder Sonstige) | Sonstige |
 | EPO-Umrechnung (seit 2.8) | Vorlage für neue EPO-Blöcke, getrennt für Sek I und MSS (eingebaut oder eigene, siehe 8.3) | 0 = befriedigend |
 | | Eigene Vorlagen umbenennen und löschen (Blöcke behalten ihre Werte und zeigen dann „angepasst“; war sie Standard, gilt wieder „0 = befriedigend“) | – |
+| Kompetenzkataloge (seit 2.9) | Kataloge anlegen (aus Vorlage, leer oder per Import), bearbeiten, als Datei exportieren, löschen (nur, wenn kein Kurs ihn verwendet) | keiner |
 | Ausdrucke (seit 1.47) | Schulname, Lehrkraft | leer |
 | | Schullogo wählen / ändern / entfernen (PNG, JPEG, GIF, WebP oder SVG; Rasterbilder auf höchstens 600 px verkleinert) | kein Logo |
 | Speicherort & Sicherungen | Name dieses Geräts | – |
@@ -924,6 +939,14 @@ So eignet sich derselbe Bogen für Elterngespräche (z. B. ohne Bemerkung) und f
 **Ausdrucke (seit 1.47):** Schulname, Lehrkraft und Logo erscheinen im Kopf aller Ausdrucke (siehe 11). Sie liegen in der verschlüsselten Datenbank und gelten damit auf allen Geräten. Das Logo wird als Bild in der Datenbank gespeichert; ein großes Foto verkleinert die App beim Hochladen auf 600 px an der längsten Seite, SVG-Dateien (bis 300 KB) bleiben unverändert. Das Notfallwerkzeug gibt das Logo nicht in der CSV aus.
 
 **Designs (seit 1.43):** Für den hellen und den dunklen Modus gibt es je drei Designs: hell **Standard** (Petrol), **Salbei** (grünliches Grau) und **Lavendel** (Flieder); dunkel **Standard** (Schiefer), **Nord** (kühles Blaugrau) und **Aubergine** (dunkles Violett). Jede Kachel zeigt eine kleine Vorschau mit Schrift, Akzentfarbe und drei Notenfarben; ein Klick wählt das Design sofort. Ist das Farbschema fest auf hell oder dunkel gestellt, wechselt es beim Klick auf eine Kachel des anderen Modus mit; bei „Wie das System“ gilt das Design, sobald das System in diesen Modus wechselt. Der Schalter **Hell / Dunkel / Wie das System** in der Kopfzeile wechselt nur den Modus und behält die gewählten Designs. Die Notenfarben (grün → rot) bleiben in allen Designs gleich, Ausdrucke sind immer schwarz auf weiß, und das Timer-Pop-up übernimmt das Design.
+
+**Kompetenzkataloge (seit 2.9):** Ein Katalog enthält Bereiche (z. B. „Prozessbezogen“, „Inhaltlich (Leitideen)“), darin Kompetenzen und bei Bedarf Teilkompetenzen, jede mit **Kennung** (z. B. „M-K2“) und Bezeichnung. Er gilt für alle Kurse, die ihn in den Kursdaten gewählt haben (siehe 6.1).
+
+- **Aus Vorlage …:** legt eine Kopie an. Eingebaut ist „Mathematik Sek I (Bildungsstandards 2022)“ mit den sieben prozessbezogenen Kompetenzen M-K1 bis M-K7 (argumentieren, kommunizieren, Probleme lösen, modellieren, darstellen, mit mathematischen Objekten umgehen, mit Medien arbeiten) und den fünf Leitideen M-L1 bis M-L5 (Zahl und Operation, Größen und Messen, Strukturen und funktionaler Zusammenhang, Raum und Form, Daten und Zufall). Die KMK nummeriert nicht; die Kennungen folgen der Reihenfolge im Beschluss vom 23.06.2022.
+- **Bearbeiten** (Stift): Name, Fach, Stufengrenzen („teilweise“ ab 50 %, „sicher“ ab 80 %; „teilweise“ muss kleiner sein) und die Einträge. „+ Kompetenz“, „+ Teil“ und „+ Bereich“ legen neue Einträge mit einer vorgeschlagenen Kennung an. Jede Änderung wird sofort gespeichert und zählt die Version des Katalogs hoch.
+- **Kennungen bleiben fest, sobald sie vergeben sind:** Solange keine Aufgabe eine Kennung trägt, lässt sie sich ändern oder löschen. Danach steht sie grau ohne Eingabefeld, und statt Löschen gibt es **Ausblenden** (Auge): Ausgeblendete Einträge sind durchgestrichen, für neue Aufgaben nicht mehr wählbar, und alte Tests bleiben auswertbar. Eine Kennung kommt in einem Katalog nur einmal vor.
+- **Exportieren** (Pfeil nach unten): speichert den Katalog als JSON-Datei („Kompetenzkatalog – Name.json“, Format `ordonota-kompetenzkatalog`). Diese Datei liest auch das Bauskript für Moodle-Fragen, damit beide dieselben Kennungen verwenden. Eine Vorlage liegt im Repository unter `vorlagen/kompetenzen/mathe-sek1.json`.
+- **Importieren:** liest eine solche Datei. Gibt es den Katalog (gleiche Katalog-Kennung) schon, fragt die App: **Ersetzen** (die Kurse behalten ihn) oder **Als neuen Katalog**. Ersetzen geht nicht, wenn in der Datei Kennungen fehlen, die an Aufgaben vergeben sind.
 
 **Reiter:** Ausgeschaltete Reiter verschwinden aus der Reiterleiste aller Kurse, die keine eigene Auswahl haben (siehe 6.4). Daten daraus bleiben gespeichert und zählen weiter. Unter den Haken steht, wie viele Kurse abweichen.
 
@@ -1316,6 +1339,7 @@ Reines HTML/CSS/JavaScript ohne Build-Schritt und ohne externe Bibliotheken. Die
 | `js/crypto.js` | `NM.crypto` | `Vault`: Erzeugen, Entsperren (Passwort/Wiederherstellung), Ver-/Entschlüsseln, Passwortwechsel |
 | `js/storage.js` | `NM.storage` | `FolderStore` (File System Access API): Lesen/Schreiben, Sicherungen, Lock, Konflikterkennung; `ServerStore` (gleiche Schnittstelle über das Startprogramm, `detectServer()`); `MemoryStore` für den Demo-Modus |
 | `js/pomodoro.js` | `NM.pomodoro` | Pomodoro-Timer: Ablauf (`next`), Anzeige in der Kopfzeile, Töne per Web Audio, Einstellungsformular |
+| `js/competencies.js` | `NM.competencies` | Kompetenzkataloge (rein, ohne DOM, seit 2.9): Vorlagen (`TEMPLATES`), bereinigen (`clean`, `cleanList`), lesen (`entries`, `forCourse`, `usedIds`), Fach → Katalog (`guessForFach`), bearbeiten (`addKompetenz`, `addTeil`, `renameId`, `removeEntry`, `setHidden`), Austauschdatei (`exportJson`, `parseImport`, `applyImport`), Punkte je Kompetenz (`pointsPer`), Kennung an einer Aufgabe (`toggleTask`) |
 | `js/people.js` | `NM.people` | Personenregister (rein, ohne DOM): Register vervollständigen (`ensure`), gleiche Namen, Vorschläge, Zusammenführen, Trennen, Löschen |
 | `js/view-people.js` | `NM.views.people` | Seite „Personen“: Liste mit Suche und Filter, Person mit Kursen, Dialoge Zusammenführen (Vorschläge und manuell), Trennen, Löschen |
 | `js/model.js` | `NM.model` | Datenmodell: neue Datenbank/Kurse/Leistungen, Migration, Namensliste parsen, Demo-Daten |
@@ -1421,7 +1445,7 @@ Seit 2.0 teilt OrdoNota das Aussehen mit den anderen Ordo-Apps. Es sind weiterhi
   "kdf": "PBKDF2-SHA256",
   "savedAt": "2026-10-14T21:57:03.123Z",
   "device": "Laptop Schule",
-  "app": "2.8.0",
+  "app": "2.9.0",
   "pw":   { "salt": "<b64>", "iter": 600000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "rec":  { "salt": "<b64>", "iter": 100000, "iv": "<b64>", "ct": "<b64: eingepackter Datenschlüssel>" },
   "data": { "iv": "<b64>", "ct": "<b64: verschlüsseltes JSON des Datenmodells>" }
@@ -1444,7 +1468,7 @@ Entschlüsselter Inhalt (`schema: 5`):
 ```js
 {
   schema: 5,                             // Datenformat (siehe 26.2)
-  savedWith: "2.8.0",                    // App-Version beim letzten Speichern
+  savedWith: "2.9.0",                    // App-Version beim letzten Speichern
   created: "<ISO>", savedAt: "<ISO>",
   settings: { autoLockMin, limitSek1, limitMss, precision, testCat: "ka" | "other" /* seit 1.30 */, keepBackups, backupEveryMin, gradeColors,
               tabs: { "<Reiter>": false },   // seit 1.25: ausgeschaltete Reiter (Standard für alle Kurse)
@@ -1453,7 +1477,12 @@ Entschlüsselter Inhalt (`schema: 5`):
               scriptoSeq,                     // seit 1.41: zuletzt vergebene laufende Nummer der OrdoScripto-Test-IDs
               print: { schoolName, teacher, logo },  // seit 1.47: Druckkopf; logo = Data-URL (PNG/JPEG/GIF/WebP/SVG) oder ""; migrate() bereinigt, check() prüft
               epoPresets: [ { id, name, level: "sek1" | "mss", strict, mins: [ 16 Zahlen, % je Punktstufe 0–15 ], points: { "++", …, "m" } } ],  // seit 2.8: eigene EPO-Vorlagen
-              epoDefault: { sek1, mss } },   // seit 2.8: Vorlage für neue EPO-Blöcke je Stufe ("bef" | "mild" | "streng" | "test" | id einer eigenen)
+              epoDefault: { sek1, mss },     // seit 2.8: Vorlage für neue EPO-Blöcke je Stufe ("bef" | "mild" | "streng" | "test" | id einer eigenen)
+              competencyCatalogs: [ Katalog ] },   // seit 2.9: Kompetenzkataloge (js/competencies.js); migrate() bereinigt (cleanList), check() meldet fehlende Kataloge/Kennungen als Hinweis
+  // Katalog = { id, name, fach, version, stufen: { teilweise: 50, sicher: 80 },
+  //             bereiche: [ { id, name, kompetenzen: [ { id, name, ausgeblendet?, teil?: [ { id, name, ausgeblendet? } ] } ] } ] }
+  // Gleicher Aufbau wie die Austauschdatei (dort zusätzlich format: "ordonota-kompetenzkatalog", formatVersion: 1).
+  // Kennungen ([A-Za-z0-9][A-Za-z0-9._-]{0,31}) sind im Katalog eindeutig und werden nie neu vergeben; benutzte nur ausblenden.
   criteriaPool: [ { id, group, name, desc: { 0, 1, 2, 3 } } ],   // Kriterien für Präsentationen (alle Kurse, seit 1.20)
   presTemplates: [ { id, name, criteria: [ { poolId, group, name, desc, weight } ] } ],   // Vorlagen (seit 1.21; Standardvorlagen seit 1.22)
   years:   [ { id, name: "2026/27" } ],
@@ -1475,6 +1504,7 @@ Course = {
   wHalf1, wHalf2,                        // Jahresnote (Standard 1 : 2)
   einstufung: "U" | "G" | "E" | "E1" | "E2" | "GK" | "LK",   // seit 1.42 (1.41: G/E), GK/LK seit 1.43.1: U = undifferenziert (Standard); gilt für alle ohne eigene Einstufung
   tabs?: { "<Reiter>": true | false },   // seit 1.25: Abweichung vom Standard settings.tabs (fehlt = wie Standard)
+  catalogId?: "<Katalog-id>",           // seit 2.9: Kompetenzkatalog des Kurses (fehlt = keiner)
   attendance: { "<YYYY-MM-DD>": { half, hours, abs: { "<studentId>": "a" | "e" | "u" } } },   // seit 1.45: Fehlzeiten; a = Entschuldigung offen, e = entschuldigt, u = unentschuldigt; hours = Unterrichtsstunden; Summen nie gespeichert
   students: [ { id, personId, last, first, active, iStatus?, photo?, email?, einstufung? } ],   // personId (seit Schema 5): Person in db.people; je Kurs höchstens ein Eintrag je Person
     // einstufung (seit 1.42): nur bei Abweichung vom Kurs   // photo: JPEG als Data-URL, 160×160; email: Moodle-Adresse (Zuordnung beim Import)
@@ -1502,7 +1532,7 @@ Assessment = {
   makeupOf?: "<id>",   // nur Tests (seit 1.40): Nachschreibtermin zu dieser Arbeit; half/cat/weight/ungraded werden angeglichen
   manual?: { grades: { "<sid>": { p } | { status } } },
   test?:   { limit, precision, wholeGrades?,                            // wholeGrades: nur ganze Noten (Sek I)
-             tasks: [ { id, name, max, bonus?, moodleNr?, partId? } ],   // moodleNr: Fragennummer in Moodle; partId: Teil
+             tasks: [ { id, name, max, bonus?, moodleNr?, partId?, competencies? } ],   // moodleNr: Fragennummer in Moodle; partId: Teil; competencies (seit 2.9): [ Kennungen aus dem Kurskatalog ], fehlt = keine
              custom: { "<p>": Mindestpunktzahl },
              parts?: [ { id, name, weight, limit?, precision?, custom?, wholeGrades?, moodle? } ],   // Arbeit in Teilen (seit 1.18)
              partMode?: "sum" | "separate",                       // gemeinsam bepunktet / getrennt benotet
@@ -1564,6 +1594,7 @@ Für das Zurücklesen der QR-Codes startet das Skript `tests/qr_lesen.py` in ein
 | Datei | Prüft | Ausführen |
 |---|---|---|
 | `tests/grades.test.html` | Skalen, Eingabe-Parser, Rundung, Notenschlüssel (Vergleich mit Excel-Formeln), Bonus/Kappung, Status, Drittelparagraph, EPO (Werte aus der bisherigen EPO-Liste; Zusatz m: Parser, Zelltext, Zählung, eigene Punkte; Vorlagen „0 = befriedigend“, Mild, Streng und Wie Testschlüssel mit 12 Stunden in Sek I und MSS, 15 ab 97,5 %, unter 0 % → 01/00, eigene Vorlagen, Standardvorlage, Erkennen der geltenden Vorlage und „angepasst“, Hinweis bei alter Tabelle), Halbjahres-/Jahresnote, GK-Gewichtung, nicht erreichbare Stufen (zu wenig Punkte, eigene Schwellen, Präsentationen), „Punkte verteilen“ (Beispiel 18 Punkte, Grenze fest auch als eigene Schwelle, wenige Punkte, halbe Punkte, ganze Noten, MSS), Präsentationen (Gewicht, Status, Schlüssel, Halbjahresnote, Gruppen: Gruppenwert, Abweichung, Personenkriterium, Modus „alles als Gruppe“), Arbeiten in Teilen (gemeinsam/getrennt, Gewichte, fehlender Teil, Status je Teil, ganze Noten je Teil, MSS) | im Browser öffnen |
+| `tests/competencies.test.html` | Kompetenzkataloge: Vorlage Mathe Sek I (12 Kompetenzen, freie id bei zweiter Kopie), Bereinigen (doppelte/ungültige Kennungen, Stufen, Bereich-ids), Fach → Katalog, Anlegen von Kompetenzen, Teilen und Bereichen mit vorgeschlagener Kennung, Kennung ändern nur unbenutzt, Löschen nur unbenutzt, Ausblenden, Katalog löschen nur ohne Kurs, `toggleTask`, Punkte je Kompetenz (Teile, Bonus), Export/Import (Formatprüfung, neu, Ersetzen nur ohne verlorene Kennungen), Migration und Prüfung, Nachschreibtermin. `run_tests.py` vergleicht außerdem `vorlagen/kompetenzen/mathe-sek1.json` mit der eingebauten Vorlage | im Browser öffnen |
 | `tests/people.test.html` | Personenregister: Umstellung auf Schema 5 (je Kurseintrag eine eigene Person, nichts zusammengeführt, zweites Öffnen ändert nichts), `ensure` (neue Einträge, Name bei nur einem Kurs, doppelte oder unbekannte Person, „seit … in keinem Kurs“), gleiche Namen, Vorschläge zum Zusammenführen (Name, Mail-Adresse, nicht im selben Kurs), Zusammenführen (auch mehrere Paare nacheinander, `mergePairs`), Trennen, Löschen, `orphansIf`, Strukturprüfung; Nachteilsausgleich (Kürzel, Fächer ohne Groß-/Kleinschreibung, „alle Fächer“, abgelaufen, Anlegen/Ändern/Löschen, Zusammenführen, Migration); Notizverlauf (leer abgelehnt, Reihenfolge, Filter nach Kurs, Ändern, Löschen, Zusammenführen, Trennen nimmt Notizen des Kurses mit, Migration); Förderplan (Pflicht-Schwerpunkt, „Sonstiges“ mit Text, Zeitraum, geltende Fassung, Ändern, Löschen, Zusammenführen, Trennen, Migration) | im Browser öffnen |
 | `tests/model.test.html` | Migration älterer Datenbanken (SCHEMA 1 → 5, Bereich neuer Tests, Kriterienpool, Startbestand ergänzen, Vorlagen, Standardvorlagen), neue Präsentation, Ablehnung neuerer Datenformate, Erhalt unbekannter Felder, Reiterauswahl (`settings.tabs`, `course.tabs`), Reihenfolge der Reiter (`orderTabs`, `moveTab`), Werkzeuge je Kurs (`toolList`, `setTools`, Migration von `course.tools`), Namensliste | im Browser öffnen |
 | `tests/update.test.html` | Datenbanken früherer Versionen (Prüfstücke 1.1–1.29 in `tests/altdaten/`, je Datenformat mindestens eins): öffnen, Strukturprüfung ohne Fehler, **gleiche Halbjahres- und Jahresnoten wie in der alten Version**, unbekannte Felder bleiben, zweites Öffnen ändert nichts; `NM.model.check` findet kaputte Halbjahre, Bereiche, fehlende Inhalte, doppelte Personen, fehlende Schuljahre und ändert nichts | im Browser öffnen |
@@ -1623,6 +1654,7 @@ In `js/model.js` stehen zwei Nummern:
 - **Sortierbare Spalte:** `NM.ui.sorter(tabelle, { schlüssel: { get: (s) => Wert, first: 'asc' | 'desc' } })` liefert `rows()` zum Ordnen der Schülerliste sowie `head()`, `toggle()` und `nameHeads()` für die Spaltenköpfe; die passenden Namenszellen erzeugt `NM.ui.nameCells(s, nr)`.
 - **Moodle-Import:** Einlesen und Übernehmen in `js/moodle.js` (Tests: `tests/moodle.test.html`), Dialog und Karte in `js/view-tests.js`, Ausdruck `NM.print.moodle` in `js/print.js`.
 - **Ausdrucke:** neue Ausdrucke in die Druckauswahl „Drucken …“ (`NM.ui.printButton`) eintragen, kein eigener Knopf. Jeder Ausdruck beginnt mit `header(course, title, sub, opts)` in `js/print.js` (seit 1.47; `opts`: `kicker`, `person`, `half`, `date`, `dateLabel`, `showDate`, `extra`, `compact` für Zettel), keine eigenen Köpfe. CSS `.p-head*`, `.p-school`, `.p-logo`, `.p-kicker`, `.p-meta`. Die Angaben kommen aus `settings.print` (`NM.model.cleanPrint`, Karte `printCard` mit `readLogo` in `js/view-settings.js`). Test: E2E `run_print_head_check`.
+- **Kompetenzkataloge (seit 2.9, PLANUNG.md AI):** Logik rein in `js/competencies.js` (`NM.competencies`), Standardwerte in `migrate()`, Hinweise in `check()`. Die eingebaute Vorlage steht in `TEMPLATES` und muss mit `vorlagen/kompetenzen/mathe-sek1.json` übereinstimmen (die Datei liest das Bauskript `moodle.py` des Skills „moodle-fragen“; unter `file://` kann die App keine JSON-Datei laden, deshalb beides). Einstellungen: `competencyCard` und Dialog `catalogDialog` in `js/view-settings.js`. Kursdaten: Auswahl und Vorbelegung über das Fach in `courseCard` (`js/view-course.js`), „Kurs kopieren“ übernimmt `catalogId`. Test: Karte `competenciesCard` und Kürzel in `taskItem` (`js/view-tests.js`). Demo: 8b Mathe mit Katalog, „KA 1 – Terme“ mit Kompetenzen (`demoDb` in `js/model.js`). Kein neues `SCHEMA`: nur zusätzliche Felder; „Kompetenztest“ = Test mit `ungraded` (siehe PLANUNG AI, Q20). Tests: `tests/competencies.test.html`, E2E `run_competency_check`.
 - **Personenregister (seit Schema 5):** Logik rein in `js/people.js` (`NM.people`, Tests `tests/people.test.html`). `ensure(db)` läuft in `migrate()` und in `NM.app.commit()`, legt für Kurseinträge ohne Person eine an, setzt/entfernt `orphanSince` und übernimmt bei nur einem Kurs den Namen. Neue Stellen, die Kurseinträge anlegen, brauchen deshalb nichts weiter; wer dieselbe Person meint (z. B. „Kurs kopieren“ in `js/view-course.js`), übernimmt die `personId`. Löschen mit Rückfrage über `NM.people.orphansIf` (`removeStudent`, `confirmCourseDelete`). Nach einer Umstellung des Schemas setzt `migrateOpened` (`js/app.js`) `store.lastBackup` zurück, damit die nächste Speicherung sichert. Seite „Personen“ (seit 2.4.0): `js/view-people.js` (`NM.views.people`), aufgerufen über `renderPeople` in `js/app.js` bei `ui.tab = 'people'` (nicht in `TABS`, gewählte Person in `ui.personId`), Eintrag in der Seitenleiste `peopleLink`. Abgleich beim Einfügen `addPasted` und Namensänderung `changeName` in `js/view-course.js`. Tests: `tests/people.test.html`, E2E `run_people_check`, `run_people_page_check`.
 - **Nachteilsausgleich (seit 2.5.0):** Logik rein in `js/people.js` (`setAusgleich`, `removeAusgleich`, `ausgleicheFuer`, `ausgleichPasst`, `ausgleichAbgelaufen`, `ausgleichKurz`, `faecherDerPerson`), Standardwert in `migrate()`. Erfassen: `ausgleichSection`/`ausgleichDialog` in `js/view-people.js`. Kürzel: `NM.ui.ausgleichMarks`, in `UI.nameCells` nur mit Option `course` (bewusst nicht in Ziehen, EPO, Präsentationen, Beamer und Druck); Kursliste in `js/view-course.js`. Spalte „Ausgleich“ in `resultsCard` (`js/view-tests.js`, `ausgleichBox`). Druck-CSS blendet `.na-mark` und `.col-ausgleich` zusätzlich aus. Notfallwerkzeug: Spalte „Nachteilsausgleich“ in `Personenregister.csv`. Tests: `tests/people.test.html`, E2E `run_ausgleich_check`.
 - **Notizverlauf (seit 2.6.0):** Logik rein in `js/people.js` (`notizen`, `notizenOf`, `setNotiz`, `removeNotiz`; `split` nimmt Notizen der abgetrennten Kurse mit), Standardwert in `migrate()`. Oberfläche in `js/view-people.js`: `notesSection` mit `noteItem`/`noteEditItem` (Zustand in `view`, Entwurf je Person in `view.draft`), dazu `quickNoteDialog` (Sitzplan, Knopf `.seat-note-btn` und Taste N in `js/view-seating.js`) und `courseNotesDialog` (Notenübersicht, `notesBtn` in `js/view-overview.js`), beide über `NM.views.people`. Notfallwerkzeug: `Notizen.csv`. Tests: `tests/people.test.html`, E2E `run_notes_check`.

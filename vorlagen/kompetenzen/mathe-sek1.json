@@ -1,0 +1,74 @@
+{
+  "format": "ordonota-kompetenzkatalog",
+  "formatVersion": 1,
+  "id": "mathe-sek1",
+  "name": "Mathematik Sek I",
+  "fach": "Mathematik",
+  "version": 1,
+  "stufen": {
+    "teilweise": 50,
+    "sicher": 80
+  },
+  "bereiche": [
+    {
+      "id": "K",
+      "name": "Prozessbezogen",
+      "kompetenzen": [
+        {
+          "id": "M-K1",
+          "name": "Mathematisch argumentieren"
+        },
+        {
+          "id": "M-K2",
+          "name": "Mathematisch kommunizieren"
+        },
+        {
+          "id": "M-K3",
+          "name": "Probleme mathematisch lösen"
+        },
+        {
+          "id": "M-K4",
+          "name": "Mathematisch modellieren"
+        },
+        {
+          "id": "M-K5",
+          "name": "Mathematisch darstellen"
+        },
+        {
+          "id": "M-K6",
+          "name": "Mit mathematischen Objekten umgehen"
+        },
+        {
+          "id": "M-K7",
+          "name": "Mit Medien mathematisch arbeiten"
+        }
+      ]
+    },
+    {
+      "id": "L",
+      "name": "Inhaltlich (Leitideen)",
+      "kompetenzen": [
+        {
+          "id": "M-L1",
+          "name": "Zahl und Operation"
+        },
+        {
+          "id": "M-L2",
+          "name": "Größen und Messen"
+        },
+        {
+          "id": "M-L3",
+          "name": "Strukturen und funktionaler Zusammenhang"
+        },
+        {
+          "id": "M-L4",
+          "name": "Raum und Form"
+        },
+        {
+          "id": "M-L5",
+          "name": "Daten und Zufall"
+        }
+      ]
+    }
+  ]
+}

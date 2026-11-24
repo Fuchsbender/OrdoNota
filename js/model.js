@@ -12,7 +12,7 @@
   // 5 (2.4): Personenregister (db.people, students[].personId) – ältere Versionen würden neue Kurseinträge
   //    ohne Person anlegen und Personen beim Löschen nicht aufräumen.
   const SCHEMA = 5;
-  const APP_VERSION = '2.8.0';
+  const APP_VERSION = '2.9.0';
 
   class NewerSchemaError extends Error {}
 
@@ -131,6 +131,7 @@
         print: printDefaults(), // seit 1.47: Druckkopf (Schulname, Lehrkraft, Logo als Data-URL)
         epoPresets: [], // seit 2.8: eigene EPO-Vorlagen [{ id, name, level: 'sek1'|'mss', strict, mins: [16 Zahlen], points }]
         epoDefault: { sek1: 'bef', mss: 'bef' }, // seit 2.8: Vorlage für neue EPO-Blöcke je Stufe (id einer eingebauten oder eigenen Vorlage)
+        competencyCatalogs: [], // seit 2.9: Kompetenzkataloge (js/competencies.js); course.catalogId, task.competencies
       },
       criteriaPool: pool,
       presTemplates: defaultPresTemplates(pool),
@@ -178,6 +179,8 @@
     // 2.8: EPO-Vorlagen
     db.settings.epoPresets = cleanEpoPresets(db.settings.epoPresets);
     db.settings.epoDefault = Object.assign({ sek1: 'bef', mss: 'bef' }, db.settings.epoDefault && typeof db.settings.epoDefault === 'object' ? db.settings.epoDefault : {});
+    // 2.9: Kompetenzkataloge
+    db.settings.competencyCatalogs = NM.competencies.cleanList(db.settings.competencyCatalogs);
     // 1.20: Kriterienpool für Präsentationen (Startbestand nur, wenn es noch keinen gibt)
     if (!Array.isArray(db.criteriaPool)) db.criteriaPool = defaultCriteriaPool();
     // 1.21: Vorlagen für Präsentationen (benannte Kriteriensätze); 1.22: mit Standardvorlagen
@@ -198,6 +201,17 @@
       // 1.41: Einstufung des Kurses; 1.42: undifferenziert (Standard), G, E, E1, E2 und Abweichung je Person; 1.43.1: GK, LK (MSS)
       c.einstufung = courseEinstufung(c);
       for (const s of c.students) if (s.einstufung !== undefined && (!EINSTUFUNG_IDS.includes(s.einstufung) || s.einstufung === c.einstufung)) delete s.einstufung;
+      // 2.9: Kompetenzkatalog des Kurses (fehlt = keiner) und Kompetenzen je Aufgabe (fehlt = keine)
+      if (typeof c.catalogId !== 'string' || !c.catalogId) delete c.catalogId;
+      for (const a of c.assessments) {
+        if (a.kind !== 'test' || !a.test || !Array.isArray(a.test.tasks)) continue;
+        for (const t of a.test.tasks) {
+          if (!t || t.competencies === undefined) continue;
+          const ids = NM.competencies.cleanTaskIds(t.competencies);
+          if (ids.length) t.competencies = ids;
+          else delete t.competencies;
+        }
+      }
       // 1.40: Nachschreibtermine übernehmen Halbjahr, Bereich, Gewicht und Wertung der Original-Arbeit
       syncMakeups(c);
       c.overrides = c.overrides || {};
@@ -377,6 +391,23 @@
         for (const x of st.epoPresets) {
           if (!x || !['sek1', 'mss'].includes(x.level)) add('fehler', 'Einstellungen', `EPO-Vorlage „${(x && x.name) || '?'}“ ohne gültige Stufe`);
           else if (!Array.isArray(x.mins) || x.mins.length < 16 || !x.mins.every((m) => Number.isFinite(Number(m)))) add('fehler', 'Einstellungen', `EPO-Vorlage „${x.name}“: Schwellen unvollständig`);
+        }
+      }
+    }
+    // 2.9: Kompetenzkataloge, Katalog am Kurs, Kennungen an Aufgaben
+    if (st.competencyCatalogs !== undefined) {
+      if (!Array.isArray(st.competencyCatalogs)) add('fehler', 'Einstellungen', 'Kompetenzkataloge sind keine Liste');
+      else {
+        dup(st.competencyCatalogs, 'Kompetenzkatalog', 'Einstellungen');
+        for (const c of db.courses) {
+          if (!c.catalogId) continue;
+          const where = `${c.klasse || '?'} ${c.fach || ''}`.trim();
+          const cat = st.competencyCatalogs.find((x) => x && x.id === c.catalogId);
+          if (!cat) { add('hinweis', where, `Kompetenzkatalog „${c.catalogId}“ gibt es nicht mehr`); continue; }
+          const known = new Set(NM.competencies.entries(cat).map((e) => e.id));
+          let unknown = 0;
+          for (const a of c.assessments || []) if (a.kind === 'test' && a.test) for (const t of a.test.tasks || []) for (const id of t.competencies || []) if (!known.has(id)) unknown++;
+          if (unknown) add('hinweis', where, `${unknown} Kompetenz-Kennung(en) an Aufgaben, die im Katalog „${cat.name}“ fehlen`);
         }
       }
     }
@@ -753,6 +784,10 @@
       { id: 'a4', name: 'A3', max: 8 },
       { id: 'a5', name: 'Bonus', max: 3, bonus: true },
     ];
+    // 2.9: Kompetenzkatalog (Vorlage Mathe Sek I) und Kompetenzen je Aufgabe
+    c8.catalogId = NM.competencies.addFromTemplate(db, 'mathe-sek1').id;
+    const comp = { a1: ['M-K6', 'M-L1'], a2: ['M-K6', 'M-L1'], a3: ['M-K1', 'M-L3'], a4: ['M-K4', 'M-L3'], a5: ['M-K3'] };
+    for (const task of t.test.tasks) task.competencies = comp[task.id];
     c8.students.forEach((s, i) => {
       const f = 1 - i / 14;
       t.test.results[s.id] = { scores: { a1: Math.round(4 * f), a2: Math.round(6 * f * 2) / 2, a3: Math.round(10 * f), a4: Math.round(8 * (f - 0.1) * 2) / 2, a5: i % 4 === 0 ? 2 : '' } };

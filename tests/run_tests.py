@@ -174,7 +174,7 @@ def report(name, ok, detail=""):
 
 def run_test_pages(br, base):
     print("Testseiten:")
-    for page in ["grades", "model", "people", "attendance", "update", "moodle", "qr", "pomodoro", "groups", "random", "timer", "draw", "crypto", "storage"]:
+    for page in ["grades", "model", "people", "attendance", "update", "moodle", "qr", "pomodoro", "groups", "random", "timer", "draw", "crypto", "storage", "competencies"]:
         br.open(f"{base}/tests/{page}.test.html")
         done = br.wait("/^(ALLE TESTS BESTANDEN|\\d+ FEHLGESCHLAGEN|FEHLER)/.test(document.getElementById('out').textContent)")
         text = br.eval("document.getElementById('out').textContent") or ""
@@ -182,6 +182,12 @@ def run_test_pages(br, base):
         ok = done and first == "ALLE TESTS BESTANDEN" and not br.errors
         fails = [l for l in text.split("\n") if l.startswith("FAIL")]
         report(f"{page}.test.html  ({first or 'keine Ausgabe'})", ok, "; ".join(fails + br.errors)[:500])
+    # 2.9: Vorlage im Repo (für moodle.py) = eingebaute Vorlage in js/competencies.js
+    for key in ["mathe-sek1"]:
+        built = br.eval(f"NM.competencies.templateFile('{key}')") or "null"
+        with open(os.path.join(ROOT, "vorlagen", "kompetenzen", f"{key}.json"), encoding="utf-8") as f:
+            on_disk = json.load(f)
+        report(f"Vorlage vorlagen/kompetenzen/{key}.json = eingebaute Vorlage", json.loads(built) == on_disk)
 
 
 def run_app_smoke(br, base):
@@ -1191,6 +1197,88 @@ def run_sidebar_check(br, base):
     ok = bool(res) and res["open"] > 200 and res["closed"][0] and res["closed"][1] < 80 and res["closed"][2] == 2 and res["closed"][3] is True and res["closed"][4] is True \
         and res["switch"] == [True, True, 1] and res["reopen"] == [False, 2, True, False]
     report("Kursliste: einklappen, Kurs über Kürzel wechseln, ausklappen", ok and not br.errors, str(res) + "; ".join(br.errors))
+
+
+def run_competency_check(br, base):
+    print("Kompetenzkataloge (2.9): Einstellungen, Kursdaten, Raster im Test:")
+    br.call("Emulation.setDeviceMetricsOverride", width=1440, height=1000, deviceScaleFactor=1, mobile=False)
+    br.open(f"{base}/index.html?demo")
+    br.wait(APP_READY, 30)
+    br.errors = []
+    res = br.eval("""(async () => {
+        const wait = (ms = 250) => new Promise((r) => setTimeout(r, ms));
+        const C = NM.competencies, db = NM.app.db(), out = {};
+        const c = db.courses[0];
+        const a = c.assessments.find((x) => x.kind === 'test' && !x.makeupOf);
+        // Raster im Test
+        NM.app.select({ courseId: c.id, tab: 'tests' }); await wait();
+        const card = document.querySelector('[data-comp-card]');
+        out.grid = !!card && card.querySelectorAll('tbody tr[data-comp-task]').length === a.test.tasks.length && card.querySelectorAll('thead th.comp-col').length === 12;
+        const foot = [...card.querySelectorAll('tfoot td')].map((td) => td.textContent);
+        out.foot = foot[0] === '10' && foot[7] === '10' && foot[9] === '18' && foot[1] === '–';
+        const box = card.querySelector('tr[data-comp-task="a1"] input[data-comp="M-K2"]');
+        box.checked = true; box.dispatchEvent(new Event('change')); await wait();
+        out.toggle = a.test.tasks[0].competencies.join() === 'M-K6,M-L1,M-K2';
+        out.chip = document.querySelector('.task .task-comp').textContent === 'K6 · L1 · K2';
+        out.footAfter = [...document.querySelectorAll('[data-comp-card] tfoot td')][1].textContent === '4';
+        out.fewNone = !document.querySelector('[data-comp-card] tfoot td.comp-few');
+        const bonus = a.test.tasks.find((x) => x.id === 'a5'); bonus.max = 2; NM.app.rerender(); await wait();
+        const few = document.querySelectorAll('[data-comp-card] tfoot td.comp-few');
+        out.few = few.length === 1 && few[0].textContent === '2';
+        bonus.max = 3; NM.app.rerender(); await wait();
+        // Ausgeblendete Kompetenz: nur sichtbar, solange sie vergeben ist; nicht neu wählbar
+        const cat = C.forCourse(db, c);
+        C.setHidden(cat, 'M-K5', true); C.setHidden(cat, 'M-K6', true); NM.app.rerender(); await wait();
+        const heads = [...document.querySelectorAll('[data-comp-card] thead th.comp-col')].map((th) => th.textContent);
+        out.hidden = !heads.includes('K5') && heads.includes('K6') && document.querySelector('tr[data-comp-task="a3"] input[data-comp="M-K6"]').disabled && !document.querySelector('tr[data-comp-task="a1"] input[data-comp="M-K6"]').disabled;
+        C.setHidden(cat, 'M-K5', false); C.setHidden(cat, 'M-K6', false);
+        // ohne Katalog keine Karte, keine Kürzel
+        const keep = c.catalogId; delete c.catalogId; NM.app.rerender(); await wait();
+        out.noCatalog = !document.querySelector('[data-comp-card]') && !document.querySelector('.task-comp');
+        c.catalogId = keep;
+        // Kursdaten: Auswahl und Vorbelegung über das Fach
+        NM.app.select({ courseId: c.id, tab: 'course' }); await wait();
+        const sel = document.querySelector('[data-course-catalog]');
+        out.select = !!sel && sel.value === 'mathe-sek1';
+        sel.value = ''; sel.dispatchEvent(new Event('change')); await wait();
+        out.none = !c.catalogId;
+        const fach = [...document.querySelectorAll('.card .field')].find((f) => f.textContent.startsWith('Fach')).querySelector('input');
+        fach.value = 'Mathematik'; fach.dispatchEvent(new Event('change')); await wait();
+        out.guess = c.catalogId === 'mathe-sek1';
+        // Einstellungen: Liste, Vorlage, Dialog
+        NM.app.select({ tab: 'settings' }); await wait();
+        out.list = document.querySelectorAll('[data-comp-catalog]').length === 1;
+        const tpl = document.querySelector('[data-comp-template]');
+        tpl.value = 'mathe-sek1'; tpl.dispatchEvent(new Event('change')); await wait();
+        out.template = C.catalogs(db).map((x) => x.id).join() === 'mathe-sek1,mathe-sek1-2' && document.querySelectorAll('[data-comp-catalog]').length === 2;
+        document.querySelector('[data-comp-catalog="mathe-sek1"] .icon-btn').click(); await wait();
+        const dlg = document.querySelector('dialog .comp-edit');
+        out.dialog = !!dlg && dlg.querySelectorAll('[data-comp-entry]').length === 12;
+        out.fixedId = !!dlg.querySelector('[data-comp-entry="M-K6"] .comp-id.fixed') && !!dlg.querySelector('[data-comp-entry="M-K5"] input.comp-id');
+        const v0 = cat.version;
+        dlg.querySelector('[data-comp-add="K"]').click(); await wait();
+        out.add = !!document.querySelector('dialog [data-comp-entry="M-K8"]') && cat.version === v0 + 1;
+        const idIn = document.querySelector('dialog [data-comp-entry="M-K8"] input.comp-id');
+        idIn.value = 'M-K1'; idIn.dispatchEvent(new Event('change')); await wait();
+        out.dupRefused = !!C.find(cat, 'M-K8') && idIn.value === 'M-K8';
+        const st = document.querySelector('dialog [data-comp-stufe="teilweise"]');
+        st.value = '90'; st.dispatchEvent(new Event('change')); await wait();
+        out.stufeRefused = cat.stufen.teilweise === 50;
+        document.querySelector('dialog [data-comp-entry="M-K8"] .icon-btn').click(); await wait();
+        out.removed = !C.find(cat, 'M-K8');
+        document.querySelector('dialog .modal-actions .btn-primary').click(); await wait();
+        out.closed = !document.querySelector('dialog');
+        // Löschen eines benutzten Katalogs wird verweigert
+        document.querySelector('[data-comp-catalog="mathe-sek1"] [aria-label^="Löschen"]').click(); await wait();
+        out.keepUsed = !!C.byId(db, 'mathe-sek1') && !document.querySelector('dialog');
+        // Prüfung meldet nichts Neues
+        out.check = !NM.model.check(db).some((p) => p.level === 'fehler');
+        return out; })()""")
+    for k, v in (res or {}).items():
+        report(f"Kompetenzen: {k}", v is True, str(v))
+    if not res:
+        report("Kompetenzen: Ablauf", False, "; ".join(br.errors))
+    report("Kompetenzen: keine Browserfehler", not br.errors, "; ".join(br.errors)[:300])
 
 
 def run_tests_view_check(br, base):
@@ -2498,7 +2586,7 @@ def run_settings_layout_check(br, base):
             return r; })()""")
         out[width] = res
     br.call("Emulation.clearDeviceMetricsOverride")
-    ok = all(r and r["cards"] == 10 and r["gap"] <= 20 and r["selOk"] and r["chipOk"] for r in out.values())
+    ok = all(r and r["cards"] == 11 and r["gap"] <= 20 and r["selOk"] and r["chipOk"] for r in out.values())
     report("Einstellungen ohne Lücken bei 1570/2560 px, Auswahllisten nicht abgeschnitten, Kürzel „MSS12“ passt", ok and not br.errors, str(out) + "; ".join(br.errors))
 
 
@@ -3546,7 +3634,7 @@ def main():
         run_epo_material_check, run_epo_presets_check, run_attendance_check, run_epo_tiles_check, run_print_head_check,
         run_draw_check, run_draw_pools_check, run_random_check, run_timer_check, run_tools_layout_check,
         run_tools_menu_check, run_pomodoro_check, run_transition_check, run_sidebar_check,
-        run_tests_view_check, run_task_add_click_check, run_makeup_check, run_verbal_check, run_ausgleich_check, run_notes_check, run_foerder_check, run_people_check, run_people_page_check, run_unreachable_check,
+        run_tests_view_check, run_competency_check, run_task_add_click_check, run_makeup_check, run_verbal_check, run_ausgleich_check, run_notes_check, run_foerder_check, run_people_check, run_people_page_check, run_unreachable_check,
         run_tabs_check, run_tab_order_check, run_overview_fold_check, run_settings_layout_check,
         run_theme_check, run_demo_link_check, run_old_db_check, run_parts_check, run_print_menu_check,
         run_pres_check, run_group_check, run_groups_tab_check, run_moodle_check, run_scripto_check,

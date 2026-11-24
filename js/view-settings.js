@@ -1,13 +1,13 @@
 /* OrdoNota – Reiter „Einstellungen“. */
 (function (NM) {
   'use strict';
-  const { h, icon, toast, modal, confirmDialog, parseNum, promptDialog } = NM.util;
+  const { h, icon, toast, modal, confirmDialog, parseNum, promptDialog, pickFile, download, clear } = NM.util;
   const S = NM.storage;
 
   function render(view, { db }) {
     view.append(
       h('div', { class: 'view-head' }, h('h1', null, 'Einstellungen')),
-      h('div', { class: 'masonry' }, securityCard(db), defaultsCard(db), epoCard(db), printCard(db), storageCard(db), yearsCard(db), tabsCard(db), displayCard(db), pomodoroCard(db), infoCard())
+      h('div', { class: 'masonry' }, securityCard(db), defaultsCard(db), epoCard(db), competencyCard(db), printCard(db), storageCard(db), yearsCard(db), tabsCard(db), displayCard(db), pomodoroCard(db), infoCard())
     );
   }
 
@@ -243,6 +243,270 @@
         : h('p', { class: 'muted small' }, 'Noch keine. Eine eigene Vorlage entsteht im EPO-Block unter „Einstellungen dieses EPO-Blocks“ mit „Als Vorlage speichern“.'),
       h('p', { class: 'muted small' }, 'Bestehende Blöcke behalten ihre Werte; jeder Block lässt sich einzeln umstellen.')
     );
+  }
+
+  // ---------- Kompetenzkataloge (seit 2.9, PLANUNG.md AI) ----------
+
+  function competencyCard(db) {
+    const C = NM.competencies;
+    const cats = C.catalogs(db);
+    const count = (cat) => C.entries(cat).filter((e) => e.level === 'komp' && !e.hidden).length;
+    const fromTemplate = h(
+      'select',
+      {
+        class: 'input input-sm',
+        'aria-label': 'Katalog aus Vorlage anlegen',
+        'data-comp-template': '',
+        onchange: (e) => {
+          const key = e.target.value;
+          if (!key) return;
+          const cat = C.addFromTemplate(db, key);
+          NM.app.commit();
+          toast(`Katalog „${cat.name}“ angelegt. Wählen Sie ihn in den Kursdaten eines Kurses.`, 'success', 5000);
+        },
+      },
+      h('option', { value: '', selected: true }, 'Aus Vorlage …'),
+      C.TEMPLATES.map((t) => h('option', { value: t.key }, t.label))
+    );
+    const importFile = async () => {
+      const file = await pickFile('.json,application/json');
+      if (!file) return;
+      let cat;
+      try {
+        cat = C.parseImport(await file.text());
+      } catch (e) {
+        return toast(e.message, 'error', 8000);
+      }
+      let mode = 'new';
+      const old = C.byId(db, cat.id);
+      if (old) {
+        const v = await modal({
+          title: 'Katalog importieren',
+          body: h('p', null, `Den Katalog „${old.name}“ (Kennung ${old.id}, Version ${old.version}) gibt es schon. Die Datei hat Version ${cat.version}.`),
+          buttons: [
+            { label: 'Abbrechen', value: null },
+            { label: 'Als neuen Katalog', value: 'new' },
+            { label: 'Ersetzen', value: 'replace', kind: 'primary' },
+          ],
+        });
+        if (!v) return;
+        mode = v;
+      }
+      const res = C.applyImport(db, cat, mode);
+      if (res.missing.length) return toast(`Nicht ersetzt: In der Datei fehlen Kennungen, die an Aufgaben vergeben sind (${res.missing.join(', ')}). Importieren Sie die Datei als neuen Katalog.`, 'error', 10000);
+      NM.app.commit();
+      toast(mode === 'replace' ? `Katalog „${res.cat.name}“ ersetzt.` : `Katalog „${res.cat.name}“ importiert.`, 'success');
+    };
+    const remove = async (cat) => {
+      const used = C.coursesUsing(db, cat.id);
+      if (used.length) return toast(`„${cat.name}“ wird noch verwendet: ${used.map((c) => NM.model.courseTitle(c)).join(', ')}. Wählen Sie dort zuerst einen anderen Katalog.`, 'error', 8000);
+      if (!(await confirmDialog('Katalog löschen', `„${cat.name}“ löschen? Exportieren Sie ihn vorher, wenn Sie ihn noch brauchen.`, { okLabel: 'Löschen', danger: true }))) return;
+      C.removeCatalog(db, cat.id);
+      NM.app.commit();
+    };
+    return h(
+      'div',
+      { class: 'card', 'data-comp-catalogs': '' },
+      h('h2', null, 'Kompetenzkataloge'),
+      h('p', { class: 'muted small' }, 'Aus dem Katalog eines Kurses wählen Sie in den Tests die Kompetenzen je Aufgabe. Den Katalog legen Sie in den Kursdaten fest.'),
+      cats.length
+        ? h(
+            'ul',
+            { class: 'epo-preset-list' },
+            cats.map((cat) =>
+              h(
+                'li',
+                { 'data-comp-catalog': cat.id },
+                h('span', { class: 'grow' }, cat.name),
+                h('span', { class: 'muted small' }, [cat.fach, `${count(cat)} Kompetenzen`].filter(Boolean).join(' · ')),
+                h('button', { class: 'icon-btn', 'aria-label': 'Bearbeiten: ' + cat.name, title: 'Bearbeiten', onclick: () => catalogDialog(db, cat) }, icon('pencil')),
+                h('button', { class: 'icon-btn', 'aria-label': 'Exportieren: ' + cat.name, title: 'Als Datei exportieren (z. B. für das Bauskript der Moodle-Fragen)', onclick: () => download(C.exportName(cat), C.exportJson(cat), 'application/json;charset=utf-8') }, icon('download')),
+                h('button', { class: 'icon-btn', 'aria-label': 'Löschen: ' + cat.name, title: 'Löschen', onclick: () => remove(cat) }, icon('trash'))
+              )
+            )
+          )
+        : h('p', { class: 'muted small' }, 'Noch keiner. Am schnellsten geht es mit „Aus Vorlage …“, danach können Sie den Katalog anpassen.'),
+      h(
+        'div',
+        { class: 'inline comp-actions' },
+        fromTemplate,
+        h('button', { class: 'btn btn-sm', onclick: importFile }, icon('upload'), ' Importieren'),
+        h(
+          'button',
+          {
+            class: 'btn btn-sm btn-ghost',
+            onclick: () => {
+              const cat = C.addEmpty(db);
+              NM.app.commit();
+              catalogDialog(db, cat);
+            },
+          },
+          '+ Neuer Katalog'
+        )
+      )
+    );
+  }
+
+  /** Dialog „Katalog bearbeiten“: Name, Fach, Stufen, Baum Bereich → Kompetenz → Teilkompetenz. Speichert jede Änderung sofort. */
+  function catalogDialog(db, cat) {
+    const C = NM.competencies;
+    const box = h('div', { class: 'comp-edit' });
+    const changed = () => {
+      C.bump(cat);
+      NM.app.commit();
+    };
+    const textField = (label, value, onSet, attrs = {}) =>
+      h(
+        'label',
+        { class: 'field' },
+        h('span', null, label),
+        h('input', Object.assign({ class: 'input', value, onchange: (e) => onSet(e.target.value.trim(), e.target) }, attrs))
+      );
+    const pctField = (label, key) =>
+      h(
+        'label',
+        { class: 'field' },
+        h('span', null, label),
+        h('input', {
+          class: 'input',
+          type: 'number',
+          min: 1,
+          max: 100,
+          step: 1,
+          value: cat.stufen[key],
+          'data-comp-stufe': key,
+          onchange: (e) => {
+            const v = parseNum(e.target.value);
+            const other = key === 'teilweise' ? cat.stufen.sicher : cat.stufen.teilweise;
+            const okay = v > 0 && v <= 100 && (key === 'teilweise' ? v < other : v > other);
+            if (!okay) {
+              e.target.value = cat.stufen[key];
+              return toast('„teilweise ab“ muss kleiner sein als „sicher ab“ (1–100 %).', 'error');
+            }
+            cat.stufen[key] = v;
+            changed();
+          },
+        })
+      );
+    // Kennung: änderbar, solange unbenutzt; sonst fest mit Hinweis
+    const idCell = (e) => {
+      if (C.useCount(db, cat.id, e.id))
+        return h('span', { class: 'comp-id fixed', title: 'An Aufgaben vergeben – die Kennung bleibt fest.' }, e.id);
+      return h('input', {
+        class: 'input input-sm comp-id',
+        value: e.id,
+        'aria-label': 'Kennung',
+        spellcheck: false,
+        onchange: (ev) => {
+          const err = C.renameId(db, cat, e.id, ev.target.value);
+          if (err) {
+            ev.target.value = e.id;
+            return toast(err, 'error', 6000);
+          }
+          NM.app.commit();
+          draw();
+        },
+      });
+    };
+    const entryRow = (e) => {
+      const loc = C.locate(cat, e.id);
+      const used = C.inUse(db, cat, e.id);
+      const own = loc.obj;
+      return h(
+        'li',
+        { class: 'comp-row' + (e.level === 'teil' ? ' teil' : '') + (own.ausgeblendet ? ' is-hidden' : ''), 'data-comp-entry': e.id },
+        idCell(e),
+        h('input', {
+          class: 'input input-sm grow',
+          value: own.name,
+          'aria-label': `Bezeichnung ${e.id}`,
+          onchange: (ev) => {
+            own.name = ev.target.value.trim() || e.id;
+            ev.target.value = own.name;
+            changed();
+          },
+        }),
+        e.level === 'komp'
+          ? h('button', { class: 'btn btn-sm btn-ghost', title: 'Teilkompetenz anlegen', onclick: () => { C.addTeil(cat, e.id); NM.app.commit(); draw(); } }, '+ Teil')
+          : null,
+        used
+          ? h(
+              'button',
+              {
+                class: 'icon-btn',
+                'aria-pressed': own.ausgeblendet ? 'true' : 'false',
+                'aria-label': (own.ausgeblendet ? 'Einblenden: ' : 'Ausblenden: ') + e.id,
+                title: own.ausgeblendet ? 'Wieder einblenden' : 'Ausblenden: für neue Aufgaben nicht mehr wählbar, alte Tests bleiben auswertbar',
+                onclick: () => { C.setHidden(cat, e.id, !own.ausgeblendet); NM.app.commit(); draw(); },
+              },
+              icon(own.ausgeblendet ? 'eye-off' : 'eye')
+            )
+          : h(
+              'button',
+              {
+                class: 'icon-btn',
+                'aria-label': 'Löschen: ' + e.id,
+                title: 'Löschen (noch an keiner Aufgabe vergeben)',
+                onclick: () => { C.removeEntry(db, cat, e.id); NM.app.commit(); draw(); },
+              },
+              icon('trash')
+            )
+      );
+    };
+    const bereichBlock = (b) => {
+      const list = C.entries({ bereiche: [b] });
+      return h(
+        'section',
+        { class: 'comp-bereich', 'data-comp-bereich': b.id },
+        h(
+          'div',
+          { class: 'comp-bereich-head' },
+          h('input', {
+            class: 'input input-sm grow comp-bereich-name',
+            value: b.name,
+            'aria-label': 'Name des Bereichs',
+            onchange: (ev) => {
+              b.name = ev.target.value.trim() || b.id;
+              ev.target.value = b.name;
+              changed();
+            },
+          }),
+          h('button', { class: 'btn btn-sm btn-ghost', 'data-comp-add': b.id, onclick: () => { C.addKompetenz(cat, b.id); NM.app.commit(); draw(); } }, '+ Kompetenz'),
+          h(
+            'button',
+            {
+              class: 'icon-btn',
+              'aria-label': 'Bereich löschen: ' + b.name,
+              title: 'Bereich löschen (nur, wenn keine seiner Kompetenzen an Aufgaben vergeben ist)',
+              onclick: () => {
+                if (!C.removeBereich(db, cat, b.id)) return toast('Kompetenzen dieses Bereichs sind an Aufgaben vergeben. Blenden Sie sie stattdessen aus.', 'error', 6000);
+                NM.app.commit();
+                draw();
+              },
+            },
+            icon('trash')
+          )
+        ),
+        list.length ? h('ul', { class: 'comp-list' }, list.map(entryRow)) : h('p', { class: 'muted small' }, 'Noch keine Kompetenzen.')
+      );
+    };
+    function draw() {
+      clear(box).append(
+        h(
+          'div',
+          { class: 'form-grid' },
+          textField('Name', cat.name, (v, el) => { cat.name = v || cat.id; el.value = cat.name; changed(); }, { 'data-comp-name': '' }),
+          textField('Fach', cat.fach, (v) => { cat.fach = v; changed(); }, { placeholder: 'z. B. Mathematik' }),
+          pctField('„teilweise“ ab (%)', 'teilweise'),
+          pctField('„sicher“ ab (%)', 'sicher')
+        ),
+        h('p', { class: 'muted small' }, `Kennung des Katalogs: ${cat.id} · Version ${cat.version}. Kennungen an Aufgaben bleiben fest; was schon vergeben ist, lässt sich nur ausblenden.`),
+        ...cat.bereiche.map(bereichBlock),
+        h('button', { class: 'btn btn-sm btn-ghost', onclick: () => { C.addBereich(cat); NM.app.commit(); draw(); } }, '+ Bereich')
+      );
+    }
+    draw();
+    return modal({ title: 'Katalog bearbeiten', wide: true, body: box, buttons: [{ label: 'Fertig', value: true, kind: 'primary' }] });
   }
 
   // ---------- Ausdrucke (Druckkopf, seit 1.47) ----------

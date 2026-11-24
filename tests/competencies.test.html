@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="de">
+<head><meta charset="utf-8"><title>Tests Kompetenzkataloge</title></head>
+<body>
+<pre id="out"></pre>
+<script src="../js/util.js"></script>
+<script src="../js/grades.js"></script>
+<script src="../js/attendance.js"></script>
+<script src="../js/people.js"></script>
+<script src="../js/competencies.js"></script>
+<script src="../js/model.js"></script>
+<script>
+  const C = NM.competencies;
+  const M = NM.model;
+  const lines = [];
+  let fails = 0;
+  const ok = (name, cond) => { if (!cond) fails++; lines.push((cond ? 'OK   ' : 'FAIL ') + name); };
+  const throws = (name, fn, re) => { try { fn(); ok(name, false); } catch (e) { ok(name, !re || re.test(e.message)); } };
+
+  // Erfundener Kurs mit einem Test
+  const task = (id, max, extra = {}) => Object.assign({ id, name: id, max }, extra);
+  const withCourse = (db, tasks, catalogId) => {
+    const c = { id: 'c1', yearId: db.years[0].id, klasse: '8b', fach: 'Mathe', jahrgang: 8, students: [], assessments: [{ id: 't1', kind: 'test', half: 'HJ1', cat: 'other', name: 'KT 1', weight: 1, test: { tasks, results: {} } }] };
+    if (catalogId) c.catalogId = catalogId;
+    db.courses.push(c);
+    return c;
+  };
+
+  try {
+    // ---------- Vorlage ----------
+    {
+      const db = M.newDb();
+      const cat = C.addFromTemplate(db, 'mathe-sek1');
+      const e = C.entries(cat);
+      ok('Vorlage: 7 prozessbezogene und 5 inhaltliche Kompetenzen', e.length === 12 && e.filter((x) => x.bereich === 'K').length === 7 && e.filter((x) => x.bereich === 'L').length === 5);
+      ok('Vorlage: Kennungen M-K1 … M-L5', e[0].id === 'M-K1' && e[6].id === 'M-K7' && e[11].id === 'M-L5' && C.find(cat, 'M-L3').name === 'Strukturen und funktionaler Zusammenhang');
+      ok('Vorlage: Stufen 50/80, Version 1', cat.stufen.teilweise === 50 && cat.stufen.sicher === 80 && cat.version === 1);
+      const cat2 = C.addFromTemplate(db, 'mathe-sek1');
+      ok('Vorlage zweimal: freie id', cat2.id === 'mathe-sek1-2' && db.settings.competencyCatalogs.length === 2);
+      cat2.bereiche[0].kompetenzen[0].name = 'x';
+      ok('Vorlage zweimal: unabhängige Kopien', C.TEMPLATES[0].catalog.bereiche[0].kompetenzen[0].name === 'Mathematisch argumentieren');
+      throws('unbekannte Vorlage', () => C.addFromTemplate(db, 'gibt-es-nicht'));
+      ok('Kurzanzeige ohne Fachvorsatz', C.short('M-K2') === 'K2' && C.short('M-K2.1') === 'K2.1' && C.short('K3') === 'K3');
+    }
+
+    // ---------- Bereinigen ----------
+    {
+      const c = C.clean({ id: 'x', fach: 'Chemie', version: 'a', stufen: { teilweise: 90, sicher: 60 }, bereiche: [
+        { id: 'A', name: 'A', kompetenzen: [{ id: 'C-1', name: 'eins', teil: [{ id: 'C-1.1' }, { id: 'C-1' }, { id: 'bad id' }] }, { id: 'C-1', name: 'doppelt' }, null, { id: 'C-2', ausgeblendet: 1 }] },
+        { id: 'A', kompetenzen: 'kaputt' },
+      ] });
+      ok('clean: doppelte und ungültige Kennungen fallen weg', C.entries(c).map((e) => e.id).join() === 'C-1,C-1.1,C-2');
+      ok('clean: Name fällt auf Fach/Kennung zurück', c.name === 'Chemie' && C.find(c, 'C-1.1').name === 'C-1.1');
+      ok('clean: ungültige Stufen → Standard, Version → 1', c.stufen.teilweise === 50 && c.stufen.sicher === 80 && c.version === 1);
+      ok('clean: doppelte Bereich-id bekommt neue', c.bereiche[1].id === 'B1' && c.bereiche[1].kompetenzen.length === 0);
+      ok('clean: ausgeblendet als true', C.find(c, 'C-2').hidden === true);
+      ok('clean: ohne id → null', C.clean({ bereiche: [] }) === null && C.clean(null) === null && C.clean([]) === null);
+      ok('cleanList: doppelte Katalog-ids fallen weg', C.cleanList([{ id: 'a' }, { id: 'a' }, { id: 'b' }, 7]).map((x) => x.id).join() === 'a,b');
+      ok('cleanTaskIds', C.cleanTaskIds(['a', 'a', 3, '', 'b']).join() === 'a,b' && C.cleanTaskIds('a').length === 0);
+    }
+
+    // ---------- Teilkompetenzen ausgeblendet über die Kompetenz ----------
+    {
+      const c = C.clean({ id: 'x', bereiche: [{ id: 'A', kompetenzen: [{ id: 'K1', ausgeblendet: true, teil: [{ id: 'K1.1' }] }] }] });
+      ok('Teil einer ausgeblendeten Kompetenz gilt als ausgeblendet', C.find(c, 'K1.1').hidden === true);
+    }
+
+    // ---------- Fach → Katalog ----------
+    {
+      const db = M.newDb();
+      C.addFromTemplate(db, 'mathe-sek1');
+      ok('Fach „Mathe“ passt zu „Mathematik“', C.guessForFach(db, 'Mathe') === 'mathe-sek1' && C.guessForFach(db, ' mathematik ') === 'mathe-sek1');
+      ok('Fach „M“ oder „Chemie“ passt nicht', C.guessForFach(db, 'M') === null && C.guessForFach(db, 'Chemie') === null && C.guessForFach(db, '') === null);
+      C.addFromTemplate(db, 'mathe-sek1');
+      ok('zwei passende Kataloge → keine Vorbelegung', C.guessForFach(db, 'Mathe') === null);
+    }
+
+    // ---------- Bearbeiten ----------
+    {
+      const db = M.newDb();
+      const cat = C.addFromTemplate(db, 'mathe-sek1');
+      const v0 = cat.version;
+      const k = C.addKompetenz(cat, 'K');
+      ok('neue Kompetenz: nächste Nummer', k.id === 'M-K8' && cat.version === v0 + 1);
+      const t = C.addTeil(cat, 'M-K2');
+      ok('neue Teilkompetenz: Kennung mit Punkt', t.id === 'M-K2.1' && C.find(cat, 'M-K2.1').parent === 'M-K2');
+      ok('zweite Teilkompetenz', C.addTeil(cat, 'M-K2').id === 'M-K2.2');
+      ok('Teil eines Teils nicht möglich', C.addTeil(cat, 'M-K2.1') === null);
+      const b = C.addBereich(cat);
+      ok('neuer Bereich', b.id === 'B1' && cat.bereiche.length === 3);
+      ok('erste Kompetenz im leeren Bereich', C.addKompetenz(cat, 'B1').id === 'B11');
+
+      withCourse(db, [task('a1', 2, { competencies: ['M-K1', 'M-L3'] }), task('a2', 1, { competencies: ['M-K2.1'] })], cat.id);
+      ok('usedIds', [...C.usedIds(db, cat.id)].sort().join() === 'M-K1,M-K2.1,M-L3');
+      ok('renameId: frei', C.renameId(db, cat, 'M-K8', 'M-K9') === '' && C.find(cat, 'M-K9'));
+      ok('renameId: benutzt bleibt fest', /bleibt deshalb fest/.test(C.renameId(db, cat, 'M-K1', 'M-X')) && C.find(cat, 'M-K1'));
+      ok('renameId: doppelt', /schon/.test(C.renameId(db, cat, 'M-K9', 'M-K3')));
+      ok('renameId: ungültig', /Kennung/.test(C.renameId(db, cat, 'M-K9', 'a b')) && /Kennung/.test(C.renameId(db, cat, 'M-K9', '')));
+      ok('renameId: gleich = nichts zu tun', C.renameId(db, cat, 'M-K9', 'M-K9') === '');
+      ok('inUse: Kompetenz mit benutztem Teil', C.inUse(db, cat, 'M-K2') && !C.inUse(db, cat, 'M-K3'));
+      ok('removeEntry: benutzt → nein', !C.removeEntry(db, cat, 'M-K2') && !C.removeEntry(db, cat, 'M-K1'));
+      ok('removeEntry: unbenutzter Teil, leere Liste fällt weg', C.removeEntry(db, cat, 'M-K2.2') && C.locate(cat, 'M-K2').obj.teil.length === 1);
+      C.addTeil(cat, 'M-K3');
+      ok('removeEntry: letzter Teil → teil entfernt', C.removeEntry(db, cat, 'M-K3.1') && !('teil' in C.locate(cat, 'M-K3').obj));
+      ok('removeBereich: benutzt → nein, leer → ja', !C.removeBereich(db, cat, 'K') && C.removeBereich(db, cat, 'B1'));
+      C.setHidden(cat, 'M-K1', true);
+      ok('ausblenden', C.find(cat, 'M-K1').hidden && C.locate(cat, 'M-K1').obj.ausgeblendet === true);
+      C.setHidden(cat, 'M-K1', false);
+      ok('einblenden', !('ausgeblendet' in C.locate(cat, 'M-K1').obj));
+      ok('Katalog löschen: im Kurs benutzt → nein', !C.removeCatalog(db, cat.id) && db.settings.competencyCatalogs.length === 1);
+      delete db.courses[0].catalogId;
+      ok('Katalog löschen: frei → ja', C.removeCatalog(db, cat.id) && db.settings.competencyCatalogs.length === 0);
+    }
+
+    // ---------- Aufgaben ----------
+    {
+      const tk = task('a', 1);
+      C.toggleTask(tk, 'M-K1', true);
+      C.toggleTask(tk, 'M-K1', true);
+      C.toggleTask(tk, 'M-L2', true);
+      ok('toggleTask: setzen ohne Doppelte', tk.competencies.join() === 'M-K1,M-L2');
+      C.toggleTask(tk, 'M-K1', false);
+      C.toggleTask(tk, 'M-L2', false);
+      ok('toggleTask: letzte weg → Feld weg', !('competencies' in tk));
+
+      const cat = C.clean({ id: 'x', bereiche: [{ id: 'A', kompetenzen: [{ id: 'K1', teil: [{ id: 'K1.1' }, { id: 'K1.2' }] }, { id: 'K2' }] }] });
+      const pts = C.pointsPer(cat, [task('a', 2, { competencies: ['K1', 'K1.1'] }), task('b', 3, { competencies: ['K1.2', 'K2'] }), task('c', 4, { bonus: true, competencies: ['K2'] }), task('d', 5)]);
+      ok('pointsPer: Kompetenz zählt Teile mit, jede Aufgabe einmal', pts.get('K1') === 5 && pts.get('K1.1') === 2 && pts.get('K1.2') === 3);
+      ok('pointsPer: Bonus zählt mit', pts.get('K2') === 7 && !pts.has('d'));
+    }
+
+    // ---------- Austauschdatei ----------
+    {
+      const db = M.newDb();
+      const cat = C.addFromTemplate(db, 'mathe-sek1');
+      const json = C.exportJson(cat);
+      const back = JSON.parse(json);
+      ok('Export: Formatkennung und Version', back.format === C.FORMAT && back.formatVersion === 1 && back.id === 'mathe-sek1');
+      ok('Export: Dateiname ohne Sonderzeichen', C.exportName({ name: 'A/B: C' }) === 'Kompetenzkatalog – A_B_ C.json');
+      const imp = C.parseImport('﻿' + json);
+      ok('Import: liest Export zurück', JSON.stringify(imp) === JSON.stringify(cat));
+      throws('Import: kein JSON', () => C.parseImport('{'), /kein gültiges JSON/);
+      throws('Import: falsches Format', () => C.parseImport('{"format":"x"}'), /kein Kompetenzkatalog/);
+      throws('Import: neuere Formatversion', () => C.parseImport('{"format":"ordonota-kompetenzkatalog","formatVersion":2}'), /aktualisieren/);
+      throws('Import: leer', () => C.parseImport('{"format":"ordonota-kompetenzkatalog","formatVersion":1,"id":"a","bereiche":[]}'), /keine Kompetenzen/);
+
+      // neu (id frei) und ersetzen
+      const r1 = C.applyImport(db, C.parseImport(json), 'new');
+      ok('Import als neuer Katalog: freie id', r1.cat.id === 'mathe-sek1-2' && db.settings.competencyCatalogs.length === 2);
+      withCourse(db, [task('a1', 1, { competencies: ['M-K7'] })], 'mathe-sek1');
+      const smaller = JSON.parse(json);
+      smaller.bereiche[0].kompetenzen.pop(); // M-K7 fehlt
+      const r2 = C.applyImport(db, C.parseImport(JSON.stringify(smaller)), 'replace');
+      ok('Ersetzen: benutzte Kennung fehlt → nichts ersetzt', r2.missing.join() === 'M-K7' && C.byId(db, 'mathe-sek1').bereiche[0].kompetenzen.length === 7);
+      const renamed = JSON.parse(json);
+      renamed.bereiche[0].kompetenzen[0].name = 'Argumentieren';
+      const r3 = C.applyImport(db, C.parseImport(JSON.stringify(renamed)), 'replace');
+      ok('Ersetzen: übernimmt, Version steigt', !r3.missing.length && C.find(C.byId(db, 'mathe-sek1'), 'M-K1').name === 'Argumentieren' && C.byId(db, 'mathe-sek1').version === 2);
+      ok('Ersetzen: Reihenfolge der Kataloge bleibt', db.settings.competencyCatalogs[0].id === 'mathe-sek1');
+    }
+
+    // ---------- Modell: Migration und Prüfung ----------
+    {
+      const db = M.newDb();
+      delete db.settings.competencyCatalogs;
+      const c = withCourse(db, [task('a1', 1, { competencies: ['M-K1', 'M-K1', 5] }), task('a2', 1, { competencies: [] }), task('a3', 1)], 7);
+      M.migrate(db);
+      ok('migrate: Katalogliste angelegt', Array.isArray(db.settings.competencyCatalogs) && db.settings.competencyCatalogs.length === 0);
+      ok('migrate: ungültige catalogId entfernt', !('catalogId' in c));
+      const ts = c.assessments[0].test.tasks;
+      ok('migrate: Kennungen bereinigt, leere Liste entfernt', ts[0].competencies.join() === 'M-K1' && !('competencies' in ts[1]) && !('competencies' in ts[2]));
+      ok('migrate: Schema bleibt 5', db.schema === 5 && M.SCHEMA === 5);
+
+      C.addFromTemplate(db, 'mathe-sek1');
+      c.catalogId = 'mathe-sek1';
+      ts[1].competencies = ['M-X'];
+      const res = M.check(db);
+      ok('check: unbekannte Kennung → Hinweis', res.some((p) => p.level === 'hinweis' && /1 Kompetenz-Kennung/.test(p.text)) && !res.some((p) => p.level === 'fehler'));
+      c.catalogId = 'weg';
+      ok('check: Katalog fehlt → Hinweis', M.check(db).some((p) => p.level === 'hinweis' && /gibt es nicht mehr/.test(p.text)));
+
+      // Nachschreibtermin übernimmt die Zuordnung
+      c.catalogId = 'mathe-sek1';
+      const mk = M.newMakeup(c, c.assessments[0]);
+      ok('Nachschreibtermin: Kompetenzen mit den Aufgaben übernommen', mk.test.tasks[0].competencies.join() === 'M-K1');
+    }
+  } catch (e) {
+    fails++;
+    lines.push('FAIL Ausnahme: ' + (e && e.stack || e));
+  }
+  document.getElementById('out').textContent = (fails ? `${fails} FEHLGESCHLAGEN` : 'ALLE TESTS BESTANDEN') + '\n' + lines.join('\n');
+  document.title = 'fertig';
+</script>
+</body>
+</html>
