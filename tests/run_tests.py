@@ -1602,13 +1602,28 @@ def run_people_page_check(br, base):
         out.manual = [blockedOk, e0.personId === s0.personId || P.entries(db, e0.personId).length === 2];
         // Filter „Ohne Kurs“ und Löschen
         const orphanP = { id: 'p-lose', last: 'Ohnekurs', first: 'Olga', created: '2026-01-01' }; db.people.push(orphanP); NM.app.commit(); await wait();
-        document.querySelector('[data-people-filter="orphans"]').click(); await wait();
+        const pf = (v) => { const el = document.querySelector('[data-people-filter]'); el.value = v; el.dispatchEvent(new Event('change')); };
+        pf('orphans'); await wait();
         out.filter = items().length >= 1 && items().some((b) => b.dataset.person === 'p-lose') && items().every((b) => b.classList.contains('orphan'));
         items().find((b) => b.dataset.person === 'p-lose').click(); await wait();
         document.querySelector('[data-person-remove]').click(); await wait(); d = dialog();
         btn('Löschen', d).click(); await wait(300);
         out.removed = !P.byId(db, 'p-lose');
-        document.querySelector('[data-people-filter="all"]').click(); await wait();
+        pf('all'); await wait();
+        // Filter nach Kurs: nur Personen dieses Kurses, Suche wirkt zusätzlich, Gruppen je Schuljahr
+        const fc = db.courses.find((c) => c.yearId === NM.app.currentYear().id && c.students.length >= 2);
+        const fsel = document.querySelector('[data-people-filter]');
+        const groups = [...fsel.querySelectorAll('optgroup')].map((g) => g.label);
+        const optTxt = fsel.querySelector(`option[value="${fc.id}"]`).textContent;
+        pf(fc.id); await wait();
+        const want = new Set(fc.students.map((s) => s.personId));
+        const inC = items().every((b) => want.has(b.dataset.person)) && items().length === want.size;
+        const sInp = document.querySelector('[data-people-search]'); sInp.value = fc.students[0].last; sInp.dispatchEvent(new Event('input')); await wait();
+        const both = items().length >= 1 && items().every((b) => want.has(b.dataset.person));
+        sInp.value = ''; sInp.dispatchEvent(new Event('input')); await wait();
+        const kept = document.querySelector('[data-people-filter]').value === fc.id;
+        out.byCourse = [inC, both, kept, groups[0] === 'Schuljahr ' + NM.app.currentYear().name, optTxt.endsWith('(' + want.size + ')')];
+        pf('all'); await wait();
         // Kurs aus der Seitenleiste: zurück zu einem Kursreiter
         document.querySelector('.course-item').click(); await wait();
         out.back = NM.app.state.ui.tab === 'overview' && !!document.querySelector('.tabs');
@@ -1626,6 +1641,7 @@ def run_people_page_check(br, base):
     report("Zusammenführen: Vorschläge gezählt, nicht vorausgewählt, angehaktes Paar verknüpft", r.get("sugCount") and r.get("notPre") and r.get("merged"), str(res))
     report("Trennen: nicht alle Einträge, gewählter Eintrag wird neue Person", r.get("splitGuard") and r.get("split"), str(res))
     report("Registername bei einem Kurs ändert den Kursnamen mit; manuell zusammenführen, gleicher Kurs gesperrt", r.get("regName") and r.get("manual") == [True, True], str(res))
+    report("Filter nach Kurs: nur dessen Personen, Suche zusätzlich, aktuelles Schuljahr zuerst, Anzahl in der Option", r.get("byCourse") == [True, True, True, True, True], str(res))
     report("Filter „Ohne Kurs“, Aus dem Register löschen, Kurswahl führt zurück, check ohne Fehler", r.get("filter") and r.get("removed") and r.get("back") and r.get("fehler") == [], str(res))
     # Schmal: Liste oder Person, „Alle Personen“ führt zurück
     br.call("Emulation.setDeviceMetricsOverride", width=390, height=844, deviceScaleFactor=2, mobile=True)

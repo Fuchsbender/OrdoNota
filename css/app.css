@@ -911,7 +911,6 @@ dialog.modal h2 { font-size: 1.25rem; margin-bottom: 1rem; }
 .people-layout { display: grid; grid-template-columns: minmax(16rem, 22rem) minmax(0, 1fr); gap: 1rem; align-items: start; }
 .people-list { position: sticky; top: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; max-height: calc(100vh - 7rem); }
 .people-list > .input, .people-filter, .people-count { flex: none; }
-.people-filter { align-self: flex-start; }
 .seg-count { margin-left: 0.375rem; font-variant-numeric: tabular-nums; opacity: 0.75; }
 .people-count { margin: 0; }
 .people-items { list-style: none; margin: 0 -0.375rem; padding: 0 0.375rem; overflow-y: auto; min-height: 0; }

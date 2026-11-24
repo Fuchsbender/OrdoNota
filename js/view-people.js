@@ -32,6 +32,19 @@
       .sort((a, b) => order.indexOf(b.course.yearId) - order.indexOf(a.course.yearId) || M.courseTitle(a.course).localeCompare(M.courseTitle(b.course), 'de'));
   }
 
+  /** Kurse für den Filter, je Schuljahr: das aktuelle zuerst, dann die übrigen vom neuesten an. */
+  function courseGroups(db) {
+    const cur = NM.app.currentYear();
+    const years = (db.years || []).slice().reverse();
+    if (cur) years.sort((a, b) => (b.id === cur.id) - (a.id === cur.id));
+    return years
+      .map((y) => ({
+        label: 'Schuljahr ' + (y.name || ''),
+        courses: (db.courses || []).filter((c) => c.yearId === y.id).sort((a, b) => M.courseTitle(a).localeCompare(M.courseTitle(b), 'de')),
+      }))
+      .filter((g) => g.courses.length);
+  }
+
   function personName(p) {
     return M.studentName(p) || 'Ohne Namen';
   }
@@ -47,8 +60,13 @@
     const people = P.list(db);
     const all = M.sortStudents(people.slice());
     const orphans = all.filter((p) => !P.entries(db, p.id).length);
+    const groups = courseGroups(db);
+    const inCourse = (c) => all.filter((p) => P.entries(db, p.id).some((e) => e.course === c));
+    if (view.filter !== 'all' && view.filter !== 'orphans' && !groups.some((g) => g.courses.some((c) => c.id === view.filter))) view.filter = 'all';
+    const fCourse = groups.flatMap((g) => g.courses).find((c) => c.id === view.filter);
+    const base = view.filter === 'orphans' ? orphans : fCourse ? inCourse(fCourse) : all;
     const q = P.nameKey(view.q, '').replace(/\|$/, '');
-    const shown = (view.filter === 'orphans' ? orphans : all).filter((p) => !q || (p.last + ' ' + p.first).toLowerCase().includes(q) || (p.first + ' ' + p.last).toLowerCase().includes(q));
+    const shown = base.filter((p) => !q || (p.last + ' ' + p.first).toLowerCase().includes(q) || (p.first + ' ' + p.last).toLowerCase().includes(q));
     let sel = P.byId(db, NM.app.state.ui.personId);
     if (!sel && view.detail) view.detail = false;
     const pairs = P.suggestPairs(db);
@@ -79,8 +97,20 @@
         NM.app.rerender();
       },
     });
-    const filterBtn = (id, label, n) =>
-      h('button', { type: 'button', class: 'seg' + (view.filter === id ? ' active' : ''), 'aria-pressed': String(view.filter === id), 'data-people-filter': id, onclick: () => ((view.filter = id), NM.app.rerender()) }, label, h('span', { class: 'seg-count' }, n));
+    const opt = (v, label, n) => h('option', { value: v, selected: view.filter === v }, `${label} (${n})`);
+    const filter = h(
+      'select',
+      {
+        class: 'input people-filter',
+        'aria-label': 'Personen filtern: alle, ohne Kurs oder nach Kurs',
+        'data-people-filter': '',
+        'data-focus-key': 'people-filter',
+        onchange: (e) => ((view.filter = e.target.value), NM.app.rerender()),
+      },
+      opt('all', 'Alle', all.length),
+      opt('orphans', 'Ohne Kurs', orphans.length),
+      groups.map((g) => h('optgroup', { label: g.label }, g.courses.map((c) => opt(c.id, M.courseTitle(c), inCourse(c).length))))
+    );
 
     const items = shown.map((p) =>
       h(
@@ -105,11 +135,11 @@
       'div',
       { class: 'card people-list' },
       search,
-      h('div', { class: 'segmented people-filter', role: 'group', 'aria-label': 'Filter' }, filterBtn('all', 'Alle', all.length), filterBtn('orphans', 'Ohne Kurs', orphans.length)),
+      filter,
       h('p', { class: 'muted small people-count', 'aria-live': 'polite' }, shown.length === all.length ? `${all.length} Personen` : `${shown.length} von ${all.length} Personen`),
       shown.length
         ? h('ul', { class: 'people-items', 'data-scroll-key': 'people-items', onkeydown: listKey }, items)
-        : h('p', { class: 'muted' }, people.length ? 'Keine Person passt zur Suche.' : 'Noch keine Personen. Sie entstehen, sobald Namen in einem Kurs stehen.')
+        : h('p', { class: 'muted' }, !people.length ? 'Noch keine Personen. Sie entstehen, sobald Namen in einem Kurs stehen.' : q ? 'Keine Person passt zur Suche.' : view.filter === 'orphans' ? 'Alle Personen stehen in einem Kurs.' : 'In diesem Kurs steht niemand.')
     );
 
     const detail = h('div', { class: 'people-detail' }, sel ? detailCard(db, sel) : h('div', { class: 'card people-empty' }, h('p', { class: 'muted' }, 'Links eine Person wählen.')));
