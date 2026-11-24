@@ -12,7 +12,7 @@
   // 5 (2.4): Personenregister (db.people, students[].personId) – ältere Versionen würden neue Kurseinträge
   //    ohne Person anlegen und Personen beim Löschen nicht aufräumen.
   const SCHEMA = 5;
-  const APP_VERSION = '2.10.0';
+  const APP_VERSION = '2.11.0';
 
   class NewerSchemaError extends Error {}
 
@@ -798,6 +798,22 @@
     ns.date = t.date;
     ns.test.results[c8.students[11].id] = { scores: { a1: 3, a2: 4, a3: 7, a4: 5, a5: '' } };
     c8.assessments.push(ns);
+    // 2.11: Kompetenztest (nicht gewertet) vor der Arbeit, für den Reiter „Kompetenzen“
+    const kt = newTest(c8, 'HJ1', db.settings);
+    kt.name = 'Kompetenztest Terme';
+    kt.date = '2026-09-03';
+    kt.ungraded = true;
+    kt.test.tasks = [
+      { id: 'k1', name: 'K1', max: 2, competencies: ['M-L1'] },
+      { id: 'k2', name: 'K2', max: 4, competencies: ['M-L1', 'M-K5'] },
+      { id: 'k3', name: 'K3', max: 4, competencies: ['M-K2', 'M-L3'] },
+      { id: 'k4', name: 'K4', max: 2, competencies: ['M-K1'] },
+    ];
+    c8.students.forEach((s, i) => {
+      if (i === 5) return; // eine Person ohne Eintrag
+      kt.test.results[s.id] = i === 9 ? { status: 'fehlt' } : { scores: { k1: [2, 2, 1, 2, 0, 0, 2, 1, 2, 0, 1, 2][i], k2: [4, 3, 2, 4, 1, 0, 3, 2, 4, 0, 1, 3][i], k3: [4, 2, 1, 3, 2, 0, 4, 1, 3, 0, 2, 1][i], k4: [2, 1, 0, 2, 1, 0, 1, 0, 2, 0, 1, 0][i] } };
+    });
+    c8.assessments.splice(c8.assessments.indexOf(t), 0, kt);
     const hue = newManual('HJ1', 'other', 'HÜ 1');
     c8.students.forEach((s, i) => (hue.manual.grades[s.id] = { p: Math.max(0, 14 - i) }));
     c8.assessments.push(hue);

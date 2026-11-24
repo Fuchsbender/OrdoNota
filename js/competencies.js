@@ -450,6 +450,106 @@
     return out;
   }
 
+  // ---------- Auswertung je Person (seit 2.11, PLANUNG AI 8–10) ----------
+  // Nichts wird gespeichert: alles aus den Tests des Kurses berechnet.
+
+  // Status, bei denen eine Person in einem Test (oder Teil) bei den Kompetenzen nicht zählt
+  const SKIP_STATUS = new Set(['fehlt', 'nachschreiben', 'taeuschung']);
+
+  /** Stufe zu einem Prozentwert: 'sicher' | 'teilweise' | 'noch' (Grenzen aus dem Katalog). */
+  function stufeOf(cat, pct) {
+    const s = Object.assign({}, STUFEN, (cat && cat.stufen) || {});
+    if (pct >= s.sicher) return 'sicher';
+    if (pct >= s.teilweise) return 'teilweise';
+    return 'noch';
+  }
+
+  /** Ist der Test ein Kompetenztest? Nicht gewertet und mindestens eine Aufgabe mit Kompetenz. */
+  function isCompetencyTest(a) {
+    return !!a && a.kind === 'test' && !!a.ungraded && !!a.test && (a.test.tasks || []).some((t) => (t.competencies || []).length > 0);
+  }
+
+  /** Trägt der Test mindestens eine Kompetenz? */
+  const testHasCompetencies = (a) => !!a && a.kind === 'test' && !!a.test && (a.test.tasks || []).some((t) => (t.competencies || []).length > 0);
+
+  /** Kennungen einer Aufgabe auf Kompetenzebene (Teil → Kompetenz darüber), nur bekannte, jede einmal. */
+  function taskKomps(task, toKomp) {
+    const out = new Set();
+    for (const id of task.competencies || []) if (toKomp.has(id)) out.add(toKomp.get(id));
+    return out;
+  }
+
+  /**
+   * Kompetenzstand aller Personen eines Kurses in einem Zeitraum.
+   * @param halves Liste der Halbjahre (z. B. ['HJ1'] oder ['HJ1','HJ2'] für das Schuljahr)
+   * @param sids  Personen-ids
+   * @returns {
+   *   cols: Einträge (Ebene Kompetenz) mit Aufgaben im Zeitraum, in Katalogreihenfolge,
+   *   missing: sichtbare Kompetenzen ohne Aufgabe im Zeitraum,
+   *   tests: Anzahl Tests mit Kompetenzen,
+   *   cell(sid, id) → { got, max, pct, stufe, few, tests } | null }
+   * Regeln: Punkte je Kompetenz summiert (erreicht ÷ möglich), eine Aufgabe zählt bei jeder ihrer
+   * Kompetenzen voll, Bonusaufgaben zählen mit. Ein Nachschreibtermin zählt mit seinen eigenen Punkten
+   * (G.countingFor). „fehlt“, „nachschreiben“ und „Täuschung“ zählen nicht (bei getrennt bewerteten Teilen
+   * je Teil); „nicht gewertet“ zählt. Hat die Person im Test (Teil) gar keine Punkte, zählt er nicht;
+   * sonst zählt eine leere Aufgabe mit 0 Punkten.
+   */
+  function evaluate(cat, course, halves, sids) {
+    const G = NM.grades;
+    const all = entries(cat);
+    const toKomp = new Map(all.map((e) => [e.id, e.level === 'teil' ? e.parent : e.id]));
+    const tests = ((course && course.assessments) || []).filter((a) => a.kind === 'test' && a.test && halves.includes(a.half) && !G.isMakeup(course, a) && testHasCompetencies(a));
+    // Spalten: Kompetenzen, die im Zeitraum an einer Aufgabe hängen (Original oder Nachschreibtermin)
+    const withTasks = new Set();
+    for (const a of tests) {
+      for (const x of [a, ...G.makeupsOf(course, a)]) for (const t of x.test.tasks || []) for (const id of taskKomps(t, toKomp)) withTasks.add(id);
+    }
+    const komps = all.filter((e) => e.level === 'komp');
+    const cols = komps.filter((e) => withTasks.has(e.id));
+    const missing = komps.filter((e) => !e.hidden && !withTasks.has(e.id));
+    const data = new Map();
+    const entered = (v) => v !== null && v !== undefined && v !== '';
+    for (const sid of sids) {
+      const per = new Map();
+      for (const a of tests) {
+        const src = G.countingFor(course, a, sid);
+        const test = src.test;
+        const r = (test.results || {})[sid];
+        if (!r || SKIP_STATUS.has(r.status)) continue;
+        const scores = r.scores || {};
+        const sep = G.separateParts(test);
+        // Gruppen: getrennt bewertete Teile einzeln, sonst der ganze Test
+        const groups = sep ? G.taskGroups(test) : [{ part: null, tasks: test.tasks || [] }];
+        for (const { part, tasks } of groups) {
+          if (part && SKIP_STATUS.has((r.partStatus || {})[part.id])) continue;
+          if (!tasks.some((t) => entered(scores[t.id]))) continue;
+          for (const t of tasks) {
+            const ids = taskKomps(t, toKomp);
+            if (!ids.size) continue;
+            const got = entered(scores[t.id]) ? Number(scores[t.id]) || 0 : 0;
+            const max = Number(t.max) || 0;
+            for (const id of ids) {
+              const c = per.get(id) || { got: 0, max: 0, tests: new Set() };
+              c.got += got;
+              c.max += max;
+              c.tests.add(a.id);
+              per.set(id, c);
+            }
+          }
+        }
+      }
+      data.set(sid, per);
+    }
+    function cell(sid, id) {
+      const c = (data.get(sid) || new Map()).get(id);
+      if (!c || c.max <= 0) return null;
+      const got = Math.round(c.got * 100) / 100;
+      const pct = Math.round((c.got / c.max) * 100);
+      return { got, max: Math.round(c.max * 100) / 100, pct, stufe: stufeOf(cat, pct), few: c.max < FEW_POINTS, tests: c.tests.size };
+    }
+    return { cols, missing, tests: tests.length, cell };
+  }
+
   /** Templates für die Prüfung gegen vorlagen/*.json (Test). */
   const templateFile = (key) => {
     const tpl = TEMPLATES.find((t) => t.key === key);
@@ -497,6 +597,10 @@
     parseImport,
     applyImport,
     pointsPer,
+    stufeOf,
+    isCompetencyTest,
+    testHasCompetencies,
+    evaluate,
     templateFile,
   };
 })(window.NM = window.NM || {});

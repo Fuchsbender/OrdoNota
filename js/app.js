@@ -32,15 +32,20 @@
     { id: 'random', label: 'Tools' }, // bis 1.35 „Zufall“; id bleibt wegen gespeicherter Auswahl
     { id: 'groups', label: 'Gruppen' },
     { id: 'overview', label: 'Notenübersicht' },
+    { id: 'competencies', label: 'Kompetenzen' }, // 2.11: nur mit Kompetenzkatalog am Kurs
     { id: 'seating', label: 'Sitzplan' },
     { id: 'settings', label: 'Einstellungen' },
   ];
   // Reiter, die sich ausschalten lassen (Kurs & Schüler und Einstellungen bleiben immer)
-  const OPTIONAL_TABS = ['tests', 'epo', 'pres', 'draw', 'random', 'groups', 'overview', 'seating'];
+  const OPTIONAL_TABS = ['tests', 'epo', 'pres', 'draw', 'random', 'groups', 'overview', 'competencies', 'seating'];
 
-  /** Ist der Reiter im Kurs eingeschaltet? Eigene Einstellung des Kurses (course.tabs) vor dem Standard (settings.tabs). */
-  function tabOn(course, id) {
+  /**
+   * Ist der Reiter im Kurs eingeschaltet? Eigene Einstellung des Kurses (course.tabs) vor dem Standard (settings.tabs).
+   * „Kompetenzen“ erscheint nur mit Kompetenzkatalog am Kurs; setting = true fragt nur die Einstellung ab (Haken).
+   */
+  function tabOn(course, id, setting = false) {
     if (!OPTIONAL_TABS.includes(id)) return true;
+    if (id === 'competencies' && !setting && !(course && state.db && NM.competencies.forCourse(state.db, course))) return false;
     const own = course && course.tabs;
     if (own && typeof own[id] === 'boolean') return own[id];
     const def = (state.db && state.db.settings.tabs) || {};

@@ -9,13 +9,36 @@
   function render(view, { course, db }) {
     const level = G.courseLevel(course);
     const half = NM.app.currentHalf(course);
-    const tests = course.assessments.filter((a) => a.kind === 'test' && a.half === half);
+    const inHalf = course.assessments.filter((a) => a.kind === 'test' && a.half === half);
     const ui = NM.app.state.ui;
+    // 2.11: Umschalter „Benotet | Kompetenztests | Alle“, nur wenn das Halbjahr Kompetenztests hat
+    const C = NM.competencies;
+    const hasComp = inHalf.some((a) => C.isCompetencyTest(a));
+    ui.testFilter = ui.testFilter || {};
+    const filter = hasComp ? ui.testFilter[course.id] || 'all' : 'all';
+    const tests = filter === 'graded' ? inHalf.filter((a) => !C.isCompetencyTest(a)) : filter === 'comp' ? inHalf.filter((a) => C.isCompetencyTest(a)) : inHalf;
+    const filterSwitch = hasComp
+      ? UI.segSwitch(
+          'Welche Tests',
+          [
+            { id: 'graded', label: 'Benotet', title: 'Alle Tests außer Kompetenztests' },
+            { id: 'comp', label: 'Kompetenztests', title: 'Nicht gewertete Tests mit Kompetenzen' },
+            { id: 'all', label: 'Alle' },
+          ],
+          filter,
+          (id) => {
+            ui.testFilter[course.id] = id;
+            NM.app.saveUi();
+            NM.app.rerender();
+          },
+          { 'data-test-filter': '' }
+        )
+      : null;
     // Ohne Auswahl: die neueste Arbeit, die kein Nachschreibtermin ist
     let cur = tests.find((t) => t.id === ui.testId[course.id]) || tests.filter((t) => !G.isMakeup(course, t)).pop() || tests[tests.length - 1] || null;
 
     view.append(
-      h('div', { class: 'view-head' }, h('h1', null, 'Tests'), UI.halfSwitch(course, false)),
+      h('div', { class: 'view-head' }, h('h1', null, 'Tests'), UI.halfSwitch(course, false), filterSwitch),
       UI.pickerList({
         items: tests,
         currentId: cur && cur.id,
@@ -28,6 +51,7 @@
           const t = M.newTest(course, half, db.settings);
           course.assessments.push(t);
           ui.testId[course.id] = t.id;
+          if (filter === 'comp') ui.testFilter[course.id] = 'all'; // der neue Test ist noch kein Kompetenztest
           NM.app.saveUi();
           NM.app.commit();
         },
@@ -39,6 +63,10 @@
         },
       })
     );
+    if (!cur && inHalf.length) {
+      view.appendChild(UI.emptyState(filter === 'comp' ? 'Keine Kompetenztests in ' + half : 'Keine benoteten Tests in ' + half, 'Mit „Alle“ sehen Sie wieder alle Tests des Halbjahres.', null, 'list-check'));
+      return;
+    }
     if (!cur) {
       view.appendChild(UI.emptyState('Noch kein Test in ' + half, 'Legen Sie einen Test an: Aufgaben mit Höchstpunktzahlen festlegen, Rohpunkte eintragen – Note, Notenspiegel und Drittelparagraph werden automatisch berechnet.', null, 'list-check'));
       return;
@@ -47,6 +75,15 @@
     const moodleCards = [t.moodle ? moodleCard(course, db, cur, null) : null, ...(G.hasParts(t) ? t.parts.filter((x) => x.moodle).map((x) => moodleCard(course, db, cur, x)) : [])];
     const scriptoCard = NM.scripto.dataOf(course, cur) ? scriptoCardFor(course, db, cur) : null;
     view.append(...[metaCard(course, cur, level), ...moodleCards, scriptoCard, G.hasParts(t) ? partsCard(course, db, cur, level) : null, tasksCard(course, db, cur), competenciesCard(course, db, cur), h('div', { class: 'test-layout' }, h('div', { class: 'tests-main' }, resultsCard(course, cur, level), verbalCard(course, cur, level)), keyCard(course, cur, level))].filter(Boolean));
+  }
+
+  /** Ändert sich, ob ein Test ein Kompetenztest ist, Umschalter auf „Alle“, damit er nicht aus der Liste verschwindet. */
+  function keepInList(course) {
+    const f = NM.app.state.ui.testFilter;
+    if (f && f[course.id] && f[course.id] !== 'all') {
+      delete f[course.id];
+      NM.app.saveUi();
+    }
   }
 
   function metaCard(course, a, level) {
@@ -130,13 +167,14 @@
           h('span', null, 'Wertung'),
           h(
             'label',
-            { class: 'check field-check', title: 'Der Test erscheint ausgegraut in der Notenübersicht und zählt nicht zur Halbjahresnote.' },
+            { class: 'check field-check', title: 'Der Test erscheint ausgegraut in der Notenübersicht und zählt nicht zur Halbjahresnote. Mit Kompetenzen ist er ein Kompetenztest: Die Notenübersicht zeigt ihn nur auf Wunsch.' },
             h('input', {
               type: 'checkbox',
               checked: !!a.ungraded,
               onchange: (e) => {
                 if (e.target.checked) a.ungraded = true;
                 else delete a.ungraded;
+                keepInList(course);
                 NM.app.commit();
               },
             }),
@@ -567,7 +605,9 @@
           'data-focus-key': `comp-${task.id}-${e.id}`,
           'data-comp': e.id,
           onchange: (ev) => {
+            const was = C.isCompetencyTest(a);
             C.toggleTask(task, e.id, ev.target.checked);
+            if (was !== C.isCompetencyTest(a)) keepInList(course);
             NM.app.commit();
           },
         })

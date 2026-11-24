@@ -42,6 +42,9 @@
     else view.appendChild(halfCard(course, half, level));
   }
 
+  /** Kompetenztests in der Notenübersicht zeigen? (pro Gerät und Kurs, nur Ansicht) */
+  const showComp = (course) => !!(NM.app.state.ui.ovComp || {})[course.id];
+
   function weightsLine(course) {
     const parts = [`Klassen-/Kursarbeiten ${fmtNum(course.wKa, 0)} % · Sonstige ${fmtNum(course.wOther, 0)} %`];
     return h('span', { class: 'muted small' }, parts.join(''), ' (änderbar unter „Kurs & Schüler“)');
@@ -89,7 +92,10 @@
 
   function halfCard(course, half, level) {
     // Nachschreibtermine stehen in der Spalte ihrer Original-Arbeit
-    const list = course.assessments.filter((a) => a.half === half && !G.isMakeup(course, a));
+    const inHalf = course.assessments.filter((a) => a.half === half && !G.isMakeup(course, a));
+    // 2.11: Kompetenztests (nicht gewertet, mit Kompetenzen) sind nur auf Wunsch eine Spalte
+    const compTests = inHalf.filter((a) => NM.competencies.isCompetencyTest(a));
+    const list = showComp(course) ? inHalf : inHalf.filter((a) => !compTests.includes(a));
     const ka = list.filter((a) => a.cat === 'ka').sort(byDate);
     const other = list.filter((a) => a.cat === 'other').sort(byDate);
     const all = M.activeStudents(course);
@@ -287,7 +293,31 @@
     return h(
       'div',
       { class: 'card' },
-      h('div', { class: 'card-head' }, h('h2', null, half), weightsLine(course)),
+      h(
+        'div',
+        { class: 'card-head' },
+        h('h2', null, half),
+        weightsLine(course),
+        compTests.length
+          ? h(
+              'label',
+              { class: 'check comp-toggle', title: 'Nicht gewertete Tests mit Kompetenzen grau einblenden; sie zählen nicht zur Note.' },
+              h('input', {
+                type: 'checkbox',
+                checked: showComp(course),
+                'data-ov-comp': '',
+                onchange: (e) => {
+                  const ui = NM.app.state.ui;
+                  ui.ovComp = Object.assign({}, ui.ovComp, { [course.id]: e.target.checked });
+                  if (!e.target.checked) delete ui.ovComp[course.id];
+                  NM.app.saveUi();
+                  NM.app.rerender();
+                },
+              }),
+              ` Kompetenztests zeigen (${compTests.length})`
+            )
+          : null
+      ),
       addBtns,
       students.length === 0
         ? h('p', { class: 'muted' }, 'Bitte zuerst im Reiter „Kurs & Schüler“ Namen eintragen.')
@@ -479,7 +509,7 @@
     const lab = (p) => (p === null || p === undefined ? '' : G.label(p, level));
     const num = (v) => (v === null || v === undefined ? '' : fmtNum(v, 2));
     const header = ['Nr', 'Nachname', 'Vorname'];
-    const perHalf = halves.map((half) => course.assessments.filter((a) => a.half === half && !G.isMakeup(course, a)).sort((a, b) => (a.cat === b.cat ? byDate(a, b) : a.cat === 'ka' ? -1 : 1)));
+    const perHalf = halves.map((half) => course.assessments.filter((a) => a.half === half && !G.isMakeup(course, a) && (showComp(course) || !NM.competencies.isCompetencyTest(a))).sort((a, b) => (a.cat === b.cat ? byDate(a, b) : a.cat === 'ka' ? -1 : 1)));
     halves.forEach((half, i) => {
       for (const a of perHalf[i]) header.push(`${half} ${a.name}${Number(a.weight) !== 1 ? ' (×' + a.weight + ')' : ''}`);
       header.push(`${half} Ø KA`, `${half} Ø Sonstige`, `${half} gerechnet`, `${half} Note`);

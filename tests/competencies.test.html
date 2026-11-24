@@ -187,6 +187,64 @@
       const mk = M.newMakeup(c, c.assessments[0]);
       ok('Nachschreibtermin: Kompetenzen mit den Aufgaben übernommen', mk.test.tasks[0].competencies.join() === 'M-K1');
     }
+
+    // ---------- Auswertung je Person (2.11) ----------
+    {
+      const db = M.newDb();
+      const cat = C.addFromTemplate(db, 'mathe-sek1');
+      C.addTeil(cat, 'M-K3'); // M-K3.1
+      const teil = C.entries(cat).find((e) => e.level === 'teil').id;
+      const c = withCourse(db, [task('a1', 4, { competencies: ['M-K1', 'M-L3'] }), task('a2', 6, { competencies: ['M-K1'] }), task('a3', 2, { competencies: [teil, 'M-K3'] }), task('b', 2, { bonus: true, competencies: ['M-L3'] }), task('x', 5)], 'mathe-sek1');
+      const t1 = c.assessments[0];
+      t1.test.results = {
+        s1: { scores: { a1: 4, a2: 5, a3: 1, b: 2, x: 5 } },
+        s2: { status: 'fehlt', scores: { a1: 1 } },
+        s3: { status: 'ungewertet', scores: { a1: 2 } },
+        s4: { scores: {} },
+        s5: { status: 'taeuschung', scores: { a1: 4 } },
+      };
+      let ev = C.evaluate(cat, c, ['HJ1'], ['s1', 's2', 's3', 's4', 's5', 's6']);
+      ok('Auswertung: Spalten nur mit Aufgaben, Teil → Kompetenz', ev.cols.map((e) => e.id).join() === 'M-K1,M-K3,M-L3');
+      ok('Auswertung: fehlende sichtbare Kompetenzen', ev.missing.map((e) => e.id).join() === 'M-K2,M-K4,M-K5,M-K6,M-K7,M-L1,M-L2,M-L4,M-L5' && ev.tests === 1);
+      const k1 = ev.cell('s1', 'M-K1');
+      ok('Auswertung: Summe erreicht ÷ möglich, Stufe', k1.got === 9 && k1.max === 10 && k1.pct === 90 && k1.stufe === 'sicher' && !k1.few && k1.tests === 1);
+      const l3 = ev.cell('s1', 'M-L3');
+      ok('Auswertung: Bonusaufgabe zählt erreicht und möglich', l3.got === 6 && l3.max === 6);
+      const k3 = ev.cell('s1', 'M-K3');
+      ok('Auswertung: Aufgabe mit Teil und Kompetenz zählt einmal, wenig Daten', k3.got === 1 && k3.max === 2 && k3.pct === 50 && k3.stufe === 'teilweise' && k3.few);
+      ok('Auswertung: fehlt / Täuschung / ohne Punkte / ohne Eintrag zählen nicht', !ev.cell('s2', 'M-K1') && !ev.cell('s5', 'M-K1') && !ev.cell('s4', 'M-K1') && !ev.cell('s6', 'M-K1'));
+      const s3 = ev.cell('s3', 'M-K1');
+      ok('Auswertung: „nicht gewertet“ zählt, leere Aufgabe mit 0', s3.got === 2 && s3.max === 10 && s3.stufe === 'noch');
+      ok('Auswertung: anderes Halbjahr leer', C.evaluate(cat, c, ['HJ2'], ['s1']).cols.length === 0);
+
+      // Nachschreibtermin: eigene Punkte statt der Original-Arbeit
+      const mk = M.newMakeup(c, t1);
+      mk.date = '2026-10-01';
+      mk.test.results = { s2: { scores: { a1: 3, a2: 6, a3: 2, b: 0 } } };
+      c.assessments.push(mk);
+      ev = C.evaluate(cat, c, ['HJ1'], ['s2']);
+      const m1 = ev.cell('s2', 'M-K1');
+      ok('Auswertung: Nachschreibtermin zählt mit seinen Punkten, kein Doppel', m1.got === 9 && m1.max === 10 && m1.tests === 1 && ev.tests === 1);
+
+      // Zweiter Test im 2. HJ; Schuljahr summiert
+      c.assessments.push({ id: 't2', kind: 'test', half: 'HJ2', cat: 'other', name: 'KT 2', weight: 1, ungraded: true, test: { tasks: [task('c1', 10, { competencies: ['M-K1'] })], results: { s1: { scores: { c1: 3 } } } } });
+      const y = C.evaluate(cat, c, ['HJ1', 'HJ2'], ['s1']).cell('s1', 'M-K1');
+      ok('Auswertung: Schuljahr summiert beide Halbjahre', y.got === 12 && y.max === 20 && y.pct === 60 && y.tests === 2);
+      ok('Kompetenztest: nicht gewertet + Kompetenz', C.isCompetencyTest(c.assessments[2]) && !C.isCompetencyTest(t1) && C.testHasCompetencies(t1));
+
+      // Stufengrenzen aus dem Katalog
+      cat.stufen = { teilweise: 40, sicher: 60 };
+      ok('Stufe: Grenzen je Katalog', C.stufeOf(cat, 60) === 'sicher' && C.stufeOf(cat, 59) === 'teilweise' && C.stufeOf(cat, 39) === 'noch' && C.stufeOf(null, 80) === 'sicher');
+
+      // Getrennt bewertete Teile: Teilstatus „fehlt“ lässt nur diesen Teil weg
+      const db2 = M.newDb();
+      const cat2 = C.addFromTemplate(db2, 'mathe-sek1');
+      const c2 = withCourse(db2, [task('p1', 4, { partId: 'A', competencies: ['M-K1'] }), task('p2', 4, { partId: 'B', competencies: ['M-K1'] })], 'mathe-sek1');
+      Object.assign(c2.assessments[0].test, { parts: [{ id: 'A', name: 'Teil A' }, { id: 'B', name: 'Teil B' }], partMode: 'separate' });
+      c2.assessments[0].test.results = { s1: { scores: { p1: 3 }, partStatus: { B: 'fehlt' } } };
+      const pc = C.evaluate(cat2, c2, ['HJ1'], ['s1']).cell('s1', 'M-K1');
+      ok('Auswertung: Teilstatus fehlt nur für den Teil', pc.got === 3 && pc.max === 4);
+    }
   } catch (e) {
     fails++;
     lines.push('FAIL Ausnahme: ' + (e && e.stack || e));

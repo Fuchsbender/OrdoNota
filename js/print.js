@@ -820,7 +820,7 @@
         )
       );
     }
-    const list = c.assessments.filter((a) => a.half === half && !G.isMakeup(c, a));
+    const list = c.assessments.filter((a) => a.half === half && !G.isMakeup(c, a) && !NM.competencies.isCompetencyTest(a)); // 2.11: Kompetenztests ohne Note
     const ka = list.filter((a) => a.cat === 'ka').sort((a, b) => (a.date || '').localeCompare(b.date || ''));
     const other = list.filter((a) => a.cat === 'other').sort((a, b) => (a.date || '').localeCompare(b.date || ''));
     const showKa = Number(c.wKa) > 0 || ka.length > 0;
@@ -907,7 +907,7 @@
   function studentSheet(c, s, halves, o) {
     const level = G.courseLevel(c);
     const sections = halves.map((half) => {
-      const list = c.assessments.filter((a) => a.half === half && !G.isMakeup(c, a)).sort((a, b) => (a.cat === b.cat ? (a.date || '').localeCompare(b.date || '') : a.cat === 'ka' ? -1 : 1));
+      const list = c.assessments.filter((a) => a.half === half && !G.isMakeup(c, a) && !NM.competencies.isCompetencyTest(a)).sort((a, b) => (a.cat === b.cat ? (a.date || '').localeCompare(b.date || '') : a.cat === 'ka' ? -1 : 1));
       const r = G.halfResult(c, half, s.id);
       const parts = [h('h2', null, half)];
       if (o.grades) {

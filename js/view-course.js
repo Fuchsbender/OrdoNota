@@ -709,7 +709,7 @@
           : null
       ),
       NM.ui.tabChecks(
-        (id) => NM.app.tabOn(course, id),
+        (id) => NM.app.tabOn(course, id, true),
         (id, on) => {
           course.tabs = course.tabs || {};
           if (on === (def[id] !== false)) delete course.tabs[id];
@@ -718,7 +718,10 @@
           NM.app.commit({ render: false });
           NM.app.renderShell();
         },
-        (id) => (course.tabs && typeof course.tabs[id] === 'boolean' ? h('span', { class: 'muted small', title: 'Weicht vom Standard in den Einstellungen ab' }, ' ◆') : null)
+        (id) => [
+          course.tabs && typeof course.tabs[id] === 'boolean' ? h('span', { class: 'muted small', title: 'Weicht vom Standard in den Einstellungen ab' }, ' ◆') : null,
+          id === 'competencies' && !NM.competencies.forCourse(db, course) ? h('span', { class: 'muted small' }, ' (braucht einen Kompetenzkatalog)') : null,
+        ]
       ),
       h('p', { class: 'muted small' }, 'Ausgeschaltete Reiter verschwinden nur aus der Reiterleiste; Noten daraus bleiben gespeichert und zählen weiter. Standard für alle Kurse: Einstellungen → Reiter.')
     );

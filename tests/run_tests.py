@@ -812,7 +812,7 @@ def run_print_head_check(br, base):
             out.reject = P.logo.startsWith('data:image/png');
             // Kopf in den Druckarten
             const c = db.courses[0], half = NM.app.currentHalf(c);
-            const test = c.assessments.find((a) => a.kind === 'test' && a.half === half) || c.assessments.find((a) => a.kind === 'test');
+            const test = c.assessments.find((a) => a.kind === 'test' && a.half === half && !a.ungraded) || c.assessments.find((a) => a.kind === 'test');
             const epo = c.assessments.find((a) => a.kind === 'epo');
             const pres = c.assessments.find((a) => a.kind === 'pres');
             const root = () => document.getElementById('print-root');
@@ -1225,7 +1225,7 @@ def run_competency_check(br, base):
         const wait = (ms = 250) => new Promise((r) => setTimeout(r, ms));
         const C = NM.competencies, db = NM.app.db(), out = {};
         const c = db.courses[0];
-        const a = c.assessments.find((x) => x.kind === 'test' && !x.makeupOf);
+        const a = c.assessments.find((x) => x.kind === 'test' && !x.makeupOf && !x.ungraded);
         // Raster im Test
         NM.app.select({ courseId: c.id, tab: 'tests' }); await wait();
         const card = document.querySelector('[data-comp-card]');
@@ -1270,7 +1270,7 @@ def run_competency_check(br, base):
         document.querySelector('[data-comp-catalog="mathe-sek1"] .icon-btn').click(); await wait();
         const dlg = document.querySelector('dialog .comp-edit');
         out.dialog = !!dlg && dlg.querySelectorAll('[data-comp-entry]').length === 12;
-        out.fixedId = !!dlg.querySelector('[data-comp-entry="M-K6"] .comp-id.fixed') && !!dlg.querySelector('[data-comp-entry="M-K5"] input.comp-id');
+        out.fixedId = !!dlg.querySelector('[data-comp-entry="M-K6"] .comp-id.fixed') && !!dlg.querySelector('[data-comp-entry="M-K7"] input.comp-id');
         const v0 = cat.version;
         dlg.querySelector('[data-comp-add="K"]').click(); await wait();
         out.add = !!document.querySelector('dialog [data-comp-entry="M-K8"]') && cat.version === v0 + 1;
@@ -1308,7 +1308,7 @@ def run_tests_view_check(br, base):
         window.print = () => {};
         const c = NM.app.db().courses[0];
         NM.app.select({ courseId: c.id, tab: 'tests' }); await wait();
-        const a = c.assessments.find((x) => x.kind === 'test');
+        const a = c.assessments.find((x) => x.kind === 'test' && !x.ungraded);
         const out = { wide: document.getElementById('view').getBoundingClientRect().width > 1600 };
         const boxes = () => [...document.querySelectorAll('[data-focus-key^="ts-signed-"]')];
         out.ka = [a.cat, boxes().length];
@@ -1337,7 +1337,7 @@ def run_task_add_click_check(br, base):
         const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
         const c = NM.app.db().courses[0];
         NM.app.select({ courseId: c.id, tab: 'tests' }); await wait();
-        const a = c.assessments.find((x) => x.kind === 'test');
+        const a = c.assessments.find((x) => x.kind === 'test' && !x.ungraded);
         window.__t = a.test;
         const inp = document.querySelector('.task-max');
         inp.focus(); inp.select();
@@ -2082,6 +2082,96 @@ def qr_lesen(art, inhalt, endung):
         shutil.rmtree(tmp, ignore_errors=True)
 
 
+def run_competency_tab_check(br, base):
+    print("Reiter „Kompetenzen“, Umschalter in „Tests“, Kompetenztests in der Notenübersicht (2.11):")
+    br.call("Emulation.setDeviceMetricsOverride", width=1440, height=1000, deviceScaleFactor=1, mobile=False)
+    br.open(f"{base}/index.html?demo")
+    br.wait(APP_READY, 30)
+    br.errors = []
+    res = br.eval("""(async () => {
+        const wait = (ms = 250) => new Promise((r) => setTimeout(r, ms));
+        const db = NM.app.db(), out = {};
+        const c = db.courses.find((x) => x.klasse === '8b'), mss = db.courses.find((x) => x !== c);
+        const tabs = () => [...document.querySelectorAll('.tabs .tab')].map((b) => b.dataset.tab);
+        NM.app.state.ui.half[c.id] = 'HJ1';
+        NM.app.select({ courseId: c.id, tab: 'competencies' }); await wait();
+        out.tab = [tabs().includes('competencies'), document.querySelector('.tabs .tab.active').dataset.tab];
+        const cols = () => [...document.querySelectorAll('[data-comp-grid] thead th[data-comp-col]')].map((th) => th.dataset.compCol).join();
+        out.cols = cols();
+        out.groups = [...document.querySelectorAll('[data-comp-grid] thead th.group')].map((th) => th.textContent).join('|');
+        const rows = document.querySelectorAll('[data-comp-grid] tbody tr');
+        out.rows = rows.length === c.students.filter((s) => s.active !== false).length;
+        // Erste Person: KA 1 + Kompetenztest, M-L1 = (4+6) aus KA 1 + (2+4) aus dem Kompetenztest
+        const s0 = c.students[0];
+        const ev = NM.competencies.evaluate(NM.competencies.forCourse(db, c), c, ['HJ1'], [s0.id]).cell(s0.id, 'M-L1');
+        const td = document.querySelector(`[data-comp-grid] tr[data-student="${s0.id}"] td[data-comp-cell="M-L1"]`);
+        out.cell = [ev.max === 16, ev.tests === 2, td.dataset.stufe === ev.stufe, td.querySelector('.comp-pct').textContent === String(ev.pct), !!td.querySelector('.stufe-mark svg'), td.title.includes('von 16 Punkten aus 2 Tests')];
+        // Person ohne Eintrag im Kompetenztest: M-K2 nur dort → „–“
+        const s5 = c.students[5];
+        const dash = document.querySelector(`[data-comp-grid] tr[data-student="${s5.id}"] td[data-comp-cell="M-K2"]`);
+        out.dash = dash.classList.contains('comp-empty') && dash.textContent.trim() === '–';
+        out.missing = document.querySelector('[data-comp-missing]').textContent;
+        // Sortieren nach einer Kompetenz (aufsteigend: schwächste zuerst)
+        document.querySelector('[data-comp-grid] th[data-comp-col="M-K1"] .sort-btn').click(); await wait();
+        const pcts = [...document.querySelectorAll('[data-comp-grid] td[data-comp-cell="M-K1"] .comp-pct')].map((x) => Number(x.textContent));
+        out.sort = pcts.every((v, i) => !i || pcts[i - 1] <= v);
+        delete NM.app.state.ui.sort.comp;
+        // Zeitraum: HJ2 leer, Schuljahr wie HJ1 (im HJ2 noch keine Kompetenzen)
+        document.querySelector('[data-comp-period] [data-seg="HJ2"]').click(); await wait();
+        out.hj2 = !document.querySelector('[data-comp-grid]') && !!document.querySelector('#view .sd-empty');
+        document.querySelector('[data-comp-period] [data-seg="Jahr"]').click(); await wait();
+        out.year = [cols() === out.cols, document.querySelector('[data-comp-period] .seg.active').dataset.seg, document.querySelector('[data-comp-grid] h2').textContent];
+        NM.app.state.ui.half[c.id] = 'HJ1';
+        // Kurs ohne Katalog: kein Reiter, Haken mit Hinweis
+        NM.app.select({ courseId: mss.id, tab: 'competencies' }); await wait();
+        out.mss = [tabs().includes('competencies'), document.querySelector('.tabs .tab.active').dataset.tab];
+        NM.app.select({ tab: 'course' }); await wait();
+        const chk = document.querySelector('[data-tab-check="competencies"]');
+        out.mssCheck = [chk.checked, chk.closest('label').textContent.includes('braucht einen Kompetenzkatalog')];
+        // Umschalter im Reiter „Tests“
+        NM.app.select({ courseId: c.id, tab: 'tests' }); await wait();
+        const items = () => [...document.querySelectorAll('.picker-item')].map((b) => b.textContent);
+        const seg = (id) => document.querySelector(`[data-test-filter] [data-seg="${id}"]`);
+        out.filterAll = [!!document.querySelector('[data-test-filter]'), seg('all').classList.contains('active'), items().filter((t) => !t.startsWith('+')).length];
+        seg('comp').click(); await wait();
+        out.filterComp = [items().filter((t) => !t.startsWith('+')).length, items()[0].startsWith('Kompetenztest Terme'), document.querySelector('.picker-item.active').textContent.startsWith('Kompetenztest Terme')];
+        seg('graded').click(); await wait();
+        out.filterGraded = items().filter((t) => !t.startsWith('+')).every((t) => !t.startsWith('Kompetenztest'));
+        // „nicht gewertet“ abhaken → Umschalter zurück auf „Alle“
+        const box = [...document.querySelectorAll('.field-check')].find((l) => l.textContent.includes('nicht gewertet')).querySelector('input');
+        box.checked = true; box.dispatchEvent(new Event('change')); await wait();
+        out.keep = [NM.app.state.ui.testFilter[c.id] === undefined, seg('all').classList.contains('active')];
+        box.checked = false; box.dispatchEvent(new Event('change')); await wait();
+        // HJ2 ohne Kompetenztest: kein Umschalter
+        NM.app.setHalf(c, 'HJ2'); await wait();
+        out.noFilter = !document.querySelector('[data-test-filter]');
+        NM.app.setHalf(c, 'HJ1'); await wait();
+        // Notenübersicht: Kompetenztest keine Spalte, Schalter blendet ihn grau ein
+        NM.app.select({ tab: 'overview' }); await wait();
+        const heads = () => [...document.querySelectorAll('.overview-table .assess-head')].map((th) => th.textContent);
+        out.ov = [heads().some((t) => t.includes('Kompetenztest')), !!document.querySelector('[data-ov-comp]')];
+        const raw = () => [...document.querySelectorAll('.overview-table tbody tr')].map((tr) => tr.textContent).join('|');
+        const before = raw();
+        const t = document.querySelector('[data-ov-comp]'); t.checked = true; t.dispatchEvent(new Event('change')); await wait();
+        const head = [...document.querySelectorAll('.overview-table .assess-head')].find((th) => th.textContent.includes('Kompetenztest'));
+        out.ovOn = [!!head, !!head && head.classList.contains('ungraded'), NM.app.state.ui.ovComp[c.id] === true];
+        // Ausdruck der Notenliste ohne Kompetenztest
+        const origPrint = window.print; window.print = () => {};
+        try { NM.print.course(c, 'HJ1'); await wait(); } finally { window.print = origPrint; }
+        out.print = document.getElementById('print-root').textContent.includes('KA 1') && !document.getElementById('print-root').textContent.includes('Kompetenztest Terme');
+        document.getElementById('print-root').innerHTML = '';
+        const t2 = document.querySelector('[data-ov-comp]'); t2.checked = false; t2.dispatchEvent(new Event('change')); await wait();
+        out.ovOff = [raw() === before, NM.app.state.ui.ovComp[c.id] === undefined];
+        return out; })()""")
+    ok = bool(res) and res["tab"] == [True, "competencies"] and res["cols"] == "M-K1,M-K2,M-K3,M-K4,M-K5,M-K6,M-L1,M-L3" \
+        and res["groups"] == "Prozessbezogen|Inhaltlich (Leitideen)" and res["rows"] and all(res["cell"]) and res["dash"] \
+        and res["missing"].startswith("Noch in keinem Test: M-K7, M-L2, M-L4, M-L5") and res["sort"] and res["hj2"] \
+        and res["year"] == [True, "Jahr", "Schuljahr"] and res["mss"] == [False, "overview"] and res["mssCheck"] == [True, True] \
+        and res["filterAll"] == [True, True, 3] and res["filterComp"] == [1, True, True] and res["filterGraded"] and res["keep"] == [True, True] \
+        and res["noFilter"] and res["ov"] == [False, True] and res["ovOn"] == [True, True, True] and res["print"] and res["ovOff"] == [True, True]
+    report("Kompetenzen: Raster Person × Kompetenz, Zeitraum, ohne Katalog kein Reiter, Umschalter in Tests, Notenübersicht/Druck ohne Kompetenztests", ok and not br.errors, str(res) + "; ".join(br.errors))
+
+
 def run_scripto_check(br, base):
     print("OrdoScripto (IDs, Import-CSV, Trennblätter mit QR-Code, zxing-cpp):")
     # 1. Modulmatrizen aus der App: mehrere Inhalte, Versionen 1–10, alle Masken
@@ -2313,7 +2403,7 @@ def run_tabs_check(br, base):
         [...document.querySelectorAll('button')].find((b) => b.textContent === 'Wie Standard').click(); await wait();
         out.reset = [c2.tabs === undefined, tabs().includes('Notenübersicht')];
         return out; })()""")
-    ok = bool(res) and res["all"] == 10 and res["def"] == [False, False, 8] and res["own"] == ['{"seating":true,"pres":false}', True, False, 2] \
+    ok = bool(res) and res["all"] == 11 and res["def"] == [False, False, 9] and res["own"] == ['{"seating":true,"pres":false}', True, False, 2] \
         and res["fallback"] == ["Notenübersicht", True, False] and res["other"] == [False, True] and res["noOverview"] == "Kurs & Schüler" and res["reset"] == [True, True]
     report("Reiter: Standard in Einstellungen, Abweichung je Kurs, Ersatzreiter, Sprunglinks, „Wie Standard“", ok and not br.errors, str(res) + "; ".join(br.errors))
 
@@ -2352,10 +2442,10 @@ def run_tab_order_check(br, base):
         [...document.querySelectorAll('.tab-order button')].find((b) => b.textContent === 'Standardreihenfolge').click(); await wait();
         out.reset = [tabs().join(), db.settings.tabOrder.length];
         return out; })()""")
-    std = "course,tests,epo,pres,draw,random,groups,overview,seating,settings"
-    up = "course,tests,epo,pres,draw,overview,random,groups,seating,settings"
-    drag = "course,seating,tests,epo,pres,draw,overview,random,groups,settings"
-    ok = bool(res) and res["start"] == std and res["up"] == [up, up] and res["checks"] == "tests,epo,pres,draw,overview,random,groups,seating" \
+    std = "course,tests,epo,pres,draw,random,groups,overview,competencies,seating,settings"
+    up = "course,tests,epo,pres,draw,overview,random,groups,competencies,seating,settings"
+    drag = "course,seating,tests,epo,pres,draw,overview,random,groups,competencies,settings"
+    ok = bool(res) and res["start"] == std and res["up"] == [up, up] and res["checks"] == "tests,epo,pres,draw,overview,random,groups,competencies,seating" \
         and res["drag"] == drag and res["off"] == drag.replace("pres,", "") and res["on"] == drag and res["reset"] == [std, 0]
     report("Reiter: ▲▼ in den Einstellungen, Ziehen in der Reiterleiste, Haken in derselben Reihenfolge, Standardreihenfolge", ok and not br.errors, str(res) + "; ".join(br.errors))
 
@@ -2712,7 +2802,7 @@ def run_parts_check(br, base):
         const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
         window.print = () => {};
         const c = NM.app.db().courses[0];
-        const a = c.assessments.find((x) => x.kind === 'test');
+        const a = c.assessments.find((x) => x.kind === 'test' && !x.ungraded);
         const t = a.test;
         NM.app.state.ui.testId[c.id] = a.id;
         NM.app.select({ courseId: c.id, tab: 'tests' }); await wait();
@@ -3227,7 +3317,7 @@ def run_groups_tab_check(br, base):
         out.fromSet = [gp.pres.groups.length, gp.pres.groups[1].topic];
         NM.app.select({ tab: 'groups' }); await wait();
         return out; })()""")
-    ok = bool(res) and res["start"] == ["Stationenlernen Prozent", 4, True, 10] and res["created"] == [True, "4,4,4", 12, "mixed", True, 0] \
+    ok = bool(res) and res["start"] == ["Stationenlernen Prozent", 4, True, 11] and res["created"] == [True, "4,4,4", 12, "mixed", True, 0] \
         and res["away"] == [False, 11, True] and res["lock"] == [True, True, 3] and res["click"] == [True, True] and res["drag"] == [True] * 7 \
         and res["edit"] == ["Plakat gestalten", "Team Rot"] and res["rule"] == [2, True] and res["ruleRoll"] == 0 and res["beamer"] == [True] * 4 and res["beamerFit"] == [True, True] and res["beamerToggle"] == [True, True, True, True, False, True] and res["beamerBack"] == [0, True] \
         and res["menu"] == ["list", "cards"] and res["print"] == [True] * 3 and res["puzzle"] == [True] * 7 and res["view"] == [True, True, True, True, False] and res["viewBack"] == [0, True] \
@@ -3706,7 +3796,7 @@ def main():
         run_tests_view_check, run_competency_check, run_task_add_click_check, run_makeup_check, run_verbal_check, run_ausgleich_check, run_notes_check, run_foerder_check, run_people_check, run_people_page_check, run_unreachable_check,
         run_tabs_check, run_tab_order_check, run_overview_fold_check, run_settings_layout_check,
         run_theme_check, run_demo_link_check, run_old_db_check, run_parts_check, run_print_menu_check,
-        run_pres_check, run_group_check, run_groups_tab_check, run_moodle_check, run_moodle_comp_check, run_scripto_check,
+        run_pres_check, run_group_check, run_groups_tab_check, run_moodle_check, run_moodle_comp_check, run_competency_tab_check, run_scripto_check,
         run_decrypt_tool, run_launcher_check,
     ]
     srv, base = serve()

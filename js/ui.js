@@ -26,6 +26,28 @@
     );
   }
 
+  /** Allgemeiner Umschalter (wie halfSwitch): options = [{ id, label, title? }], onPick(id). */
+  function segSwitch(ariaLabel, options, cur, onPick, attrs = {}) {
+    return h(
+      'div',
+      Object.assign({ class: 'segmented', role: 'group', 'aria-label': ariaLabel }, attrs),
+      options.map((o) =>
+        h('button', { class: 'seg' + (o.id === cur ? ' active' : ''), 'aria-pressed': o.id === cur ? 'true' : 'false', title: o.title || null, 'data-seg': o.id, onclick: () => onPick(o.id) }, o.label)
+      )
+    );
+  }
+
+  // Zeichen der Kompetenzstufen (seit 2.11): eigene SVGs im Strich der Tabler-Symbole, Farbe über currentColor
+  const STUFE_PATHS = {
+    sicher: '<path d="M5 12l5 5l10 -10"/>',
+    teilweise: '<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/>',
+    noch: '<path d="M17 7l-10 10"/><path d="M7 7l10 10"/>',
+  };
+  const STUFE_LABEL = { sicher: 'sicher', teilweise: 'teilweise', noch: 'noch nicht' };
+  function stufeMark(stufe) {
+    return h('span', { class: 'stufe-mark stufe-' + stufe, 'aria-hidden': 'true', html: `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">${STUFE_PATHS[stufe]}</svg>` });
+  }
+
   /** Anzeige-Badge einer Note. */
   function gradeBadge(p, level, extra) {
     if (p === null || p === undefined) return h('span', { class: 'grade-badge empty' }, '–');
@@ -397,6 +419,9 @@
   NM.ui = {
     tabChecks,
     halfSwitch,
+    segSwitch,
+    stufeMark,
+    STUFE_LABEL,
     gradeBadge,
     valueText,
     gradeInput,
