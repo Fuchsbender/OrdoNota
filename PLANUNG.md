@@ -657,7 +657,7 @@ Probe mit 12 Stunden (max. 48 P), „0 = befriedigend“: immer `0` (24 P) → 0
 
 **Ablauf je Schritt:** mit Oberfläche zuerst `/impeccable shape` und bestätigen lassen → umsetzen → Detektor, `polish` (bei Import/Formularen `harden`) → Tests (`code-testlauf`) → Doku (DOKUMENTATION.md mit 24, 25.1, 26.4; README) → hier abhaken → lokaler Commit. Pushen nur auf Ansage nach `code-pruefen`.
 
-## AJ) Personen nach Kurs filtern – erledigt in 2.14.0 (geklärt am 24.11.2026)
+## AJ) Personen nach Kurs filtern – erledigt in 2.14.0 (geklärt am 24.11.2026, veröffentlicht als v2.14.0)
 
 - [x] Auf der Seite „Personen“ ersetzt eine Auswahl den Umschalter „Alle | Ohne Kurs“: „Alle“, „Ohne Kurs“, darunter die Kurse aller Schuljahre (je Schuljahr gruppiert, das aktuelle zuerst), jeweils mit Anzahl.
 - [x] Nur für die Sitzung, Voreinstellung „Alle“. Die Namenssuche wirkt zusätzlich, Reihenfolge alphabetisch wie sonst. Nichts gespeichert, Schema bleibt 5.
