@@ -295,6 +295,39 @@
       ok('Register: Kompetenz nur im ersten Jahr', ph[0].rows[1].entry.id === 'M-L3' && !ph[0].rows[1].perYear.y2);
       ok('Register: ohne Punkte leer', C.personHistory(db, [{ course: c, student: { id: 's9' } }]).length === 0);
     }
+
+    // ---------- Kompetenzbogen, Moodle-Block, Förderplan (2.13) ----------
+    {
+      const db = M.newDb();
+      const cat = C.addFromTemplate(db, 'mathe-sek1');
+      const c = withCourse(db, [task('a1', 4, { competencies: ['M-K1'] }), task('a2', 6, { competencies: ['M-K1', 'M-L3'] })], 'mathe-sek1');
+      const t1 = c.assessments[0];
+      t1.test.results = { s1: { scores: { a1: 2, a2: 6 } }, s2: { scores: { a1: 1, a2: 2 } }, s3: { status: 'fehlt' } };
+      // s1: M-K1 8/10 = 80 sicher, M-L3 6/6 sicher; s2: M-K1 3/10 noch, M-L3 2/6 noch
+      c.assessments.push({ id: 't2', kind: 'test', half: 'HJ1', cat: 'other', name: 'KT 2', date: '2026-11-01', weight: 1, ungraded: true, test: { tasks: [task('b1', 10, { competencies: ['M-K1'] })], results: { s1: { scores: { b1: 2 } } } } });
+      // s1 M-K1 jetzt 10/20 = 50 teilweise
+      const sh = C.sheet(cat, c, ['HJ1'], 's1');
+      ok('Bogen: sicher → kann, sonst → weiter', sh.kann.map((x) => x.entry.id).join() === 'M-L3' && sh.weiter.map((x) => x.entry.id + ':' + x.stufe).join() === 'M-K1:teilweise');
+      ok('Bogen: Bereich mit Namen', sh.kann[0].bereich === cat.bereiche.find((b) => b.kompetenzen.some((k) => k.id === 'M-L3')).name && sh.kann[0].bereich !== '');
+      const e0 = C.sheet(cat, c, ['HJ1'], 's9');
+      ok('Bogen: ohne Punkte leer', !e0.kann.length && !e0.weiter.length);
+
+      const tc = C.testCompetencies(cat, c, t1, 's1');
+      ok('Moodle-Block: nur dieser Test, Katalogreihenfolge', tc.map((x) => `${x.entry.id}:${x.got}/${x.max}:${x.stufe}`).join() === 'M-K1:8/10:sicher,M-L3:6/6:sicher');
+      ok('Moodle-Block: „fehlt“ leer', C.testCompetencies(cat, c, t1, 's3').length === 0);
+      const mk = M.newMakeup(c, t1);
+      mk.test.results = { s3: { scores: { a1: 4, a2: 1 } } };
+      c.assessments.push(mk);
+      ok('Moodle-Block: Original zählt nicht den Nachschreibtermin', C.testCompetencies(cat, c, t1, 's3').length === 0);
+      ok('Moodle-Block: Nachschreibtermin mit eigenen Punkten', C.testCompetencies(cat, c, mk, 's3').map((x) => `${x.entry.id}:${x.got}/${x.max}`).join() === 'M-K1:5/10,M-L3:1/6');
+      ok('Moodle-Block: ohne Katalog leer', C.testCompetencies(null, c, t1, 's1').length === 0);
+
+      const y = db.years[0].id;
+      const gaps = C.openGaps(db, [{ course: c, student: { id: 's2' } }], y);
+      ok('Förderplan: „noch nicht“ im Schuljahr mit Fach', gaps.map((g) => g.entry.id).join() === 'M-K1,M-L3' && gaps[0].fach === (cat.fach || cat.name));
+      ok('Förderplan: anderes Schuljahr leer', C.openGaps(db, [{ course: c, student: { id: 's2' } }], 'y-andere').length === 0);
+      ok('Förderplan: teilweise/sicher kein Hinweis', C.openGaps(db, [{ course: c, student: { id: 's1' } }], y).length === 0);
+    }
   } catch (e) {
     fails++;
     lines.push('FAIL Ausnahme: ' + (e && e.stack || e));

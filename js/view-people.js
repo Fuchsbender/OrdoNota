@@ -623,6 +623,7 @@
         h('label', { class: 'field fp-date' }, h('span', null, mode === 'edit' ? 'Datum der Fassung' : 'Datum der neuen Fassung'), datum),
         h('fieldset', { class: 'na-fieldset' }, h('legend', null, 'Förderschwerpunkte'), h('div', { class: 'fp-sp' }, boxes.map((b) => h('label', { class: 'check' }, b.cb, ' ', b.l))), sonst),
         h('div', { class: 'fp-range' }, h('label', { class: 'field' }, h('span', null, 'Zeitraum von (optional)'), von), h('label', { class: 'field' }, h('span', null, 'bis (optional)'), bis)),
+        mode === 'edit' ? null : gapsHint(db, p, ziele),
         h('label', { class: 'field' }, h('span', null, 'Ziele'), ziele),
         h('label', { class: 'field' }, h('span', null, 'Maßnahmen'), massnahmen),
         h('p', { class: 'muted small' }, 'Der offizielle Plan liegt in der Schulakte. Hier nur die Arbeitsfassung, nie gedruckt, nie auf dem Beamer.')
@@ -639,6 +640,43 @@
     P.setFoerderplan(db, p.id, data());
     NM.app.commit();
     toast(mode === 'continue' ? 'Neue Fassung gespeichert.' : 'Förderplan gespeichert.', 'success');
+  }
+
+  /**
+   * Hinweis aus den Kompetenztests (2.13, PLANUNG AI 14): Kompetenzen mit „noch nicht“ im laufenden
+   * Schuljahr, je Zeile „In Ziele übernehmen“ (hängt eine Zeile an). Nichts wird automatisch eingetragen.
+   */
+  function gapsHint(db, p, ziele) {
+    const year = NM.app.currentYear();
+    const gaps = year ? NM.competencies.openGaps(db, P.entries(db, p.id), year.id) : [];
+    if (!gaps.length) return null;
+    const lineOf = (g) => g.entry.name + (g.fach ? ' (' + g.fach + ')' : '');
+    const btns = [];
+    const sync = () =>
+      btns.forEach(({ b, line }) => {
+        b.disabled = ziele.value.includes(line);
+        b.textContent = b.disabled ? 'Übernommen' : 'In Ziele übernehmen';
+      });
+    const take = (line) => {
+      const v = ziele.value.replace(/\s+$/, '');
+      ziele.value = (v ? v + '\n' : '') + line;
+      sync();
+    };
+    const items = gaps.map((g) => {
+      const line = lineOf(g);
+      const b = h('button', { type: 'button', class: 'btn btn-sm', 'data-fp-gap': g.entry.id, onclick: () => take(line) }, 'In Ziele übernehmen');
+      btns.push({ b, line });
+      return h('li', null, h('span', null, h('span', { class: 'fp-gap-sym', 'aria-hidden': 'true' }, '✗ '), g.entry.name, g.fach ? h('span', { class: 'muted' }, ' · ' + g.fach) : null), b);
+    });
+    ziele.addEventListener('input', sync);
+    sync();
+    return h(
+      'details',
+      { class: 'fp-gaps', 'data-fp-gaps': '' },
+      h('summary', null, `Aus den Kompetenztests: ${gaps.length} × noch nicht`),
+      h('p', { class: 'muted small' }, `Stand im Schuljahr ${year.name}, über alle Kurse mit Kompetenzkatalog. Übernehmen hängt eine Zeile an die Ziele an.`),
+      h('ul', { class: 'plain fp-gap-list' }, items)
+    );
   }
 
   /** Zwei Fassungen nebeneinander (nur Ansicht). Vorgewählt: links die vorherige, rechts die geltende. */

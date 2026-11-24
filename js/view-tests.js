@@ -1888,9 +1888,18 @@
     const withResult = M.activeStudents(course).filter((s) => G.testResult(a.test, s.id, level).score !== null);
     const who = h('select', { class: 'input' }, h('option', { value: '' }, `Alle (${withResult.length}, je eine Seite)`), withResult.map((s) => h('option', { value: s.id }, M.studentName(s))));
     const grade = h('input', { type: 'checkbox', checked: true });
+    // Kompetenzen (2.13): nur wenn der Kurs einen Katalog hat und der Test Kompetenzen trägt
+    const hasComp = !!NM.competencies.forCourse(NM.app.state.db, course) && NM.competencies.testHasCompetencies(a);
+    const comp = h('input', { type: 'checkbox', checked: true, 'data-moodle-comp': '' });
     const v = await modal({
       title: 'Moodle-Rückmeldung drucken',
-      body: h('div', null, h('label', { class: 'field' }, h('span', null, 'Wer'), who), h('label', { class: 'check' }, grade, ' Note mit ausdrucken')),
+      body: h(
+        'div',
+        null,
+        h('label', { class: 'field' }, h('span', null, 'Wer'), who),
+        h('label', { class: 'check' }, grade, ' Note mit ausdrucken'),
+        hasComp ? h('label', { class: 'check', title: 'Je Kompetenz Zeichen und Punkte aus diesem Test, unter den Fragen' }, comp, ' Kompetenzen in diesem Test') : null
+      ),
       buttons: [
         { label: 'Abbrechen', value: null },
         { label: [icon('printer'), ' Drucken'], value: 'ok', kind: 'primary' },
@@ -1898,7 +1907,7 @@
     });
     if (v !== 'ok') return;
     if (!withResult.length) return toast('Noch keine Ergebnisse zum Drucken.', 'error');
-    NM.print.moodle(course, a, { sid: who.value || null, withGrade: grade.checked });
+    NM.print.moodle(course, a, { sid: who.value || null, withGrade: grade.checked, withComp: hasComp && comp.checked });
   }
 
   // ---------- OrdoScripto ----------

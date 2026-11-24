@@ -546,12 +546,13 @@
   /**
    * Punkte einer Person je Test und Kompetenz: [{ testId, src (gezählter Termin), komp, got, max }],
    * ein Eintrag je Test und Kompetenz. Regeln siehe evaluate.
+   * @param own true: genau diese Tests (ohne Nachschreibtermin an ihrer Stelle), z. B. für die Moodle-Rückmeldung
    */
-  function items(course, tests, toKomp, sid) {
+  function items(course, tests, toKomp, sid, own = false) {
     const G = NM.grades;
     const out = [];
     for (const a of tests) {
-      const src = G.countingFor(course, a, sid);
+      const src = own ? a : G.countingFor(course, a, sid);
       const test = src.test;
       const r = (test.results || {})[sid];
       if (!r || SKIP_STATUS.has(r.status)) continue;
@@ -667,6 +668,58 @@
     });
   }
 
+  // ---------- Für Schüler und Förderplan (seit 2.13, PLANUNG AI 13–14) ----------
+
+  /**
+   * Kompetenzbogen einer Person im Kurs: Stand je Kompetenz im Zeitraum, getrennt in
+   * „Das kannst du schon“ (sicher) und „Daran arbeitest du weiter“ (teilweise, noch nicht).
+   * @returns { kann: [{ entry, bereich, stufe }], weiter: [...] } in Katalogreihenfolge
+   */
+  function sheet(cat, course, halves, sid) {
+    const names = new Map(((cat && cat.bereiche) || []).map((b) => [b.id, b.name || '']));
+    const out = { kann: [], weiter: [] };
+    for (const r of history(cat, course, halves, sid)) {
+      const x = { entry: r.entry, bereich: names.get(r.entry.bereich) || '', stufe: r.total.stufe };
+      (x.stufe === 'sicher' ? out.kann : out.weiter).push(x);
+    }
+    return out;
+  }
+
+  /**
+   * Kompetenzen eines einzelnen Tests (oder Nachschreibtermins) für eine Person, nur mit den Punkten
+   * dieses Tests. Regeln wie evaluate (Status, leere Aufgaben).
+   * @returns [{ entry, got, max, pct, stufe }] in Katalogreihenfolge, leer ohne Katalog oder Punkte
+   */
+  function testCompetencies(cat, course, a, sid) {
+    if (!cat || !testHasCompetencies(a)) return [];
+    const all = entries(cat);
+    const toKomp = new Map(all.map((e) => [e.id, e.level === 'teil' ? e.parent : e.id]));
+    const per = new Map(items(course, [a], toKomp, sid, true).filter((it) => it.max > 0).map((it) => [it.komp, it]));
+    return all
+      .filter((e) => e.level === 'komp' && per.has(e.id))
+      .map((entry) => {
+        const it = per.get(entry.id);
+        const c = sumCell(cat, it);
+        return { entry, got: c.got, max: c.max, pct: c.pct, stufe: c.stufe };
+      });
+  }
+
+  /**
+   * Hinweis im Förderplan: Kompetenzen mit Stand „noch nicht“ im Schuljahr, über alle Kurse der Person.
+   * @param list Kurseinträge der Person [{ course, student }]
+   * @returns [{ entry, cat, fach }] je Katalog in Katalogreihenfolge
+   */
+  function openGaps(db, list, yearId) {
+    const out = [];
+    for (const g of personHistory(db, (list || []).filter((x) => x.course.yearId === yearId))) {
+      for (const r of g.rows) {
+        const c = r.perYear[yearId];
+        if (c && c.stufe === 'noch') out.push({ entry: r.entry, cat: g.cat, fach: g.cat.fach || g.cat.name || '' });
+      }
+    }
+    return out;
+  }
+
   /** Templates für die Prüfung gegen vorlagen/*.json (Test). */
   const templateFile = (key) => {
     const tpl = TEMPLATES.find((t) => t.key === key);
@@ -718,6 +771,9 @@
     isCompetencyTest,
     testHasCompetencies,
     evaluate,
+    sheet,
+    testCompetencies,
+    openGaps,
     history,
     personHistory,
     templateFile,

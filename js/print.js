@@ -357,7 +357,7 @@
   const MOODLE_MARK = { ok: ['✓', 'richtig'], part: ['◐', 'teilweise'], wrong: ['✗', 'falsch'], none: ['–', 'keine Antwort'] };
 
   /** Je Person eine Seite: Ergebnis oben, darunter Frage, Antwort, Lösung und Punkte; Note nur mit withGrade. */
-  function moodle(course, a, { sid = null, withGrade = true } = {}) {
+  function moodle(course, a, { sid = null, withGrade = true, withComp = false } = {}) {
     const level = G.courseLevel(course);
     const t = a.test;
     const answers = NM.moodle.answersOf(t);
@@ -365,6 +365,7 @@
     const students = M.activeStudents(course).filter((s) => (!sid || s.id === sid) && G.testResult(t, s.id, level).score !== null);
     // Markierung nach Punkten (auch in Moodle von Hand korrigierte); „keine Antwort“ nur ohne Punkte
     const mark = (v, task, x) => (v === undefined || v === null || v === '' ? '' : Number(v) >= Number(task.max) ? 'ok' : Number(v) > 0 ? 'part' : x.q && !x.a ? 'none' : 'wrong');
+    const cat = withComp ? NM.competencies.forCourse(NM.app.state.db, course) : null;
     const tile = (label, value, cls) => h('div', { class: 'p-mr-tile' + (cls ? ' ' + cls : '') }, h('span', null, label), h('strong', null, value));
     const pages = students.map((s) => {
       const scores = (t.results[s.id] || {}).scores || {};
@@ -411,6 +412,7 @@
           h('tbody', null, rows)
         ),
         h('div', { class: 'p-mr-legend' }, Object.values(MOODLE_MARK).map(([sym, label]) => h('span', null, h('b', null, sym), ' ', label))),
+        cat ? moodleComp(cat, course, a, s.id) : null,
         h(
           'div',
           { class: 'p-mr-foot' },
@@ -429,6 +431,60 @@
       );
     });
     doPrint(`${a.name} – Moodle-Rückmeldung`, h('div', null, pages));
+  }
+
+  // ---------- Kompetenzen für Schüler (2.13, PLANUNG AI 13) ----------
+
+  const COMP_MARK = { sicher: ['✓', 'sicher', 'ok'], teilweise: ['◐', 'teilweise', 'part'], noch: ['✗', 'noch nicht', 'wrong'] };
+  const compSym = (st) => h('span', { class: 'p-mr-sym', title: COMP_MARK[st][1] }, COMP_MARK[st][0]);
+  const compLegend = () => h('div', { class: 'p-mr-legend' }, Object.values(COMP_MARK).map(([sym, label]) => h('span', null, h('b', null, sym), ' ', label)));
+
+  /** Block „Kompetenzen in diesem Test“: Zeichen, Name, Punkte aus diesem Test. */
+  function moodleComp(cat, course, a, sid) {
+    const list = NM.competencies.testCompetencies(cat, course, a, sid);
+    if (!list.length) return null;
+    return h(
+      'div',
+      { class: 'p-comp p-comp-test', 'data-p-comp-test': '' },
+      h('h2', null, 'Kompetenzen in diesem Test'),
+      h('table', { class: 'p-comp-table' }, h('tbody', null, list.map((c) => h('tr', { class: 'p-mr-' + COMP_MARK[c.stufe][2] }, h('td', { class: 'p-comp-sym' }, compSym(c.stufe)), h('td', null, c.entry.name), h('td', { class: 'p-mr-pts' }, `${fmtScore(c.got)} / ${fmtScore(c.max)}`))))),
+      compLegend()
+    );
+  }
+
+  /**
+   * Kompetenzbogen: je Person eine A4-Seite, „Das kannst du schon“ und „Daran arbeitest du weiter“,
+   * nur Zeichen, keine Prozent und keine Punkte. Personen ohne Punkte im Zeitraum fallen weg.
+   */
+  function competencySheet(course, cat, halves, { sid = null, half = null } = {}) {
+    const C = NM.competencies;
+    const pages = M.activeStudents(course)
+      .filter((s) => !sid || s.id === sid)
+      .map((s) => ({ s, sh: C.sheet(cat, course, halves, s.id) }))
+      .filter((x) => x.sh.kann.length + x.sh.weiter.length)
+      .map(({ s, sh }) => {
+        const block = (title, list, empty, attr) =>
+          h(
+            'section',
+            { class: 'p-comp-block', [attr]: '' },
+            h('h2', null, title),
+            list.length
+              ? h('table', { class: 'p-comp-table' }, h('tbody', null, list.map((x) => h('tr', { class: 'p-mr-' + COMP_MARK[x.stufe][2] }, h('td', { class: 'p-comp-sym' }, compSym(x.stufe)), h('td', null, x.entry.name), h('td', { class: 'p-comp-ber' }, x.bereich)))))
+              : h('p', { class: 'p-comp-empty' }, empty)
+          );
+        return h(
+          'div',
+          { class: 'p-page p-break p-mr p-comp', 'data-p-comp-sheet': s.id },
+          header(course, 'Kompetenzbogen', null, { kicker: [cat.fach, cat.name].filter(Boolean).join(' · ') || null, person: [s.first, s.last].filter(Boolean).join(' '), half }),
+          block('Das kannst du schon', sh.kann, 'Hier steht noch nichts. Das kommt mit den nächsten Tests.', 'data-p-comp-kann'),
+          block('Daran arbeitest du weiter', sh.weiter, 'Gerade nichts. Weiter so!', 'data-p-comp-weiter'),
+          compLegend(),
+          h('div', { class: 'p-mr-foot' }, h('div', { class: 'p-mr-sign' }, h('div', null, h('div', { class: 'p-mr-line' }), 'Datum'), h('div', null, h('div', { class: 'p-mr-line' }), 'Unterschrift Lehrkraft')))
+        );
+      });
+    if (!pages.length) return false;
+    doPrint(`${M.courseTitle(course)} – Kompetenzbogen`, h('div', null, pages));
+    return true;
   }
 
   // ---------- Trennblätter für OrdoScripto ----------
@@ -1039,5 +1095,5 @@
     );
   }
 
-  NM.print = { test, moodle, scripto, pres, presGuide, groups, epo, epoSlips, seating, attendance, course, studentsDialog };
+  NM.print = { test, moodle, competencySheet, scripto, pres, presGuide, groups, epo, epoSlips, seating, attendance, course, studentsDialog };
 })((globalThis.NM = globalThis.NM || {}));

@@ -30,16 +30,8 @@
   function render(view, { course, db }) {
     const cat = C.forCourse(db, course);
     const period = currentPeriod(course);
-    view.append(
-      h(
-        'div',
-        { class: 'view-head' },
-        h('h1', null, 'Kompetenzen'),
-        periodSwitch(course, period),
-        h('div', { class: 'spacer' }),
-        cat ? h('span', { class: 'muted small' }, 'Katalog: ' + cat.name) : null
-      )
-    );
+    const head = h('div', { class: 'view-head' }, h('h1', null, 'Kompetenzen'), periodSwitch(course, period), h('div', { class: 'spacer' }), cat ? h('span', { class: 'muted small' }, 'Katalog: ' + cat.name) : null);
+    view.append(head);
     if (!cat) {
       view.appendChild(UI.emptyState('Kein Kompetenzkatalog', 'Wählen Sie unter „Kurs & Schüler“ einen Kompetenzkatalog für den Kurs.', null, 'list-check'));
       return;
@@ -58,7 +50,29 @@
       );
       return;
     }
+    head.appendChild(
+      UI.printButton('Drucken: Kompetenzen ' + periodLabel(period), [
+        { id: 'comp-sheet', icon: 'list-check', label: 'Kompetenzbogen je Person', group: 'students', tip: 'Je Person eine Seite: „Das kannst du schon“ und „Daran arbeitest du weiter“ mit ✓ ◐ ✗, ohne Prozent und Punkte. Zeitraum wie oben gewählt.', run: () => sheetPrint(course, cat, halves, period, students) },
+      ])
+    );
     view.appendChild(gridCard(course, cat, ev, students, period));
+  }
+
+  /** Dialog: Kompetenzbogen für alle oder eine Person (nur Personen mit Punkten im Zeitraum). */
+  async function sheetPrint(course, cat, halves, period, students) {
+    const withData = students.filter((s) => C.history(cat, course, halves, s.id).length);
+    if (!withData.length) return NM.util.toast('Noch keine Punkte zum Drucken.', 'error');
+    const who = h('select', { class: 'input', 'data-comp-sheet-who': '' }, h('option', { value: '' }, `Alle (${withData.length}, je eine Seite)`), withData.map((s) => h('option', { value: s.id }, M.studentName(s))));
+    const v = await modal({
+      title: 'Kompetenzbogen drucken',
+      body: h('div', null, h('label', { class: 'field' }, h('span', null, 'Wer'), who), h('p', { class: 'muted small' }, 'Zeitraum: ' + periodLabel(period) + '. Nur ✓ sicher, ◐ teilweise und ✗ noch nicht, ohne Prozent und Punkte.')),
+      buttons: [
+        { label: 'Abbrechen', value: null },
+        { label: [icon('printer'), ' Drucken'], value: 'ok', kind: 'primary' },
+      ],
+    });
+    if (v !== 'ok') return;
+    NM.print.competencySheet(course, cat, halves, { sid: who.value || null, half: period === 'Jahr' ? null : period });
   }
 
   function gridCard(course, cat, ev, students, period) {

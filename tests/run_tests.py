@@ -2243,6 +2243,81 @@ def run_competency_history_check(br, base):
     report("Kompetenzen: Kurszeile, Verlauf im Dialog mit ‹ ›, gemeinsame Achse, Personenregister je Schuljahr", ok and not br.errors, str(res) + "; ".join(br.errors))
 
 
+def run_competency_print_check(br, base):
+    print("Kompetenzen: Kompetenzbogen, Moodle-Block, Hinweis im Förderplan (2.13):")
+    br.call("Emulation.setDeviceMetricsOverride", width=1440, height=1000, deviceScaleFactor=1, mobile=False)
+    br.open(f"{base}/index.html?demo")
+    br.wait(APP_READY, 30)
+    br.errors = []
+    res = br.eval("""(async () => {
+        const wait = (ms = 250) => new Promise((r) => setTimeout(r, ms));
+        const db = NM.app.db(), out = {}, C = NM.competencies;
+        const origPrint = window.print; window.print = () => {};
+        try {
+        const c = db.courses.find((x) => x.klasse === '8b');
+        const cat = C.forCourse(db, c);
+        NM.app.state.ui.half[c.id] = 'HJ1';
+        NM.app.select({ courseId: c.id, tab: 'competencies' }); await wait();
+        const root = () => document.getElementById('print-root');
+        const dlg = () => document.querySelector('dialog[open]');
+        // Druckauswahl → Kompetenzbogen → eine Person
+        document.querySelector('.view-head [data-print-menu]').click(); await wait();
+        document.querySelector('[data-print="comp-sheet"]').click(); await wait();
+        const s0 = c.students[0];
+        const sel = dlg().querySelector('[data-comp-sheet-who]');
+        out.dialog = [!!sel, sel.options.length > 1];
+        sel.value = s0.id;
+        [...dlg().querySelectorAll('.modal-actions .btn')].pop().click(); await wait();
+        const sh = C.sheet(cat, c, ['HJ1'], s0.id);
+        const page = root().querySelector('[data-p-comp-sheet]');
+        const t = page ? page.textContent : '';
+        out.sheet = [root().querySelectorAll('[data-p-comp-sheet]').length === 1, page && page.dataset.pCompSheet === s0.id,
+          page && page.querySelectorAll('[data-p-comp-kann] tr').length === sh.kann.length, page && page.querySelectorAll('[data-p-comp-weiter] tr').length === sh.weiter.length,
+          t.includes('Kompetenzbogen') && t.includes('Das kannst du schon') && t.includes('Daran arbeitest du weiter'), !t.includes('%') && !/Punkte/.test(t), t.includes('HJ1') || t.includes('1. HJ')];
+        document.body.classList.remove('printing');
+        // alle: eine Seite je Person mit Punkten
+        const withData = c.students.filter((s) => s.active !== false && C.history(cat, c, ['HJ1'], s.id).length).length;
+        NM.print.competencySheet(c, cat, ['HJ1']);
+        out.all = root().querySelectorAll('[data-p-comp-sheet]').length === withData && withData > 0;
+        document.body.classList.remove('printing');
+        // Moodle-Rückmeldung mit Block „Kompetenzen in diesem Test“
+        const a = c.assessments.find((x) => C.testHasCompetencies(x) && x.half === 'HJ1');
+        const sm = c.students.find((s) => C.testCompetencies(cat, c, a, s.id).length);
+        NM.print.moodle(c, a, { sid: sm.id, withComp: true });
+        const blk = root().querySelector('[data-p-comp-test]');
+        const tc = C.testCompetencies(cat, c, a, sm.id);
+        out.moodle = [!!blk, blk && blk.querySelectorAll('tr').length === tc.length, blk && blk.textContent.includes(tc[0].entry.name) && blk.textContent.includes(`${NM.util.fmtScore(tc[0].got)} / ${NM.util.fmtScore(tc[0].max)}`)];
+        document.body.classList.remove('printing');
+        NM.print.moodle(c, a, { sid: sm.id });
+        out.moodleOff = !root().querySelector('[data-p-comp-test]');
+        document.body.classList.remove('printing');
+        // Förderplan: Hinweis „noch nicht“ im Dialog, Übernehmen hängt eine Zeile an
+        const y = NM.app.currentYear().id;
+        const sg = c.students.find((s) => C.openGaps(db, NM.people.entries(db, s.personId), y).length);
+        out.hasGap = !!sg;
+        if (sg) {
+          const gaps = C.openGaps(db, NM.people.entries(db, sg.personId), y);
+          NM.app.select({ tab: 'people' }); await wait();
+          document.querySelector(`[data-person="${sg.personId}"]`).click(); await wait();
+          const btn = document.querySelector('[data-fp-new], [data-fp-continue]');
+          btn.click(); await wait();
+          const box = dlg().querySelector('[data-fp-gaps]');
+          const ziele = dlg().querySelector('[data-fp-text="ziele"]');
+          const before = ziele.value;
+          const b0 = box && box.querySelector('[data-fp-gap]');
+          out.gapBox = [!!box, box && box.querySelectorAll('[data-fp-gap]').length === gaps.length, box && box.querySelector('summary').textContent.includes(gaps.length + ' × noch nicht')];
+          if (b0) { b0.click(); await wait(50); }
+          out.take = [!!b0 && ziele.value.endsWith(gaps[0].entry.name + ' (' + gaps[0].fach + ')'), !!b0 && b0.disabled, ziele.value.startsWith(before.replace(/\\s+$/, ''))];
+          dlg().querySelector('.modal-actions .btn').click(); await wait();
+          out.notSaved = !NM.people.foerderplaene(db.people.find((p) => p.id === sg.personId)).some((f) => (f.ziele || '').endsWith(gaps[0].entry.name + ' (' + gaps[0].fach + ')'));
+        }
+        } finally { window.print = origPrint; document.body.classList.remove('printing'); }
+        return out; })()""")
+    ok = bool(res) and all(res["dialog"]) and all(res["sheet"]) and res["all"] and all(res["moodle"]) and res["moodleOff"] \
+        and res["hasGap"] and all(res.get("gapBox", [False])) and all(res.get("take", [False])) and res.get("notSaved")
+    report("Kompetenzen: Kompetenzbogen aus der Druckauswahl, Block in der Moodle-Rückmeldung, Förderplan-Hinweis zum Übernehmen", ok and not br.errors, str(res) + "; ".join(br.errors))
+
+
 def run_scripto_check(br, base):
     print("OrdoScripto (IDs, Import-CSV, Trennblätter mit QR-Code, zxing-cpp):")
     # 1. Modulmatrizen aus der App: mehrere Inhalte, Versionen 1–10, alle Masken
@@ -3867,7 +3942,7 @@ def main():
         run_tests_view_check, run_competency_check, run_task_add_click_check, run_makeup_check, run_verbal_check, run_ausgleich_check, run_notes_check, run_foerder_check, run_people_check, run_people_page_check, run_unreachable_check,
         run_tabs_check, run_tab_order_check, run_overview_fold_check, run_settings_layout_check,
         run_theme_check, run_demo_link_check, run_old_db_check, run_parts_check, run_print_menu_check,
-        run_pres_check, run_group_check, run_groups_tab_check, run_moodle_check, run_moodle_comp_check, run_competency_tab_check, run_competency_history_check, run_scripto_check,
+        run_pres_check, run_group_check, run_groups_tab_check, run_moodle_check, run_moodle_comp_check, run_competency_tab_check, run_competency_history_check, run_competency_print_check, run_scripto_check,
         run_decrypt_tool, run_launcher_check,
     ]
     srv, base = serve()
