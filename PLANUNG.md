@@ -639,12 +639,12 @@ Probe mit 12 Stunden (max. 48 P), „0 = befriedigend“: immer `0` (24 P) → 0
   ]
 }
 ```
-`textanfang` erzeugt `moodle.py` so, wie Moodle den Fragetext in die CSV schreibt (HTML entfernt, Leerraum zusammengefasst). Formatänderungen nur in Absprache, beide Seiten gleichzeitig.
+`textanfang` erzeugt `moodle.py` so, wie Moodle den Fragetext in die CSV schreibt (HTML entfernt, Bilder weg, Leerraum zusammengefasst, LaTeX roh, höchstens 80 Zeichen). Gleichen sich die ersten 60 Zeichen zweier Fragen eines Tests, bricht `moodle.py` ab. OrdoNota vergleicht als Präfix. Formatänderungen nur in Absprache, beide Seiten gleichzeitig. **Übergabe an die Skill-Sitzung:** `03 - Material/UEBERGABE moodle-fragen – Kompetenzen für OrdoNota.md` (Abschnitt „Rückmeldungen“ vor AI-2 lesen).
 
 **Schema 6:** Ein Test mit „geht nicht in die Note ein“ würde von älteren Versionen in die Note gerechnet. Ältere Versionen verstehen die Daten also falsch, deshalb `SCHEMA` 5 → 6 (Regel 1 der CLAUDE.md). Release-Notizen: alle Geräte zuerst aktualisieren. Erste Speicherung nach der Umstellung legt eine Sicherung an (wie bei AD).
 
 **To-do:**
-- [ ] **AI-1 (2.9.0)** Datenmodell (Schema 6, Katalog in `db`, `task.competencies`, Haken „geht nicht in die Note ein“, `migrate()`/`check()`), reines Modul `js/competencies.js` mit `tests/competencies.test.html`, Vorlage `vorlagen/kompetenzen/mathe-sek1.json`, Katalogseite in den Einstellungen mit Import/Export, Feld „Kompetenzen“ je Aufgabe, Notenlogik ignoriert nicht benotete Tests
+- [ ] **AI-1 (2.9.0)** Datenmodell (Schema 6, Katalog in `db`, `task.competencies`, Haken „geht nicht in die Note ein“, `migrate()`/`check()`), reines Modul `js/competencies.js` mit `tests/competencies.test.html`, Vorlage `vorlagen/kompetenzen/mathe-sek1.json` (Fassung der Bildungsstandards klären, 2003 oder 2022 – die Kennungen in den Beispielen oben sind Platzhalter), Katalogseite in den Einstellungen mit Import/Export, Feld „Kompetenzen“ je Aufgabe, Notenlogik ignoriert nicht benotete Tests
 - [ ] **AI-2 (2.10.0)** Moodle-Import mit Begleitdatei (dritte Datei), Textabgleich, Zuordnungsdialog, unbekannte Kennungen. Parallel `moodle.py` im Vault: Katalog lesen, Kennungen prüfen, Tags in die XML, Begleitdatei schreiben (wer das baut, entscheidet der Nutzer)
 - [ ] **AI-3 (2.11.0)** Reiter „Kompetenzen“ (Person × Kompetenz, Stufen, „wenig Daten“, Zeitraum), Umschalter im Reiter „Tests“, Ausblenden in der Notenübersicht
 - [ ] **AI-4 (2.12.0)** Verlauf im Kurs und im Personenregister
