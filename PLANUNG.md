@@ -586,7 +586,7 @@ Probe mit 12 Stunden (max. 48 P), „0 = befriedigend“: immer `0` (24 P) → 0
 **Ziel:** Aufgaben tragen Kompetenzen aus einem Katalog. OrdoNota wertet je Person und Kompetenz aus (Stufe und Prozent), zeigt den Verlauf im Kurs und im Personenregister (AD) und übernimmt die Zuordnung beim Moodle-Import aus einer Begleitdatei, die das Bauskript `moodle.py` (Skill `moodle-fragen`, Vault `03 - Material/claude/skills/moodle-fragen/`) mitschreibt.
 
 **Entscheidungen des Nutzers (24.11.2026, alle wie empfohlen, Ergänzungen vermerkt):**
-1. **Keine eigene Testart.** Jeder Test kann Kompetenzen tragen (benotet oder nicht). Ein Test lässt sich mit dem Haken „geht nicht in die Note ein“ als reiner Kompetenztest kennzeichnen. *Ergänzung:* Nicht benotete Kompetenztests lassen sich getrennt ansehen und ausblenden (siehe 9).
+1. **Keine eigene Testart.** Jeder Test kann Kompetenzen tragen (benotet oder nicht). Ein Test lässt sich mit dem vorhandenen Haken „nicht gewertet“ als reiner Kompetenztest kennzeichnen (Q20). *Ergänzung:* Nicht benotete Kompetenztests lassen sich getrennt ansehen und ausblenden (siehe 9).
 2. **Katalog:** eigene Liste je Fach, für alle Kurse gemeinsam, dazu mitgelieferte Vorlagen (Bildungsstandards Mathe Sek I, später Chemie) zum Übernehmen und Ändern. Stabile Kennungen (z. B. `M-K2`).
 3. **Übergabe aus Moodle:** Begleitdatei vom Bauskript; in OrdoNota lässt sich die Zuordnung immer von Hand setzen und korrigieren. Keine Kennung im Fragetext.
 4. **Zuerst Mathematik Sek I**, Datenmodell fachneutral; MSS und Chemie später ohne Umbau.
@@ -641,14 +641,19 @@ Probe mit 12 Stunden (max. 48 P), „0 = befriedigend“: immer `0` (24 P) → 0
 ```
 `textanfang` erzeugt `moodle.py` so, wie Moodle den Fragetext in die CSV schreibt (HTML entfernt, Bilder weg, Leerraum zusammengefasst, LaTeX roh, höchstens 80 Zeichen). Gleichen sich die ersten 60 Zeichen zweier Fragen eines Tests, bricht `moodle.py` ab. OrdoNota vergleicht als Präfix. Formatänderungen nur in Absprache, beide Seiten gleichzeitig. **Übergabe an die Skill-Sitzung:** `03 - Material/UEBERGABE moodle-fragen – Kompetenzen für OrdoNota.md` (Abschnitt „Rückmeldungen“ vor AI-2 lesen).
 
-**Schema 6:** Ein Test mit „geht nicht in die Note ein“ würde von älteren Versionen in die Note gerechnet. Ältere Versionen verstehen die Daten also falsch, deshalb `SCHEMA` 5 → 6 (Regel 1 der CLAUDE.md). Release-Notizen: alle Geräte zuerst aktualisieren. Erste Speicherung nach der Umstellung legt eine Sicherung an (wie bei AD).
+**Kein neues Schema (Q20, 24.11.2026):** Der Haken „nicht gewertet“ (`a.ungraded`, `grades.js` `ungradedFor`) gibt es schon und ältere Versionen verstehen ihn. Ein **Kompetenztest** ist ein Test mit `ungraded` und mindestens einer Kompetenz; Umschalter und Schalter in der Notenübersicht beziehen sich genau darauf, nicht gewertete Tests ohne Kompetenzen bleiben wie bisher ausgegraut sichtbar. Katalog und `task.competencies` sind zusätzliche Felder, `SCHEMA` bleibt 5 (CLAUDE.md Regel 1).
+
+**Weitere Entscheidungen (24.11.2026):**
+19. **Vorlage Mathe Sek I = Bildungsstandards 2022** (KMK): `M-K1`–`M-K6`, `M-L1` Zahl und Operation, `M-L2` Größen und Messen, `M-L3` Strukturen und funktionaler Zusammenhang, `M-L4` Raum und Form, `M-L5` Daten und Zufall. Ohne Teilkompetenzen. Bezeichnungen vor dem Schreiben mit dem KMK-Dokument abgleichen.
+20. Haken „nicht gewertet“ weiterverwenden, kein Schema 6 (siehe oben).
+21. **Katalog am Kurs:** Auswahl „Kompetenzkatalog“ in den Kurseinstellungen, vorbelegt nach `course.fach`. Ohne Katalog kein Feld „Kompetenzen“ an den Aufgaben.
 
 **To-do:**
-- [ ] **AI-1 (2.9.0)** Datenmodell (Schema 6, Katalog in `db`, `task.competencies`, Haken „geht nicht in die Note ein“, `migrate()`/`check()`), reines Modul `js/competencies.js` mit `tests/competencies.test.html`, Vorlage `vorlagen/kompetenzen/mathe-sek1.json` (Fassung der Bildungsstandards klären, 2003 oder 2022 – die Kennungen in den Beispielen oben sind Platzhalter), Katalogseite in den Einstellungen mit Import/Export, Feld „Kompetenzen“ je Aufgabe, Notenlogik ignoriert nicht benotete Tests
+- [ ] **AI-1 (2.9.0)** Datenmodell (Schema bleibt 5, Kataloge in `db.settings`, `course.catalogId`, `task.competencies`, `migrate()`/`check()`), reines Modul `js/competencies.js` mit `tests/competencies.test.html`, Vorlage `vorlagen/kompetenzen/mathe-sek1.json` (Bildungsstandards 2022, Q19), Katalogseite in den Einstellungen mit Import/Export, Katalogauswahl am Kurs, Feld „Kompetenzen“ je Aufgabe
 - [ ] **AI-2 (2.10.0)** Moodle-Import mit Begleitdatei (dritte Datei), Textabgleich, Zuordnungsdialog, unbekannte Kennungen. Parallel `moodle.py` im Vault: Katalog lesen, Kennungen prüfen, Tags in die XML, Begleitdatei schreiben (wer das baut, entscheidet der Nutzer)
 - [ ] **AI-3 (2.11.0)** Reiter „Kompetenzen“ (Person × Kompetenz, Stufen, „wenig Daten“, Zeitraum), Umschalter im Reiter „Tests“, Ausblenden in der Notenübersicht
 - [ ] **AI-4 (2.12.0)** Verlauf im Kurs und im Personenregister
-- [ ] **AI-5 (2.13.0)** Kompetenzbogen, Block in der Moodle-Rückmeldung, Hinweis im Förderplan → danach **Release v2.13.0** (Notizen „Neu seit 2.8.0“, Hinweis Schema 6)
+- [ ] **AI-5 (2.13.0)** Kompetenzbogen, Block in der Moodle-Rückmeldung, Hinweis im Förderplan → danach **Release v2.13.0** (Notizen „Neu seit 2.8.0“)
 
 **Ablauf je Schritt:** mit Oberfläche zuerst `/impeccable shape` und bestätigen lassen → umsetzen → Detektor, `polish` (bei Import/Formularen `harden`) → Tests (`code-testlauf`) → Doku (DOKUMENTATION.md mit 24, 25.1, 26.4; README) → hier abhaken → lokaler Commit. Pushen nur auf Ansage nach `code-pruefen`.
 
