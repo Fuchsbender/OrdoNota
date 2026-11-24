@@ -650,7 +650,7 @@ Probe mit 12 Stunden (max. 48 P), „0 = befriedigend“: immer `0` (24 P) → 0
 
 **To-do:**
 - [ ] **AI-1 (2.9.0)** Datenmodell (Schema bleibt 5, Kataloge in `db.settings`, `course.catalogId`, `task.competencies`, `migrate()`/`check()`), reines Modul `js/competencies.js` mit `tests/competencies.test.html`, Vorlage `vorlagen/kompetenzen/mathe-sek1.json` (Bildungsstandards 2022, Q19), Katalogseite in den Einstellungen mit Import/Export, Katalogauswahl am Kurs, Feld „Kompetenzen“ je Aufgabe
-- [ ] **AI-2 (2.10.0)** Moodle-Import mit Begleitdatei (dritte Datei), Textabgleich, Zuordnungsdialog, unbekannte Kennungen. Parallel `moodle.py` im Vault: Katalog lesen, Kennungen prüfen, Tags in die XML, Begleitdatei schreiben (wer das baut, entscheidet der Nutzer)
+- [ ] **AI-2 (2.10.0)** Moodle-Import mit Begleitdatei (dritte Datei), Textabgleich als Präfix (CSV-Text beginnt mit `textanfang`, normalisiert; **nicht** am ersten „: “ schneiden, ein Fragetext kann selbst „: “ enthalten – Hinweis der Skill-Sitzung vom 24.11.2026), Zuordnungsdialog, unbekannte Kennungen. Parallel `moodle.py` im Vault: Katalog lesen, Kennungen prüfen, Tags in die XML, Begleitdatei schreiben (wer das baut, entscheidet der Nutzer)
 - [ ] **AI-3 (2.11.0)** Reiter „Kompetenzen“ (Person × Kompetenz, Stufen, „wenig Daten“, Zeitraum), Umschalter im Reiter „Tests“, Ausblenden in der Notenübersicht
 - [ ] **AI-4 (2.12.0)** Verlauf im Kurs und im Personenregister
 - [ ] **AI-5 (2.13.0)** Kompetenzbogen, Block in der Moodle-Rückmeldung, Hinweis im Förderplan → danach **Release v2.13.0** (Notizen „Neu seit 2.8.0“)
