@@ -15,7 +15,8 @@ Aufruf:
     python3 entschluesseln.py DATEI.nmdb                  (fragt nach dem Passwort)
     python3 entschluesseln.py DATEI.nmdb --wiederherstellung
     python3 entschluesseln.py DATEI.nmdb -o ausgabe.json
-    python3 entschluesseln.py DATEI.nmdb --csv ordner/     (zusätzlich eine CSV je Kurs, das Personenregister und ggf. Notizen.csv, Foerderplaene.csv)
+    python3 entschluesseln.py DATEI.nmdb --csv ordner/     (zusätzlich eine CSV je Kurs, das Personenregister und ggf. Notizen.csv, Foerderplaene.csv,
+                                                            Kompetenzkataloge.csv, Kompetenzen.csv)
 
 ACHTUNG: Die Ausgabe ist NICHT verschlüsselt. Nach Gebrauch löschen.
 """
@@ -227,6 +228,38 @@ def schreibe_csv(daten, ordner):
         pfad = os.path.join(ordner, name + ".csv")
         with open(pfad, "w", newline="", encoding="utf-8-sig") as f:
             csv.writer(f, delimiter=";").writerows(zeilen)
+        pfade.append(pfad)
+    # 2.9–2.13: Kompetenzen. Stand und Verlauf rechnet nur die App aus den Punkten;
+    # hier die Rohdaten: die Kataloge und welche Aufgabe welche Kompetenzen trägt.
+    kataloge = [k for k in ((daten.get("settings") or {}).get("competencyCatalogs") or []) if isinstance(k, dict)]
+    if kataloge:
+        zk = [["Katalog", "Katalogname", "Fach", "Version", "Bereich", "Kennung", "Name", "Ebene", "ausgeblendet"]]
+        for k in kataloge:
+            for b in k.get("bereiche") or []:
+                for ko in b.get("kompetenzen") or []:
+                    eintraege = [(ko, "Kompetenz")] + [(t, "Teil") for t in ko.get("teil") or []]
+                    for e, ebene in eintraege:
+                        zk.append([k.get("id", ""), k.get("name", ""), k.get("fach", ""), k.get("version", ""), b.get("name", ""),
+                                   e.get("id", ""), e.get("name", ""), ebene, "ja" if e.get("ausgeblendet") or ko.get("ausgeblendet") else ""])
+        pfad = os.path.join(ordner, "Kompetenzkataloge.csv")
+        with open(pfad, "w", newline="", encoding="utf-8-sig") as f:
+            csv.writer(f, delimiter=";").writerows(zk)
+        pfade.append(pfad)
+    za = [["Kurs", "Katalog", "Halbjahr", "Test", "Aufgabe", "Höchstpunkte", "Bonus", "Kompetenzen"]]
+    for kurs in daten.get("courses", []):
+        titel = f'{jahre.get(kurs.get("yearId"), "")} {kurs.get("klasse", "")} {kurs.get("fach", "")}'.strip()
+        for a in kurs.get("assessments", []):
+            if a.get("kind") != "test":
+                continue
+            for i, t in enumerate((a.get("test") or {}).get("tasks") or []):
+                ids = [x for x in (t.get("competencies") or []) if isinstance(x, str)]
+                if ids:
+                    za.append([titel, kurs.get("catalogId", ""), a.get("half", ""), a.get("name", ""), t.get("name") or f"A{i + 1}",
+                               t.get("max", ""), "ja" if t.get("bonus") else "", ", ".join(ids)])
+    if len(za) > 1:
+        pfad = os.path.join(ordner, "Kompetenzen.csv")
+        with open(pfad, "w", newline="", encoding="utf-8-sig") as f:
+            csv.writer(f, delimiter=";").writerows(za)
         pfade.append(pfad)
     # Schema 5: Personenregister mit den Kursen jeder Person
     personen = daten.get("people") or []

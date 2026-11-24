@@ -3836,12 +3836,13 @@ def run_decrypt_tool(br, base):
         ok = code == 0 and os.path.exists(klartext) and json.load(open(klartext, encoding="utf-8")) == sample["db"]
         csvs = os.listdir(os.path.join(tmp, "csv")) if os.path.isdir(os.path.join(tmp, "csv")) else []
         report("Kommandozeile schreibt JSON", ok)
-        report(f"CSV je Kurs und Personenregister ({len(csvs)} Dateien)", len(csvs) == len(sample["db"]["courses"]) + 1 and "Personenregister.csv" in csvs)
+        komp = {"Kompetenzkataloge.csv", "Kompetenzen.csv"}  # Demo 8b hat einen Katalog (2.9)
+        report(f"CSV je Kurs, Personenregister und Kompetenzen ({len(csvs)} Dateien)", len(csvs) == len(sample["db"]["courses"]) + 3 and "Personenregister.csv" in csvs and komp <= set(csvs))
         try:
             import csv as _csv
             with open(os.path.join(tmp, "csv", "Personenregister.csv"), encoding="utf-8-sig") as f:
                 reg = list(_csv.reader(f, delimiter=";"))
-            kurs_csv = next(n for n in csvs if n != "Personenregister.csv")
+            kurs_csv = next(n for n in csvs if n != "Personenregister.csv" and n not in komp)
             with open(os.path.join(tmp, "csv", kurs_csv), encoding="utf-8-sig") as f:
                 kz = list(_csv.reader(f, delimiter=";"))
             ids = {p["id"] for p in sample["db"]["people"]}
@@ -3929,6 +3930,18 @@ def run_decrypt_tool(br, base):
             with open(fp_pfad, encoding="utf-8-sig") as f:
                 zf2 = [z.rstrip("\n").split(";") for z in f]
         report("CSV: Foerderplaene.csv mit Schwerpunkten, Zeitraum, „gilt“ bei der neuesten", zf2 and zf2[0][3:6] == ["Datum", "gilt", "Schwerpunkte"] and [z[3:9] for z in zf2[1:]] == [["2026-02-10", "ja", "Lernen, Autismus", "2026-02-01", "2026-07-31", "Lesen 2"], ["2025-09-04", "", "Lernen", "", "", "Lesen"]], str(zf2))
+        # Kompetenzen (2.9–2.13): Kataloge und Zuordnung je Aufgabe als Rohdaten
+        kat = {"id": "mathe", "name": "Mathe Sek I", "fach": "Mathematik", "version": 3,
+               "bereiche": [{"id": "b1", "name": "Prozess", "kompetenzen": [{"id": "M-K1", "name": "Argumentieren", "teil": [{"id": "M-K1.1", "name": "Begründen", "ausgeblendet": True}]}]}]}
+        kurs = {"id": "k1", "yearId": "y", "klasse": "8b", "fach": "M", "catalogId": "mathe", "students": [],
+                "assessments": [{"id": "t1", "kind": "test", "half": "HJ1", "name": "KT 1", "test": {"tasks": [{"id": "a", "name": "A1", "max": 4, "competencies": ["M-K1", "M-K1.1"]}, {"id": "b", "max": 2}, {"id": "c", "max": 1, "bonus": True, "competencies": ["M-K1"]}], "results": {}}}]}
+        pfade = tool.schreibe_csv({"settings": {"competencyCatalogs": [kat]}, "years": [{"id": "y", "name": "2026/27"}], "courses": [kurs]}, tmp)
+        lies = lambda name: next(([z.rstrip("\n").split(";") for z in open(x, encoding="utf-8-sig")] for x in pfade if x.endswith(name)), [])
+        zk, za = lies("Kompetenzkataloge.csv"), lies("Kompetenzen.csv")
+        report("CSV: Kompetenzkataloge.csv und Kompetenzen.csv (Zuordnung je Aufgabe)",
+               zk[1:] == [["mathe", "Mathe Sek I", "Mathematik", "3", "Prozess", "M-K1", "Argumentieren", "Kompetenz", ""], ["mathe", "Mathe Sek I", "Mathematik", "3", "Prozess", "M-K1.1", "Begründen", "Teil", "ja"]]
+               and za[1:] == [["2026/27 8b M", "mathe", "HJ1", "KT 1", "A1", "4", "", "M-K1, M-K1.1"], ["2026/27 8b M", "mathe", "HJ1", "KT 1", "A3", "1", "ja", "M-K1"]]
+               and not any(x.endswith("Kompetenzen.csv") for x in tool.schreibe_csv({"years": [], "courses": []}, tmp + "/leer")), str(zk) + str(za))
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
