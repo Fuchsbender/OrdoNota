@@ -334,7 +334,7 @@ Mit dem Nutzer am 18.11.2026 geklärt (grill-me, alle Empfehlungen angenommen). 
 - [x] **AE** Nachteilsausgleich – erledigt in 2.5.0 (20.11.2026), gepusht, Release v2.7.0, Oberfläche wie unten beschrieben
 - [x] **AF** Notizverlauf – erledigt in 2.6.0 (20.11.2026), gepusht, Release v2.7.0, Oberfläche wie unten beschrieben
 - [x] **AG** Förderplan – erledigt in 2.7.0 (20.11.2026), gepusht, Release v2.7.0, Oberfläche wie unten beschrieben (Hinweis in der Kursliste als Symbol statt Text, damit die Spalte schmal bleibt)
-- [ ] später: Kompetenzanalysen und Kompetenzverlauf (eigener grill-me-Durchgang, baut auf AD auf)
+- [ ] Kompetenzanalysen und Kompetenzverlauf: am 24.11.2026 geklärt, eigener Abschnitt **AI** (Schritte AI-1 bis AI-5, Release ab 2.13.0)
 
 **Ablauf je Buchstabe** (Projekte-CLAUDE.md): Oberfläche vorher mit `/impeccable shape` planen und bestätigen lassen → umsetzen (Hauptsitzung oder `code-umsetzen`) → Impeccable-Detektor über die geänderten UI-Dateien → `/impeccable polish` (bei Formularen auch `harden`) → Tests (`code-testlauf`) → Doku (DOKUMENTATION.md, README.md), Version (Minor), hier als erledigt abhaken → lokaler Commit. Pushen nur auf Ansage, vorher `code-pruefen`.
 
@@ -580,6 +580,77 @@ Probe mit 12 Stunden (max. 48 P), „0 = befriedigend“: immer `0` (24 P) → 0
 - **Umsetzung von 8:** Die Schwelle für 01 ist −9,99 % („ab“), 00 gilt bei −10 % und weniger. Die Schwellen der eingebauten Vorlagen werden ungerundet gespeichert (z. B. 4,1666… %), damit genau getroffene Grenzen wie in der linearen Rechnung nach oben zählen; angezeigt werden 2 Nachkommastellen.
 
 **Tests:** `epoResult` mit allen drei Vorlagen und der Probe oben (Sek I und MSS), negative Schwellen, Vergleich „angepasst“, eigene Vorlagen in `migrate()`/`check()`, Hinweis und „So lassen“ bei alten Blöcken, Jahrgangswechsel Sek I ↔ MSS (`model.js:437` erkennt bisher nur die alte Standardtabelle). Datenmodell: nur zusätzliche Felder (`settings` für Vorlagen und Standard, `epo.keepTable`), also kein neues `SCHEMA`; `tools/entschluesseln.py` mitziehen. Doku: DOKUMENTATION.md Abschnitte 8, 16, 24, 25.1, 26.4 und README. Version: Minor. UI: vorher `/impeccable shape` für Vorlagenauswahl, Hinweis und Einstellungen.
+
+## AI) Kompetenztests: Kompetenzen je Aufgabe, Auswertung und Verlauf (geklärt am 24.11.2026, grill-me Q1–Q18)
+
+**Ziel:** Aufgaben tragen Kompetenzen aus einem Katalog. OrdoNota wertet je Person und Kompetenz aus (Stufe und Prozent), zeigt den Verlauf im Kurs und im Personenregister (AD) und übernimmt die Zuordnung beim Moodle-Import aus einer Begleitdatei, die das Bauskript `moodle.py` (Skill `moodle-fragen`, Vault `03 - Material/claude/skills/moodle-fragen/`) mitschreibt.
+
+**Entscheidungen des Nutzers (24.11.2026, alle wie empfohlen, Ergänzungen vermerkt):**
+1. **Keine eigene Testart.** Jeder Test kann Kompetenzen tragen (benotet oder nicht). Ein Test lässt sich mit dem Haken „geht nicht in die Note ein“ als reiner Kompetenztest kennzeichnen. *Ergänzung:* Nicht benotete Kompetenztests lassen sich getrennt ansehen und ausblenden (siehe 9).
+2. **Katalog:** eigene Liste je Fach, für alle Kurse gemeinsam, dazu mitgelieferte Vorlagen (Bildungsstandards Mathe Sek I, später Chemie) zum Übernehmen und Ändern. Stabile Kennungen (z. B. `M-K2`).
+3. **Übergabe aus Moodle:** Begleitdatei vom Bauskript; in OrdoNota lässt sich die Zuordnung immer von Hand setzen und korrigieren. Keine Kennung im Fragetext.
+4. **Zuerst Mathematik Sek I**, Datenmodell fachneutral; MSS und Chemie später ohne Umbau.
+5. **Zuordnung beim Import über den Fragetext:** Die Moodle-CSVs enthalten nur die Nummer im Test und den Fragetext als Kurzfassung (gefolgt von „: “ und den gemischten Antworten), keinen Fragenamen (geprüft an `demo/Antworten.csv`). OrdoNota vergleicht den Text bis zum „: “ mit `textanfang` der Begleitdatei und zeigt die Zuordnung F1 → Fragename → Kompetenzen in einem Dialog zum Prüfen; nicht eindeutige von Hand. Die Kennungen stehen zusätzlich als Moodle-Tags in der XML. Den Textabgleich vor dem Festschreiben an einem echten Export mit LaTeX, Cloze und Bildern prüfen.
+6. **Mehrere Kompetenzen je Aufgabe**, die Punkte zählen voll bei jeder, keine Gewichte.
+7. **Katalog mit zwei Ebenen** (Bereich → Kompetenz), optional Teilkompetenzen. Ausgewertet wird bis zur Kompetenz. Kennungen bleiben fest, auch wenn die Bezeichnung sich ändert.
+8. **Auswertung:** Prozent und Stufe („noch nicht“ unter 50 %, „teilweise“ 50–79 %, „sicher“ ab 80 %, Grenzen je Katalog einstellbar). Hinweis „wenig Daten“ bei weniger als 3 möglichen Punkten.
+9. **Ansichten:** Reiter „Tests“ mit Umschalter „Benotet | Kompetenztests | Alle“. Notenübersicht: Tests ohne Note sind keine Spalte; Schalter „Kompetenztests zeigen“ blendet sie grau und ohne Einfluss auf die Note ein. Neuer Reiter „Kompetenzen“ je Kurs (Person × Kompetenz aus allen Tests mit Kompetenzen), ein-/ausschaltbar wie die anderen Reiter.
+10. **Stand = Summe der Punkte je Zeitraum** (erreicht ÷ möglich), Umschalter „1. HJ | 2. HJ | Schuljahr“ wie in der Notenübersicht.
+11. **Verlauf:** im Reiter „Kompetenzen“ per Klick auf eine Person (je Kompetenz die Tests nach Datum, Prozent und Stufe auf einer kleinen Linie) und eine Kurszeile „Anteil sicher / teilweise / noch nicht“ je Kompetenz; im Personenregister derselbe Verlauf über alle Kurse und Schuljahre, getrennt je Fach (über `personId`). **Nichts wird gespeichert**, alles aus den Tests berechnet.
+12. **Handkorrigierte Tests:** Feld „Kompetenzen“ je Aufgabe in der Karte „Aufgaben“ (Auswahl aus dem Katalog des Kursfachs, mehrere), auch in Arbeiten in Teilen. Der Moodle-Import füllt es vor. Nachschreibtermine übernehmen die Zuordnung. Bonusaufgaben zählen bei den Kompetenzen mit (erreicht und möglich). Präsentationen vorerst ohne Kompetenzen.
+13. **Für Schüler:** druckbarer Kompetenzbogen je Person (Stufe mit Zeichen ✓ ◐ ✗, „Das kannst du schon“ / „Daran arbeitest du weiter“, ohne Prozent) in der Druckauswahl; Moodle-Rückmeldung je Person mit Haken „Kompetenzen in diesem Test“. Beamer und Vollbild nie mit Einzelwerten, höchstens die Kurszeile ohne Namen.
+14. **Datenschutz:** Leistungsdaten wie Noten (kein Art. 9), verschlüsselt wie alles andere; nicht in der unverschlüsselten Excel-Schülerliste, in Exporten nur auf Ankreuzen; `tools/entschluesseln.py` mitziehen. Im Förderplan (AG) erscheinen Kompetenzen mit „noch nicht“ als Hinweis zum Übernehmen, nicht automatisch.
+15. **Katalog als gemeinsame Grundlage:** Vorlagen als JSON im Repo (`vorlagen/kompetenzen/mathe-sek1.json`, keine Personendaten). Eigener Katalog in der Datenbank, „Katalog exportieren“ schreibt dieselbe Struktur. `moodle.py` liest eine Katalogdatei, bricht bei unbekannter Kennung ab und schreibt Katalogkennung und -version in die Begleitdatei. Beim Import meldet OrdoNota unbekannte Kennungen (zuordnen oder in den Katalog aufnehmen).
+16. **Katalogformat** (siehe unten). Kennungen werden nie umbenannt oder neu vergeben; gelöschte bleiben als „ausgeblendet“, damit alte Tests auswertbar bleiben; `version` zählt bei jeder Änderung hoch.
+17. **Format der Begleitdatei** (siehe unten). Fragen vom Typ „Beschreibung“ kommen nicht hinein.
+18. **Reihenfolge AI-1 bis AI-5**, je Schritt eine Minor-Version. *Ergänzung:* **Release erst ab 2.13.0** (nach AI-5), vorher nur lokal committen bzw. pushen auf Ansage.
+
+**Katalogdatei** (Vorlage, Export, Eingabe für `moodle.py`):
+```json
+{
+  "format": "ordonota-kompetenzkatalog",
+  "formatVersion": 1,
+  "id": "mathe-sek1",
+  "fach": "Mathematik",
+  "version": 3,
+  "stufen": { "teilweise": 50, "sicher": 80 },
+  "bereiche": [
+    { "id": "K", "name": "Prozessbezogen",
+      "kompetenzen": [
+        { "id": "M-K2", "name": "Probleme mathematisch lösen",
+          "teil": [ { "id": "M-K2.1", "name": "Lösungsstrategien anwenden" } ] } ] },
+    { "id": "L", "name": "Inhaltlich",
+      "kompetenzen": [ { "id": "M-L4", "name": "Funktionaler Zusammenhang" } ] }
+  ]
+}
+```
+
+**Begleitdatei** `Moodle-Test – <Thema> (Kompetenzen).json` (schreibt `t.speichern(...)` neben die XML):
+```json
+{
+  "format": "ordonota-moodle-kompetenzen",
+  "formatVersion": 1,
+  "katalog": { "id": "mathe-sek1", "version": 3 },
+  "test": "Quadratische Funktionen/Teil 1",
+  "fragen": [
+    { "name": "QF-03 Gestaucht",
+      "textanfang": "Der Graph von f(x) = 0,5x² ist …",
+      "kompetenzen": ["M-L4", "M-K4"] }
+  ]
+}
+```
+`textanfang` erzeugt `moodle.py` so, wie Moodle den Fragetext in die CSV schreibt (HTML entfernt, Leerraum zusammengefasst). Formatänderungen nur in Absprache, beide Seiten gleichzeitig.
+
+**Schema 6:** Ein Test mit „geht nicht in die Note ein“ würde von älteren Versionen in die Note gerechnet. Ältere Versionen verstehen die Daten also falsch, deshalb `SCHEMA` 5 → 6 (Regel 1 der CLAUDE.md). Release-Notizen: alle Geräte zuerst aktualisieren. Erste Speicherung nach der Umstellung legt eine Sicherung an (wie bei AD).
+
+**To-do:**
+- [ ] **AI-1 (2.9.0)** Datenmodell (Schema 6, Katalog in `db`, `task.competencies`, Haken „geht nicht in die Note ein“, `migrate()`/`check()`), reines Modul `js/competencies.js` mit `tests/competencies.test.html`, Vorlage `vorlagen/kompetenzen/mathe-sek1.json`, Katalogseite in den Einstellungen mit Import/Export, Feld „Kompetenzen“ je Aufgabe, Notenlogik ignoriert nicht benotete Tests
+- [ ] **AI-2 (2.10.0)** Moodle-Import mit Begleitdatei (dritte Datei), Textabgleich, Zuordnungsdialog, unbekannte Kennungen. Parallel `moodle.py` im Vault: Katalog lesen, Kennungen prüfen, Tags in die XML, Begleitdatei schreiben (wer das baut, entscheidet der Nutzer)
+- [ ] **AI-3 (2.11.0)** Reiter „Kompetenzen“ (Person × Kompetenz, Stufen, „wenig Daten“, Zeitraum), Umschalter im Reiter „Tests“, Ausblenden in der Notenübersicht
+- [ ] **AI-4 (2.12.0)** Verlauf im Kurs und im Personenregister
+- [ ] **AI-5 (2.13.0)** Kompetenzbogen, Block in der Moodle-Rückmeldung, Hinweis im Förderplan → danach **Release v2.13.0** (Notizen „Neu seit 2.8.0“, Hinweis Schema 6)
+
+**Ablauf je Schritt:** mit Oberfläche zuerst `/impeccable shape` und bestätigen lassen → umsetzen → Detektor, `polish` (bei Import/Formularen `harden`) → Tests (`code-testlauf`) → Doku (DOKUMENTATION.md mit 24, 25.1, 26.4; README) → hier abhaken → lokaler Commit. Pushen nur auf Ansage nach `code-pruefen`.
 
 ## C) Gamification des Pomodoro-Timers (zurückgestellt, erst auf Nachfrage des Nutzers)
 
