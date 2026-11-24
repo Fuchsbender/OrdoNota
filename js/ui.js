@@ -48,6 +48,99 @@
     return h('span', { class: 'stufe-mark stufe-' + stufe, 'aria-hidden': 'true', html: `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">${STUFE_PATHS[stufe]}</svg>` });
   }
 
+  // ---------- Verlaufslinie der Kompetenzen (seit 2.12) ----------
+  // Gemeinsame Zeitachse: alle Zeilen einer Tabelle nutzen dieselben Plätze (ein Platz je Test), damit
+  // derselbe Test in jeder Zeile an derselben Stelle steht. Die Daten stehen einmal im Kopf (compAxis).
+
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  function svgEl(tag, attrs, ...kids) {
+    const e = document.createElementNS(SVG_NS, tag);
+    for (const [k, v] of Object.entries(attrs || {})) if (v !== null && v !== undefined) e.setAttribute(k, v);
+    for (const k of kids) if (k) e.appendChild(typeof k === 'string' ? document.createTextNode(k) : k);
+    return e;
+  }
+  const slotKey = (p) => (p.course ? p.course.id + ':' : '') + p.testId;
+
+  /** Plätze der Achse aus allen Punkten der Zeilen: [{ key, date, name, yearId }], nach Schuljahr, Datum, Name. */
+  function compSlots(rows, yearOrder = null) {
+    const seen = new Map();
+    const order = [];
+    for (const r of rows) for (const p of r.points) if (!seen.has(slotKey(p))) (seen.set(slotKey(p), p), order.push(p));
+    // zuerst Schuljahr (yearOrder, alt → neu), dann Datum, dann Name
+    const years = yearOrder || [...new Set(order.map((p) => p.yearId))];
+    return order
+      .slice()
+      .sort((x, y) => years.indexOf(x.yearId) - years.indexOf(y.yearId) || String(x.date || '9999').localeCompare(String(y.date || '9999')) || String(x.name).localeCompare(String(y.name), 'de'))
+      .map((p) => ({ key: slotKey(p), date: p.date, name: p.name, yearId: p.yearId || null }));
+  }
+
+  function lineGeom(n) {
+    const pad = 14;
+    const step = n > 1 ? Math.max(16, Math.min(60, 360 / (n - 1))) : 0;
+    const W = Math.max(88, pad * 2 + step * (n - 1));
+    return { W, x: (i) => (n > 1 ? pad + i * step : W / 2), step };
+  }
+
+  function yearBreaks(svg, slots, g, y1, y2) {
+    for (let i = 1; i < slots.length; i++) {
+      if (slots[i].yearId && slots[i - 1].yearId && slots[i].yearId !== slots[i - 1].yearId) {
+        const bx = (g.x(i - 1) + g.x(i)) / 2;
+        svg.appendChild(svgEl('line', { class: 'comp-line-year', x1: bx, x2: bx, y1, y2 }));
+      }
+    }
+  }
+
+  /** Datumszeile über den Linien (gleiche Breite wie compLine); bei engen Plätzen nur jedes k-te Datum. */
+  function compAxis(slots) {
+    const g = lineGeom(slots.length);
+    const H = 14;
+    const svg = svgEl('svg', { class: 'comp-axis', viewBox: `0 0 ${g.W} ${H}`, width: g.W, height: H, 'aria-hidden': 'true' });
+    const every = Math.max(1, Math.ceil(34 / Math.max(g.step, 1)));
+    yearBreaks(svg, slots, g, 0, H);
+    slots.forEach((sl, i) => {
+      if (i % every) return;
+      svg.appendChild(svgEl('text', { class: 'comp-axis-date', x: g.x(i), y: 10, 'text-anchor': 'middle' }, sl.date ? fmtDate(sl.date).slice(0, 6) : '–'));
+    });
+    return svg;
+  }
+
+  /**
+   * Kleine Verlaufslinie: ein Punkt je Test auf seinem Platz der Achse, Höhe = Prozent in diesem Test,
+   * gestrichelt die Stufengrenzen, jeder Punkt mit Stufenzeichen (Farbe nie allein) und Tooltip.
+   * points: [{ testId, name, date, got, max, pct, stufe, makeup?, course?, yearId? }]
+   */
+  function compLine(cat, points, { slots = null, courseLabel = null } = {}) {
+    slots = slots || compSlots([{ points }]);
+    const pos = new Map(slots.map((s, i) => [s.key, i]));
+    const st = Object.assign({}, NM.competencies.STUFEN, (cat && cat.stufen) || {});
+    const g = lineGeom(slots.length);
+    const top = 15;
+    const H = 50;
+    const plot = H - top - 7;
+    const y = (pct) => top + ((100 - Math.max(0, Math.min(100, pct))) / 100) * plot;
+    const tip = (p) =>
+      [p.name || 'Test', p.date ? fmtDate(p.date) : null, courseLabel && p.course ? courseLabel(p.course) : null, p.makeup ? 'Nachschreibtermin' : null].filter(Boolean).join(' · ') +
+      `\n${NM.util.fmtScore(p.got)} von ${NM.util.fmtScore(p.max)} Punkten · ${p.pct} % · ${STUFE_LABEL[p.stufe]}`;
+    const label = 'Verlauf: ' + points.map((p) => `${p.date ? fmtDate(p.date) + ' ' : ''}${p.pct} % (${STUFE_LABEL[p.stufe]})`).join(', ');
+    const svg = svgEl('svg', { class: 'comp-line', viewBox: `0 0 ${g.W} ${H}`, width: g.W, height: H, role: 'img', 'aria-label': label });
+    for (const v of [st.teilweise, st.sicher]) svg.appendChild(svgEl('line', { class: 'comp-line-grid', x1: 2, x2: g.W - 2, y1: y(v), y2: y(v) }));
+    yearBreaks(svg, slots, g, 2, H - 2);
+    const xy = points.map((p) => [g.x(pos.get(slotKey(p)) ?? 0), y(p.pct)]);
+    if (points.length > 1) svg.appendChild(svgEl('polyline', { class: 'comp-line-path', points: xy.map((c) => c.join(',')).join(' ') }));
+    const showPct = g.step >= 24 || slots.length === 1;
+    points.forEach((p, i) => {
+      const [cx, cy] = xy[i];
+      const grp = svgEl('g', { class: 'comp-line-pt st-' + p.stufe, 'data-comp-pt': p.stufe }, svgEl('title', null, tip(p)));
+      grp.appendChild(svgEl('circle', { class: 'comp-line-dot', cx, cy, r: 6.5 }));
+      const mark = svgEl('g', { transform: `translate(${cx - 5} ${cy - 5}) scale(${10 / 24})`, fill: 'none', stroke: 'currentColor', 'stroke-width': 3, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' });
+      mark.innerHTML = STUFE_PATHS[p.stufe];
+      grp.appendChild(mark);
+      if (showPct) grp.appendChild(svgEl('text', { class: 'comp-line-pct', x: cx, y: Math.max(9, cy - 9), 'text-anchor': 'middle' }, String(p.pct)));
+      svg.appendChild(grp);
+    });
+    return svg;
+  }
+
   /** Anzeige-Badge einer Note. */
   function gradeBadge(p, level, extra) {
     if (p === null || p === undefined) return h('span', { class: 'grade-badge empty' }, '–');
@@ -422,6 +515,9 @@
     segSwitch,
     stufeMark,
     STUFE_LABEL,
+    compLine,
+    compSlots,
+    compAxis,
     gradeBadge,
     valueText,
     gradeInput,

@@ -2172,6 +2172,77 @@ def run_competency_tab_check(br, base):
     report("Kompetenzen: Raster Person × Kompetenz, Zeitraum, ohne Katalog kein Reiter, Umschalter in Tests, Notenübersicht/Druck ohne Kompetenztests", ok and not br.errors, str(res) + "; ".join(br.errors))
 
 
+
+def run_competency_history_check(br, base):
+    print("Kompetenzen: Kurszeile, Verlauf je Person, Personenregister (2.12):")
+    br.call("Emulation.setDeviceMetricsOverride", width=1440, height=1000, deviceScaleFactor=1, mobile=False)
+    br.open(f"{base}/index.html?demo")
+    br.wait(APP_READY, 30)
+    br.errors = []
+    res = br.eval("""(async () => {
+        const wait = (ms = 250) => new Promise((r) => setTimeout(r, ms));
+        const db = NM.app.db(), out = {}, C = NM.competencies;
+        const c = db.courses.find((x) => x.klasse === '8b');
+        const cat = C.forCourse(db, c);
+        NM.app.state.ui.half[c.id] = 'HJ1';
+        NM.app.select({ courseId: c.id, tab: 'competencies' }); await wait();
+        // Kurszeile: Anzahlen je Stufe = Rechnung, Text für Screenreader
+        const sids = c.students.map((s) => s.id);
+        const d = C.evaluate(cat, c, ['HJ1'], sids).dist('M-K1');
+        const td = document.querySelector('[data-comp-dist-row] td[data-comp-dist="M-K1"]');
+        const nums = [...td.querySelectorAll('.comp-dist-num span')].map((x) => Number(x.textContent));
+        out.dist = [nums.join() === [d.sicher, d.teilweise, d.noch].join(), d.n === d.sicher + d.teilweise + d.noch, td.querySelector('.sd-visually-hidden').textContent.includes('(von ' + d.n + ')'), td.querySelectorAll('.comp-dist-seg').length > 0];
+        // Kurszeile bleibt beim Sortieren unten
+        document.querySelector('[data-comp-grid] th[data-comp-col="M-K1"] .sort-btn').click(); await wait();
+        out.footLast = !!document.querySelector('[data-comp-grid] tfoot [data-comp-dist-row]') && document.querySelector('[data-comp-grid] tbody tr:last-child').dataset.student !== undefined;
+        delete NM.app.state.ui.sort.comp; NM.app.rerender(); await wait();
+        // Verlauf: Klick auf den Namen öffnet den Dialog
+        const s0 = c.students[0];
+        document.querySelector(`[data-comp-person="${s0.id}"]`).click(); await wait();
+        const dlg = () => document.querySelector('dialog.comp-hist-dialog');
+        const hist = C.history(cat, c, ['HJ1'], s0.id);
+        const rowL1 = () => dlg().querySelector('tr[data-hist-komp="M-L1"]');
+        out.open = [!!dlg(), dlg().querySelector('h2').textContent === 'Verlauf: ' + NM.model.studentName(s0), dlg().querySelector('.comp-hist-pos').textContent === '1 / ' + c.students.length, dlg().querySelector('[data-hist-prev]').disabled];
+        out.rows = dlg().querySelectorAll('tbody tr[data-hist-komp]').length === hist.length;
+        const hL1 = hist.find((r) => r.entry.id === 'M-L1');
+        out.points = [rowL1().querySelectorAll('[data-comp-pt]').length === hL1.points.length, hL1.points.length === 2, rowL1().querySelector('polyline') !== null, rowL1().querySelector('[data-hist-total]').dataset.histTotal === hL1.total.stufe, rowL1().querySelector('title').textContent.includes('Kompetenztest Terme')];
+        // gemeinsame Achse: derselbe Test steht in allen Zeilen an derselben Stelle
+        const xOf = (tr) => [...tr.querySelectorAll('.comp-line-dot')].map((c) => c.getAttribute('cx'));
+        const k2 = dlg().querySelector('tr[data-hist-komp="M-K2"]');
+        out.axis = [xOf(k2)[0] === xOf(rowL1())[0], dlg().querySelectorAll('.comp-axis-date').length === 2];
+        // weiter mit › und Pfeiltaste, Person mit „fehlt“ (Index 9) hat nur die KA
+        dlg().querySelector('[data-hist-next]').click(); await wait(50);
+        out.next = [dlg().querySelector('.comp-hist-pos').textContent === '2 / ' + c.students.length, dlg().querySelector('h2').textContent.endsWith(NM.model.studentName(c.students[1]))];
+        dlg().dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true })); await wait(50);
+        out.key = dlg().querySelector('.comp-hist-pos').textContent === '1 / ' + c.students.length;
+        for (let i = 0; i < 9; i++) dlg().querySelector('[data-hist-next]').click();
+        await wait(50);
+        out.fehlt = [dlg().querySelector('.comp-hist-pos').textContent === '10 / ' + c.students.length, rowL1().querySelectorAll('[data-comp-pt]').length === 1];
+        for (let i = 0; i < 5; i++) dlg().querySelector('[data-hist-next]').click();
+        out.last = dlg().querySelector('[data-hist-next]').disabled && dlg().querySelector('.comp-hist-pos').textContent === c.students.length + ' / ' + c.students.length;
+        dlg().querySelector('.modal-actions .btn').click(); await wait();
+        out.closed = !dlg();
+        // Personenregister: Abschnitt „Kompetenzen“ mit Stand je Schuljahr
+        NM.app.state.ui.half[c.id] = 'HJ1';
+        NM.app.select({ tab: 'people' }); await wait();
+        document.querySelector(`[data-person="${s0.personId}"]`).click(); await wait();
+        const sec = document.querySelector('[data-people-comp]');
+        const ph = C.personHistory(db, NM.people.entries(db, s0.personId));
+        const yr = db.years[0];
+        const cellY = sec && sec.querySelector('tr[data-hist-komp="M-L1"] [data-hist-year]');
+        const year = C.evaluate(cat, c, NM.grades.halvesFor(c), [s0.id]).cell(s0.id, 'M-L1');
+        out.people = [!!sec, sec && sec.querySelectorAll('[data-people-comp-cat]').length === ph.length, sec && sec.querySelectorAll('tbody tr').length === ph[0].rows.length, !!cellY && cellY.dataset.histYear === year.stufe && cellY.textContent.includes(year.pct + ' %'), sec && sec.querySelector('thead').textContent.includes(yr.name.slice(2))];
+        // Person nur im MSS-Kurs (ohne Katalog): kein Abschnitt
+        const mss = db.courses.find((x) => x !== c);
+        const only = mss.students.find((s) => NM.people.entries(db, s.personId).length === 1);
+        if (only) { document.querySelector(`[data-person="${only.personId}"]`).click(); await wait(); }
+        out.none = !only || !document.querySelector('[data-people-comp]');
+        return out; })()""")
+    ok = bool(res) and all(res["dist"]) and res["footLast"] and all(res["open"]) and res["rows"] and all(res["points"]) and all(res["axis"]) \
+        and all(res["next"]) and res["key"] and all(res["fehlt"]) and res["last"] and res["closed"] and all(res["people"]) and res["none"]
+    report("Kompetenzen: Kurszeile, Verlauf im Dialog mit ‹ ›, gemeinsame Achse, Personenregister je Schuljahr", ok and not br.errors, str(res) + "; ".join(br.errors))
+
+
 def run_scripto_check(br, base):
     print("OrdoScripto (IDs, Import-CSV, Trennblätter mit QR-Code, zxing-cpp):")
     # 1. Modulmatrizen aus der App: mehrere Inhalte, Versionen 1–10, alle Masken
@@ -3796,7 +3867,7 @@ def main():
         run_tests_view_check, run_competency_check, run_task_add_click_check, run_makeup_check, run_verbal_check, run_ausgleich_check, run_notes_check, run_foerder_check, run_people_check, run_people_page_check, run_unreachable_check,
         run_tabs_check, run_tab_order_check, run_overview_fold_check, run_settings_layout_check,
         run_theme_check, run_demo_link_check, run_old_db_check, run_parts_check, run_print_menu_check,
-        run_pres_check, run_group_check, run_groups_tab_check, run_moodle_check, run_moodle_comp_check, run_competency_tab_check, run_scripto_check,
+        run_pres_check, run_group_check, run_groups_tab_check, run_moodle_check, run_moodle_comp_check, run_competency_tab_check, run_competency_history_check, run_scripto_check,
         run_decrypt_tool, run_launcher_check,
     ]
     srv, base = serve()

@@ -245,6 +245,56 @@
       const pc = C.evaluate(cat2, c2, ['HJ1'], ['s1']).cell('s1', 'M-K1');
       ok('Auswertung: Teilstatus fehlt nur für den Teil', pc.got === 3 && pc.max === 4);
     }
+
+    // ---------- Verlauf, Kurszeile, Register (2.12) ----------
+    {
+      const db = M.newDb();
+      const cat = C.addFromTemplate(db, 'mathe-sek1');
+      const c = withCourse(db, [task('a1', 4, { competencies: ['M-K1'] }), task('a2', 6, { competencies: ['M-K1', 'M-L3'] })], 'mathe-sek1');
+      const t1 = c.assessments[0];
+      t1.date = '2026-10-01';
+      t1.test.results = { s1: { scores: { a1: 4, a2: 6 } }, s2: { scores: { a1: 1, a2: 2 } }, s3: { status: 'fehlt' }, s4: { scores: { a1: 2, a2: 4 } } };
+      c.assessments.unshift({ id: 't0', kind: 'test', half: 'HJ1', cat: 'other', name: 'KT 0', date: '2026-09-03', weight: 1, ungraded: true, test: { tasks: [task('c1', 10, { competencies: ['M-K1'] })], results: { s1: { scores: { c1: 5 } }, s3: { scores: { c1: 9 } } } } });
+      const hs = C.history(cat, c, ['HJ1'], 's1');
+      ok('Verlauf: Kompetenzen mit Punkten in Katalogreihenfolge', hs.map((r) => r.entry.id).join() === 'M-K1,M-L3');
+      const k1 = hs[0];
+      ok('Verlauf: Tests nach Datum, Prozent je Test', k1.points.map((p) => p.testId + ':' + p.pct + ':' + p.stufe).join() === 't0:50:teilweise,t1:100:sicher');
+      ok('Verlauf: Punkte und Datum am Punkt', k1.points[1].got === 10 && k1.points[1].max === 10 && k1.points[1].date === '2026-10-01' && !k1.points[1].makeup);
+      const ev = C.evaluate(cat, c, ['HJ1'], ['s1', 's2', 's3', 's4']);
+      ok('Verlauf: Stand = Zelle der Tabelle', k1.total.pct === ev.cell('s1', 'M-K1').pct && k1.total.tests === 2 && k1.total.got === 15 && k1.total.max === 20);
+      const s3 = C.history(cat, c, ['HJ1'], 's3');
+      ok('Verlauf: „fehlt“ gibt keinen Punkt', s3.length === 1 && s3[0].points.length === 1 && s3[0].points[0].testId === 't0');
+      ok('Verlauf: ohne Punkte leer', C.history(cat, c, ['HJ1'], 's9').length === 0 && C.history(cat, c, ['HJ2'], 's1').length === 0);
+      // Nachschreibtermin: Punkt mit Datum des Termins, markiert
+      const mk = M.newMakeup(c, t1);
+      mk.date = '2026-10-15';
+      mk.test.results = { s3: { scores: { a1: 2, a2: 3 } } };
+      c.assessments.push(mk);
+      const m = C.history(cat, c, ['HJ1'], 's3')[0];
+      ok('Verlauf: Nachschreibtermin mit eigenem Datum', m.points.length === 2 && m.points[1].makeup && m.points[1].date === '2026-10-15' && m.points[1].pct === 50);
+
+      // Kurszeile: Verteilung je Kompetenz, nur Personen mit Punkten
+      const ev2 = C.evaluate(cat, c, ['HJ1'], ['s1', 's2', 's3', 's4', 's5']);
+      const d = ev2.dist('M-K1');
+      // s1 15/20=75 teilweise, s2 3/10=30 noch, s3 (9+5)/20=70 teilweise, s4 6/10=60 teilweise
+      ok('Kurszeile: Verteilung sicher/teilweise/noch', d.sicher === 0 && d.teilweise === 3 && d.noch === 1 && d.n === 4);
+      ok('Kurszeile: Kompetenz ohne Punkte', C.evaluate(cat, c, ['HJ1'], ['s9']).dist('M-K1').n === 0);
+
+      // Register: zwei Schuljahre, ein Kurs ohne Katalog fällt weg
+      const y2 = { id: 'y2', name: '2027/28' };
+      db.years.push(y2);
+      const c2 = { id: 'c2', yearId: 'y2', klasse: '9b', fach: 'Mathe', jahrgang: 9, catalogId: 'mathe-sek1', students: [], assessments: [{ id: 'u1', kind: 'test', half: 'HJ2', cat: 'other', name: 'KT 9', date: '2028-03-01', weight: 1, test: { tasks: [task('d1', 5, { competencies: ['M-K1'] })], results: { p9: { scores: { d1: 5 } } } } }] };
+      const c3 = { id: 'c3', yearId: 'y2', klasse: '9b', fach: 'Chemie', jahrgang: 9, students: [], assessments: [{ id: 'v1', kind: 'test', half: 'HJ1', cat: 'other', name: 'Chemie', weight: 1, test: { tasks: [task('e1', 5, { competencies: ['M-K1'] })], results: { q1: { scores: { e1: 1 } } } } }] };
+      db.courses.push(c2, c3);
+      const ph = C.personHistory(db, [{ course: c2, student: { id: 'p9' } }, { course: c, student: { id: 's1' } }, { course: c3, student: { id: 'q1' } }]);
+      ok('Register: ein Katalog, Kurs ohne Katalog fällt weg', ph.length === 1 && ph[0].cat.id === cat.id);
+      ok('Register: Schuljahre alt → neu', ph[0].years.map((y) => y.id).join() === db.years[0].id + ',y2');
+      const r = ph[0].rows[0];
+      ok('Register: Punkte über Schuljahre nach Datum, mit Kurs', r.entry.id === 'M-K1' && r.points.map((p) => p.testId).join() === 't0,t1,u1' && r.points[2].course === c2);
+      ok('Register: Stand je Schuljahr', r.perYear[db.years[0].id].pct === 75 && r.perYear.y2.pct === 100 && r.perYear.y2.stufe === 'sicher');
+      ok('Register: Kompetenz nur im ersten Jahr', ph[0].rows[1].entry.id === 'M-L3' && !ph[0].rows[1].perYear.y2);
+      ok('Register: ohne Punkte leer', C.personHistory(db, [{ course: c, student: { id: 's9' } }]).length === 0);
+    }
   } catch (e) {
     fails++;
     lines.push('FAIL Ausnahme: ' + (e && e.stack || e));

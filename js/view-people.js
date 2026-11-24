@@ -190,6 +190,7 @@
             h('table', { class: 'table compact people-courses' }, h('thead', null, h('tr', null, h('th', null, 'Schuljahr'), h('th', null, 'Kurs'), h('th', null, 'Name im Kurs'), h('th', null, ''))), h('tbody', null, rows))
           )
         : h('p', { class: 'muted' }, 'Steht in keinem Kurs.'),
+      competencySection(db, p),
       ausgleichSection(db, p),
       notesSection(db, p),
       foerderSection(db, p),
@@ -200,6 +201,34 @@
         es.length > 1 ? h('button', { class: 'btn', 'data-person-split': '', onclick: () => splitDialog(db, p) }, 'Trennen …') : null,
         !es.length ? h('button', { class: 'btn btn-danger', 'data-person-remove': '', onclick: () => removePerson(db, p) }, icon('trash'), ' Aus dem Register löschen') : null
       )
+    );
+  }
+
+  // ---------- Kompetenzen (2.12, PLANUNG AI 11) ----------
+  // Verlauf über alle Kurse und Schuljahre, je Katalog (Fach) eine Tabelle; nichts gespeichert.
+
+  function competencySection(db, p) {
+    const groups = NM.competencies.personHistory(db, P.entries(db, p.id));
+    if (!groups.length) return null;
+    const VC = NM.views.competencies;
+    return h(
+      'section',
+      { class: 'people-comp', 'data-people-comp': '' },
+      h('h3', null, 'Kompetenzen'),
+      groups.map((g) =>
+        h(
+          'div',
+          { class: 'people-comp-cat', 'data-people-comp-cat': g.cat.id },
+          h('h4', null, [g.cat.fach, g.cat.name].filter(Boolean).join(' · ')),
+          VC.historyTable(
+            g.cat,
+            g.rows,
+            g.years.map((y) => h('th', { scope: 'col', class: 'comp-hist-year', title: 'Stand im Schuljahr ' + y.name }, shortYear(y.name))),
+            { courseLabel: (c) => courseLabel(db, c), yearOrder: g.years.map((y) => y.id), stand: (r) => g.years.map((y) => VC.standCell(r.perYear[y.id] || null, 'data-hist-year', { tests: false })) }
+          )
+        )
+      ),
+      h('p', { class: 'muted small' }, 'Aus allen Tests mit Kompetenzen in den Kursen der Person, je Schuljahr erreicht ÷ möglich.' + (groups.some((g) => g.years.length > 1) ? ' Die gestrichelte senkrechte Linie trennt die Schuljahre.' : ''))
     );
   }
 

@@ -495,10 +495,8 @@
    * sonst zählt eine leere Aufgabe mit 0 Punkten.
    */
   function evaluate(cat, course, halves, sids) {
+    const { all, toKomp, tests } = prepare(cat, course, halves);
     const G = NM.grades;
-    const all = entries(cat);
-    const toKomp = new Map(all.map((e) => [e.id, e.level === 'teil' ? e.parent : e.id]));
-    const tests = ((course && course.assessments) || []).filter((a) => a.kind === 'test' && a.test && halves.includes(a.half) && !G.isMakeup(course, a) && testHasCompetencies(a));
     // Spalten: Kompetenzen, die im Zeitraum an einer Aufgabe hängen (Original oder Nachschreibtermin)
     const withTasks = new Set();
     for (const a of tests) {
@@ -508,46 +506,165 @@
     const cols = komps.filter((e) => withTasks.has(e.id));
     const missing = komps.filter((e) => !e.hidden && !withTasks.has(e.id));
     const data = new Map();
-    const entered = (v) => v !== null && v !== undefined && v !== '';
     for (const sid of sids) {
       const per = new Map();
-      for (const a of tests) {
-        const src = G.countingFor(course, a, sid);
-        const test = src.test;
-        const r = (test.results || {})[sid];
-        if (!r || SKIP_STATUS.has(r.status)) continue;
-        const scores = r.scores || {};
-        const sep = G.separateParts(test);
-        // Gruppen: getrennt bewertete Teile einzeln, sonst der ganze Test
-        const groups = sep ? G.taskGroups(test) : [{ part: null, tasks: test.tasks || [] }];
-        for (const { part, tasks } of groups) {
-          if (part && SKIP_STATUS.has((r.partStatus || {})[part.id])) continue;
-          if (!tasks.some((t) => entered(scores[t.id]))) continue;
-          for (const t of tasks) {
-            const ids = taskKomps(t, toKomp);
-            if (!ids.size) continue;
-            const got = entered(scores[t.id]) ? Number(scores[t.id]) || 0 : 0;
-            const max = Number(t.max) || 0;
-            for (const id of ids) {
-              const c = per.get(id) || { got: 0, max: 0, tests: new Set() };
-              c.got += got;
-              c.max += max;
-              c.tests.add(a.id);
-              per.set(id, c);
-            }
-          }
-        }
+      for (const it of items(course, tests, toKomp, sid)) {
+        const c = per.get(it.komp) || { got: 0, max: 0, tests: new Set() };
+        c.got += it.got;
+        c.max += it.max;
+        c.tests.add(it.testId);
+        per.set(it.komp, c);
       }
       data.set(sid, per);
     }
-    function cell(sid, id) {
-      const c = (data.get(sid) || new Map()).get(id);
-      if (!c || c.max <= 0) return null;
-      const got = Math.round(c.got * 100) / 100;
-      const pct = Math.round((c.got / c.max) * 100);
-      return { got, max: Math.round(c.max * 100) / 100, pct, stufe: stufeOf(cat, pct), few: c.max < FEW_POINTS, tests: c.tests.size };
+    const cell = (sid, id) => sumCell(cat, (data.get(sid) || new Map()).get(id));
+    /** Kurszeile: wie viele Personen mit Punkten in der Kompetenz sicher / teilweise / noch nicht sind. */
+    function dist(id) {
+      const out = { sicher: 0, teilweise: 0, noch: 0, n: 0 };
+      for (const sid of sids) {
+        const c = cell(sid, id);
+        if (!c) continue;
+        out[c.stufe]++;
+        out.n++;
+      }
+      return out;
     }
-    return { cols, missing, tests: tests.length, cell };
+    return { cols, missing, tests: tests.length, cell, dist };
+  }
+
+  /** Katalog flach, Teil → Kompetenz und die Tests (ohne Nachschreibtermine) mit Kompetenzen im Zeitraum. */
+  function prepare(cat, course, halves) {
+    const G = NM.grades;
+    const all = entries(cat);
+    const toKomp = new Map(all.map((e) => [e.id, e.level === 'teil' ? e.parent : e.id]));
+    const tests = ((course && course.assessments) || []).filter((a) => a.kind === 'test' && a.test && halves.includes(a.half) && !G.isMakeup(course, a) && testHasCompetencies(a));
+    return { all, toKomp, tests };
+  }
+
+  const entered = (v) => v !== null && v !== undefined && v !== '';
+
+  /**
+   * Punkte einer Person je Test und Kompetenz: [{ testId, src (gezählter Termin), komp, got, max }],
+   * ein Eintrag je Test und Kompetenz. Regeln siehe evaluate.
+   */
+  function items(course, tests, toKomp, sid) {
+    const G = NM.grades;
+    const out = [];
+    for (const a of tests) {
+      const src = G.countingFor(course, a, sid);
+      const test = src.test;
+      const r = (test.results || {})[sid];
+      if (!r || SKIP_STATUS.has(r.status)) continue;
+      const scores = r.scores || {};
+      const sep = G.separateParts(test);
+      const per = new Map();
+      // Gruppen: getrennt bewertete Teile einzeln, sonst der ganze Test
+      const groups = sep ? G.taskGroups(test) : [{ part: null, tasks: test.tasks || [] }];
+      for (const { part, tasks } of groups) {
+        if (part && SKIP_STATUS.has((r.partStatus || {})[part.id])) continue;
+        if (!tasks.some((t) => entered(scores[t.id]))) continue;
+        for (const t of tasks) {
+          const ids = taskKomps(t, toKomp);
+          if (!ids.size) continue;
+          const got = entered(scores[t.id]) ? Number(scores[t.id]) || 0 : 0;
+          const max = Number(t.max) || 0;
+          for (const id of ids) {
+            const c = per.get(id) || { testId: a.id, src, komp: id, got: 0, max: 0 };
+            c.got += got;
+            c.max += max;
+            per.set(id, c);
+          }
+        }
+      }
+      out.push(...per.values());
+    }
+    return out;
+  }
+
+  /** Summe { got, max, tests? } → Zelle { got, max, pct, stufe, few, tests } oder null ohne mögliche Punkte. */
+  function sumCell(cat, c) {
+    if (!c || c.max <= 0) return null;
+    const pct = Math.round((c.got / c.max) * 100);
+    const tests = c.tests instanceof Set ? c.tests.size : c.tests || 0;
+    return { got: Math.round(c.got * 100) / 100, max: Math.round(c.max * 100) / 100, pct, stufe: stufeOf(cat, pct), few: c.max < FEW_POINTS, tests };
+  }
+
+  const byDate = (x, y) => String(x.date || '9999').localeCompare(String(y.date || '9999')) || String(x.name).localeCompare(String(y.name), 'de');
+
+  /** Ein Punkt der Verlaufslinie (ein Test, eine Kompetenz). */
+  function point(cat, course, it) {
+    const pct = it.max > 0 ? Math.round((it.got / it.max) * 100) : 0;
+    const makeup = NM.grades.isMakeup(course, it.src);
+    return { testId: it.testId, name: it.src.name || '', date: it.src.date || '', makeup, got: Math.round(it.got * 100) / 100, max: Math.round(it.max * 100) / 100, pct, stufe: stufeOf(cat, pct) };
+  }
+
+  /**
+   * Verlauf einer Person im Kurs (seit 2.12, PLANUNG AI 11): je Kompetenz mit Punkten im Zeitraum
+   * die Tests nach Datum (Prozent in diesem Test) und der Stand wie in evaluate.
+   * @returns [{ entry, points: [{ testId, name, date, makeup, got, max, pct, stufe }], total }] in Katalogreihenfolge
+   */
+  function history(cat, course, halves, sid) {
+    const { all, toKomp, tests } = prepare(cat, course, halves);
+    const list = items(course, tests, toKomp, sid).filter((it) => it.max > 0);
+    return all
+      .filter((e) => e.level === 'komp')
+      .map((entry) => {
+        const mine = list.filter((it) => it.komp === entry.id);
+        if (!mine.length) return null;
+        const points = mine.map((it) => point(cat, course, it)).sort(byDate);
+        const total = sumCell(cat, mine.reduce((s, it) => ({ got: s.got + it.got, max: s.max + it.max, tests: s.tests + 1 }), { got: 0, max: 0, tests: 0 }));
+        return { entry, points, total };
+      })
+      .filter(Boolean);
+  }
+
+  /**
+   * Verlauf einer Person über alle Kurse und Schuljahre (Personenregister), getrennt je Katalog.
+   * @param list Kurseinträge der Person [{ course, student }] (NM.people.entries)
+   * @returns [{ cat, years: [{ id, name }] (alt → neu, nur mit Punkten),
+   *            rows: [{ entry, points: [… , course, yearId], perYear: { yearId: Zelle } }] }]
+   * Kurse ohne Katalog fallen weg. Mehrere Kurse eines Schuljahrs im selben Katalog zählen zusammen.
+   */
+  function personHistory(db, list) {
+    const G = NM.grades;
+    const order = (db.years || []).map((y) => y.id);
+    const out = new Map();
+    for (const { course, student } of list || []) {
+      const cat = forCourse(db, course);
+      if (!cat) continue;
+      const { all, toKomp, tests } = prepare(cat, course, G.halvesFor(course));
+      const its = items(course, tests, toKomp, student.id).filter((it) => it.max > 0);
+      if (!its.length) continue;
+      const g = out.get(cat.id) || { cat, all, years: new Set(), per: new Map() };
+      g.years.add(course.yearId);
+      for (const it of its) {
+        const p = Object.assign(point(cat, course, it), { course, yearId: course.yearId });
+        const r = g.per.get(it.komp) || { points: [], sums: new Map() };
+        r.points.push(p);
+        const s = r.sums.get(course.yearId) || { got: 0, max: 0, tests: 0 };
+        s.got += it.got;
+        s.max += it.max;
+        s.tests++;
+        r.sums.set(course.yearId, s);
+        g.per.set(it.komp, r);
+      }
+      out.set(cat.id, g);
+    }
+    const yearSort = (a, b) => order.indexOf(a) - order.indexOf(b);
+    return [...out.values()].map((g) => {
+      const years = [...g.years].sort(yearSort).map((id) => ({ id, name: ((db.years || []).find((y) => y.id === id) || {}).name || '' }));
+      const rows = g.all
+        .filter((e) => e.level === 'komp' && g.per.has(e.id))
+        .map((entry) => {
+          const r = g.per.get(entry.id);
+          const perYear = {};
+          for (const [y, s] of r.sums) perYear[y] = sumCell(g.cat, s);
+          // nach Schuljahr, darin nach Datum
+          const points = r.points.sort((x, y) => yearSort(x.yearId, y.yearId) || byDate(x, y));
+          return { entry, points, perYear };
+        });
+      return { cat: g.cat, years, rows };
+    });
   }
 
   /** Templates für die Prüfung gegen vorlagen/*.json (Test). */
@@ -601,6 +718,8 @@
     isCompetencyTest,
     testHasCompetencies,
     evaluate,
+    history,
+    personHistory,
     templateFile,
   };
 })(window.NM = window.NM || {});
