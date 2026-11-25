@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="de">
+<head><meta charset="utf-8"><title>Tests Export für OrdoSortis</title></head>
+<body>
+<pre id="out"></pre>
+<script src="../js/util.js"></script>
+<script src="../js/sortis.js"></script>
+<script>
+  const S = NM.sortis;
+  const lines = [];
+  let fails = 0;
+  const ok = (name, cond) => { if (!cond) fails++; lines.push((cond ? 'OK   ' : 'FAIL ') + name); };
+  // Erfundene Daten
+  const db = {
+    years: [{ id: 'y1', name: '2026/27' }],
+    people: [
+      { id: 'p1', last: 'Müller', first: 'Zoe' },
+      { id: 'p2', last: 'Meyer', first: 'Ben' },
+      { id: 'p3', last: 'Meyer', first: 'Anna' },
+      { id: 'p4', last: 'Weg', first: 'Willi' },
+      { id: 'p5', last: 'Test; "Q"', first: 'Zeile\nZwei' },
+      { id: 'p6', last: 'Ohne', first: 'Mail' },
+    ],
+    courses: [{
+      id: 'c1', yearId: 'y1', klasse: '8b', fach: 'M',
+      students: [
+        { id: 's1', personId: 'p1', last: 'Alt', first: 'Name', email: 'zoe@example.org', note: 3, bemerkung: 'geheim' },
+        { id: 's2', personId: 'p2', last: 'X', first: 'Y', email: 'ben@example.org' },
+        { id: 's3', personId: 'p3', last: 'X', first: 'Y', email: '' },
+        { id: 's4', personId: 'p4', last: 'Weg', first: 'Willi', active: false },
+        { id: 's5', personId: 'p5', last: 'Q', first: 'Q', email: 'a;b@example.org' },
+        { id: 's6', personId: 'p6', last: 'Ohne', first: 'Mail' },
+      ],
+    }],
+  };
+  const f = S.exportCsv(db, db.courses[0], '2026-11-25');
+  const rows = f.text.split('\n');
+  ok('Kopfzeile', rows[0] === 'person_id;nachname;vorname;klasse;schuljahr;email');
+  ok('Dateiname', f.name === 'ordosortis_personen_8b_2026-11-25.csv');
+  ok('Kein BOM, kein \\r, Datei endet mit genau einem \\n', f.text.charCodeAt(0) !== 0xfeff && !f.text.includes('\r') && f.text.endsWith('\n') && !f.text.endsWith('\n\n'));
+  ok('Inaktive fehlen', !f.text.includes('p4') && !f.text.includes('Willi'));
+  ok('Namen aus dem Register, nicht aus dem Kurseintrag', f.text.includes('p1;Müller;Zoe;8b;2026/27;zoe@example.org') && !f.text.includes('Alt') && !f.text.includes('X;Y'));
+  const order = rows.slice(1).filter((r) => /^p\d;/.test(r)).map((r) => r.slice(0, 2));
+  ok('Sortierung: Meyer Anna, Meyer Ben, Müller, Ohne, Test', order.join() === 'p3,p2,p1,p6,p5');
+  ok('Leere Mail bleibt leer', rows.includes('p3;Meyer;Anna;8b;2026/27;') && rows.includes('p6;Ohne;Mail;8b;2026/27;'));
+  ok('Maskierung bei ; " und Zeilenumbruch', f.text.includes('p5;"Test; ""Q""";"Zeile\nZwei";8b;2026/27;"a;b@example.org"'));
+  ok('Nichts Berechnetes oder Vertrauliches', !f.text.includes('geheim') && !f.text.includes('note'));
+  ok('Ohne Datum: heutiges Datum im Dateinamen', S.exportCsv(db, db.courses[0]).name === `ordosortis_personen_8b_${NM.util.todayISO()}.csv`);
+  ok('Klasse mit Sonderzeichen im Dateinamen', S.exportCsv(db, Object.assign({}, db.courses[0], { klasse: '8/b x' }), '2026-01-02').name === 'ordosortis_personen_8_b_x_2026-01-02.csv');
+  ok('Leerer Kurs: nur Kopfzeile', S.exportCsv(db, { yearId: 'y1', klasse: '5a', students: [] }, '2026-01-02').text === 'person_id;nachname;vorname;klasse;schuljahr;email\n');
+
+  document.getElementById('out').textContent = (fails ? `${fails} FEHLGESCHLAGEN` : 'ALLE TESTS BESTANDEN') + '\n\n' + lines.join('\n');
+</script>
+</body>
+</html>

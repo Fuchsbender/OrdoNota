@@ -137,6 +137,14 @@
       search,
       filter,
       h('p', { class: 'muted small people-count', 'aria-live': 'polite' }, shown.length === all.length ? `${all.length} Personen` : `${shown.length} von ${all.length} Personen`),
+      fCourse
+        ? h(
+            'button',
+            { type: 'button', class: 'btn btn-sm', 'data-sortis-export': '', title: 'Personen dieses Kurses als CSV für OrdoSortis: nur Kennung, Name, Klasse, Schuljahr und Mail-Adresse', onclick: () => sortisExport(db, fCourse) },
+            icon('download'),
+            ' Für OrdoSortis exportieren'
+          )
+        : null,
       shown.length
         ? h('ul', { class: 'people-items', 'data-scroll-key': 'people-items', onkeydown: listKey }, items)
         : h('p', { class: 'muted' }, !people.length ? 'Noch keine Personen. Sie entstehen, sobald Namen in einem Kurs stehen.' : q ? 'Keine Person passt zur Suche.' : view.filter === 'orphans' ? 'Alle Personen stehen in einem Kurs.' : 'In diesem Kurs steht niemand.')
@@ -144,6 +152,13 @@
 
     const detail = h('div', { class: 'people-detail' }, sel ? detailCard(db, sel) : h('div', { class: 'card people-empty' }, h('p', { class: 'muted' }, 'Links eine Person wählen.')));
     root.append(head, h('div', { class: 'people-layout' + (view.detail && sel ? ' show-detail' : '') }, list, detail));
+  }
+
+  /** Export „Für OrdoSortis“: CSV laden, danach Hinweis (die Datei ist nicht verschlüsselt). */
+  function sortisExport(db, course) {
+    const f = NM.sortis.exportCsv(db, course);
+    NM.util.download(f.name, f.text, 'text/csv;charset=utf-8');
+    toast('Datei für OrdoSortis gespeichert. Sie ist nicht verschlüsselt: nur dort öffnen und danach löschen.', 'success');
   }
 
   function choose(pid) {

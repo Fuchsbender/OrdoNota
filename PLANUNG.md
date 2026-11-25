@@ -663,6 +663,19 @@ Probe mit 12 Stunden (max. 48 P), „0 = befriedigend“: immer `0` (24 P) → 0
 - [x] Nur für die Sitzung, Voreinstellung „Alle“. Die Namenssuche wirkt zusätzlich, Reihenfolge alphabetisch wie sonst. Nichts gespeichert, Schema bleibt 5.
 - [x] E2E-Test in `run_people_page_check`, Doku 6.x.
 
+## AK) Export „Für OrdoSortis“ – erledigt in 2.15.0 am 25.11.2026 (lokal committet, noch nicht veröffentlicht)
+
+OrdoSortis (`../OrdoSortis`, Berufsorientierung) übernimmt Personen und Klassen aus OrdoNota. Schlüssel ist `people[].id`. Das Format legt `../OrdoSortis/docs/KONZEPT.md` Abschnitt 7.1 fest; Änderungen nur nach Absprache und in beiden Apps.
+
+- **Ort:** Seite „Personen“. Steht die Auswahl auf einem Kurs, erscheint unter der Liste der Knopf **„Für OrdoSortis exportieren“** (bei „Alle“ und „Ohne Kurs“ nicht).
+- **Inhalt:** die aktiven Kurseinträge des Kurses (`active !== false`), sortiert nach Nachname, Vorname. Namen aus dem Personenregister (`people[]`), nicht aus dem Kurseintrag.
+- **Datei:** `ordosortis_personen_<Klasse>_<JJJJ-MM-TT>.csv` (über `safeFilename`), Semikolon, UTF-8 **ohne BOM**, Zeilenende `\n`, Kopfzeile `person_id;nachname;vorname;klasse;schuljahr;email`. `klasse` = `course.klasse`, `schuljahr` = Name des Schuljahrs, `email` = Moodle-Adresse des Kurseintrags oder leer. Felder mit `;`, `"` oder Zeilenumbruch in Anführungszeichen.
+- **Nie dabei:** Noten, Bemerkungen, Notizen, Nachteilsausgleiche, Förderplan, Fotos, I-Status.
+- Nach dem Herunterladen ein Hinweis: Die Datei ist nicht verschlüsselt.
+- **Logik** rein in `js/sortis.js` (`NM.sortis.exportCsv(db, course)` → `{ name, text }`), Datum über einen Parameter testbar.
+- **Tests:** `tests/sortis.test.html` (Kopfzeile, Sortierung, inaktive fehlen, Namen aus dem Register, leere Mail, Maskierung, kein BOM, Dateiname); End-to-End in `run_tests.py` (Knopf nur bei Kursauswahl, Inhalt der Datei).
+- Kein neues `SCHEMA`, keine neuen Felder.
+
 ## C) Gamification des Pomodoro-Timers (zurückgestellt, erst auf Nachfrage des Nutzers)
 
 **Vor Beginn die offenen Fragen unten mit dem Nutzer klären.** C ergänzt nur Felder → kein neues `SCHEMA`; `migrate()` und `tools/entschluesseln.py` (CSV-Ausgabe) mitziehen.

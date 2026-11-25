@@ -174,7 +174,7 @@ def report(name, ok, detail=""):
 
 def run_test_pages(br, base):
     print("Testseiten:")
-    for page in ["grades", "model", "people", "attendance", "update", "moodle", "qr", "pomodoro", "groups", "random", "timer", "draw", "crypto", "storage", "competencies"]:
+    for page in ["grades", "model", "people", "attendance", "update", "moodle", "qr", "pomodoro", "groups", "random", "timer", "draw", "crypto", "storage", "sortis", "competencies"]:
         br.open(f"{base}/tests/{page}.test.html")
         done = br.wait("/^(ALLE TESTS BESTANDEN|\\d+ FEHLGESCHLAGEN|FEHLER)/.test(document.getElementById('out').textContent)")
         text = br.eval("document.getElementById('out').textContent") or ""
@@ -1623,7 +1623,18 @@ def run_people_page_check(br, base):
         sInp.value = ''; sInp.dispatchEvent(new Event('input')); await wait();
         const kept = document.querySelector('[data-people-filter]').value === fc.id;
         out.byCourse = [inC, both, kept, groups[0] === 'Schuljahr ' + NM.app.currentYear().name, optTxt.endsWith('(' + want.size + ')')];
+        // Export „Für OrdoSortis“: Knopf nur bei einem Kurs, Datei mit Kopfzeile und den aktiven Personen, Hinweis „nicht verschlüsselt“
+        const sbtn = () => document.querySelector('[data-sortis-export]');
+        const got = []; const origDl = NM.util.download; NM.util.download = (n, t) => got.push({ n, t });
+        sbtn().click(); await wait(); NM.util.download = origDl;
+        const srows = got.length ? got[0].t.split('\\n') : [];
+        const act = fc.students.filter((s) => s.active !== false);
+        out.sortis = [got.length === 1, got[0] && got[0].n.startsWith('ordosortis_personen_') && got[0].n.endsWith('.csv'), srows[0] === 'person_id;nachname;vorname;klasse;schuljahr;email',
+                      srows.length === act.length + 2 && srows[srows.length - 1] === '', act.every((s) => got[0].t.includes(s.personId + ';')), !got[0].t.includes('\\r') && got[0].t.charCodeAt(0) !== 0xfeff,
+                      [...document.querySelectorAll('.toast')].some((t) => t.textContent.includes('nicht verschlüsselt'))];
+        pf('orphans'); await wait(); const noOrph = !sbtn();
         pf('all'); await wait();
+        out.sortisHidden = [noOrph, !sbtn()];
         // Kurs aus der Seitenleiste: zurück zu einem Kursreiter
         document.querySelector('.course-item').click(); await wait();
         out.back = NM.app.state.ui.tab === 'overview' && !!document.querySelector('.tabs');
@@ -1642,6 +1653,7 @@ def run_people_page_check(br, base):
     report("Trennen: nicht alle Einträge, gewählter Eintrag wird neue Person", r.get("splitGuard") and r.get("split"), str(res))
     report("Registername bei einem Kurs ändert den Kursnamen mit; manuell zusammenführen, gleicher Kurs gesperrt", r.get("regName") and r.get("manual") == [True, True], str(res))
     report("Filter nach Kurs: nur dessen Personen, Suche zusätzlich, aktuelles Schuljahr zuerst, Anzahl in der Option", r.get("byCourse") == [True, True, True, True, True], str(res))
+    report("Export „Für OrdoSortis“: Knopf nur bei Kursauswahl, CSV mit Kopfzeile und aktiven Personen, Hinweis nicht verschlüsselt", r.get("sortis") == [True, True, True, True, True, True, True] and r.get("sortisHidden") == [True, True], str(res))
     report("Filter „Ohne Kurs“, Aus dem Register löschen, Kurswahl führt zurück, check ohne Fehler", r.get("filter") and r.get("removed") and r.get("back") and r.get("fehler") == [], str(res))
     # Schmal: Liste oder Person, „Alle Personen“ führt zurück
     br.call("Emulation.setDeviceMetricsOverride", width=390, height=844, deviceScaleFactor=2, mobile=True)
