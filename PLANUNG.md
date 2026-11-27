@@ -687,6 +687,7 @@ Mit dem Nutzer am 27.11.2026 geklärt (grill-me Q1–Q10, alle Empfehlungen ange
 - [x] **AO** EPO: Anzahl der angezeigten Stunden begrenzen – erledigt in 2.19.0 (27.11.2026, lokal committet); Auswahl erst ab 4 Stunden im Block
 - [x] **AP** Tool „Begriffe in Gruppen“ – erledigt in 2.20.0 (27.11.2026, lokal committet); „je Gruppe“ rundet die Gruppenzahl wie der Reiter „Gruppen“; Notfallwerkzeug unverändert (wie `randomCards` nur im Klartext-JSON)
 - [x] **AQ** Planung – geklärt am 27.11.2026 (grill-me Q1–Q11), AQ-1 bis AQ-3 erledigt in 2.21.0–2.23.0 (lokal committet); offen: Bauskript in der Materialsammlung (eigene Sitzung, Übergabedatei), AQ-4 später
+- [ ] **AR** Erklärtexte für den Kompetenzbogen – geklärt am 27.11.2026 (grill-me Q1–Q10), Schritte AR-1 und AR-2 siehe Abschnitt AR
 
 ### AL) Sperre bei Standby
 
@@ -790,6 +791,46 @@ Wunsch: Integration von Kompetenztests, Schnittstelle zu Lehrplan und Arbeitsmat
 - `teile` ist optional; ohne `teile` entfällt `teil`. `teil` ist der Index in `teile`.
 - `punkte` > 0, Vielfache von 0,5; `name` je Arbeit eindeutig. `bereich`: `ka` (Klassen-/Kursarbeit) oder `sonstige` (z. B. HÜ); `katalog` fehlt, wenn ohne Katalog gebaut.
 - Keine Personendaten, keine Lösungen. Unbekannte Felder werden übergangen. Formatänderungen nur in Absprache, beide Seiten gleichzeitig.
+
+## AR) Erklärtexte für den Kompetenzbogen (geklärt am 27.11.2026, grill-me Q1–Q10)
+
+Rückmeldung des Nutzers nach dem ersten KA-Import: Der Kompetenzbogen bringt den Schülern so wenig, weil er die Kompetenzen nicht erklärt. Je Stufe soll es eigene Erklärtexte geben, die klarer machen, was man verbessern kann.
+
+**Befunde (27.11.2026):**
+- Jeder Katalog hat zwei Grenzen (`stufen.teilweise` 50 %, `stufen.sicher` 80 %), also drei Stufen: ✗ noch nicht, ◐ teilweise, ✓ sicher.
+- Der Kompetenzbogen (`js/print.js` `competencySheet`, Daten aus `NM.competencies.sheet`) zeigt je Kompetenz nur Zeichen, Name und Bereich. Er wertet nur die Ebene der Kompetenzen aus, Teilkompetenzen fließen ein.
+- Vorlagen kommen beim Wählen als Kopie in `db.settings.competencyCatalogs`. Neue Texte in den Vorlagen erreichen vorhandene Kopien also nicht von selbst.
+
+**Entscheidungen** (alle Empfehlungen angenommen, Anrede „du“ klein):
+1. **Texte im Katalog** (Q1), an jeder Kompetenz das Feld `texte: { worum, noch, teilweise, sicher }`. Die Formatversion bleibt 1. Ältere OrdoNota-Versionen und `moodle.py` übergehen das Feld.
+2. **Vier Texte je Kompetenz** (Q2), je höchstens 300 Zeichen:
+   - `worum` „Darum geht es“: erklärt den Fachbegriff in Schülersprache, für alle Stufen gleich.
+   - `noch` (✗): was noch fehlt und womit du anfängst.
+   - `teilweise` (◐): was schon klappt und was du als Nächstes übst.
+   - `sicher` (✓): „Ich kann …“-Satz und eine Herausforderung als nächster Schritt.
+3. **Teilkompetenzen** bekommen vorerst keine Texte (Q3).
+4. **Texte für die Vorlagen** (Q4) für Mathe Sek I, Mathe MSS und Chemie Sek I entwirft Claude aus den Beschreibungen der KMK-Bildungsstandards. Sie sind einfach, in der Du-Form mit kleinem „du“ geschrieben und für die MSS etwas fachlicher. Der Nutzer sieht sie vor dem Commit durch.
+5. **Vorhandene Kopien** (Q5): `migrate()` trägt die Texte der Vorlage nach. Das gilt nur für Kataloge, deren Kennung zu einer Vorlage passt (Kennung gleich der Vorlage oder Vorlage plus „-N“, wie `fillTemplateStufe`), nur für leere Felder und nur für Kompetenzen mit gleicher Kennung. Eigene Texte werden nie überschrieben.
+6. **Anzeige** (Q6):
+   - Die Texte erscheinen auf dem Kompetenzbogen und in der Moodle-Rückmeldung je Person (Block „Kompetenzen in diesem Test“).
+   - Beim Übernehmen des Förderplan-Hinweises in die Ziele kommt der Text für „noch nicht“ mit.
+   - Beamer und Vollbild zeigen keine Texte.
+7. **Bezug zum Test** (Q7): Bei ◐ und ✗ steht eine kleine Zeile „Im Test <Name>: Aufgaben 1a, 2“. Sie nennt nur den letzten Test im Zeitraum, in dem die Kompetenz vorkam.
+8. **Seitenlänge** (Q8): „Das kannst du schon“ zeigt nur den `sicher`-Text in einer Zeile. „Daran arbeitest du weiter“ zeigt `worum` und den Stufentext. Reicht der Platz nicht, läuft der Bogen auf eine zweite Seite weiter. In der Druckauswahl kommt der Haken „Erklärtexte“ dazu, standardmäßig an.
+9. **Bearbeiten** (Q9) im Katalogdialog: Je Kompetenz klappt der Bereich „Texte für den Kompetenzbogen“ mit vier Feldern auf. Die Texte kommen in Export und Import mit. `tools/entschluesseln.py` bekommt Spalten dafür. Vor dem Bau läuft `/impeccable shape`.
+10. **Schritte** (Q10): AR-1 und AR-2, je eine Minor-Version. Die Texte der Vorlagen legt Claude zwischen AR-1 und AR-2 zum Durchsehen vor. Liegen Kopien der Katalogdateien in der Materialsammlung, bekommt die Skill-Sitzung einen Hinweis.
+
+**Schritte:**
+- [ ] **AR-1 (2.24.0) Erklärtexte im Katalog und auf dem Bogen**:
+  - `clean()` übernimmt `texte`, mit Längengrenze und ohne leere Felder.
+  - Bearbeiten im Katalogdialog, Export und Import.
+  - Ausgabe auf dem Kompetenzbogen (mit Haken „Erklärtexte“ und Aufgabenzeile) und in der Moodle-Rückmeldung.
+  - Förderplan-Übernahme.
+  - `entschluesseln.py`, Tests und Doku.
+- [ ] **AR-2 (2.25.0) Texte für die drei Vorlagen**:
+  - Entwurf zum Durchsehen.
+  - Danach die Vorlagen in `js/competencies.js` und `vorlagen/kompetenzen/*.json` ergänzen.
+  - Nachtragen über `migrate()`, dazu Tests.
 
 ## C) Gamification des Pomodoro-Timers (zurückgestellt, erst auf Nachfrage des Nutzers)
 
