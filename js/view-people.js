@@ -695,7 +695,11 @@
     const year = NM.app.currentYear();
     const gaps = year ? NM.competencies.openGaps(db, P.entries(db, p.id), year.id) : [];
     if (!gaps.length) return null;
-    const lineOf = (g) => g.entry.name + (g.fach ? ' (' + g.fach + ')' : '');
+    // 2.24 (PLANUNG AR 6): mit dem Erklärtext zu „noch nicht“, wenn der Katalog einen hat
+    const lineOf = (g) => {
+      const tip = NM.competencies.texteOf(g.cat, g.entry.id).noch;
+      return g.entry.name + (g.fach ? ' (' + g.fach + ')' : '') + (tip ? ': ' + tip : '');
+    };
     const btns = [];
     const sync = () =>
       btns.forEach(({ b, line }) => {

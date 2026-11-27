@@ -237,7 +237,8 @@ def schreibe_csv(daten, ordner):
     # hier die Rohdaten: die Kataloge und welche Aufgabe welche Kompetenzen trägt.
     kataloge = [k for k in ((daten.get("settings") or {}).get("competencyCatalogs") or []) if isinstance(k, dict)]
     if kataloge:
-        zk = [["Katalog", "Katalogname", "Fach", "Version", "Bereich", "Kennung", "Name", "Ebene", "ausgeblendet", "Stufe"]]
+        zk = [["Katalog", "Katalogname", "Fach", "Version", "Bereich", "Kennung", "Name", "Ebene", "ausgeblendet", "Stufe",
+               "Darum geht es", "Text noch nicht", "Text teilweise", "Text sicher"]]
         for k in kataloge:
             for b in k.get("bereiche") or []:
                 for ko in b.get("kompetenzen") or []:
@@ -245,7 +246,8 @@ def schreibe_csv(daten, ordner):
                     for e, ebene in eintraege:
                         zk.append([k.get("id", ""), k.get("name", ""), k.get("fach", ""), k.get("version", ""), b.get("name", ""),
                                    e.get("id", ""), e.get("name", ""), ebene, "ja" if e.get("ausgeblendet") or ko.get("ausgeblendet") else "",
-                                   {"sek1": "Sek I", "mss": "MSS"}.get(k.get("stufe"), "")])  # Stufe seit 2.22
+                                   {"sek1": "Sek I", "mss": "MSS"}.get(k.get("stufe"), "")]  # Stufe seit 2.22
+                                  + [(e.get("texte") or {}).get(x, "") if ebene == "Kompetenz" else "" for x in ("worum", "noch", "teilweise", "sicher")])  # Erklärtexte seit 2.24
         pfad = os.path.join(ordner, "Kompetenzkataloge.csv")
         with open(pfad, "w", newline="", encoding="utf-8-sig") as f:
             csv.writer(f, delimiter=";").writerows(zk)

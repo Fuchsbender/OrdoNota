@@ -378,6 +378,36 @@
       ok('Förderplan: anderes Schuljahr leer', C.openGaps(db, [{ course: c, student: { id: 's2' } }], 'y-andere').length === 0);
       ok('Förderplan: teilweise/sicher kein Hinweis', C.openGaps(db, [{ course: c, student: { id: 's1' } }], y).length === 0);
     }
+
+    // ---------- Erklärtexte (2.24, PLANUNG AR) ----------
+    {
+      const raw = { id: 'x', bereiche: [{ id: 'A', kompetenzen: [
+        { id: 'K1', texte: { worum: '  Du  begründest. ', noch: '', sicher: 'Ich kann begründen.', fremd: 'weg', teilweise: 'x'.repeat(400) }, teil: [{ id: 'K1.1', texte: { worum: 'Teil' } }] },
+        { id: 'K2', texte: 'kaputt' },
+      ] }] };
+      const cat = C.clean(raw);
+      const k1 = cat.bereiche[0].kompetenzen[0];
+      ok('clean: Texte getrimmt, leere und fremde Felder weg, gekürzt', k1.texte.worum === 'Du begründest.' && !('noch' in k1.texte) && !('fremd' in k1.texte) && k1.texte.teilweise.length === C.TEXT_MAX);
+      ok('clean: Teilkompetenz ohne Texte, kaputte Texte weg', !k1.teil[0].texte && !('texte' in cat.bereiche[0].kompetenzen[1]));
+      ok('texteOf/textCount', C.texteOf(cat, 'K1').sicher === 'Ich kann begründen.' && C.textCount(cat, 'K1') === 3 && C.textCount(cat, 'K2') === 0 && Object.keys(C.texteOf(cat, 'K1.1')).length === 0);
+      ok('setText: setzen, leeren, Feld verschwindet', C.setText(cat, 'K2', 'noch', ' Fang an. ') === 'Fang an.' && C.setText(cat, 'K2', 'noch', '') === '' && !('texte' in cat.bereiche[0].kompetenzen[1]));
+      ok('setText: nicht für Teile oder fremde Felder', C.setText(cat, 'K1.1', 'worum', 'x') === '' && C.setText(cat, 'K1', 'quatsch', 'x') === '' && !C.texteOf(cat, 'K1').quatsch);
+      ok('Export/Import behält Texte', C.parseImport(C.exportJson(cat)).bereiche[0].kompetenzen[0].texte.worum === 'Du begründest.');
+
+      const db = M.newDb();
+      const mc = C.addFromTemplate(db, 'mathe-sek1');
+      C.setText(mc, 'M-K1', 'teilweise', 'Übe Begründungen mit „weil“.');
+      const c = withCourse(db, [task('1a', 4, { competencies: ['M-K1'] }), task('1b', 6, { competencies: ['M-L3'] }), task('2', 2, { competencies: ['M-K1'] })], 'mathe-sek1');
+      c.assessments[0].date = '2026-09-10';
+      c.assessments[0].test.results = { s1: { scores: { '1a': 1, '1b': 6, '2': 2 } } };
+      c.assessments.push({ id: 't2', kind: 'test', half: 'HJ1', cat: 'other', name: 'KA 2', date: '2026-11-01', weight: 1, test: { tasks: [task('3a', 4, { competencies: ['M-K1'] }), task('3b', 2)], results: { s1: { scores: { '3a': 2 } } } } });
+      const sh = C.sheet(mc, c, ['HJ1'], 's1');
+      const w = sh.weiter.find((x) => x.entry.id === 'M-K1');
+      ok('Bogen: Texte am Eintrag', w && w.texte.teilweise === 'Übe Begründungen mit „weil“.' && sh.kann[0].texte && Object.keys(sh.kann[0].texte).length === 0);
+      ok('Bogen: Aufgaben aus dem letzten Test', w.last && w.last.name === 'KA 2' && w.last.tasks.join() === '3a');
+      const lt = C.lastTasks(mc, c, ['HJ1'], 's1');
+      ok('lastTasks: M-L3 nur im ersten Test, mehrere Aufgaben', lt.get('M-L3').name === 'KT 1' && lt.get('M-L3').tasks.join() === '1b');
+    }
   } catch (e) {
     fails++;
     lines.push('FAIL Ausnahme: ' + (e && e.stack || e));

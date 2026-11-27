@@ -821,7 +821,7 @@ Rückmeldung des Nutzers nach dem ersten KA-Import: Der Kompetenzbogen bringt de
 10. **Schritte** (Q10): AR-1 und AR-2, je eine Minor-Version. Die Texte der Vorlagen legt Claude zwischen AR-1 und AR-2 zum Durchsehen vor. Liegen Kopien der Katalogdateien in der Materialsammlung, bekommt die Skill-Sitzung einen Hinweis.
 
 **Schritte:**
-- [ ] **AR-1 (2.24.0) Erklärtexte im Katalog und auf dem Bogen**:
+- [x] **AR-1 (2.24.0) Erklärtexte im Katalog und auf dem Bogen** – erledigt 27.11.2026 (lokal committet; nach `/impeccable shape`). Der Bogen nutzt die Blöcke nur, wenn mindestens eine Kompetenz unter „weiter“ einen Text hat; sonst bleibt die Tabelle wie bisher. Plan war:
   - `clean()` übernimmt `texte`, mit Längengrenze und ohne leere Felder.
   - Bearbeiten im Katalogdialog, Export und Import.
   - Ausgabe auf dem Kompetenzbogen (mit Haken „Erklärtexte“ und Aufgabenzeile) und in der Moodle-Rückmeldung.

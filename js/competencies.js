@@ -2,7 +2,8 @@
  * Rein, ohne DOM. Ein Katalog liegt in db.settings.competencyCatalogs im selben Aufbau wie die
  * Austauschdatei (Format „ordonota-kompetenzkatalog“), nur ohne die Felder format/formatVersion:
  *   { id, name, fach, version, stufen: { teilweise, sicher },
- *     bereiche: [ { id, name, kompetenzen: [ { id, name, ausgeblendet?, teil?: [ { id, name, ausgeblendet? } ] } ] } ] }
+ *     bereiche: [ { id, name, kompetenzen: [ { id, name, ausgeblendet?, texte?, teil?: [ { id, name, ausgeblendet? } ] } ] } ] }
+ * texte (seit 2.24, PLANUNG.md AR): Erklärtexte für den Kompetenzbogen { worum?, noch?, teilweise?, sicher? }, je höchstens 300 Zeichen.
  * Ein Kurs zeigt mit course.catalogId auf einen Katalog, eine Aufgabe trägt task.competencies = [Kennungen].
  * Kennungen werden nie neu vergeben; benutzte lassen sich nur ausblenden. */
 (function (NM) {
@@ -12,6 +13,9 @@
   const FORMAT_VERSION = 1;
   const ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,31}$/;
   const STUFEN = { teilweise: 50, sicher: 80 };
+  /** Erklärtexte je Kompetenz (seit 2.24): „Darum geht es“ und je Stufe ein Text. */
+  const TEXT_KEYS = ['worum', 'noch', 'teilweise', 'sicher'];
+  const TEXT_MAX = 300;
   const STUFE_IDS = ['sek1', 'mss']; // Kursstufe eines Katalogs (seit 2.22, fehlt = beide)
   const FEW_POINTS = 3; // weniger mögliche Punkte → Hinweis „wenig Daten“
 
@@ -173,6 +177,17 @@
     return { teilweise: t, sicher: k };
   }
 
+  /** Erklärtexte bereinigen: nur bekannte Felder, getrimmt, gekürzt, ohne leere. null = keine Texte. */
+  function cleanTexte(o) {
+    if (!o || typeof o !== 'object' || Array.isArray(o)) return null;
+    const out = {};
+    for (const k of TEXT_KEYS) {
+      const v = typeof o[k] === 'string' ? o[k].replace(/\s+/g, ' ').trim().slice(0, TEXT_MAX) : '';
+      if (v) out[k] = v;
+    }
+    return Object.keys(out).length ? out : null;
+  }
+
   function cleanEntry(x, seen) {
     if (!x || typeof x !== 'object') return null;
     const id = str(x.id, 32);
@@ -206,6 +221,8 @@
           if (te) teil.push(te);
         }
         if (teil.length) e.teil = teil;
+        const tx = cleanTexte(k.texte);
+        if (tx) e.texte = tx;
         kompetenzen.push(e);
       }
       bereiche.push({ id: bid, name: str(b.name) || bid, kompetenzen });
@@ -277,6 +294,25 @@
     }
     return null;
   }
+
+  /** Erklärtexte einer Kompetenz ({} ohne Texte oder für Teilkompetenzen). */
+  function texteOf(cat, id) {
+    const loc = locate(cat, id);
+    return (loc && !loc.parent && loc.obj.texte) || {};
+  }
+
+  /** Einen Erklärtext setzen (leer = entfernen). Gibt den gespeicherten Text zurück. */
+  function setText(cat, id, key, value) {
+    const loc = locate(cat, id);
+    if (!loc || loc.parent || !TEXT_KEYS.includes(key)) return '';
+    const tx = cleanTexte(Object.assign({}, loc.obj.texte, { [key]: String(value || '') }));
+    if (tx) loc.obj.texte = tx;
+    else delete loc.obj.texte;
+    return (tx && tx[key]) || '';
+  }
+
+  /** Wie viele der vier Erklärtexte gesetzt sind. */
+  const textCount = (cat, id) => Object.keys(texteOf(cat, id)).length;
 
   /** Kurze Anzeige einer Kennung: ohne Fachvorsatz („M-K2“ → „K2“). */
   const short = (id) => (/^[^-]+-./.test(id) ? id.slice(id.indexOf('-') + 1) : id);
@@ -835,14 +871,38 @@
   /**
    * Kompetenzbogen einer Person im Kurs: Stand je Kompetenz im Zeitraum, getrennt in
    * „Das kannst du schon“ (sicher) und „Daran arbeitest du weiter“ (teilweise, noch nicht).
-   * @returns { kann: [{ entry, bereich, stufe }], weiter: [...] } in Katalogreihenfolge
+   * @returns { kann: [{ entry, bereich, stufe, texte, last }], weiter: [...] } in Katalogreihenfolge
+   *   texte: Erklärtexte der Kompetenz (seit 2.24), last: { name, tasks: [Aufgabennamen] } aus dem letzten Test im Zeitraum
    */
   function sheet(cat, course, halves, sid) {
     const names = new Map(((cat && cat.bereiche) || []).map((b) => [b.id, b.name || '']));
     const out = { kann: [], weiter: [] };
+    const last = lastTasks(cat, course, halves, sid);
     for (const r of history(cat, course, halves, sid)) {
-      const x = { entry: r.entry, bereich: names.get(r.entry.bereich) || '', stufe: r.total.stufe };
+      const x = { entry: r.entry, bereich: names.get(r.entry.bereich) || '', stufe: r.total.stufe, texte: texteOf(cat, r.entry.id), last: last.get(r.entry.id) || null };
       (x.stufe === 'sicher' ? out.kann : out.weiter).push(x);
+    }
+    return out;
+  }
+
+  /**
+   * Letzter Test im Zeitraum je Kompetenz (seit 2.24, PLANUNG AR 7): Name des gezählten Termins und die
+   * Aufgaben dieses Termins, die die Kompetenz (oder einen ihrer Teile) tragen.
+   * @returns Map Kennung → { name, tasks: [Namen] }
+   */
+  function lastTasks(cat, course, halves, sid) {
+    const { toKomp, tests } = prepare(cat, course, halves);
+    const best = new Map();
+    for (const it of items(course, tests, toKomp, sid)) {
+      if (!(it.max > 0)) continue;
+      const prev = best.get(it.komp);
+      if (prev && byDate(prev.src, it.src) > 0) continue;
+      best.set(it.komp, it);
+    }
+    const out = new Map();
+    for (const [komp, it] of best) {
+      const tasks = (it.src.test.tasks || []).filter((t) => taskKomps(t, toKomp).has(komp)).map((t) => t.name || '').filter(Boolean);
+      out.set(komp, { name: it.src.name || '', tasks });
     }
     return out;
   }
@@ -892,6 +952,8 @@
     FORMAT,
     FORMAT_VERSION,
     STUFEN,
+    TEXT_KEYS,
+    TEXT_MAX,
     STUFE_IDS,
     FEW_POINTS,
     TEMPLATES,
@@ -905,6 +967,9 @@
     entries,
     find,
     locate,
+    texteOf,
+    setText,
+    textCount,
     short,
     coursesUsing,
     usedIds,
@@ -938,6 +1003,7 @@
     testHasCompetencies,
     evaluate,
     sheet,
+    lastTasks,
     testCompetencies,
     openGaps,
     history,

@@ -63,16 +63,24 @@
     const withData = students.filter((s) => C.history(cat, course, halves, s.id).length);
     if (!withData.length) return NM.util.toast('Noch keine Punkte zum Drucken.', 'error');
     const who = h('select', { class: 'input', 'data-comp-sheet-who': '' }, h('option', { value: '' }, `Alle (${withData.length}, je eine Seite)`), withData.map((s) => h('option', { value: s.id }, M.studentName(s))));
+    // 2.24 (PLANUNG AR 8): Erklärtexte aus dem Katalog, standardmäßig an
+    const texts = h('input', { type: 'checkbox', checked: true, 'data-comp-sheet-texts': '' });
     const v = await modal({
       title: 'Kompetenzbogen drucken',
-      body: h('div', null, h('label', { class: 'field' }, h('span', null, 'Wer'), who), h('p', { class: 'muted small' }, 'Zeitraum: ' + periodLabel(period) + '. Nur ✓ sicher, ◐ teilweise und ✗ noch nicht, ohne Prozent und Punkte.')),
+      body: h(
+        'div',
+        null,
+        h('label', { class: 'field' }, h('span', null, 'Wer'), who),
+        h('label', { class: 'check' }, texts, ' Erklärtexte (Darum geht es, So kommst du weiter, Aufgaben im letzten Test)'),
+        h('p', { class: 'muted small' }, 'Zeitraum: ' + periodLabel(period) + '. Nur ✓ sicher, ◐ teilweise und ✗ noch nicht, ohne Prozent und Punkte. Die Erklärtexte stehen im Katalog (Einstellungen → Kompetenzkataloge).')
+      ),
       buttons: [
         { label: 'Abbrechen', value: null },
         { label: [icon('printer'), ' Drucken'], value: 'ok', kind: 'primary' },
       ],
     });
     if (v !== 'ok') return;
-    NM.print.competencySheet(course, cat, halves, { sid: who.value || null, half: period === 'Jahr' ? null : period });
+    NM.print.competencySheet(course, cat, halves, { sid: who.value || null, half: period === 'Jahr' ? null : period, texts: texts.checked });
   }
 
   function gridCard(course, cat, ev, students, period) {

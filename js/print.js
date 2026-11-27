@@ -439,15 +439,19 @@
   const compSym = (st) => h('span', { class: 'p-mr-sym', title: COMP_MARK[st][1] }, COMP_MARK[st][0]);
   const compLegend = () => h('div', { class: 'p-mr-legend' }, Object.values(COMP_MARK).map(([sym, label]) => h('span', null, h('b', null, sym), ' ', label)));
 
-  /** Block „Kompetenzen in diesem Test“: Zeichen, Name, Punkte aus diesem Test. */
+  /** Name einer Kompetenz, darunter klein ein Erklärtext (seit 2.24, PLANUNG AR). */
+  const compName = (name, text) => (text ? [name, h('span', { class: 'p-comp-tip', 'data-p-comp-tip': '' }, text)] : name);
+
+  /** Block „Kompetenzen in diesem Test“: Zeichen, Name (mit dem Text zur erreichten Stufe), Punkte aus diesem Test. */
   function moodleComp(cat, course, a, sid) {
-    const list = NM.competencies.testCompetencies(cat, course, a, sid);
+    const C = NM.competencies;
+    const list = C.testCompetencies(cat, course, a, sid);
     if (!list.length) return null;
     return h(
       'div',
       { class: 'p-comp p-comp-test', 'data-p-comp-test': '' },
       h('h2', null, 'Kompetenzen in diesem Test'),
-      h('table', { class: 'p-comp-table' }, h('tbody', null, list.map((c) => h('tr', { class: 'p-mr-' + COMP_MARK[c.stufe][2] }, h('td', { class: 'p-comp-sym' }, compSym(c.stufe)), h('td', null, c.entry.name), h('td', { class: 'p-mr-pts' }, `${fmtScore(c.got)} / ${fmtScore(c.max)}`))))),
+      h('table', { class: 'p-comp-table' }, h('tbody', null, list.map((c) => h('tr', { class: 'p-mr-' + COMP_MARK[c.stufe][2] }, h('td', { class: 'p-comp-sym' }, compSym(c.stufe)), h('td', null, compName(c.entry.name, C.texteOf(cat, c.entry.id)[c.stufe])), h('td', { class: 'p-mr-pts' }, `${fmtScore(c.got)} / ${fmtScore(c.max)}`))))),
       compLegend()
     );
   }
@@ -455,29 +459,47 @@
   /**
    * Kompetenzbogen: je Person eine A4-Seite, „Das kannst du schon“ und „Daran arbeitest du weiter“,
    * nur Zeichen, keine Prozent und keine Punkte. Personen ohne Punkte im Zeitraum fallen weg.
+   * texts (seit 2.24, PLANUNG AR 8): Erklärtexte – bei „kannst du schon“ der Satz zu ✓, bei „arbeitest du weiter“
+   * „Darum geht es“, der Text zur Stufe und die Aufgaben im letzten Test. Ein Block wird nicht über Seiten getrennt.
    */
-  function competencySheet(course, cat, halves, { sid = null, half = null } = {}) {
+  function competencySheet(course, cat, halves, { sid = null, half = null, texts = true } = {}) {
     const C = NM.competencies;
     const pages = M.activeStudents(course)
       .filter((s) => !sid || s.id === sid)
       .map((s) => ({ s, sh: C.sheet(cat, course, halves, s.id) }))
       .filter((x) => x.sh.kann.length + x.sh.weiter.length)
       .map(({ s, sh }) => {
-        const block = (title, list, empty, attr) =>
+        const row = (x) => h('tr', { class: 'p-mr-' + COMP_MARK[x.stufe][2] }, h('td', { class: 'p-comp-sym' }, compSym(x.stufe)), h('td', null, compName(x.entry.name, texts ? x.texte.sicher : '')), h('td', { class: 'p-comp-ber' }, x.bereich));
+        // „Daran arbeitest du weiter“ mit Texten: je Kompetenz ein Block (Kopfzeile wie die Tabelle, darunter die Hilfen)
+        const tipBlock = (x) => {
+          const tip = x.texte[x.stufe];
+          const tasks = x.last && x.last.tasks.length ? `Im Test ${x.last.name || 'ohne Namen'}: ${x.last.tasks.length === 1 ? 'Aufgabe' : 'Aufgaben'} ${x.last.tasks.join(', ')}` : '';
+          return h(
+            'div',
+            { class: 'p-comp-item p-mr-' + COMP_MARK[x.stufe][2], 'data-p-comp-item': x.entry.id },
+            h('div', { class: 'p-comp-item-head' }, h('span', { class: 'p-comp-sym' }, compSym(x.stufe)), h('span', { class: 'p-comp-item-name' }, x.entry.name), h('span', { class: 'p-comp-ber' }, x.bereich)),
+            x.texte.worum ? h('p', { class: 'p-comp-worum', 'data-p-comp-worum': '' }, 'Darum geht es: ', x.texte.worum) : null,
+            tip ? h('p', { class: 'p-comp-next', 'data-p-comp-next': '' }, h('b', null, 'So kommst du weiter: '), tip) : null,
+            tasks ? h('p', { class: 'p-comp-tasks', 'data-p-comp-tasks': '' }, tasks) : null
+          );
+        };
+        const block = (title, list, empty, attr, items) =>
           h(
             'section',
             { class: 'p-comp-block', [attr]: '' },
             h('h2', null, title),
-            list.length
-              ? h('table', { class: 'p-comp-table' }, h('tbody', null, list.map((x) => h('tr', { class: 'p-mr-' + COMP_MARK[x.stufe][2] }, h('td', { class: 'p-comp-sym' }, compSym(x.stufe)), h('td', null, x.entry.name), h('td', { class: 'p-comp-ber' }, x.bereich)))))
-              : h('p', { class: 'p-comp-empty' }, empty)
+            !list.length
+              ? h('p', { class: 'p-comp-empty' }, empty)
+              : items
+                ? h('div', { class: 'p-comp-items' }, list.map(tipBlock))
+                : h('table', { class: 'p-comp-table' }, h('tbody', null, list.map(row)))
           );
         return h(
           'div',
           { class: 'p-page p-break p-mr p-comp', 'data-p-comp-sheet': s.id },
           header(course, 'Kompetenzbogen', null, { kicker: [cat.fach, cat.name].filter(Boolean).join(' · ') || null, person: [s.first, s.last].filter(Boolean).join(' '), half }),
-          block('Das kannst du schon', sh.kann, 'Hier steht noch nichts. Das kommt mit den nächsten Tests.', 'data-p-comp-kann'),
-          block('Daran arbeitest du weiter', sh.weiter, 'Gerade nichts. Weiter so!', 'data-p-comp-weiter'),
+          block('Das kannst du schon', sh.kann, 'Hier steht noch nichts. Das kommt mit den nächsten Tests.', 'data-p-comp-kann', false),
+          block('Daran arbeitest du weiter', sh.weiter, 'Gerade nichts. Weiter so!', 'data-p-comp-weiter', texts && sh.weiter.some((x) => x.texte.worum || x.texte[x.stufe])),
           compLegend(),
           h('div', { class: 'p-mr-foot' }, h('div', { class: 'p-mr-sign' }, h('div', null, h('div', { class: 'p-mr-line' }), 'Datum'), h('div', null, h('div', { class: 'p-mr-line' }), 'Unterschrift Lehrkraft')))
         );

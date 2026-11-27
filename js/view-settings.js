@@ -365,9 +365,18 @@
   }
 
   /** Dialog „Katalog bearbeiten“: Name, Fach, Stufen, Baum Bereich → Kompetenz → Teilkompetenz. Speichert jede Änderung sofort. */
+  // 2.24 (PLANUNG AR): Erklärtexte je Kompetenz für den Kompetenzbogen
+  const TEXT_FIELDS = [
+    ['worum', 'Darum geht es', 'z. B. Du übersetzt eine Situation aus dem Alltag in eine Rechnung oder Gleichung.'],
+    ['noch', '✗ noch nicht', 'z. B. Lies die Aufgabe zweimal und schreibe auf, was gegeben und was gesucht ist.'],
+    ['teilweise', '◐ teilweise', 'z. B. Den Ansatz findest du schon. Übe, dein Ergebnis am Ende mit der Situation zu vergleichen.'],
+    ['sicher', '✓ sicher', 'z. B. Ich kann … Probiere als Nächstes …'],
+  ];
+
   function catalogDialog(db, cat) {
     const C = NM.competencies;
     const box = h('div', { class: 'comp-edit' });
+    const openTexts = new Set(); // aufgeklappte Texte bleiben beim Neuzeichnen offen
     const changed = () => {
       C.bump(cat);
       NM.app.commit();
@@ -425,7 +434,48 @@
         },
       });
     };
-    const entryRow = (e) => {
+    const countLabel = (id) => {
+      const n = C.textCount(cat, id);
+      return n ? `${n} von ${C.TEXT_KEYS.length}` : 'noch keine';
+    };
+    // Eingeklappte Zeile unter der Kompetenz: vier Felder, gespeichert beim Verlassen des Feldes
+    const textsRow = (e) => {
+      const count = h('span', { class: 'comp-texts-count muted small', 'data-comp-texts-count': '' }, countLabel(e.id));
+      const tx = C.texteOf(cat, e.id);
+      const field = ([key, label, ph]) => {
+        const counter = h('span', { class: 'comp-texts-len muted small', 'aria-live': 'polite' });
+        const showLen = (v) => {
+          counter.textContent = `${v.length} / ${C.TEXT_MAX}`;
+        };
+        const ta = h('textarea', {
+          class: 'input',
+          rows: 3,
+          maxlength: C.TEXT_MAX,
+          placeholder: ph,
+          'data-comp-text': key,
+          oninput: (ev) => showLen(ev.target.value),
+          onchange: (ev) => {
+            ev.target.value = C.setText(cat, e.id, key, ev.target.value);
+            showLen(ev.target.value);
+            count.textContent = countLabel(e.id);
+            changed();
+          },
+        });
+        ta.value = tx[key] || '';
+        showLen(ta.value);
+        return h('label', { class: 'field comp-texts-field' }, h('span', { class: 'comp-texts-label' }, h('span', null, label), counter), ta);
+      };
+      const det = h(
+        'details',
+        { class: 'comp-texts', 'data-comp-texts': e.id, open: openTexts.has(e.id) },
+        h('summary', null, 'Texte für den Kompetenzbogen', ' ', count),
+        h('div', { class: 'comp-texts-body' }, TEXT_FIELDS.map(field))
+      );
+      det.addEventListener('toggle', () => (det.open ? openTexts.add(e.id) : openTexts.delete(e.id)));
+      return h('li', { class: 'comp-texts-row' }, det);
+    };
+    const entryRow = (e) => [entryLine(e), e.level === 'komp' ? textsRow(e) : null];
+    const entryLine = (e) => {
       const loc = C.locate(cat, e.id);
       const used = C.inUse(db, cat, e.id);
       const own = loc.obj;
@@ -537,6 +587,7 @@
           pctField('„sicher“ ab (%)', 'sicher')
         ),
         h('p', { class: 'muted small' }, `Kennung des Katalogs: ${cat.id} · Version ${cat.version}. Kennungen an Aufgaben bleiben fest; was schon vergeben ist, lässt sich nur ausblenden.`),
+        h('p', { class: 'muted small' }, 'Die Texte für den Kompetenzbogen lesen die Schüler. Schreiben Sie sie kurz, in einfacher Sprache und mit „du“. Je Stufe ein Text, der sagt, was als Nächstes hilft.'),
         ...cat.bereiche.map(bereichBlock),
         h('button', { class: 'btn btn-sm btn-ghost', onclick: () => { C.addBereich(cat); NM.app.commit(); draw(); } }, '+ Bereich')
       );
