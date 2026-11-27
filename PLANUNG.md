@@ -682,7 +682,7 @@ Mit dem Nutzer am 27.11.2026 geklärt (grill-me Q1–Q10, alle Empfehlungen ange
 
 **To-do:**
 - [x] **AL** Sperre bei Standby – erledigt in 2.16.0 (27.11.2026, lokal committet). Abweichung: Lücke 2 Min. statt 60 s, weil Browser Hintergrund-Tabs auf einen Zeitgeber pro Minute drosseln
-- [ ] **AM** Ältere Ziehungen löschen
+- [x] **AM** Ältere Ziehungen löschen – erledigt in 2.17.0 (27.11.2026, lokal committet)
 - [ ] **AN** Einzelne Noten in der Notenübersicht nicht werten
 - [ ] **AO** EPO: Anzahl der angezeigten Stunden begrenzen
 - [ ] **AP** Tool „Begriffe in Gruppen“

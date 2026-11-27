@@ -154,7 +154,7 @@
     const last = d.history[d.history.length - 1];
     if (last) view.appendChild(lastDrawCard(course, last, level));
     view.appendChild(poolCard(course, d, away));
-    if (d.history.length > 1) view.appendChild(historyCard(course, d.history.slice(0, -1).reverse(), level));
+    if (d.history.length > 1) view.appendChild(historyCard(course, d.history.slice(0, -1).reverse(), level, (entry) => removeDraw(course, entry)));
   }
 
   /** Auswahl: klassischer Pool oder einer der benannten Pools des Halbjahres; neu, umbenennen, löschen. */
@@ -261,7 +261,7 @@
     const last = pool.history[pool.history.length - 1];
     if (last) view.appendChild(lastDrawCard(course, Object.assign({ aid: pool.aid }, last), level, () => undoPoolDraw(course, pool)));
     view.appendChild(poolCard(course, pool, away));
-    if (pool.history.length > 1) view.appendChild(historyCard(course, pool.history.slice(0, -1).reverse().map((e) => Object.assign({ aid: pool.aid }, e)), level));
+    if (pool.history.length > 1) view.appendChild(historyCard(course, pool.history.slice(0, -1).reverse().map((e) => Object.assign({ aid: pool.aid }, e)), level, (entry) => removeDraw(course, entry, pool)));
   }
 
   const fmtRange = ([a, b]) => (a === b ? fmtDateShort(a) : fmtDateShort(a) + '–' + fmtDateShort(b));
@@ -477,8 +477,20 @@
     });
   }
 
-  /** Frühere Ziehungen; Noten lassen sich hier nachtragen oder ändern. */
-  function historyCard(course, list, level) {
+  /** Eine frühere Ziehung löschen (Rückfrage mit Anzahl der Noten, die verloren gehen). */
+  async function removeDraw(course, entry, pool = null) {
+    const a = course.assessments.find((x) => x.id === entry.aid);
+    const n = D.removedGrades(course, entry.id, pool);
+    const notes = n ? ` ${n === 1 ? 'Eine eingetragene Note geht' : n + ' eingetragene Noten gehen'} dabei verloren.` : '';
+    const what = pool ? `Ihre Gezogenen werden aus der Spalte „${a ? a.name : pool.name}“ entfernt` : `Die Spalte${a ? ` „${a.name}“` : ''} wird gelöscht`;
+    const text = `${what}.${notes} Wer seitdem nicht erneut gezogen wurde, kommt wieder in den Topf. Spätere Ziehungen bleiben, wie sie sind.`;
+    if (!(await confirmDialog(`Ziehung vom ${fmtDate(entry.date)} löschen?`, text, { okLabel: 'Löschen', danger: true }))) return;
+    D.removeDraw(course, entry.id, pool);
+    NM.app.commit();
+  }
+
+  /** Frühere Ziehungen; Noten lassen sich hier nachtragen oder ändern, eine Ziehung lässt sich löschen. */
+  function historyCard(course, list, level, onDelete) {
     let row = 0;
     return h(
       'details',
@@ -508,6 +520,11 @@
                 .map((sid) => course.students.find((s) => s.id === sid))
                 .filter(Boolean)
                 .map((s) => h('span', { class: 'draw-hist-item' }, M.studentName(s), a ? gradeField(a, s, level, 'draw-hist', row++) : null))
+            ),
+            h(
+              'td',
+              { class: 'draw-hist-actions' },
+              h('button', { class: 'icon-btn danger', 'data-draw-delete': entry.id, title: 'Diese Ziehung löschen', 'aria-label': `Ziehung vom ${fmtDate(entry.date)} löschen`, onclick: () => onDelete(entry) }, icon('trash'))
             )
           );
         }))

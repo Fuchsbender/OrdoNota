@@ -914,6 +914,12 @@ def run_draw_check(br, base):
         hi.value = '3+'; hi.dispatchEvent(new Event('change')); await wait();
         const a1 = c.assessments.find((a) => a.id === h1.aid);
         out.histGrade = [Object.keys(a1.manual.grades).length, NM.grades.label(Object.values(a1.manual.grades)[0].p, 'sek1'), document.querySelectorAll('.draw-hist-item .grade-input').length];
+        // 2.17: frühere Ziehung löschen – Rückfrage nennt die Note, Spalte weg, Gezogene zurück, letzte bleibt
+        document.querySelector(`[data-draw-delete="${h1.id}"]`).click(); await wait();
+        const dlg = document.querySelector('dialog');
+        out.delAsk = !!dlg && dlg.textContent.includes('Eine eingetragene Note geht');
+        dlg.querySelector('.btn-danger').click(); await wait();
+        out.del = [c.draw.history.map((e) => e.id).join() === h2.id, !c.assessments.some((a) => a.id === h1.aid), D.pool(c).length, !document.querySelector('[data-draw-delete]')];
         // Haken „Im Pool“ und „heute abwesend“: bei vollem Pool alle anderen 10 ziehen, ohne dass aufgefüllt wird
         // (beim Auffüllen kämen Herausgenommene laut Doku zurück – das darf hier nicht vom Zufall der vorigen Ziehungen abhängen)
         c.draw.out = {};
@@ -924,8 +930,9 @@ def run_draw_check(br, base):
         return out; })()""")
     ok = bool(res) and res["first"] == [5, 7, 1, 5] and res["noRepeat"] and res["restBefore"] == 2 \
         and res["refill"][0] == 5 and res["refill"][1] and res["refill"][2] == 5 and res["refill"][3] == 7 \
-        and res["grade"] == [1, "other", "manual"] and res["undo"] == [2, 2, False] and res["histGrade"] == [1, "3+", 5] and res["greyed"][0] == res["greyed"][1] == 7 and res["skip"] == [False, False, True, False, 10]
-    report("Ziehen: ohne Wiederholung, Auffüllen, Note (auch nachträglich), Rückgängig, Abwesende/Herausgenommene", ok and not br.errors, str(res) + "; ".join(br.errors))
+        and res["grade"] == [1, "other", "manual"] and res["undo"] == [2, 2, False] and res["histGrade"] == [1, "3+", 5] and res["greyed"][0] == res["greyed"][1] == 7 and res["skip"] == [False, False, True, False, 10] \
+        and res["delAsk"] and res["del"] == [True, True, 7, True]
+    report("Ziehen: ohne Wiederholung, Auffüllen, Note (auch nachträglich), Rückgängig, frühere Ziehung löschen, Abwesende/Herausgenommene", ok and not br.errors, str(res) + "; ".join(br.errors))
 
 
 def run_draw_pools_check(br, base):

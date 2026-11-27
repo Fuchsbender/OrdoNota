@@ -89,6 +89,47 @@
     return e;
   }
 
+  /** Noten, die beim Löschen der Ziehung entryId verloren gehen (für die Rückfrage). */
+  function removedGrades(course, entryId, pool = null) {
+    const src = pool || data(course);
+    const e = src.history.find((x) => x.id === entryId);
+    if (!e) return 0;
+    const a = course.assessments.find((x) => x.id === (pool ? pool.aid : e.aid));
+    if (!a) return 0;
+    if (!pool) return Object.values(a.manual.grades).filter(hasGrade).length;
+    // In der Sammelspalte gehen nur Noten von Personen, die in keiner anderen Ziehung des Pools stehen
+    return e.sids.filter((sid) => hasGrade(a.manual.grades[sid]) && !src.history.some((x) => x !== e && x.sids.includes(sid))).length;
+  }
+
+  /**
+   * Eine beliebige Ziehung löschen (seit 2.17, PLANUNG AM). Klassisch: die Ziehung und ihre Notenspalte.
+   * Pool (pool angegeben): die Ziehung und die Noten ihrer Gezogenen in der Sammelspalte, sofern diese
+   * nicht noch in einer anderen Ziehung des Pools stehen. Die Gezogenen kommen wieder in den Topf, wenn
+   * sie seitdem nicht erneut gezogen wurden; spätere Ziehungen bleiben, ihr Vorher-Stand wird angepasst.
+   * @returns {{ entry, back: string[], removed: number } | null}
+   */
+  function removeDraw(course, entryId, pool = null) {
+    const src = pool || data(course);
+    const i = src.history.findIndex((x) => x.id === entryId);
+    if (i < 0) return null;
+    const removed = removedGrades(course, entryId, pool);
+    const e = src.history[i];
+    const later = src.history.slice(i + 1);
+    const back = e.sids.filter((sid) => !later.some((x) => x.sids.includes(sid)));
+    const drawnOnly = (o, sid) => o && o[sid] && o[sid].how === 'drawn';
+    for (const sid of back) if (drawnOnly(src.out, sid)) delete src.out[sid];
+    // Sonst nähme „Rückgängig“ einer späteren Ziehung die Zurückgekehrten wieder heraus
+    for (const x of later) for (const sid of back) if (drawnOnly(x.prevOut, sid)) delete x.prevOut[sid];
+    src.history.splice(i, 1);
+    if (pool) {
+      const a = course.assessments.find((x) => x.id === pool.aid);
+      if (a) for (const sid of e.sids) if (!src.history.some((x) => x.sids.includes(sid))) delete a.manual.grades[sid];
+    } else {
+      course.assessments = course.assessments.filter((x) => x.id !== e.aid);
+    }
+    return { entry: e, back, removed };
+  }
+
   /** Zeitraum der Ziehungen eines Pools (bzw. Datum der Spalte), z. B. ['2026-09-12', '2026-10-03']. */
   function poolRange(pool) {
     const d = pool.history.map((e) => e.date).filter(Boolean).sort();
@@ -213,5 +254,5 @@
     d.pools = d.pools.filter((p) => p !== pool);
   }
 
-  NM.draw = { data, shuffle, drawFrom, left, finished, newPool, drawPool, undoPool, poolRange, drawnSets, poolOfColumn, check, classicColumns, mergeConflicts, merge, removePool };
+  NM.draw = { data, shuffle, drawFrom, left, finished, newPool, drawPool, undoPool, removedGrades, removeDraw, poolRange, drawnSets, poolOfColumn, check, classicColumns, mergeConflicts, merge, removePool };
 })((globalThis.NM = globalThis.NM || {}));

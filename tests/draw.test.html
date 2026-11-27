@@ -82,6 +82,54 @@
     eq('Rückgängig: Pool wie vorher, nur die Noten der letzten Ziehung weg', [Object.keys(p3.out).sort().join(), Object.keys(col3.manual.grades).sort().join(), p3.history.length], [a.sids.slice().sort().join(), a.sids.slice().sort().join(), 1]);
   }
 
+  // Frühere Ziehung löschen (2.17): Pool
+  {
+    const c7 = course();
+    const p7 = D.newPool(c7, 'HJ1', 'X');
+    const a = D.drawPool(c7, p7, 2, { rand: seeded(5), date: '2026-09-01' });
+    const b = D.drawPool(c7, p7, 2, { rand: seeded(6), date: '2026-09-08' });
+    const col7 = c7.assessments[0];
+    for (const sid of [...a.sids, ...b.sids]) col7.manual.grades[sid] = { p: 8 };
+    const first = p7.history[0];
+    eq('Pool: Rückfrage zählt die Noten der Ziehung', D.removedGrades(c7, first.id, p7), 2);
+    const r = D.removeDraw(c7, first.id, p7);
+    eq('Pool: Ziehung weg, ihre Noten weg, Gezogene zurück im Topf, spätere bleibt', [p7.history.length, r.removed, r.back.slice().sort().join(), Object.keys(col7.manual.grades).sort().join(), Object.keys(p7.out).sort().join()], [1, 2, a.sids.slice().sort().join(), b.sids.slice().sort().join(), b.sids.slice().sort().join()]);
+    D.undoPool(c7, p7);
+    eq('Pool: Rückgängig der späteren Ziehung nimmt die Zurückgekehrten nicht wieder heraus', [Object.keys(p7.out).length, p7.history.length], [0, 0]);
+    // Erneut gezogen: bleibt draußen, Note bleibt
+    const c8 = course();
+    const p8 = D.newPool(c8, 'HJ1', 'Y');
+    const x = D.drawPool(c8, p8, 1, { date: '2026-09-01' }).sids[0];
+    delete p8.out[x];
+    D.drawPool(c8, p8, 5, { date: '2026-09-08' });
+    c8.assessments[0].manual.grades[x] = { p: 12 };
+    eq('Pool: erneut Gezogene zählt nicht als verlorene Note', D.removedGrades(c8, p8.history[0].id, p8), 0);
+    D.removeDraw(c8, p8.history[0].id, p8);
+    eq('Pool: erneut Gezogene bleibt draußen, ihre Note bleibt', [!!p8.out[x], c8.assessments[0].manual.grades[x].p, D.check(c8, p8).filter((q) => q.kind === 'doppelt').length], [true, 12, 0]);
+  }
+
+  // Frühere Ziehung löschen (2.17): klassisch, jede Ziehung mit eigener Spalte
+  {
+    const c9 = course();
+    const d = D.data(c9);
+    const classic = (n, date) => {
+      const r = D.drawFrom(d, c9.students.map((s) => s.id), n, { rand: seeded(n + date.length), refill: true, date });
+      const a = M.newManual('HJ1', 'other', 'HA-Kontrolle ' + date);
+      c9.assessments.push(a);
+      d.history.push({ id: 'k' + d.history.length, date, half: 'HJ1', aid: a.id, sids: r.sids, prevOut: r.prevOut });
+      for (const sid of r.sids) a.manual.grades[sid] = { p: 9 };
+      return { r, a };
+    };
+    const k1 = classic(2, '2026-09-01');
+    const k2 = classic(2, '2026-09-08');
+    k1.a.manual.grades['niemand'] = {};
+    eq('klassisch: Rückfrage zählt nur echte Noten der Spalte', D.removedGrades(c9, 'k0'), 2);
+    D.removeDraw(c9, 'k0');
+    eq('klassisch: Spalte und Ziehung weg, andere bleibt, Gezogene zurück', [c9.assessments.some((x) => x.id === k1.a.id), c9.assessments.some((x) => x.id === k2.a.id), d.history.map((e) => e.id), k1.r.sids.some((sid) => d.out[sid])], [false, true, ['k1'], false]);
+    eq('klassisch: Vorher-Stand der späteren Ziehung ohne die Zurückgekehrten', k1.r.sids.some((sid) => d.history[0].prevOut[sid]), false);
+    eq('klassisch: unbekannte Ziehung → null', D.removeDraw(c9, 'gibt-es-nicht'), null);
+  }
+
   // Zusammenfassen alter Einzelspalten
   {
     const c4 = course();

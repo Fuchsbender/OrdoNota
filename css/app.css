@@ -1146,6 +1146,7 @@ ul.plain.fp-older-list > li { display: block; padding: 0.125rem 0; border-bottom
 .table td.not-drawn .cell-input:focus { opacity: 1; }
 .draw-hist-item { display: inline-flex; align-items: center; gap: 0.375rem; margin: 2px 1rem 2px 0; }
 .draw-hist-item .grade-input { width: 3.25rem; }
+.draw-hist-actions { width: 1%; text-align: right; vertical-align: top; }
 /* Raster bearbeiten: + / − an allen vier Seiten */
 .seat-edit { display: grid; grid-template-columns: auto auto auto; grid-template-areas: '. top .' 'left grid right' '. bottom .'; gap: 0.5rem; justify-content: center; align-items: center; }
 .seat-edit > .seat-grid { grid-area: grid; }
