@@ -467,18 +467,43 @@
   let heartbeatTimer = null;
   let idleTimer = null;
   let lastActivity = Date.now();
+  /** Zeitpunkt der letzten Sperrprüfung; eine große Lücke bis zur nächsten heißt: Das Gerät hat geschlafen. */
+  let lastTick = Date.now();
+  const IDLE_CHECK_MS = 20000;
+  /**
+   * Lücke, ab der die App einen Ruhezustand annimmt. Nicht kleiner als 2 Minuten: Browser drosseln
+   * Zeitgeber in Hintergrund-Tabs auf einmal pro Minute, das darf noch nicht sperren.
+   */
+  const SLEEP_GAP_MS = 2 * 60000;
+
+  /**
+   * Rein: Grund für eine automatische Sperre oder null.
+   * Ruhezustand (Lücke seit der letzten Prüfung) sperrt immer, auch bei autoLockMin = 0.
+   */
+  function lockReason({ now, lastTick, lastActivity, autoLockMin }) {
+    if (now - lastTick > SLEEP_GAP_MS) return 'Automatisch gesperrt nach dem Ruhezustand.';
+    const min = Number(autoLockMin) || 0;
+    if (min > 0 && now - lastActivity > min * 60000) return 'Automatisch gesperrt nach ' + min + ' Minuten ohne Aktivität.';
+    return null;
+  }
+
+  /** Prüft, ob gesperrt werden muss, und sperrt (nicht im Demo-Modus). Gibt den Grund zurück. */
+  function checkLock(now = Date.now()) {
+    if (!state.vault || !state.db) return null;
+    const reason = lockReason({ now, lastTick, lastActivity, autoLockMin: state.db.settings.autoLockMin });
+    lastTick = now;
+    if (reason && !DEMO) lockApp(reason);
+    return reason;
+  }
 
   function startSession() {
     state.since = new Date().toISOString();
     state.store.writeLock(state.since).catch(() => {});
     clearInterval(heartbeatTimer);
     heartbeatTimer = setInterval(() => state.store && state.store.writeLock(state.since).catch(() => {}), 3 * 60000);
-    lastActivity = Date.now();
+    lastActivity = lastTick = Date.now();
     clearInterval(idleTimer);
-    idleTimer = setInterval(() => {
-      const min = Number(state.db && state.db.settings.autoLockMin) || 0;
-      if (!DEMO && min > 0 && Date.now() - lastActivity > min * 60000) lockApp('Automatisch gesperrt nach ' + min + ' Minuten ohne Aktivität.');
-    }, 20000);
+    idleTimer = setInterval(() => checkLock(), IDLE_CHECK_MS);
     ensureSelection();
     renderShell();
   }
@@ -486,9 +511,25 @@
   for (const ev of ['mousemove', 'keydown', 'mousedown', 'wheel', 'touchstart']) {
     window.addEventListener(ev, () => (lastActivity = Date.now()), { passive: true });
   }
+  // Nach dem Aufwachen sofort prüfen, nicht erst beim nächsten Zeitgeber, damit nichts sichtbar bleibt
+  document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && checkLock());
+  window.addEventListener('focus', () => checkLock());
+  window.addEventListener('pageshow', () => checkLock());
+
+  let locking = false;
 
   async function lockApp(message) {
-    if (!state.vault) return;
+    // Zeitgeber, Aufwachen und Knopf können fast gleichzeitig sperren wollen: nur einmal
+    if (!state.vault || locking) return;
+    locking = true;
+    try {
+      await lockNow(message);
+    } finally {
+      locking = false;
+    }
+  }
+
+  async function lockNow(message) {
     if (state.dirty) {
       try {
         await saveNow();
@@ -1186,6 +1227,8 @@
     migrateOpened,
     select,
     lockApp,
+    lockReason,
+    checkLock,
     switchStore,
     showRecoveryKey,
     saveUi,

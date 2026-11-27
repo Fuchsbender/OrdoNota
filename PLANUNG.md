@@ -681,7 +681,7 @@ OrdoSortis (`../OrdoSortis`, Berufsorientierung) übernimmt Personen und Klassen
 Mit dem Nutzer am 27.11.2026 geklärt (grill-me Q1–Q10, alle Empfehlungen angenommen, Q6 zurückgestellt). Jeder Buchstabe ist eine eigene Minor-Version mit Tests. Ablauf je Buchstabe wie bei der Wunschliste vom 18.11.2026 (mit Oberfläche zuerst `/impeccable shape`).
 
 **To-do:**
-- [ ] **AL** Sperre bei Standby
+- [x] **AL** Sperre bei Standby – erledigt in 2.16.0 (27.11.2026, lokal committet). Abweichung: Lücke 2 Min. statt 60 s, weil Browser Hintergrund-Tabs auf einen Zeitgeber pro Minute drosseln
 - [ ] **AM** Ältere Ziehungen löschen
 - [ ] **AN** Einzelne Noten in der Notenübersicht nicht werten
 - [ ] **AO** EPO: Anzahl der angezeigten Stunden begrenzen
@@ -692,7 +692,7 @@ Mit dem Nutzer am 27.11.2026 geklärt (grill-me Q1–Q10, alle Empfehlungen ange
 
 Ausgangslage: Die Sperre nach Inaktivität (`autoLockMin`, Standard 15 Min.) prüft alle 20 s die Uhrzeit (`js/app.js` ab 468). Ein Standby länger als `autoLockMin` sperrt also schon, aber erst beim nächsten Prüfschritt; ein kurzer Standby sperrt gar nicht.
 
-- **Zeitsprung = Ruhezustand:** Liegt zwischen zwei Prüfschritten eine Lücke von mehr als 60 s, sperrt die App sofort (`lockApp`), unabhängig von `autoLockMin` – auch bei `autoLockMin = 0` („nie“).
+- **Zeitsprung = Ruhezustand:** Liegt zwischen zwei Prüfschritten eine Lücke von mehr als 2 Minuten (geplant 60 s; Browser drosseln Zeitgeber in Hintergrund-Tabs auf einmal pro Minute, das darf nicht sperren), sperrt die App sofort (`lockApp`), unabhängig von `autoLockMin` – auch bei `autoLockMin = 0` („nie“).
 - Beim Aufwachen sofort prüfen (`visibilitychange` → sichtbar, `focus`), damit die Noten nicht bis zu 20 s sichtbar sind. Ein Tabwechsel allein sperrt nicht.
 - Keine eigene Einstellung. Ungespeicherte Änderungen sichert das Autosave wie bisher; `lockApp` speichert vorher, falls noch etwas offen ist.
 - Tests: Zeitsprung simulieren (Uhr im Test vorstellen), Tabwechsel ohne Sperre.

@@ -86,8 +86,9 @@
       h(
         'div',
         { class: 'form-grid' },
-        numField('Automatisch sperren nach (Minuten, 0 = nie)', db.settings.autoLockMin, (v) => (db.settings.autoLockMin = v), { min: 0, max: 240 })
+        numField('Automatisch sperren nach (Minuten ohne Aktivität, 0 = nie)', db.settings.autoLockMin, (v) => (db.settings.autoLockMin = v), { min: 0, max: 240 })
       ),
+      h('p', { class: 'muted small' }, 'Nach dem Ruhezustand (z. B. Notebook zugeklappt) sperrt die App immer, auch bei 0.'),
       h('p', { class: 'muted small' }, 'Verschlüsselung: AES-256-GCM, Schlüssel aus dem Passwort per PBKDF2-SHA256 (600 000 Runden). Ohne Passwort oder Wiederherstellungsschlüssel lassen sich die Daten nicht entschlüsseln – auch nicht von Synology.')
     );
   }

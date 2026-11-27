@@ -100,7 +100,7 @@ Ausprobieren ohne echte Daten: **„Demo ansehen“** auf dem Startbildschirm od
 ## Sicherheit
 
 - AES-256-GCM; der Schlüssel wird mit PBKDF2-SHA256 (600 000 Runden) aus dem Passwort abgeleitet. Ohne Passwort oder Wiederherstellungsschlüssel ist die Datei nicht lesbar – auch nicht auf der DiskStation.
-- Automatische Sperre nach 15 Minuten ohne Aktivität (einstellbar).
+- Automatische Sperre nach 15 Minuten ohne Aktivität (einstellbar) und immer nach dem Ruhezustand (Notebook zugeklappt).
 - **Nur ein Gerät gleichzeitig.** Die App warnt, wenn sie auf einem anderen Gerät offen ist, wenn die Datei zwischendurch von außen geändert wurde und wenn Synology eine Konfliktkopie angelegt hat.
 - Datenschutz: Für Schülerdaten auf privaten Geräten ist in RLP in der Regel eine Genehmigung der Schulleitung nötig. Das gilt besonders für Schülerfotos im Sitzplan.
 

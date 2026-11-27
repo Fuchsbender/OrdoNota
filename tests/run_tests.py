@@ -2807,6 +2807,38 @@ def run_tools_menu_check(br, base):
     report("Tools: Haken und ▲▼ wirken sofort, nur im Kurs, alles aus zeigt Hinweis, Standard", ok and not br.errors, str(res) + "; ".join(br.errors))
 
 
+def run_sleep_lock_check(br, base):
+    """2.16: Sperre nach dem Ruhezustand (Zeitsprung), auch bei autoLockMin = 0; Tabwechsel sperrt nicht."""
+    print("Sperre bei Standby:")
+    br.open(f"{base}/index.html?demo")
+    br.wait(APP_READY, 30)
+    br.errors = []
+    res = br.eval("""(() => {
+        const R = NM.app.lockReason, t = 1e12, MIN = 60000;
+        const r = {
+            normal: R({ now: t + 20000, lastTick: t, lastActivity: t, autoLockMin: 15 }),
+            throttled: R({ now: t + 70000, lastTick: t, lastActivity: t, autoLockMin: 15 }),
+            sleep: R({ now: t + 3 * MIN, lastTick: t, lastActivity: t, autoLockMin: 15 }),
+            sleepNever: R({ now: t + 3 * MIN, lastTick: t, lastActivity: t, autoLockMin: 0 }),
+            idle: R({ now: t + 16 * MIN, lastTick: t + 16 * MIN - 20000, lastActivity: t, autoLockMin: 15 }),
+            idleNever: R({ now: t + 16 * MIN, lastTick: t + 16 * MIN - 20000, lastActivity: t, autoLockMin: 0 }),
+        };
+        // Verdrahtung: checkLock merkt sich den Zeitpunkt, ein Sprung danach meldet den Ruhezustand (Demo sperrt nicht)
+        NM.app.checkLock();
+        r.wiredNormal = NM.app.checkLock(Date.now() + 1000);
+        r.wiredSleep = NM.app.checkLock(Date.now() + 10 * MIN);
+        r.after = NM.app.checkLock(Date.now() + 10 * MIN + 1000);
+        // Tabwechsel/Fokus: kein Fehler, Sitzung bleibt
+        document.dispatchEvent(new Event('visibilitychange'));
+        window.dispatchEvent(new Event('focus'));
+        r.stillOpen = !!NM.app.state.db;
+        return r; })()""")
+    ok = bool(res) and res["normal"] is None and res["throttled"] is None and "Ruhezustand" in (res["sleep"] or "") \
+        and "Ruhezustand" in (res["sleepNever"] or "") and "15 Minuten" in (res["idle"] or "") and res["idleNever"] is None \
+        and res["wiredNormal"] is None and "Ruhezustand" in (res["wiredSleep"] or "") and res["after"] is None and res["stillOpen"]
+    report("Ruhezustand sperrt (auch bei 0 = nie), gedrosselter Hintergrund-Tab und Fokuswechsel nicht, Inaktivität wie bisher", ok and not br.errors, str(res) + "; ".join(br.errors))
+
+
 def run_demo_link_check(br, base):
     print("Demo aus der App öffnen:")
     br.open(f"{base}/index.html")
@@ -3982,7 +4014,7 @@ def main():
         run_tools_menu_check, run_pomodoro_check, run_transition_check, run_sidebar_check,
         run_tests_view_check, run_competency_check, run_task_add_click_check, run_makeup_check, run_verbal_check, run_ausgleich_check, run_notes_check, run_foerder_check, run_people_check, run_people_page_check, run_unreachable_check,
         run_tabs_check, run_tab_order_check, run_overview_fold_check, run_settings_layout_check,
-        run_theme_check, run_demo_link_check, run_old_db_check, run_parts_check, run_print_menu_check,
+        run_theme_check, run_demo_link_check, run_sleep_lock_check, run_old_db_check, run_parts_check, run_print_menu_check,
         run_pres_check, run_group_check, run_groups_tab_check, run_moodle_check, run_moodle_comp_check, run_competency_tab_check, run_competency_history_check, run_competency_print_check, run_scripto_check,
         run_decrypt_tool, run_launcher_check,
     ]
