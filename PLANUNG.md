@@ -639,7 +639,7 @@ Probe mit 12 Stunden (max. 48 P), „0 = befriedigend“: immer `0` (24 P) → 0
   ]
 }
 ```
-`textanfang` erzeugt `moodle.py` so, wie Moodle den Fragetext in die CSV schreibt (HTML entfernt, Bilder weg, Leerraum zusammengefasst, LaTeX roh, höchstens 80 Zeichen). Gleichen sich die ersten 60 Zeichen zweier Fragen eines Tests, bricht `moodle.py` ab. OrdoNota vergleicht als Präfix. Formatänderungen nur in Absprache, beide Seiten gleichzeitig. **Übergabe an die Skill-Sitzung:** `03 - Material/UEBERGABE moodle-fragen – Kompetenzen für OrdoNota.md` (Abschnitt „Rückmeldungen“ vor AI-2 lesen).
+`textanfang` erzeugt `moodle.py` so, wie Moodle den Fragetext in die CSV schreibt (HTML entfernt, Bilder weg, Leerraum zusammengefasst, LaTeX roh, höchstens 80 Zeichen). Gleichen sich die ersten 60 Zeichen zweier Fragen eines Tests, bricht `moodle.py` ab. OrdoNota vergleicht als Präfix. Formatänderungen nur in Absprache, beide Seiten gleichzeitig. **Übergabe an die Skill-Sitzung:** erledigt (AI-1 bis AI-5 umgesetzt), Übergabedatei und Testexport am 27.11.2026 entfernt.
 
 **Kein neues Schema (Q20, 24.11.2026):** Der Haken „nicht gewertet“ (`a.ungraded`, `grades.js` `ungradedFor`) gibt es schon und ältere Versionen verstehen ihn. Ein **Kompetenztest** ist ein Test mit `ungraded` und mindestens einer Kompetenz; Umschalter und Schalter in der Notenübersicht beziehen sich genau darauf, nicht gewertete Tests ohne Kompetenzen bleiben wie bisher ausgegraut sichtbar. Katalog und `task.competencies` sind zusätzliche Felder, `SCHEMA` bleibt 5 (CLAUDE.md Regel 1).
 
