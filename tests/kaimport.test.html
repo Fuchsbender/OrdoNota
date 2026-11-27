@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="de">
+<head><meta charset="utf-8"><title>Tests KA-Datei</title></head>
+<body>
+<pre id="out"></pre>
+<script src="../js/util.js"></script>
+<script src="../js/grades.js"></script>
+<script src="../js/competencies.js"></script>
+<script src="../js/kaimport.js"></script>
+<script>
+  const K = NM.kaimport;
+  const lines = [];
+  let fails = 0;
+  const ok = (name, cond) => { if (!cond) fails++; lines.push((cond ? 'OK   ' : 'FAIL ') + name); };
+  let n = 0;
+  const uid = () => 'u' + ++n;
+
+  // Erfundene Klassenarbeit wie aus dem Bauskript
+  const file = (extra = {}) =>
+    JSON.stringify(Object.assign({
+      format: 'ordonota-ka-aufgaben',
+      formatVersion: 1,
+      katalog: { id: 'mathe-sek1', version: 1 },
+      arbeit: { name: 'KA 2 – Quadratische Funktionen', bereich: 'ka' },
+      teile: [{ name: 'Ohne Hilfsmittel' }, { name: 'Mit Hilfsmitteln' }],
+      aufgaben: [
+        { name: '1a', punkte: 3, teil: 0, kompetenzen: ['M-L3', 'M-K5'] },
+        { name: '1b', punkte: 4.5, teil: 0, kompetenzen: ['M-L3'] },
+        { name: '2', punkte: 8, teil: 1, kompetenzen: ['M-K4', 'X-9'] },
+        { name: 'Bonus', punkte: 2, bonus: true, teil: 1, kompetenzen: [] },
+      ],
+      unbekannt: 'wird übergangen',
+    }, extra));
+
+  try {
+    // ---------- Lesen ----------
+    {
+      const r = K.parse('﻿' + file());
+      ok('gültige Datei (mit BOM, unbekanntes Feld)', r.ok && r.data.aufgaben.length === 4 && r.warnings.length === 0);
+      ok('Arbeit, Bereich, Teile, Katalog', r.data.arbeit.name === 'KA 2 – Quadratische Funktionen' && r.data.arbeit.bereich === 'ka' && r.data.teile.map((t) => t.name).join() === 'Ohne Hilfsmittel,Mit Hilfsmitteln' && r.data.katalog.id === 'mathe-sek1' && r.data.katalog.version === 1);
+      ok('Bonus und Kompetenzen', r.data.aufgaben[3].bonus === true && r.data.aufgaben[0].kompetenzen.join() === 'M-L3,M-K5');
+      ok('bereich „sonstige“ → other', K.parse(file({ arbeit: { name: 'HÜ', bereich: 'sonstige' } })).data.arbeit.bereich === 'other');
+      ok('kein JSON', !K.parse('{').ok);
+      ok('falsches Format', /keine Begleitdatei/.test(K.parse(JSON.stringify({ format: 'ordonota-moodle-kompetenzen', formatVersion: 1 })).error));
+      ok('unbekannte Formatversion', /Formatversion 2/.test(K.parse(file({ formatVersion: 2 })).error));
+      ok('ohne Aufgaben', /keine Aufgaben/.test(K.parse(file({ aufgaben: [] })).error));
+      ok('Punkte fehlen', /Punkte/.test(K.parse(file({ aufgaben: [{ name: '1', punkte: 0 }] })).error));
+      ok('Name doppelt (auch „Aufgabe 1a“ = „1a“)', /doppelt/.test(K.parse(file({ aufgaben: [{ name: '1a', punkte: 1 }, { name: 'Aufgabe 1 a)', punkte: 2 }] })).error));
+      const w = K.parse(file({ aufgaben: [{ name: '1', punkte: 2, teil: 5 }] }));
+      ok('ungültiger Teil → erster Teil mit Hinweis', w.ok && w.data.aufgaben[0].teil === 0 && w.warnings.length === 1);
+      const o = K.parse(file({ teile: undefined, katalog: undefined, aufgaben: [{ name: '1', punkte: 2, teil: 1 }] }));
+      ok('ohne Teile und ohne Katalog', o.ok && o.data.teile.length === 0 && o.data.aufgaben[0].teil === null && o.data.katalog === null);
+    }
+
+    // ---------- Hilfen ----------
+    {
+      const d = K.parse(file()).data;
+      ok('allIds in Reihenfolge', K.allIds(d).join() === 'M-L3,M-K5,M-K4,X-9');
+      const s = K.sums(d);
+      ok('Summen ohne/mit Bonus', s.n === 4 && s.max === 15.5 && s.bonus === 2);
+      ok('Genauigkeit: halbe Punkte nötig', K.neededPrecision(d) === 0.5 && K.neededPrecision({ aufgaben: [{ punkte: 2 }] }) === 1 && K.neededPrecision({ aufgaben: [{ punkte: 1.2 }] }) === 0.1);
+      ok('mapIds: ersetzen, weglassen, ohne Doppelte', K.mapIds(['A', 'B', 'C'], { B: '', C: 'A' }).join() === 'A');
+    }
+
+    // ---------- Aufgaben ersetzen ----------
+    {
+      const d = K.parse(file()).data;
+      const t = { precision: 1, tasks: [{ id: 'x', name: 'A1', max: 5 }], results: {} };
+      const cnt = K.replaceTasks(t, d, { 'X-9': '' }, uid);
+      ok('Aufgaben ersetzt', cnt === 4 && t.tasks.map((x) => x.name).join() === '1a,1b,2,Bonus' && t.tasks[1].max === 4.5);
+      ok('Teile angelegt, Aufgaben zugeordnet', t.parts.length === 2 && t.partMode === 'sum' && t.tasks[0].partId === t.parts[0].id && t.tasks[2].partId === t.parts[1].id && t.parts[1].weight === 1);
+      ok('Bonus bleibt Bonus', t.tasks[3].bonus === true && !t.tasks[0].bonus);
+      ok('Kompetenzen mit Zuordnung (X-9 weggelassen), leere ohne Feld', t.tasks[2].competencies.join() === 'M-K4' && t.tasks[3].competencies === undefined);
+      ok('Genauigkeit wird halbe Punkte', t.precision === 0.5);
+      const t2 = { precision: 0.1, tasks: [], parts: [{ id: 'p' }], partMode: 'separate', results: {} };
+      K.replaceTasks(t2, K.parse(file({ teile: [], aufgaben: [{ name: '1', punkte: 2, kompetenzen: ['M-L1'] }] })).data, null, uid);
+      ok('ohne Teile: Teile entfernt; ohne Katalog keine Kompetenzen; feinere Genauigkeit bleibt', !t2.parts && !t2.partMode && t2.tasks[0].competencies === undefined && t2.precision === 0.1);
+    }
+
+    // ---------- Nur Kompetenzen (Test mit Punkten) ----------
+    {
+      const d = K.parse(file()).data;
+      const tasks = [{ id: 'a', name: '1a ', max: 3, competencies: ['M-K1'] }, { id: 'b', name: 'Aufgabe 1b', max: 4 }, { id: 'c', name: 'A3', max: 5, competencies: ['M-L5'] }, { id: 'd', name: 'Bonus', max: 2, competencies: ['M-K2'] }];
+      const rows = K.matchTasks(tasks, d);
+      ok('Zuordnung über den Namen', rows.map((r) => r.idx).join() === '0,1,,3');
+      const changed = K.setCompetencies(rows, d, {});
+      ok('zugeordnete ersetzt, nicht zugeordnete bleiben', tasks[0].competencies.join() === 'M-L3,M-K5' && tasks[1].competencies.join() === 'M-L3' && tasks[2].competencies.join() === 'M-L5');
+      ok('leere Kompetenzen der Datei entfernen das Feld', tasks[3].competencies === undefined && changed === 3);
+      ok('Punkte unverändert', tasks.map((x) => x.max).join() === '3,4,5,2');
+    }
+  } catch (e) {
+    fails++;
+    lines.push('FAIL Ausnahme: ' + (e && e.stack || e));
+  }
+  document.getElementById('out').textContent = (fails ? `${fails} FEHLGESCHLAGEN` : 'ALLE TESTS BESTANDEN') + '\n' + lines.join('\n');
+  document.title = 'fertig';
+</script>
+</body>
+</html>

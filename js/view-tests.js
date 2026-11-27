@@ -38,7 +38,15 @@
     let cur = tests.find((t) => t.id === ui.testId[course.id]) || tests.filter((t) => !G.isMakeup(course, t)).pop() || tests[tests.length - 1] || null;
 
     view.append(
-      h('div', { class: 'view-head' }, h('h1', null, 'Tests'), UI.halfSwitch(course, false), filterSwitch),
+      h(
+        'div',
+        { class: 'view-head' },
+        h('h1', null, 'Tests'),
+        UI.halfSwitch(course, false),
+        filterSwitch,
+        // 2.23 (PLANUNG.md AQ-3): neuer Test aus der Begleitdatei einer Klassenarbeit
+        h('button', { class: 'btn btn-sm', 'data-ka-new': '', title: 'Neuen Test aus der Begleitdatei einer Klassenarbeit anlegen: Aufgaben, Punkte, Teile und Kompetenzen', onclick: () => kaImport(course, db, half, null) }, icon('upload'), ' Test aus KA-Datei')
+      ),
       catalogOffer(course, db),
       UI.pickerList({
         items: tests,
@@ -631,6 +639,10 @@
         G.hasParts(t) || t.moodle
           ? null
           : h('button', { class: 'btn btn-sm', 'data-focus-key': 'moodle-import', title: 'Moodle-Test aus der Antworten- und Bewertungen-CSV in diesen Test übernehmen: jede Frage wird eine Aufgabe', onclick: () => moodleImport(course, db, a.half, a) }, icon('upload'), ' Moodle-CSV'),
+        // 2.23: Aufgaben aus der Begleitdatei einer Klassenarbeit (nicht bei Moodle-Tests, deren Aufgaben sind die Fragen)
+        t.moodle || (t.parts || []).some((x) => x.moodle)
+          ? null
+          : h('button', { class: 'btn btn-sm', 'data-ka-import': '', title: 'Aufgaben, Punkte und Kompetenzen aus der Begleitdatei einer Klassenarbeit übernehmen', onclick: () => kaImport(course, db, a.half, a) }, icon('upload'), ' KA-Datei'),
         // OrdoScripto: nach dem Vorbereiten weiter über die Karte „OrdoScripto“
         NM.scripto.dataOf(course, a)
           ? null
@@ -1751,6 +1763,290 @@
         return MO.companionCompetencies(parsed.companion, rows, map);
       },
     };
+  }
+
+  // ---------- Aufgaben aus der Begleitdatei einer Klassenarbeit (2.23, PLANUNG.md AQ-3) ----------
+
+  /**
+   * Katalog und unbekannte Kennungen für die KA-Datei klären (wie companionPlan beim Moodle-Import).
+   * apply() wählt bzw. legt den Katalog an und liefert { Kennung → Kennung | '' } oder null (ohne Katalog).
+   */
+  function kaCatalogPlan(course, db, data) {
+    const C = NM.competencies;
+    const box = h('div', { class: 'comp-import', 'data-ka-catalog': '' });
+    const ids = NM.kaimport.allIds(data);
+    let useCat = true;
+    const choice = {};
+    function info() {
+      const cur = C.forCourse(db, course);
+      if (cur) return { cat: cur, mode: 'course' };
+      const kid = data.katalog && data.katalog.id;
+      const known = kid ? C.byId(db, kid) : null;
+      if (known) return { cat: known, mode: 'known' };
+      const tpl = kid ? C.TEMPLATES.find((x) => x.catalog.id === kid) : null;
+      if (tpl) return { cat: tpl.catalog, mode: 'template', tpl };
+      return { cat: null, mode: 'none' };
+    }
+    const active = () => {
+      const i = info();
+      return i.cat && (i.mode === 'course' || useCat) ? i : null;
+    };
+    const unknown = (cat) => ids.filter((id) => !C.find(cat, id));
+    function draw() {
+      clear(box);
+      if (!ids.length) return;
+      const i = info();
+      box.append(h('h3', { class: 'comp-import-title' }, 'Kompetenzen'));
+      if (i.mode === 'known' || i.mode === 'template')
+        box.append(
+          h(
+            'label',
+            { class: 'check' },
+            h('input', { type: 'checkbox', checked: useCat, 'data-ka-use-cat': '', onchange: (e) => ((useCat = e.target.checked), draw()) }),
+            i.mode === 'known' ? ` Katalog „${i.cat.name}“ für den Kurs übernehmen` : ` Vorlage „${i.tpl.label}“ übernehmen und für den Kurs wählen`
+          )
+        );
+      if (i.mode === 'none')
+        box.append(
+          h(
+            'div',
+            { class: 'alert alert-warn' },
+            `Der Kurs hat keinen Kompetenzkatalog, und den Katalog „${(data.katalog && data.katalog.id) || '?'}“ der Datei gibt es in OrdoNota nicht. Die Kompetenzen werden nicht übernommen. Katalog zuerst unter Einstellungen → Kompetenzkataloge importieren.`
+          )
+        );
+      if (i.mode === 'course' && data.katalog && data.katalog.id !== i.cat.id)
+        box.append(h('div', { class: 'alert alert-warn' }, `Die Datei nutzt den Katalog „${data.katalog.id}“, der Kurs „${i.cat.name}“ (${i.cat.id}). Unbekannte Kennungen unten zuordnen.`));
+      else if (i.cat && data.katalog && data.katalog.version !== null && data.katalog.version > (i.cat.version || 0))
+        box.append(h('div', { class: 'alert alert-warn' }, `Die Datei wurde mit Version ${data.katalog.version} des Katalogs gebaut, in OrdoNota ist Version ${i.cat.version || 0}. Fehlen Kennungen, den Katalog neu importieren.`));
+      const act = active();
+      if (!act) return;
+      const unk = unknown(act.cat);
+      if (!unk.length) return box.append(h('p', { class: 'small' }, `✓ Alle ${ids.length} Kennungen stehen im Katalog „${act.cat.name}“.`));
+      const entries = C.entries(act.cat);
+      const where = (id) => data.aufgaben.filter((x) => x.kompetenzen.includes(id)).map((x) => x.name).join(', ');
+      box.append(
+        h('p', { class: 'small comp-unknown-head' }, `Nicht im Katalog „${act.cat.name}“:`),
+        h(
+          'ul',
+          { class: 'comp-unknown-list' },
+          unk.map((id) =>
+            h(
+              'li',
+              { 'data-ka-unknown': id },
+              h('span', { class: 'chip chip-unknown' }, id),
+              h('span', { class: 'muted small' }, where(id)),
+              h(
+                'select',
+                { class: 'input input-sm', 'aria-label': `Was passiert mit ${id}?`, onchange: (e) => ((choice[id] = e.target.value), draw()) },
+                h('option', { value: '' }, 'weglassen'),
+                act.cat.bereiche.length
+                  ? h('optgroup', { label: 'in den Katalog aufnehmen' }, act.cat.bereiche.map((b) => h('option', { value: 'add:' + b.id, selected: choice[id] === 'add:' + b.id }, `aufnehmen in „${b.name}“`)))
+                  : null,
+                entries.length ? h('optgroup', { label: 'statt dessen' }, entries.map((e) => h('option', { value: 'map:' + e.id, selected: choice[id] === 'map:' + e.id }, `${e.id} ${e.name}`))) : null
+              )
+            )
+          )
+        )
+      );
+    }
+    draw();
+    return {
+      el: box,
+      apply() {
+        const act = active();
+        if (!act) return null;
+        let cat = act.cat;
+        if (act.mode === 'template') cat = C.addFromTemplate(db, act.tpl.key);
+        if (act.mode !== 'course') course.catalogId = cat.id;
+        const map = {};
+        for (const id of unknown(act.cat)) {
+          const v = choice[id] || '';
+          if (v.startsWith('add:')) map[id] = C.addWithId(cat, v.slice(4), id) ? id : '';
+          else if (v.startsWith('map:')) map[id] = v.slice(4);
+          else map[id] = '';
+        }
+        return map;
+      },
+    };
+  }
+
+  /**
+   * Dialog „Aufgaben aus KA-Datei“: target = null legt einen neuen Test an. Ohne eingetragene Punkte ersetzt die Datei
+   * Aufgaben und Teile (Rückfrage über den Hinweis im Dialog); mit Punkten übernimmt sie nur die Kompetenzen, über den Aufgabennamen.
+   */
+  async function kaImport(course, db, half, target) {
+    const K = NM.kaimport;
+    const filled = (v) => v !== null && v !== undefined && v !== '';
+    const anyScore = !!target && Object.values(target.test.results || {}).some((r) => Object.values(r.scores || {}).some(filled));
+    const box = h('div', { 'data-ka-plan': '' });
+    let data = null;
+    let plan = null;
+    let rows = [];
+    function draw() {
+      clear(box);
+      if (!data) return;
+      const s = K.sums(data);
+      box.append(
+        h(
+          'p',
+          { class: 'small', 'data-ka-summary': '' },
+          `✓ „${data.arbeit.name}“: ${s.n} ${s.n === 1 ? 'Aufgabe' : 'Aufgaben'}, ${fmtScore(s.max)} Punkte`,
+          s.bonus ? ` + ${fmtScore(s.bonus)} Bonus` : '',
+          data.teile.length ? ` · Teile: ${data.teile.map((x) => x.name).join(', ')}` : '',
+          data.katalog ? ` · Katalog ${data.katalog.id}` : ''
+        )
+      );
+      if (!anyScore) {
+        const n = target ? target.test.tasks.length : 0;
+        box.append(
+          target && n
+            ? h('div', { class: 'alert alert-warn', 'data-ka-replace': '' }, `Die ${n} bisherigen ${n === 1 ? 'Aufgabe wird' : 'Aufgaben werden'} durch die der Datei ersetzt${G.hasParts(target.test) ? ', ebenso die Teile' : ''}. Es sind noch keine Punkte eingetragen.`)
+            : '',
+          h(
+            'div',
+            { class: 'table-wrap short' },
+            h(
+              'table',
+              { class: 'table compact' },
+              h('thead', null, h('tr', null, data.teile.length ? h('th', null, 'Teil') : null, h('th', null, 'Aufgabe'), h('th', { class: 'num' }, 'Punkte'), h('th', null, 'Kompetenzen'))),
+              h(
+                'tbody',
+                null,
+                data.aufgaben.map((x) =>
+                  h(
+                    'tr',
+                    null,
+                    data.teile.length ? h('td', null, data.teile[x.teil].name) : null,
+                    h('td', null, x.name, x.bonus ? h('span', { class: 'muted small' }, ' (Bonus)') : null),
+                    h('td', { class: 'num' }, fmtScore(x.punkte)),
+                    h('td', { class: 'comp-chips' }, x.kompetenzen.length ? x.kompetenzen.map((id) => h('span', { class: 'chip' }, id)) : h('span', { class: 'muted small' }, '–'))
+                  )
+                )
+              )
+            )
+          )
+        );
+      } else {
+        box.append(
+          h('div', { class: 'notice small', 'data-ka-comp-only': '' }, 'In diesem Test sind schon Punkte eingetragen. Aufgaben und Punkte bleiben; übernommen werden nur die Kompetenzen der zugeordneten Aufgaben.'),
+          h(
+            'div',
+            { class: 'table-wrap short' },
+            h(
+              'table',
+              { class: 'table compact' },
+              h('thead', null, h('tr', null, h('th', null, 'Aufgabe im Test'), h('th', null, 'Aufgabe aus der Datei'), h('th', null, 'Kompetenzen'))),
+              h(
+                'tbody',
+                null,
+                rows.map((r) =>
+                  h(
+                    'tr',
+                    { 'data-ka-row': r.task.id, class: r.idx === null ? 'comp-unmatched' : null },
+                    h('td', null, r.task.name),
+                    h(
+                      'td',
+                      null,
+                      h(
+                        'select',
+                        {
+                          class: 'input input-sm',
+                          'aria-label': `Aufgabe aus der Datei für ${r.task.name}`,
+                          'data-ka-pick': r.task.id,
+                          onchange: (e) => {
+                            r.idx = e.target.value === '' ? null : Number(e.target.value);
+                            draw();
+                          },
+                        },
+                        h('option', { value: '' }, '— keine, Kompetenzen bleiben —'),
+                        data.aufgaben.map((x, k) => h('option', { value: String(k), selected: r.idx === k }, x.name))
+                      )
+                    ),
+                    h(
+                      'td',
+                      { class: 'comp-chips' },
+                      r.idx === null
+                        ? (r.task.competencies || []).length
+                          ? h('span', { class: 'muted small' }, 'bleibt: ' + r.task.competencies.join(', '))
+                          : null
+                        : data.aufgaben[r.idx].kompetenzen.length
+                        ? data.aufgaben[r.idx].kompetenzen.map((id) => h('span', { class: 'chip' }, id))
+                        : h('span', { class: 'muted small' }, 'keine')
+                    )
+                  )
+                )
+              )
+            )
+          )
+        );
+      }
+      box.append(plan.el);
+    }
+    const err = h('div');
+    const fileInput = h('input', {
+      type: 'file',
+      accept: '.json,application/json',
+      onchange: async (e) => {
+        const f = e.target.files[0];
+        if (!f) return;
+        const res = K.parse(await f.text());
+        clear(err);
+        if (!res.ok) {
+          data = null;
+          err.append(h('div', { class: 'alert alert-danger', 'data-ka-error': '' }, res.error));
+          return draw();
+        }
+        err.append(...res.warnings.map((w) => h('div', { class: 'alert alert-warn' }, w)));
+        data = res.data;
+        plan = kaCatalogPlan(course, db, data);
+        rows = anyScore ? K.matchTasks(G.orderedTasks(target.test), data) : [];
+        draw();
+      },
+    });
+    const v = await modal({
+      title: target ? `Aufgaben aus KA-Datei: ${target.name}` : 'Neuer Test aus KA-Datei',
+      wide: true,
+      body: h(
+        'div',
+        null,
+        h('p', { class: 'small' }, 'Die Begleitdatei schreibt das Bauskript der Klassenarbeit neben die .docx („… (Aufgaben).json“). Sie enthält Aufgaben mit Punkten, Teile und Kompetenzen, keine Namen.'),
+        UI.dropzone(fileInput, 'KA-Datei hierher ziehen', 'JSON: „… (Aufgaben).json“'),
+        err,
+        box
+      ),
+      buttons: [
+        { label: 'Abbrechen', value: null },
+        {
+          label: target ? 'Übernehmen' : 'Test anlegen',
+          value: 'ok',
+          kind: 'primary',
+          validate: () => (data ? true : (toast('Bitte zuerst die KA-Datei wählen.', 'error'), false)),
+        },
+      ],
+    });
+    if (v !== 'ok' || !data) return;
+    const map = data.aufgaben.some((x) => x.kompetenzen.length) ? plan.apply() : {};
+    let a = target;
+    if (!a) {
+      a = M.newTest(course, half, db.settings);
+      a.name = data.arbeit.name;
+      a.cat = data.arbeit.bereich === 'ka' && course.type !== 'noka' ? 'ka' : 'other';
+      course.assessments.push(a);
+      NM.app.state.ui.testId[course.id] = a.id;
+      if (NM.app.state.ui.testFilter) delete NM.app.state.ui.testFilter[course.id]; // der neue Test soll in der Liste stehen
+      NM.app.saveUi();
+    } else if (!anyScore && a.name === 'Neuer Test') a.name = data.arbeit.name;
+    let msg;
+    if (anyScore) {
+      const n = K.setCompetencies(rows, data, map || {});
+      msg = map ? `Kompetenzen bei ${n} ${n === 1 ? 'Aufgabe' : 'Aufgaben'} geändert.` : 'Kompetenzen nicht übernommen (kein Katalog).';
+    } else {
+      const n = K.replaceTasks(a.test, data, map, uid);
+      msg = `${n} ${n === 1 ? 'Aufgabe' : 'Aufgaben'} übernommen` + (map === null && NM.kaimport.allIds(data).length ? ', ohne Kompetenzen (kein Katalog).' : '.');
+    }
+    NM.app.commit({ render: false });
+    NM.app.renderShell(); // Reiter „Kompetenzen“ kann neu dazukommen
+    toast(msg, 'info', 5000);
   }
 
   /** Dialog an der Karte „Moodle“: nur die Begleitdatei einlesen, Fragetexte aus der gespeicherten Antworten-CSV. */

@@ -174,7 +174,7 @@ def report(name, ok, detail=""):
 
 def run_test_pages(br, base):
     print("Testseiten:")
-    for page in ["grades", "model", "people", "attendance", "update", "moodle", "qr", "pomodoro", "groups", "random", "timer", "draw", "crypto", "storage", "sortis", "competencies"]:
+    for page in ["grades", "model", "people", "attendance", "update", "moodle", "qr", "pomodoro", "groups", "random", "timer", "draw", "crypto", "storage", "sortis", "competencies", "kaimport"]:
         br.open(f"{base}/tests/{page}.test.html")
         done = br.wait("/^(ALLE TESTS BESTANDEN|\\d+ FEHLGESCHLAGEN|FEHLER)/.test(document.getElementById('out').textContent)")
         text = br.eval("document.getElementById('out').textContent") or ""
@@ -3806,6 +3806,78 @@ def run_moodle_check(br, base):
     report("Moodle: Import im Test (Aufgaben ersetzen/behalten), Zuordnung, „fehlt“, Ausdruck mit/ohne Note, erneuter Import", ok and not br.errors, str(res) + "; ".join(br.errors))
 
 
+def run_ka_import_check(br, base):
+    print("Aufgaben aus der Begleitdatei einer Klassenarbeit (2.23):")
+    br.call("Emulation.setDeviceMetricsOverride", width=1440, height=1000, deviceScaleFactor=1, mobile=False)
+    br.open(f"{base}/index.html?demo")
+    br.wait(APP_READY, 30)
+    br.errors = []
+    ka = json.dumps({
+        "format": "ordonota-ka-aufgaben", "formatVersion": 1, "katalog": {"id": "mathe-sek1", "version": 1},
+        "arbeit": {"name": "KA 3 – Quadratische Funktionen", "bereich": "ka"},
+        "teile": [{"name": "Ohne Hilfsmittel"}, {"name": "Mit Hilfsmitteln"}],
+        "aufgaben": [
+            {"name": "1a", "punkte": 3, "teil": 0, "kompetenzen": ["M-L3", "M-K5"]},
+            {"name": "1b", "punkte": 4.5, "teil": 0, "kompetenzen": ["M-L3"]},
+            {"name": "2", "punkte": 8, "teil": 1, "kompetenzen": ["M-K4", "M-K9"]},
+            {"name": "Bonus", "punkte": 2, "bonus": True, "teil": 1},
+        ],
+    }, ensure_ascii=False)
+    res = br.eval("""(async (ka) => {
+        const wait = (ms = 250) => new Promise((r) => setTimeout(r, ms));
+        const pick = async (name, text) => {
+            const inp = document.querySelector('dialog input[type=file]');
+            const dt = new DataTransfer(); dt.items.add(new File([text], name, { type: 'application/json' }));
+            inp.files = dt.files; inp.dispatchEvent(new Event('change')); await wait(400);
+        };
+        const q = (sel) => document.querySelector('dialog ' + sel);
+        const db = NM.app.db(), out = {};
+        const c = db.courses.find((x) => x.klasse === '8b');
+        NM.app.select({ courseId: c.id, tab: 'tests' }); await wait();
+        const n0 = c.assessments.length;
+        // Neuer Test aus der KA-Datei; zuerst eine falsche Datei
+        document.querySelector('[data-ka-new]').click(); await wait();
+        await pick('falsch.json', '{"format":"x"}');
+        out.err = !!q('[data-ka-error]') && !q('[data-ka-summary]');
+        await pick('KA 3 (Aufgaben).json', ka);
+        out.noNull = !/\bnull\b/.test(q('[data-ka-plan]').textContent);
+        out.dialog = [(q('[data-ka-summary]') || {}).textContent || '', document.querySelectorAll('dialog [data-ka-plan] tbody tr').length, [...document.querySelectorAll('dialog [data-ka-unknown]')].map((x) => x.dataset.kaUnknown).join()];
+        const sel = q('[data-ka-unknown="M-K9"] select');
+        sel.value = 'map:M-K3'; sel.dispatchEvent(new Event('change')); await wait();
+        q('.btn-primary').click(); await wait(400);
+        const a = c.assessments[c.assessments.length - 1];
+        out.created = [c.assessments.length === n0 + 1, a.name, a.cat, a.test.parts.map((x) => x.name).join(), a.test.tasks.map((t) => t.name + ':' + t.max + ':' + (t.competencies || []).join('+')).join('|'), a.test.precision, a.test.tasks[3].bonus === true];
+        out.shown = [NM.app.state.ui.testId[c.id] === a.id, !!document.querySelector('[data-ka-import]')];
+        // Punkte eintragen, dann nur Kompetenzen übernehmen
+        const s0 = c.students[0];
+        a.test.results[s0.id] = { scores: { [a.test.tasks[0].id]: 2 } };
+        a.test.tasks[1].name = 'Aufgabe 1b'; a.test.tasks[2].name = 'A2';
+        NM.app.rerender(); await wait();
+        document.querySelector('[data-ka-import]').click(); await wait();
+        const ka2 = JSON.parse(ka); ka2.aufgaben[0].kompetenzen = ['M-K1']; ka2.aufgaben[1].kompetenzen = ['M-K2'];
+        await pick('KA 3 (Aufgaben).json', JSON.stringify(ka2));
+        out.compOnly = [!!q('[data-ka-comp-only]'), q(`[data-ka-pick="${a.test.tasks[1].id}"]`).value, q(`[data-ka-pick="${a.test.tasks[2].id}"]`).value];
+        q('.btn-primary').click(); await wait(400);
+        out.after = [a.test.tasks.map((t) => t.name + ':' + (t.competencies || []).join('+')).join('|'), a.test.results[s0.id].scores[a.test.tasks[0].id], a.test.tasks.length];
+        // Kurs ohne Katalog: Vorlage aus der Datei übernehmen, neuer Test ohne Teile
+        delete c.catalogId; c.catalogHintOff = true;
+        NM.app.rerender(); await wait();
+        document.querySelector('[data-ka-new]').click(); await wait();
+        const ka3 = JSON.parse(ka); delete ka3.teile; ka3.aufgaben.forEach((x) => delete x.teil); ka3.aufgaben[2].kompetenzen = ['M-K4'];
+        await pick('KA 4 (Aufgaben).json', JSON.stringify(ka3));
+        out.useCat = !!q('[data-ka-use-cat]') && q('[data-ka-use-cat]').checked;
+        q('.btn-primary').click(); await wait(400);
+        const b = c.assessments[c.assessments.length - 1];
+        out.newCat = [!!c.catalogId, !b.test.parts, b.test.tasks[2].competencies.join(), [...document.querySelectorAll('.tabs .tab')].some((x) => x.dataset.tab === 'competencies')];
+        return out; })(%s)""" % json.dumps(ka))
+    ok = bool(res) and res["err"] and res["noNull"] and res["dialog"][0].startswith("✓ „KA 3 – Quadratische Funktionen“: 4 Aufgaben, 15,5 Punkte + 2 Bonus") \
+        and res["dialog"][1] == 4 and res["dialog"][2] == "M-K9" \
+        and res["created"] == [True, "KA 3 – Quadratische Funktionen", "ka", "Ohne Hilfsmittel,Mit Hilfsmitteln", "1a:3:M-L3+M-K5|1b:4.5:M-L3|2:8:M-K4+M-K3|Bonus:2:", 0.5, True] \
+        and res["shown"] == [True, True] and res["compOnly"] == [True, "1", ""] \
+        and res["after"] == ["1a:M-K1|Aufgabe 1b:M-K2|A2:M-K4+M-K3|Bonus:", 2, 4] and res["newCat"] == [True, True, "M-K4", True]
+    report("KA-Datei: neuer Test mit Teilen, Bonus, Kompetenzen; mit Punkten nur Kompetenzen; Kurs ohne Katalog", ok and not br.errors, str(res) + "; ".join(br.errors))
+
+
 def run_moodle_comp_check(br, base):
     print("Moodle-Import mit Begleitdatei (Kompetenzen):")
     br.open(f"{base}/index.html?demo")
@@ -4220,7 +4292,7 @@ def main():
         run_tests_view_check, run_competency_check, run_task_add_click_check, run_makeup_check, run_verbal_check, run_ausgleich_check, run_notes_check, run_foerder_check, run_people_check, run_people_page_check, run_unreachable_check,
         run_tabs_check, run_tab_order_check, run_overview_fold_check, run_overview_off_check, run_settings_layout_check,
         run_theme_check, run_demo_link_check, run_sleep_lock_check, run_old_db_check, run_parts_check, run_print_menu_check,
-        run_pres_check, run_group_check, run_groups_tab_check, run_moodle_check, run_moodle_comp_check, run_competency_tab_check, run_comp_offer_check, run_competency_history_check, run_competency_print_check, run_scripto_check,
+        run_pres_check, run_group_check, run_groups_tab_check, run_moodle_check, run_moodle_comp_check, run_competency_tab_check, run_comp_offer_check, run_ka_import_check, run_competency_history_check, run_competency_print_check, run_scripto_check,
         run_decrypt_tool, run_launcher_check,
     ]
     srv, base = serve()

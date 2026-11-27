@@ -686,7 +686,7 @@ Mit dem Nutzer am 27.11.2026 geklärt (grill-me Q1–Q10, alle Empfehlungen ange
 - [x] **AN** Einzelne Noten in der Notenübersicht nicht werten – erledigt in 2.18.0 (27.11.2026, lokal committet), Q11/Q12 siehe Abschnitt AN
 - [x] **AO** EPO: Anzahl der angezeigten Stunden begrenzen – erledigt in 2.19.0 (27.11.2026, lokal committet); Auswahl erst ab 4 Stunden im Block
 - [x] **AP** Tool „Begriffe in Gruppen“ – erledigt in 2.20.0 (27.11.2026, lokal committet); „je Gruppe“ rundet die Gruppenzahl wie der Reiter „Gruppen“; Notfallwerkzeug unverändert (wie `randomCards` nur im Klartext-JSON)
-- [ ] **AQ** Planung – geklärt am 27.11.2026 (grill-me Q1–Q11, alle Empfehlungen angenommen), Schritte AQ-1 bis AQ-3 siehe Abschnitt AQ, AQ-4 später
+- [x] **AQ** Planung – geklärt am 27.11.2026 (grill-me Q1–Q11), AQ-1 bis AQ-3 erledigt in 2.21.0–2.23.0 (lokal committet); offen: Bauskript im Vault (eigene Sitzung, Übergabedatei), AQ-4 später
 
 ### AL) Sperre bei Standby
 
@@ -763,7 +763,7 @@ Wunsch: Integration von Kompetenztests, Schnittstelle zu Lehrplan und Arbeitsmat
   - `vorlagen/kompetenzen/chemie-sek1.json` nach den KMK-Bildungsstandards (geltende Fassung prüfen, ggf. 2024): Bereich „Kompetenzbereiche“ `C-K1` Sachkompetenz, `C-K2` Erkenntnisgewinnung, `C-K3` Kommunikation, `C-K4` Bewertung; Bereich „Basiskonzepte“ `C-B1` Stoff-Teilchen, `C-B2` Struktur-Eigenschaft, `C-B3` Chemische Reaktion, `C-B4` Energie.
   - `guessForFach` berücksichtigt die Stufe des Kurses (Sek I/MSS), damit ein MSS-Kurs Mathe den MSS-Katalog bekommt.
   - Tests: Vorlagen bestehen `clean()`/`check()`, Zuordnung nach Fach und Stufe.
-- [ ] **AQ-3 (2.23.0) Aufgaben einer Klassenarbeit importieren** – nach `/impeccable shape`, Format unten:
+- [x] **AQ-3 (2.23.0) Aufgaben einer Klassenarbeit importieren** – erledigt 27.11.2026 (lokal committet; ohne eigenes `/impeccable shape`, Dialog nach dem Muster des Moodle-Imports). Modul `js/kaimport.js`, Knöpfe „Test aus KA-Datei“ (Kopf des Reiters) und „KA-Datei“ (Karte „Aufgaben“, nicht bei Moodle-Tests). Halbe Punkte stellen die Genauigkeit auf halbe Punkte. Übergabedatei geschrieben: `03 - Material/UEBERGABE klassenarbeit – Aufgaben für OrdoNota.md`; die Vault-Seite (Bauskript) ist noch offen. Plan war:
   - reine Logik in `js/competencies.js` oder neuem Modul (Datei prüfen, in Aufgaben/Teile umsetzen, Abgleich über Aufgabennamen) mit Testseite.
   - „+ Neuer Test → Aus KA-Datei“ und in der Testkarte „Aufgaben“ „Aus KA-Datei übernehmen“ (Entscheidung 8).
   - Unbekannte Kennungen und Kurs ohne Katalog wie bei AI-2 (weglassen/aufnehmen/ersetzen; Katalog oder Vorlage der Datei übernehmen, wenn `katalog.id` passt).
