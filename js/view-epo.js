@@ -194,10 +194,27 @@
     NM.app.commit();
   }
 
+  /** Auswahl „Stunden: alle | letzte 3 | 5 | 10“ (seit 2.19, nur Anzeige; je Kurs auf dem Gerät gemerkt). */
+  const SHOW_OPTIONS = [0, 3, 5, 10];
+  function shownCount(ui, course) {
+    const n = Number((ui.epoShow || {})[course.id]) || 0;
+    return SHOW_OPTIONS.includes(n) ? n : 0;
+  }
+  function setShown(ui, course, n) {
+    ui.epoShow = Object.assign({}, ui.epoShow, { [course.id]: n });
+    if (!n) delete ui.epoShow[course.id];
+    NM.app.saveUi();
+    NM.app.rerender();
+  }
+
   function gridCard(course, a, level) {
     const epo = a.epo;
-    const lessons = sortedLessons(epo);
+    const allLessons = sortedLessons(epo);
     const ui = NM.app.state.ui;
+    // Nur die Anzeige wird begrenzt: Σ, Max, %, Note rechnen weiter über alle Stunden (G.epoResult)
+    const limit = shownCount(ui, course);
+    const lessons = limit ? allLessons.slice(-limit) : allLessons;
+    const hidden = allLessons.length - lessons.length;
     const current = ui.epoQuick ? lessons[lessons.length - 1] : null;
     const pts = Object.assign({}, G.EPO_DEFAULT_POINTS, epo.points);
     const all = M.activeStudents(course);
@@ -296,7 +313,21 @@
               { class: 'head-toggles' },
               toggleBtn(ui, 'epoQuick', ui.epoQuick ? [icon('chevron-down'), ' Schnellwahl ausblenden'] : [icon('chevron-right'), ' Schnellwahl einblenden'], 'Schaltflächen zum Bewerten der neuesten Stunde ein-/ausblenden'),
               toggleBtn(ui, 'epoPhotos', ui.epoPhotos ? [icon('chevron-down'), ' Fotos ausblenden'] : [icon('chevron-right'), ' Fotos einblenden'], 'Schülerfotos vor dem Namen ein-/ausblenden (Fotos werden im Reiter „Sitzplan“ hinzugefügt)'),
-              h('button', { class: 'btn btn-sm', 'data-tiles-open': '', title: 'Kachelansicht für das Tablet: eine Kachel je Person nach Sitzplan, Tippen bewertet die Stunde', onclick: () => tilesView(course, a) }, icon('layout-grid'), ' Kacheln')
+              h('button', { class: 'btn btn-sm', 'data-tiles-open': '', title: 'Kachelansicht für das Tablet: eine Kachel je Person nach Sitzplan, Tippen bewertet die Stunde', onclick: () => tilesView(course, a) }, icon('layout-grid'), ' Kacheln'),
+              allLessons.length > SHOW_OPTIONS[1]
+                ? h(
+                    'span',
+                    { class: 'epo-show' },
+                    h('span', { class: 'muted small' }, 'Stunden:'),
+                    UI.segSwitch(
+                      'Angezeigte Stunden',
+                      SHOW_OPTIONS.map((n) => ({ id: n, label: n ? `letzte ${n}` : 'alle', title: n ? `Nur die letzten ${n} Stunden zeigen (Note rechnet weiter mit allen)` : 'Alle Stunden zeigen' })),
+                      limit,
+                      (n) => setShown(ui, course, n),
+                      { 'data-epo-show': '' }
+                    )
+                  )
+                : null
             )
           : null,
         h(
@@ -319,7 +350,17 @@
         ? h('p', { class: 'muted' }, 'Noch keine Stunden. Mit „+ Stunde“ eine Spalte anlegen.')
         : students.length === 0
           ? h('p', { class: 'muted' }, 'Bitte zuerst im Reiter „Kurs & Schüler“ Namen eintragen.')
-          : h('div', { class: 'table-wrap', 'data-scroll-key': 'epo-grid' }, h('table', { class: 'table grid-table epo-table' + (ui.epoPhotos ? ' with-photos' : '') }, h('thead', null, head), h('tbody', null, rows))),
+          : [
+              hidden > 0
+                ? h(
+                    'p',
+                    { class: 'epo-hidden-note muted small', 'data-epo-hidden': String(hidden) },
+                    `${hidden} ältere ${hidden === 1 ? 'Stunde' : 'Stunden'} ausgeblendet – Σ, Max, % und Note zählen alle ${allLessons.length} Stunden. `,
+                    h('button', { class: 'link', onclick: () => setShown(ui, course, 0) }, 'Alle zeigen')
+                  )
+                : null,
+              h('div', { class: 'table-wrap', 'data-scroll-key': 'epo-grid' }, h('table', { class: 'table grid-table epo-table' + (ui.epoPhotos ? ' with-photos' : '') }, h('thead', null, head), h('tbody', null, rows))),
+            ],
       h('p', { class: 'muted small' }, 'Höchstpunktzahl = anwesende Stunden × ', pts['++'], '. Hausaufgaben-Vermerke werden abgezogen, Material-Vermerke (m) nur gezählt, solange ihre Punkte 0 sind. Enter/↓ springt zur nächsten Person.')
     );
   }

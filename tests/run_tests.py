@@ -566,6 +566,45 @@ def run_epo_material_check(br, base):
            and not br.errors, str(res) + "; ".join(br.errors))
 
 
+def run_epo_show_check(br, base):
+    """2.19: EPO – nur die letzten n Stunden anzeigen, Rechnung über alle Stunden."""
+    print("EPO: Anzahl der angezeigten Stunden:")
+    br.open(f"{base}/index.html?demo")
+    br.wait(APP_READY, 30)
+    br.errors = []
+    res = br.eval("""(async () => {
+        const wait = () => new Promise((r) => setTimeout(r, 200));
+        const G = NM.grades, M = NM.model;
+        const c = NM.app.db().courses[0];
+        NM.app.state.ui.epoShow = {};
+        NM.app.select({ courseId: c.id, tab: 'epo' }); await wait();
+        const blocks = c.assessments.filter((x) => x.kind === 'epo' && x.half === NM.app.currentHalf(c));
+        const a = blocks.find((x) => x.id === (NM.app.state.ui.epoId || {})[c.id]) || blocks[blocks.length - 1];
+        if (!a) return { noBlock: true };
+        // auf 8 Stunden auffüllen, damit „letzte 5“ etwas ausblendet
+        while (a.epo.lessons.length < 8) a.epo.lessons.push({ id: 'zl' + a.epo.lessons.length, date: '2026-0' + (1 + (a.epo.lessons.length % 9)) + '-15' });
+        NM.app.commit(); await wait();
+        const s = M.activeStudents(c)[0];
+        const grade = () => G.epoResult(a.epo, s.id, G.courseLevel(c)).p;
+        const heads = () => document.querySelectorAll('.epo-table thead .lesson-head').length;
+        const out = { n: a.epo.lessons.length, all: heads(), g0: grade(), noNote: !document.querySelector('[data-epo-hidden]') };
+        document.querySelector('[data-epo-show] [data-seg="5"]').click(); await wait();
+        const note = document.querySelector('[data-epo-hidden]');
+        const shownDates = [...document.querySelectorAll('.epo-table thead .lesson-head button.link:first-child')].map((b) => b.textContent);
+        const newest = a.epo.lessons.slice().sort((x, y) => (x.date || '').localeCompare(y.date || '')).slice(-5).map((l) => NM.util.fmtDateShort(l.date));
+        out.five = [heads(), note && note.dataset.epoHidden, grade() === out.g0, JSON.stringify(shownDates) === JSON.stringify(newest), NM.app.state.ui.epoShow[c.id]];
+        // Kurswechsel und zurück: Auswahl bleibt je Kurs
+        NM.app.select({ courseId: NM.app.db().courses[1].id, tab: 'epo' }); await wait();
+        NM.app.select({ courseId: c.id, tab: 'epo' }); await wait();
+        out.kept = heads();
+        document.querySelector('[data-epo-hidden] button').click(); await wait();
+        out.back = [heads(), !document.querySelector('[data-epo-hidden]'), NM.app.state.ui.epoShow[c.id] === undefined];
+        return out; })()""")
+    ok = bool(res) and not res.get("noBlock") and res["all"] == res["n"] and res["noNote"] and res["five"] == [5, str(res["n"] - 5), True, True, 5] \
+        and res["kept"] == 5 and res["back"] == [res["n"], True, True]
+    report("EPO: „letzte 5“ zeigt die neuesten Stunden, Hinweis mit Anzahl, Note unverändert, je Kurs gemerkt, „Alle zeigen“", ok and not br.errors, str(res) + "; ".join(br.errors))
+
+
 def run_epo_presets_check(br, base):
     """EPO-Vorlagen (2.8): Hinweis bei alter Tabelle mit „So lassen“/„Neue Vorlage anwenden“, Vorlage anwenden, als Vorlage speichern, Einstellungen."""
     br.open(f"{base}/index.html?demo")
@@ -4068,7 +4107,7 @@ def run_decrypt_tool(br, base):
 def main():
     blocks = [
         run_test_pages, run_app_smoke, run_sort_check, run_course_check, run_seat_beamer_check,
-        run_epo_material_check, run_epo_presets_check, run_attendance_check, run_epo_tiles_check, run_print_head_check,
+        run_epo_material_check, run_epo_presets_check, run_epo_show_check, run_attendance_check, run_epo_tiles_check, run_print_head_check,
         run_draw_check, run_draw_pools_check, run_random_check, run_timer_check, run_tools_layout_check,
         run_tools_menu_check, run_pomodoro_check, run_transition_check, run_sidebar_check,
         run_tests_view_check, run_competency_check, run_task_add_click_check, run_makeup_check, run_verbal_check, run_ausgleich_check, run_notes_check, run_foerder_check, run_people_check, run_people_page_check, run_unreachable_check,
