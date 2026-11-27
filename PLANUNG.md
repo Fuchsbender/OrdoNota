@@ -686,7 +686,7 @@ Mit dem Nutzer am 27.11.2026 geklärt (grill-me Q1–Q10, alle Empfehlungen ange
 - [x] **AN** Einzelne Noten in der Notenübersicht nicht werten – erledigt in 2.18.0 (27.11.2026, lokal committet), Q11/Q12 siehe Abschnitt AN
 - [x] **AO** EPO: Anzahl der angezeigten Stunden begrenzen – erledigt in 2.19.0 (27.11.2026, lokal committet); Auswahl erst ab 4 Stunden im Block
 - [x] **AP** Tool „Begriffe in Gruppen“ – erledigt in 2.20.0 (27.11.2026, lokal committet); „je Gruppe“ rundet die Gruppenzahl wie der Reiter „Gruppen“; Notfallwerkzeug unverändert (wie `randomCards` nur im Klartext-JSON)
-- [ ] **AQ** Planung (eigener Klärungsdurchgang nach AL–AP)
+- [ ] **AQ** Planung – geklärt am 27.11.2026 (grill-me Q1–Q11, alle Empfehlungen angenommen), Schritte AQ-1 bis AQ-3 siehe Abschnitt AQ, AQ-4 später
 
 ### AL) Sperre bei Standby
 
@@ -730,11 +730,66 @@ Ausgangslage: „nicht gewertet“ gibt es für ganze Tests/Präsentationen (`a.
 - **Ergebnis:** Anzeige mit Vollbild/Beamer und „Neu mischen“, „Als Text kopieren“. Nur das letzte Ergebnis bleibt bis zum nächsten Mischen gespeichert, kein Verlauf, kein eigener Ausdruck.
 - Datenmodell: zusätzliche Felder am Kurs (Liste, Vorgabe, letztes Ergebnis) mit Standard in `migrate()`, `tools/entschluesseln.py` mitziehen. Mischen rein in einem Logikmodul mit Tests.
 
-### AQ) Planung (später, eigener Klärungsdurchgang)
+### AQ) Planung: Einstieg Kompetenzen, neue Kataloge, Import der Aufgaben einer Klassenarbeit (geklärt am 27.11.2026, grill-me Q1–Q11)
 
-Wunsch: Integration von Kompetenztests, Schnittstelle zu Lehrplan und Arbeitsmaterial, Import von Kompetenzen für eine Klassenarbeit. Arbeitsannahme: Planung je Kurs (Reihen, Stunden) mit Verweisen auf Kompetenzen aus dem Katalog, Arbeitsmaterial (Vault `03 - Material`) und geplante Tests; für eine Klassenarbeit die Kompetenzen der Reihe übernehmen. Noch nicht entschieden.
+Wunsch: Integration von Kompetenztests, Schnittstelle zu Lehrplan und Arbeitsmaterial, Import von Kompetenzen für eine Klassenarbeit.
 
-**Für später gemerkt (Q6, 27.11.2026):** Wie die Kompetenzen (AI) in der App zusammenhängen, ist für den Nutzer nicht klar, und der Reiter „Kompetenzen“ wird bei ihm gerade nicht angezeigt. Grund laut Code: Der Reiter erscheint nur, wenn am Kurs ein Kompetenzkatalog gewählt ist (`tabOn`, `js/app.js`; Auswahl „Kompetenzkatalog“ in den Kurseinstellungen). Im Klärungsdurchgang zu AQ mit behandeln: Einstieg sichtbarer machen (z. B. Hinweis im Reiter-Menü oder im Test, wenn kein Katalog gewählt ist).
+**Befunde (27.11.2026):**
+- Der Reiter „Kompetenzen“ fehlte beim Nutzer, weil der Katalog nur beim **Eintragen** des Fachs vorbelegt wird (`js/view-course.js`, `setFach`). Kurse, die vor 2.9.0 schon ein Fach hatten, haben keinen Katalog, also keinen Reiter und kein Feld „Kompetenzen“ an den Aufgaben.
+- Die Unterrichtsplanung liegt ausführlich im Vault `03 - Material` (je Reihe `00 Reihenplan – Ma 10-01 ….md` mit Frontmatter `fach, klasse, nr, titel, wochen, status, schulbuch`, Lernzielen, Wochenübersicht, Stunden, Leistungsüberprüfungen; noch ohne Kompetenzkennungen).
+- OrdoNota läuft offline im Browser und kann den Vault nicht selbst lesen. Eine Schnittstelle geht nur über eine Datei, die der Vault erzeugt und die in OrdoNota über die Dateiauswahl kommt (Muster: Moodle-Begleitdatei, AI-2).
+
+**Entscheidungen:**
+1. **Der Vault bleibt die Quelle der Planung** (Q1). OrdoNota bekommt keine eigene Reihen- oder Stundenplanung und keinen Abgleich in beide Richtungen. Später übernimmt es per Datei nur eine schlanke Reihenliste (AQ-4).
+2. **Zuerst der Import der Aufgaben einer Klassenarbeit** (Q2): Beim Bau einer KA im Vault entsteht eine Begleitdatei mit Aufgaben, Punkten und Kompetenzen; OrdoNota legt daraus den Test an. Zeitleiste der Reihen und Sprung zum Material kommen später auf derselben Schnittstelle.
+3. **„Integration von Kompetenztests“ = besserer Einstieg** (Q3, zugleich der Punkt Q6 vom 27.11.): Katalog für bestehende Kurse anbieten, Hinweise solange kein Katalog gewählt ist, kurze Erklärung, wie alles zusammenhängt. Eigener Schritt vor allem anderen.
+4. **Neue Vorlagen** Mathe MSS und Chemie Sek I (Q4, Q11). KuM und Informatik erst, wenn der Informatik-Lehrplan fest ist; eigene Kataloge gehen schon jetzt in den Einstellungen.
+5. **Die Vault-Seite baut eine eigene Sitzung** (Q5) nach einer Übergabedatei, wie bei `moodle-fragen`.
+6. **Angebot im Reiter „Tests“** (Q6): Hinweis oben „Für <Fach> gibt es den Kompetenzkatalog „…“. Wählen | Nicht jetzt“, nur wenn `guessForFach` einen Katalog oder eine Vorlage findet. „Nicht jetzt“ wird am Kurs gespeichert (gilt auf allen Geräten).
+7. **Teilaufgaben** (Q7): Jede Teilaufgabe mit eigenen Punkten wird eine Aufgabe („1a“, „1b“); Teilaufgaben ohne eigene Punkte gehören zur Aufgabe darüber (Kompetenzen zusammengeführt). Bonus bleibt Bonus, Teile der Arbeit (z. B. „Ohne Hilfsmittel“) werden Teile in OrdoNota.
+8. **Neu oder vorhanden** (Q8): „+ Neuer Test → Aus KA-Datei“ legt Name, Bereich, Teile, Aufgaben, Höchstpunkte und Kompetenzen an; Datum, Gewicht und Schlüssel wie bei einem neuen Test. In einen vorhandenen Test: ohne eingetragene Punkte ersetzt die Datei die Aufgaben (Rückfrage); mit Punkten übernimmt OrdoNota nur die Kompetenzen, zugeordnet über den Aufgabennamen, mit Prüfdialog wie bei Moodle.
+9. **Kompetenzen im Vault je Aufgabe** im Bauskript der KA (`kompetenzen=[...]`), geprüft gegen die Katalogdatei (Q9). Kompetenzen je Reihe im Frontmatter erst mit AQ-4.
+10. **Reihenliste später** (Q10) als eigener Schritt mit kurzer Klärungsrunde, wenn der KA-Import läuft.
+
+**Schritte:**
+- [ ] **AQ-1 (2.21.0) Einstieg Kompetenzen** – nach `/impeccable shape`:
+  - Hinweis im Reiter „Tests“ (Entscheidung 6) mit „Wählen“ (setzt `course.catalogId`, legt die Vorlage bei Bedarf an) und „Nicht jetzt“ (`course.catalogHintOff = true`, Standard in `migrate()`, `tools/entschluesseln.py` mitziehen).
+  - Ohne Katalog in der Testkarte „Aufgaben“ ein leiser Hinweis „Kompetenzen je Aufgabe gibt es mit einem Kompetenzkatalog am Kurs“ mit Sprung zu den Kurseinstellungen.
+  - In der Reiterliste der Kurseinstellungen beim Reiter „Kompetenzen“: „erscheint, sobald ein Kompetenzkatalog gewählt ist“.
+  - Kurze Erklärung „So hängt es zusammen“ (Katalog am Kurs → Kompetenzen je Aufgabe → Auswertung im Reiter „Kompetenzen“ → Verlauf, Kompetenzbogen) auf der Katalogseite der Einstellungen und in `DOKUMENTATION.md`.
+  - Tests: Hinweis erscheint/verschwindet, „Nicht jetzt“ bleibt nach Neuladen, „Wählen“ schaltet den Reiter ein.
+- [ ] **AQ-2 (2.22.0) Vorlagen Mathe MSS und Chemie Sek I** (Q11; Bezeichnungen beim Bau am Beschlusstext prüfen, wie Q19 bei AI):
+  - `vorlagen/kompetenzen/mathe-mss.json` nach den Bildungsstandards AHR 2012: `MO-K1` argumentieren, `MO-K2` Probleme lösen, `MO-K3` modellieren, `MO-K4` darstellen, `MO-K5` mit symbolischen, formalen und technischen Elementen umgehen, `MO-K6` kommunizieren; `MO-L1` Algorithmus und Zahl, `MO-L2` Messen, `MO-L3` Raum und Form, `MO-L4` Funktionaler Zusammenhang, `MO-L5` Daten und Zufall.
+  - `vorlagen/kompetenzen/chemie-sek1.json` nach den KMK-Bildungsstandards (geltende Fassung prüfen, ggf. 2024): Bereich „Kompetenzbereiche“ `C-K1` Sachkompetenz, `C-K2` Erkenntnisgewinnung, `C-K3` Kommunikation, `C-K4` Bewertung; Bereich „Basiskonzepte“ `C-B1` Stoff-Teilchen, `C-B2` Struktur-Eigenschaft, `C-B3` Chemische Reaktion, `C-B4` Energie.
+  - `guessForFach` berücksichtigt die Stufe des Kurses (Sek I/MSS), damit ein MSS-Kurs Mathe den MSS-Katalog bekommt.
+  - Tests: Vorlagen bestehen `clean()`/`check()`, Zuordnung nach Fach und Stufe.
+- [ ] **AQ-3 (2.23.0) Aufgaben einer Klassenarbeit importieren** – nach `/impeccable shape`, Format unten:
+  - reine Logik in `js/competencies.js` oder neuem Modul (Datei prüfen, in Aufgaben/Teile umsetzen, Abgleich über Aufgabennamen) mit Testseite.
+  - „+ Neuer Test → Aus KA-Datei“ und in der Testkarte „Aufgaben“ „Aus KA-Datei übernehmen“ (Entscheidung 8).
+  - Unbekannte Kennungen und Kurs ohne Katalog wie bei AI-2 (weglassen/aufnehmen/ersetzen; Katalog oder Vorlage der Datei übernehmen, wenn `katalog.id` passt).
+  - Übergabedatei an die Vault-Sitzung: `03 - Material/UEBERGABE klassenarbeit – Aufgaben für OrdoNota.md` (Format, Prüfregeln, Ablage neben der KA-Datei). OrdoNota liest nur `formatVersion` 1.
+- [ ] **AQ-4 (später)** Reihenliste aus dem Vault (Titel, Zeitraum, Lernziele, Kompetenzen, geplante Leistungsüberprüfungen) – eigene Klärungsrunde.
+
+**Begleitdatei der Klassenarbeit** `<Name der KA-Datei> (Aufgaben).json`, neben der .docx im Reihenordner:
+
+```json
+{
+  "format": "ordonota-ka-aufgaben",
+  "formatVersion": 1,
+  "katalog": { "id": "mathe-sek1", "version": 1 },
+  "arbeit": { "name": "KA 2 – Quadratische Funktionen", "bereich": "ka" },
+  "teile": [ { "name": "Ohne Hilfsmittel" }, { "name": "Mit Hilfsmitteln" } ],
+  "aufgaben": [
+    { "name": "1a", "punkte": 3, "teil": 0, "kompetenzen": ["M-L3", "M-K5"] },
+    { "name": "1b", "punkte": 4, "teil": 0, "kompetenzen": ["M-L3"] },
+    { "name": "Bonus", "punkte": 2, "bonus": true, "teil": 1, "kompetenzen": ["M-K3"] }
+  ]
+}
+```
+
+- `teile` ist optional; ohne `teile` entfällt `teil`. `teil` ist der Index in `teile`.
+- `punkte` > 0, Vielfache von 0,5; `name` je Arbeit eindeutig. `bereich`: `ka` (Klassen-/Kursarbeit) oder `sonstige` (z. B. HÜ); `katalog` fehlt, wenn ohne Katalog gebaut.
+- Keine Personendaten, keine Lösungen. Unbekannte Felder werden übergangen. Formatänderungen nur in Absprache, beide Seiten gleichzeitig.
 
 ## C) Gamification des Pomodoro-Timers (zurückgestellt, erst auf Nachfrage des Nutzers)
 
