@@ -676,6 +676,65 @@ OrdoSortis (`../OrdoSortis`, Berufsorientierung) übernimmt Personen und Klassen
 - **Tests:** `tests/sortis.test.html` (Kopfzeile, Sortierung, inaktive fehlen, Namen aus dem Register, leere Mail, Maskierung, kein BOM, Dateiname); End-to-End in `run_tests.py` (Knopf nur bei Kursauswahl, Inhalt der Datei).
 - Kein neues `SCHEMA`, keine neuen Felder.
 
+## Wunschliste vom 27.11.2026 (Reihenfolge der Umsetzung: AL, AM, AN, AO, AP; AQ später)
+
+Mit dem Nutzer am 27.11.2026 geklärt (grill-me Q1–Q10, alle Empfehlungen angenommen, Q6 zurückgestellt). Jeder Buchstabe ist eine eigene Minor-Version mit Tests. Ablauf je Buchstabe wie bei der Wunschliste vom 18.11.2026 (mit Oberfläche zuerst `/impeccable shape`).
+
+**To-do:**
+- [ ] **AL** Sperre bei Standby
+- [ ] **AM** Ältere Ziehungen löschen
+- [ ] **AN** Einzelne Noten in der Notenübersicht nicht werten
+- [ ] **AO** EPO: Anzahl der angezeigten Stunden begrenzen
+- [ ] **AP** Tool „Begriffe in Gruppen“
+- [ ] **AQ** Planung (eigener Klärungsdurchgang nach AL–AP)
+
+### AL) Sperre bei Standby
+
+Ausgangslage: Die Sperre nach Inaktivität (`autoLockMin`, Standard 15 Min.) prüft alle 20 s die Uhrzeit (`js/app.js` ab 468). Ein Standby länger als `autoLockMin` sperrt also schon, aber erst beim nächsten Prüfschritt; ein kurzer Standby sperrt gar nicht.
+
+- **Zeitsprung = Ruhezustand:** Liegt zwischen zwei Prüfschritten eine Lücke von mehr als 60 s, sperrt die App sofort (`lockApp`), unabhängig von `autoLockMin` – auch bei `autoLockMin = 0` („nie“).
+- Beim Aufwachen sofort prüfen (`visibilitychange` → sichtbar, `focus`), damit die Noten nicht bis zu 20 s sichtbar sind. Ein Tabwechsel allein sperrt nicht.
+- Keine eigene Einstellung. Ungespeicherte Änderungen sichert das Autosave wie bisher; `lockApp` speichert vorher, falls noch etwas offen ist.
+- Tests: Zeitsprung simulieren (Uhr im Test vorstellen), Tabwechsel ohne Sperre.
+
+### AM) Ältere Ziehungen löschen
+
+Ausgangslage: Rückgängig gibt es nur für die letzte Ziehung je Pool bzw. klassisch (`undoDraw`, `undoPool`); der Verlauf (`historyCard`) hat keinen Knopf.
+
+- Jede Ziehung im Verlauf bekommt **„Löschen“** mit Rückfrage. Die Rückfrage nennt, wie viele Noten in ihrer Spalte stehen; die Spalte samt Noten wird entfernt.
+- Die Gezogenen kommen wieder in den Topf, **sofern sie seitdem nicht erneut gezogen wurden**. Spätere Ziehungen bleiben unverändert.
+- Bei der letzten Ziehung bleibt „Rückgängig“ wie bisher.
+- Logik rein in `js/draw.js`, Tests dazu.
+
+### AN) Einzelne Noten in der Notenübersicht nicht werten
+
+Ausgangslage: „nicht gewertet“ gibt es für ganze Tests/Präsentationen (`a.ungraded`) und je Person als Status „ungewertet“ (Tests, Präsentationen). Für EPO- und Ziehungsnoten und in der Notenübersicht fehlt es.
+
+- **Zelle:** Klick auf eine Zelle der Notenübersicht öffnet ein kleines Menü „Nicht werten“ / „Wieder werten“. Gilt für diese Person in dieser Spalte, für jede Art von Leistung. Die Zelle ist grau und durchgestrichen und zählt nicht im Schnitt. Rohdaten bleiben unverändert.
+- **Spalte:** dasselbe Menü am Spaltenkopf. Für Tests und Präsentationen setzt es den vorhandenen Haken `a.ungraded` (kein zweiter Weg); für EPO-Blöcke und Ziehungsspalten das neue Feld.
+- **Datenmodell:** neues Feld je Kurs `course.excluded` (Liste aus Spalte und Person bzw. ganzer Spalte), Standard `[]` in `migrate()`, `tools/entschluesseln.py` mitziehen, kein neues `SCHEMA`. Auswertung in `js/grades.js` (`halfResult`/`ungradedFor`), nicht gespeichert.
+- Ausdrucke zeigen es wie „nicht gewertet“.
+
+### AO) EPO: Anzahl der angezeigten Stunden begrenzen
+
+- Auswahl **„Stunden: alle | letzte 3 | letzte 5 | letzte 10“** im Reiter „Mitarbeit/EPO“. Nur die Anzeige wird begrenzt; Σ, Max, %, Note rechnen weiter über alle Stunden des Blocks.
+- Über der Tabelle ein Hinweis „4 ältere Stunden ausgeblendet“.
+- Auswahl je Kurs, gespeichert auf dem Gerät (nicht in der Datenbank).
+
+### AP) Tool „Begriffe in Gruppen“
+
+- Neues Werkzeug im Reiter „Tools“ (`TOOL_IDS`, ein-/ausschaltbar und sortierbar wie die anderen, `course.tools`).
+- **Eingabe:** freie Liste, eine Zeile je Begriff (Einfügen aus der Zwischenablage), dazu Knopf „Namen des Kurses einsetzen“. Die Liste bleibt je Kurs gespeichert.
+- **Vorgabe:** Umschalter „Anzahl Gruppen | Begriffe je Gruppe“, Standard Anzahl. Nicht glatt teilbar → Gruppen höchstens um 1 verschieden groß.
+- **Ergebnis:** Anzeige mit Vollbild/Beamer und „Neu mischen“, „Als Text kopieren“. Nur das letzte Ergebnis bleibt bis zum nächsten Mischen gespeichert, kein Verlauf, kein eigener Ausdruck.
+- Datenmodell: zusätzliche Felder am Kurs (Liste, Vorgabe, letztes Ergebnis) mit Standard in `migrate()`, `tools/entschluesseln.py` mitziehen. Mischen rein in einem Logikmodul mit Tests.
+
+### AQ) Planung (später, eigener Klärungsdurchgang)
+
+Wunsch: Integration von Kompetenztests, Schnittstelle zu Lehrplan und Arbeitsmaterial, Import von Kompetenzen für eine Klassenarbeit. Arbeitsannahme: Planung je Kurs (Reihen, Stunden) mit Verweisen auf Kompetenzen aus dem Katalog, Arbeitsmaterial (Vault `03 - Material`) und geplante Tests; für eine Klassenarbeit die Kompetenzen der Reihe übernehmen. Noch nicht entschieden.
+
+**Für später gemerkt (Q6, 27.11.2026):** Wie die Kompetenzen (AI) in der App zusammenhängen, ist für den Nutzer nicht klar, und der Reiter „Kompetenzen“ wird bei ihm gerade nicht angezeigt. Grund laut Code: Der Reiter erscheint nur, wenn am Kurs ein Kompetenzkatalog gewählt ist (`tabOn`, `js/app.js`; Auswahl „Kompetenzkatalog“ in den Kurseinstellungen). Im Klärungsdurchgang zu AQ mit behandeln: Einstieg sichtbarer machen (z. B. Hinweis im Reiter-Menü oder im Test, wenn kein Katalog gewählt ist).
+
 ## C) Gamification des Pomodoro-Timers (zurückgestellt, erst auf Nachfrage des Nutzers)
 
 **Vor Beginn die offenen Fragen unten mit dem Nutzer klären.** C ergänzt nur Felder → kein neues `SCHEMA`; `migrate()` und `tools/entschluesseln.py` (CSV-Ausgabe) mitziehen.
