@@ -82,6 +82,21 @@
   const keep = NM.model.migrate({ schema: 4, years: [], courses: [{ id: 'c', students: [], assessments: [], randomCards: ['A', 'B'] }] });
   eq('Migration: eigene Karten bleiben', keep.courses[0].randomCards, ['A', 'B']);
 
+  // Begriffe in Gruppen (2.20)
+  {
+    const seeded = (seed) => () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
+    const terms = 'a b c d e f g h i j'.split(' ');
+    const g3 = R.termGroups(terms, { mode: 'count', n: 3, rand: seeded(1) });
+    eq('Anzahl 3: drei Gruppen 4/3/3, jeder Begriff genau einmal', [g3.map((g) => g.length), g3.flat().sort().join('')], [[4, 3, 3], 'abcdefghij']);
+    eq('je Gruppe 3: Anzahl gerundet (10/3 → 3 Gruppen), höchstens 1 Unterschied', R.termGroups(terms, { mode: 'size', n: 3, rand: seeded(2) }).map((g) => g.length), [4, 3, 3]);
+    eq('je Gruppe 4: 10/4 → 3 Gruppen (gerundet)', R.termGroups(terms, { mode: 'size', n: 4, rand: seeded(3) }).map((g) => g.length), [4, 3, 3]);
+    eq('mehr Gruppen als Begriffe: je Begriff eine Gruppe', R.termGroups(['x', 'y'], { mode: 'count', n: 5 }).map((g) => g.length), [1, 1]);
+    eq('leere Begriffe fallen weg, leere Liste → keine Gruppen', [R.termGroups(['', ' ', 'z'], { n: 2 }).flat(), R.termGroups([], { n: 2 })], [['z'], []]);
+    eq('ungültiges n → 1 Gruppe', R.termGroups(['a', 'b'], { n: 0 }).length, 1);
+    eq('zufällig: andere Reihenfolge bei anderem Zufall', R.termGroups(terms, { n: 1, rand: seeded(4) })[0].join('') !== R.termGroups(terms, { n: 1, rand: seeded(9) })[0].join(''), true);
+    eq('Text zum Kopieren', R.termGroupsText([['a', 'b'], ['c']]), 'Gruppe 1: a, b\nGruppe 2: c');
+  }
+
   lines.unshift(fails === 0 ? 'ALLE TESTS BESTANDEN' : fails + ' FEHLGESCHLAGEN');
   document.getElementById('out').textContent = lines.join('\n');
 </script>

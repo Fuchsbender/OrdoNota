@@ -32,6 +32,7 @@
     people: { label: 'Personen auswählen', make: (c) => peopleTool(c) },
     dice: { label: 'Würfel', make: (c) => diceTool(c) },
     cards: { label: 'Karten ziehen', make: (c) => cardTool(c) },
+    terms: { label: 'Begriffe in Gruppen', make: (c) => termTool(c) },
   };
 
   function render(view, { course }) {
@@ -878,6 +879,147 @@
     card.appendChild(edit);
     update(false);
     requestAnimationFrame(() => update(false)); // Breite erst nach dem Einhängen bekannt
+    return card;
+  }
+
+  // ---------- Begriffe in Gruppen (seit 2.20) ----------
+  // Liste, Vorgabe und letztes Ergebnis stehen im Kurs (course.termTool), damit sie in der nächsten Stunde noch da sind.
+
+  function termData(course) {
+    return (course.termTool = M.cleanTermTool(course.termTool));
+  }
+
+  function termTool(course) {
+    const d = termData(course);
+    const stage = h('div', { class: 'rnd-stage term-stage', 'aria-live': 'polite' });
+    const info = h('div', { class: 'muted small' });
+    const paint = () => {
+      clear(stage);
+      if (!d.last) {
+        stage.append(h('p', { class: 'muted' }, d.terms.length ? `${d.terms.length} Begriffe bereit – „Mischen“ verteilt sie auf die Gruppen.` : 'Noch keine Begriffe – unten eintragen (je Zeile ein Begriff).'));
+      } else {
+        stage.append(
+          h(
+            'div',
+            { class: 'term-groups' },
+            d.last.map((g, i) => h('section', { class: 'term-group', 'data-term-group': String(i + 1) }, h('h3', null, `Gruppe ${i + 1}`), h('ul', null, g.map((t) => h('li', null, t)))))
+          )
+        );
+      }
+      clear(info);
+      if (d.last && d.last.flat().join('\n') !== '' && !sameTerms(d.last.flat(), d.terms)) info.append('Die Liste wurde seit dem Mischen geändert – „Mischen“ übernimmt sie.');
+    };
+    const sameTerms = (a, b) => a.length === b.length && a.slice().sort().join('\n') === b.slice().sort().join('\n');
+    // Speichern ohne Neuzeichnen des Reiters: sonst endete das Vollbild beim Mischen
+    const save = () => {
+      NM.app.commit({ render: false });
+      refresh();
+    };
+
+    const mode = UI.segSwitch(
+      'Vorgabe',
+      [
+        { id: 'count', label: 'Anzahl Gruppen' },
+        { id: 'size', label: 'Begriffe je Gruppe' },
+      ],
+      d.mode,
+      (id) => {
+        d.mode = id;
+        save();
+      },
+      { 'data-term-mode': '' }
+    );
+    const n = numInput(d.n, (v) => {
+      if (!(v >= 1 && v <= 99)) return toast('Bitte eine Zahl von 1 bis 99.', 'error');
+      d.n = v;
+      save();
+    }, { min: 1, max: 99, 'data-term-n': '' });
+    const go = h(
+      'button',
+      {
+        class: 'btn btn-primary',
+        'data-rnd-go': 'terms',
+        onclick: () => {
+          if (!d.terms.length) return toast('Bitte zuerst Begriffe eintragen.', 'error');
+          d.last = R.termGroups(d.terms, { mode: d.mode, n: d.n });
+          save();
+        },
+      },
+      '🎲 Mischen'
+    );
+    const copy = h(
+      'button',
+      {
+        class: 'btn',
+        'data-term-copy': '',
+        disabled: !d.last,
+        onclick: () => {
+          const text = R.termGroupsText(d.last);
+          if (!navigator.clipboard) return toast('Kopieren ist hier nicht möglich.', 'warn');
+          navigator.clipboard.writeText(text).then(() => toast('Gruppen als Text kopiert.', 'ok', 2000), () => toast('Kopieren ist hier nicht möglich.', 'warn'));
+        },
+      },
+      icon('copy'), ' Als Text kopieren'
+    );
+
+    const area = h('textarea', {
+      class: 'input',
+      rows: 6,
+      'data-term-list': '',
+      'aria-label': 'Begriffe, je Zeile einer',
+      placeholder: 'z. B.\nBruchrechnung\nProzent\nZinsen\nDreisatz',
+      value: d.terms.join('\n'),
+      onchange: (e) => {
+        d.terms = R.parseCards(e.target.value);
+        save();
+      },
+    });
+    const names = h(
+      'button',
+      {
+        class: 'btn btn-sm',
+        'data-term-names': '',
+        title: 'Vornamen der Personen des Kurses eintragen (ohne heute Abwesende); die bisherige Liste wird ersetzt',
+        onclick: async () => {
+          const away = NM.views.draw.absent(course);
+          const people = M.activeStudents(course).filter((st) => !away.has(st.id));
+          if (!people.length) return toast('Keine Personen verfügbar.', 'error');
+          if (d.terms.length && !(await NM.util.confirmDialog('Liste ersetzen?', `Die ${d.terms.length} Begriffe werden durch die Namen von ${people.length} Personen ersetzt.`, { okLabel: 'Ersetzen' }))) return;
+          const label = NM.views.seating.cardNames(people);
+          d.terms = people.map((st) => label[st.id]);
+          d.last = null;
+          area.value = d.terms.join('\n');
+          save();
+        },
+      },
+      icon('users'), ' Namen des Kurses einsetzen'
+    );
+    const summary = h('summary', null);
+    const edit = h(
+      'details',
+      { class: 'rnd-edit', open: !d.terms.length },
+      summary,
+      h('p', { class: 'muted small' }, 'Je Zeile ein Begriff, z. B. Themen, Aufgaben oder Namen. Wird im Kurs gespeichert.'),
+      area,
+      h('div', { class: 'inline wrap' }, names)
+    );
+    const card = tool(
+      'terms',
+      'Begriffe in Gruppen',
+      [mode, h('label', { class: 'field narrow' }, h('span', null, 'Anzahl'), n), go, copy],
+      h('div', null, stage, info)
+    );
+    card.appendChild(edit);
+    function refresh() {
+      paint();
+      copy.disabled = !d.last;
+      summary.textContent = `Begriffe bearbeiten (${d.terms.length})`;
+      for (const b of mode.querySelectorAll('[data-seg]')) {
+        b.classList.toggle('active', b.dataset.seg === d.mode);
+        b.setAttribute('aria-pressed', String(b.dataset.seg === d.mode));
+      }
+    }
+    refresh();
     return card;
   }
 

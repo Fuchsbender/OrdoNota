@@ -73,6 +73,34 @@
   }
 
   /** Eigene Karten aus einem Textfeld: eine Karte je nicht leerer Zeile. */
+  /**
+   * Begriffe zufällig in Gruppen einsortieren (seit 2.20, Werkzeug „Begriffe in Gruppen“).
+   * mode 'count': n Gruppen; 'size': etwa n Begriffe je Gruppe (Anzahl gerundet wie im Reiter „Gruppen“).
+   * Die Gruppen sind höchstens um 1 verschieden groß, die größeren zuerst. Leere Begriffe fallen weg.
+   * @returns {string[][]}
+   */
+  function termGroups(terms, { mode = 'count', n = 2, rand = cryptoRand } = {}) {
+    const list = (terms || []).map((t) => String(t).trim()).filter(Boolean);
+    if (!list.length) return [];
+    n = Math.max(1, Math.round(Number(n)) || 1);
+    const k = mode === 'size' ? Math.max(1, Math.round(list.length / n)) : Math.min(list.length, n);
+    const mixed = shuffle(list, rand);
+    const base = Math.floor(list.length / k), extra = list.length % k;
+    const out = [];
+    let at = 0;
+    for (let i = 0; i < k; i++) {
+      const size = base + (i < extra ? 1 : 0);
+      out.push(mixed.slice(at, at + size));
+      at += size;
+    }
+    return out;
+  }
+
+  /** Ergebnis als Text zum Kopieren: „Gruppe 1: a, b“ je Zeile. */
+  function termGroupsText(groups) {
+    return (groups || []).map((g, i) => `Gruppe ${i + 1}: ${g.join(', ')}`).join('\n');
+  }
+
   function parseCards(text) {
     return String(text || '')
       .split(/\r?\n/)
@@ -319,6 +347,8 @@
     pickPeople,
     deck,
     parseCards,
+    termGroups,
+    termGroupsText,
     SUITS,
     DICE,
     solid,

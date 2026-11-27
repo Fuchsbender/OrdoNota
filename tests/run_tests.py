@@ -1118,7 +1118,7 @@ def run_random_check(br, base):
         out.untouched = [c.assessments.length === %d, JSON.stringify(c.draw || {}) === %s];
         return out; })()""".replace('%d', str(res and res.get('nA'))).replace('%s', json.dumps(res and res.get('drawBefore'))))
     br.call("Emulation.setEmulatedMedia", features=[])
-    ok = bool(res) and bool(res2) and res["tools"] == 5 and res["number"] == [True, True] \
+    ok = bool(res) and bool(res2) and res["tools"] == 6 and res["number"] == [True, True] \
         and res2["range"][0] >= 5 and res2["range"][1] <= 7 and res2["range"][0] < res2["range"][1] \
         and res2["people"] == [5, 5, False, 5, False] and res2["refill"] == [True, 5] and res2["absent"] == [11, False, True] \
         and res2["dice"] == [3, True, True, True, True] and res2["pile"] == [True, "52"] and res2["cards"] == [49, 3, 2, True, True] and res2["svg"] and res2["multi"] == [5, 5, 44, 8, True] \
@@ -2844,6 +2844,56 @@ def run_timer_check(br, base):
     report("Timer: Zeit setzen, Start/Pause, läuft beim Reiterwechsel weiter, Ende mit Signal, ±1 Min., Schnellwahl, 4 Designs, Pop-up steuert denselben Timer", ok and not br.errors, str(res) + "; ".join(br.errors))
 
 
+def run_terms_tool_check(br, base):
+    """2.20: Tools – Begriffe in Gruppen: Liste, Namen, Vorgabe, Mischen, Kopieren, gespeichert im Kurs, Vollbild bleibt."""
+    print("Tools: Begriffe in Gruppen:")
+    br.open(f"{base}/index.html?demo")
+    br.wait(APP_READY, 30)
+    br.errors = []
+    res = br.eval("""(async () => {
+        const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
+        const db = NM.app.db(), c = db.courses[0];
+        delete c.termTool;
+        NM.app.select({ courseId: c.id, tab: 'random' }); await wait(400);
+        const q = (sel) => document.querySelector(sel);
+        const out = { tile: !!q('[data-rnd="terms"]'), editOpen: q('[data-rnd="terms"] details').open, copyOff: q('[data-term-copy]').disabled };
+        const area = q('[data-term-list]');
+        area.value = 'Bruch\\nProzent\\n\\nZinsen\\nDreisatz\\nTerme'; area.dispatchEvent(new Event('change')); await wait();
+        out.saved = c.termTool.terms.join();
+        const n = q('[data-term-n]'); n.value = '2'; n.dispatchEvent(new Event('change')); await wait();
+        q('[data-rnd-go="terms"]').click(); await wait();
+        const groups = () => [...document.querySelectorAll('[data-rnd="terms"] .term-group')].map((g) => g.querySelectorAll('li').length);
+        out.count = [groups(), c.termTool.last.flat().sort().join(), !q('[data-term-copy]').disabled];
+        q('[data-term-mode] [data-seg="size"]').click(); await wait();
+        q('[data-rnd-go="terms"]').click(); await wait();
+        out.size = [c.termTool.mode, groups(), q('[data-term-mode] [data-seg="size"]').classList.contains('active')];
+        // Kopieren
+        let copied = null;
+        Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: (t) => { copied = t; return Promise.resolve(); } } });
+        q('[data-term-copy]').click(); await wait();
+        out.copy = copied;
+        // Mischen zeichnet den Reiter nicht neu (sonst endete das Vollbild): dieselbe Kachel bleibt
+        const tile = q('[data-rnd="terms"]');
+        q('[data-rnd-go="terms"]').click(); await wait();
+        out.sameTile = q('[data-rnd="terms"]') === tile;
+        // Namen des Kurses einsetzen (mit Rückfrage, da Liste nicht leer)
+        q('[data-term-names]').click(); await wait();
+        q('dialog .btn-primary').click(); await wait();
+        out.names = [c.termTool.terms.length === NM.model.activeStudents(c).length, c.termTool.last === null, area.value.split('\\n').length];
+        // nach Neuladen der Ansicht noch da, anderer Kurs leer
+        NM.app.select({ courseId: db.courses[1].id, tab: 'random' }); await wait(300);
+        out.other = !db.courses[1].termTool || db.courses[1].termTool.terms.length === 0;
+        NM.app.select({ courseId: c.id, tab: 'random' }); await wait(300);
+        out.kept = q('[data-term-list]').value.split('\\n').length === NM.model.activeStudents(c).length;
+        out.dbcheck = NM.model.check(NM.model.migrate(JSON.parse(JSON.stringify(db)))).filter((p) => p.level === 'fehler').length;
+        return out; })()""")
+    ok = bool(res) and res["tile"] and res["editOpen"] and res["copyOff"] and res["saved"] == "Bruch,Prozent,Zinsen,Dreisatz,Terme" \
+        and res["count"] == [[3, 2], "Bruch,Dreisatz,Prozent,Terme,Zinsen", True] and res["size"] == ["size", [2, 2, 1], True] \
+        and res["copy"] and res["copy"].startswith("Gruppe 1: ") and "\nGruppe 2: " in res["copy"] and res["sameTile"] \
+        and res["names"][:2] == [True, True] and res["other"] and res["kept"] and res["dbcheck"] == 0
+    report("Tools: Begriffe in Gruppen – Liste gespeichert, Anzahl/Je Gruppe, Mischen ohne Neuzeichnen, Kopieren, Namen einsetzen", ok and not br.errors, str(res) + "; ".join(br.errors))
+
+
 def run_tools_layout_check(br, base):
     print("Tools: gleich große Kacheln, Ring läuft im Uhrzeigersinn:")
     br.call("Emulation.setDeviceMetricsOverride", width=1600, height=1000, deviceScaleFactor=1, mobile=False)
@@ -2864,7 +2914,7 @@ def run_tools_layout_check(br, base):
         q('[data-tmr-reset]').click(); await wait();
         return { sizes, n: new Set(sizes).size, ratio: off / C }; })()""")
     br.call("Emulation.clearDeviceMetricsOverride")
-    report("Alle Werkzeug-Kacheln gleich groß", bool(res) and len(res["sizes"]) == 5 and res["n"] == 1, str(res))
+    report("Alle Werkzeug-Kacheln gleich groß", bool(res) and len(res["sizes"]) == 6 and res["n"] == 1, str(res))
     # Rest endet bei 12 Uhr: negativer Versatz (nach 2 von 8 s etwa −¼ des Umfangs)
     report("Timer-Ring läuft im Uhrzeigersinn", bool(res) and -0.4 < res["ratio"] < -0.15 and not br.errors, str(res) + "; ".join(br.errors))
 
@@ -2898,9 +2948,9 @@ def run_tools_menu_check(br, base):
         out.reset = [tiles(), d.tools.off.length, d.tools.order.length];
         [...dlg().querySelectorAll('button')].find((b) => b.textContent === 'Fertig').click(); await wait();
         return out; })()""")
-    std = "timer,number,people,dice,cards"
+    std = "timer,number,people,dice,cards,terms"
     ok = bool(res) and res["start"] == std and res["title"] == "Werkzeuge in „8b Mathe“" \
-        and res["after"] == ["timer,number,people,cards", "dice", "timer,number,people,cards,dice", True] \
+        and res["after"] == ["timer,number,people,cards,terms", "dice", "timer,number,people,cards,dice,terms", True] \
         and res["other"] == std and res["empty"] == ["", True] and res["reset"] == [std, 0, 0]
     report("Tools: Haken und ▲▼ wirken sofort, nur im Kurs, alles aus zeigt Hinweis, Standard", ok and not br.errors, str(res) + "; ".join(br.errors))
 
@@ -4109,7 +4159,7 @@ def main():
         run_test_pages, run_app_smoke, run_sort_check, run_course_check, run_seat_beamer_check,
         run_epo_material_check, run_epo_presets_check, run_epo_show_check, run_attendance_check, run_epo_tiles_check, run_print_head_check,
         run_draw_check, run_draw_pools_check, run_random_check, run_timer_check, run_tools_layout_check,
-        run_tools_menu_check, run_pomodoro_check, run_transition_check, run_sidebar_check,
+        run_tools_menu_check, run_terms_tool_check, run_pomodoro_check, run_transition_check, run_sidebar_check,
         run_tests_view_check, run_competency_check, run_task_add_click_check, run_makeup_check, run_verbal_check, run_ausgleich_check, run_notes_check, run_foerder_check, run_people_check, run_people_page_check, run_unreachable_check,
         run_tabs_check, run_tab_order_check, run_overview_fold_check, run_overview_off_check, run_settings_layout_check,
         run_theme_check, run_demo_link_check, run_sleep_lock_check, run_old_db_check, run_parts_check, run_print_menu_check,

@@ -1133,6 +1133,17 @@ ul.plain.fp-older-list > li { display: block; padding: 0.125rem 0; border-bottom
 .rnd-tool:fullscreen { display: flex; flex-direction: column; overflow: auto; margin: 0; border-radius: 0; background: var(--bg); padding: 3vh 4vw; font-size: clamp(1rem, 1.6vw, 1.75rem); }
 .rnd-tool:fullscreen .card-head h2 { font-size: 1.6em; }
 .rnd-tool:fullscreen .rnd-stage { flex: 1; }
+/* 2.20: Werkzeug „Begriffe in Gruppen“ */
+.term-stage { align-items: stretch; }
+.term-groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr)); gap: 0.625rem; width: 100%; text-align: left; }
+.term-group { padding: 0.5rem 0.75rem; border: 1px solid var(--border); border-radius: 0.5rem; background: var(--bg-raised); }
+.term-group h3 { margin: 0 0 0.25rem; font-size: 0.875rem; color: var(--accent); }
+.term-group ul { margin: 0; padding-left: 1.1rem; }
+.term-group li { margin: 0.125rem 0; overflow-wrap: anywhere; }
+.rnd-tool:fullscreen .term-groups { grid-template-columns: repeat(auto-fit, minmax(min(22rem, 100%), 1fr)); gap: 1.25rem; }
+.rnd-tool:fullscreen .term-group { padding: 1rem 1.25rem; }
+.rnd-tool:fullscreen .term-group h3 { font-size: 1.2em; }
+.rnd-tool:fullscreen .term-group li { font-size: 1.35em; }
 .rnd-tool:fullscreen .rnd-number { font-size: min(45vh, 30vw); }
 .rnd-tool:fullscreen .draw-card { width: min(22vw, 18.75rem); }
 .rnd-tool:fullscreen .draw-photo { width: min(16vw, 13.75rem); height: min(16vw, 13.75rem); }

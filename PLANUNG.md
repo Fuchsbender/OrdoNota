@@ -685,7 +685,7 @@ Mit dem Nutzer am 27.11.2026 geklärt (grill-me Q1–Q10, alle Empfehlungen ange
 - [x] **AM** Ältere Ziehungen löschen – erledigt in 2.17.0 (27.11.2026, lokal committet)
 - [x] **AN** Einzelne Noten in der Notenübersicht nicht werten – erledigt in 2.18.0 (27.11.2026, lokal committet), Q11/Q12 siehe Abschnitt AN
 - [x] **AO** EPO: Anzahl der angezeigten Stunden begrenzen – erledigt in 2.19.0 (27.11.2026, lokal committet); Auswahl erst ab 4 Stunden im Block
-- [ ] **AP** Tool „Begriffe in Gruppen“
+- [x] **AP** Tool „Begriffe in Gruppen“ – erledigt in 2.20.0 (27.11.2026, lokal committet); „je Gruppe“ rundet die Gruppenzahl wie der Reiter „Gruppen“; Notfallwerkzeug unverändert (wie `randomCards` nur im Klartext-JSON)
 - [ ] **AQ** Planung (eigener Klärungsdurchgang nach AL–AP)
 
 ### AL) Sperre bei Standby

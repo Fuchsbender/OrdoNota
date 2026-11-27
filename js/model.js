@@ -12,7 +12,7 @@
   // 5 (2.4): Personenregister (db.people, students[].personId) – ältere Versionen würden neue Kurseinträge
   //    ohne Person anlegen und Personen beim Löschen nicht aufräumen.
   const SCHEMA = 5;
-  const APP_VERSION = '2.19.0';
+  const APP_VERSION = '2.20.0';
 
   class NewerSchemaError extends Error {}
 
@@ -195,6 +195,8 @@
       c.groupRules = Object.assign({ apart: [], together: [] }, c.groupRules || {});
       // 1.29: eigene Karten im Reiter „Zufall“ (je Eintrag eine Karte)
       c.randomCards = Array.isArray(c.randomCards) ? c.randomCards : [];
+      // 2.20: Werkzeug „Begriffe in Gruppen“ (fehlt = noch nicht benutzt): Liste, Vorgabe, letztes Ergebnis
+      if (c.termTool !== undefined) c.termTool = cleanTermTool(c.termTool);
       // 1.39: Werkzeuge im Reiter „Tools“ je Kurs aus-/umsortieren (leer = alle an, Standardreihenfolge)
       c.tools = Object.assign({}, c.tools && typeof c.tools === 'object' ? c.tools : {});
       for (const k of ['off', 'order']) c.tools[k] = Array.isArray(c.tools[k]) ? c.tools[k].filter((x) => typeof x === 'string') : [];
@@ -445,7 +447,16 @@
 
   /** Reiter id in der Liste order um delta Plätze verschieben (Ergebnis: neue Liste). */
   // Werkzeuge im Reiter „Tools“ (Standardreihenfolge)
-  const TOOL_IDS = ['timer', 'number', 'people', 'dice', 'cards'];
+  const TOOL_IDS = ['timer', 'number', 'people', 'dice', 'cards', 'terms'];
+
+  /** Daten des Werkzeugs „Begriffe in Gruppen“ mit gültigen Werten (seit 2.20). */
+  function cleanTermTool(t) {
+    t = t && typeof t === 'object' ? t : {};
+    const strs = (x) => (Array.isArray(x) ? x.filter((v) => typeof v === 'string' && v.trim()) : []);
+    const n = Math.round(Number(t.n));
+    const last = Array.isArray(t.last) ? t.last.filter(Array.isArray).map(strs) : null;
+    return Object.assign({}, t, { terms: strs(t.terms), mode: t.mode === 'size' ? 'size' : 'count', n: n >= 1 && n <= 99 ? n : 3, last: last && last.length ? last : null });
+  }
 
   /** Werkzeuge eines Kurses in seiner Reihenfolge: [{ id, on }]. Unbekannte ids fallen weg, neue Werkzeuge sind an. */
   function toolList(course) {
@@ -1032,6 +1043,7 @@
     check,
     orderTabs,
     TOOL_IDS,
+    cleanTermTool,
     toolList,
     setTools,
     moveTab,

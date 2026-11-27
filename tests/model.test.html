@@ -91,10 +91,12 @@
   // 1.39: Werkzeuge im Reiter „Tools“ je Kurs
   const tdb = M.migrate({ years: [], courses: [{ id: 'k1', name: 'K' }, { id: 'k2', name: 'L', tools: { off: ['dice', 3], order: ['cards', 'timer'], extra: 1 } }] });
   const [k1, k2] = tdb.courses;
-  ok('Tools: Standard alle an, Standardreihenfolge', k1.tools.off.length === 0 && k1.tools.order.length === 0 && M.toolList(k1).map((x) => x.id + (x.on ? '+' : '-')).join() === 'timer+,number+,people+,dice+,cards+');
+  ok('Tools: Standard alle an, Standardreihenfolge', k1.tools.off.length === 0 && k1.tools.order.length === 0 && M.toolList(k1).map((x) => x.id + (x.on ? '+' : '-')).join() === 'timer+,number+,people+,dice+,cards+,terms+');
   ok('Tools: migrate behält gültige Werte und unbekannte Felder', k2.tools.off.join() === 'dice' && k2.tools.extra === 1);
-  ok('Tools: gespeicherte Reihenfolge, fehlende ergänzt', M.toolList(k2).map((x) => x.id + (x.on ? '+' : '-')).join() === 'cards+,timer+,number+,people+,dice-');
-  ok('Tools: unbekannte ids fallen weg', M.toolList({ tools: { order: ['xyz', 'dice'], off: ['xyz'] } }).length === 5);
+  ok('Tools: gespeicherte Reihenfolge, fehlende ergänzt', M.toolList(k2).map((x) => x.id + (x.on ? '+' : '-')).join() === 'cards+,terms+,timer+,number+,people+,dice-');
+  ok('Tools: unbekannte ids fallen weg', M.toolList({ tools: { order: ['xyz', 'dice'], off: ['xyz'] } }).length === 6);
+  ok('Tools: Begriffe in Gruppen – cleanTermTool setzt Standard und bereinigt', JSON.stringify(M.cleanTermTool(undefined)) === JSON.stringify({ terms: [], mode: 'count', n: 3, last: null }) && JSON.stringify(M.cleanTermTool({ terms: ['a', '', 3, ' b'], mode: 'x', n: 500, last: [['a'], 'x', [1, 'b']], extra: 1 })) === JSON.stringify({ terms: ['a', ' b'], mode: 'count', n: 3, last: [['a'], ['b']], extra: 1 }));
+  ok('Tools: Migration lässt termTool weg, wenn es fehlt, und bereinigt es sonst', M.migrate({ years: [], courses: [{ id: 'k', name: 'K' }] }).courses[0].termTool === undefined && M.migrate({ years: [], courses: [{ id: 'k', name: 'K', termTool: { terms: ['x'], mode: 'size', n: 2 } }] }).courses[0].termTool.mode === 'size');
   const k3 = { tools: {} };
   M.setTools(k3, M.toolList(k3).map((x) => ({ id: x.id, on: x.id !== 'people' })));
   ok('Tools: setTools speichert Standardreihenfolge leer', k3.tools.order.length === 0 && k3.tools.off.join() === 'people');
