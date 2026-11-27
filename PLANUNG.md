@@ -832,6 +832,16 @@ Rückmeldung des Nutzers nach dem ersten KA-Import: Der Kompetenzbogen bringt de
   - Danach die Vorlagen in `js/competencies.js` und `vorlagen/kompetenzen/*.json` ergänzen.
   - Nachtragen über `migrate()`, dazu Tests.
 
+## AS) Vorlage für KA-Datei und Kompetenz-Begleitdatei ohne Claude-Skills (Wunsch vom 27.11.2026, noch nicht geklärt)
+
+Wunsch des Nutzers: Nicht jede Lehrkraft hat die Claude-Skills der Materialsammlung, die die Begleitdateien bauen („… (Aufgaben).json“ für Klassenarbeiten, „… (Kompetenzen).json“ für Moodle-Tests). Eine Vorlage in OrdoNota wäre für andere Nutzer hilfreich.
+
+Vor dem Bau mit grill-me klären, z. B.:
+- Vorlage als Datei (JSON mit Beispiel, Tabelle zum Ausfüllen) oder Eingabe direkt in der App (Aufgaben, Punkte und Kompetenzen eintippen, als Datei sichern und wieder laden)?
+- Nur KA-Datei oder auch die Moodle-Begleitdatei (dort braucht es `textanfang` je Frage)?
+- Wo in der App (Reiter „Tests“, Einstellungen → Kompetenzkataloge, Hilfe)?
+- Beschreibung des Formats für andere Werkzeuge in `DOKUMENTATION.md`?
+
 ## C) Gamification des Pomodoro-Timers (zurückgestellt, erst auf Nachfrage des Nutzers)
 
 **Vor Beginn die offenen Fragen unten mit dem Nutzer klären.** C ergänzt nur Felder → kein neues `SCHEMA`; `migrate()` und `tools/entschluesseln.py` (CSV-Ausgabe) mitziehen.

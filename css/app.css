@@ -751,15 +751,24 @@ body.grp-dragging, body.grp-dragging * { cursor: grabbing !important; }
 .comp-row.is-hidden .grow, .comp-row.is-hidden .comp-id { color: var(--text-dim); text-decoration: line-through; }
 .comp-id { width: 6.5rem; flex: none; font-variant-numeric: tabular-nums; }
 /* 2.24: Erklärtexte je Kompetenz */
-.comp-texts-row { padding-left: 7rem; }
+.comp-texts-row { padding-left: 7rem; min-width: 0; }
 .comp-texts > summary { cursor: pointer; color: var(--accent); font-size: 0.8125rem; width: fit-content; }
 .comp-texts-count { margin-left: 0.25rem; }
 .comp-texts[open] { margin-bottom: 0.625rem; }
+.comp-texts-body > * { min-width: 0; }
 .comp-texts-body { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem 0.875rem; margin-top: 0.5rem; }
-.comp-texts-label { display: flex; justify-content: space-between; gap: 0.5rem; }
+.comp-texts-label { display: flex; justify-content: space-between; gap: 0.5rem; padding-right: 0.25rem; }
 .comp-texts-len { font-variant-numeric: tabular-nums; }
-.comp-texts-field textarea { resize: vertical; min-height: 5.25rem; line-height: 1.4; }
-@media (max-width: 700px) { .comp-texts-row { padding-left: 0; } .comp-texts-body { grid-template-columns: 1fr; } }
+.comp-texts-field textarea { width: 100%; box-sizing: border-box; resize: vertical; min-height: 5.25rem; max-height: 14rem; line-height: 1.4; field-sizing: content; }
+@media (max-width: 700px) {
+  .comp-texts-row { padding-left: 0; }
+  .comp-texts-body { grid-template-columns: 1fr; }
+  /* Zeilen im Katalogdialog umbrechen statt den Dialog zu verbreitern */
+  .comp-list > li { min-width: 0; }
+  .comp-bereich-head, .comp-row { flex-wrap: wrap; }
+  .comp-bereich-head .grow, .comp-row .grow { flex: 1 1 12rem; }
+  .comp-row.teil { padding-left: 0.75rem; }
+}
 .comp-id.fixed { display: inline-flex; align-items: center; height: 1.75rem; padding: 0 0.5rem; border: 1px solid transparent; font-size: 0.8125rem; color: var(--text-dim); }
 /* 2.9: Karte „Kompetenzen“ im Test (Raster Aufgaben × Kompetenzen) */
 .comp-table th.comp-col, .comp-table td.comp-col { text-align: center; padding-left: 0.25rem; padding-right: 0.25rem; min-width: 2.25rem; }

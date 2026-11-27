@@ -443,16 +443,17 @@
       const count = h('span', { class: 'comp-texts-count muted small', 'data-comp-texts-count': '' }, countLabel(e.id));
       const tx = C.texteOf(cat, e.id);
       const field = ([key, label, ph]) => {
-        const counter = h('span', { class: 'comp-texts-len muted small', 'aria-live': 'polite' });
+        const counter = h('span', { class: 'comp-texts-len muted small', id: `comp-len-${e.id}-${key}` });
         const showLen = (v) => {
           counter.textContent = `${v.length} / ${C.TEXT_MAX}`;
         };
         const ta = h('textarea', {
           class: 'input',
-          rows: 3,
+          rows: 4,
           maxlength: C.TEXT_MAX,
           placeholder: ph,
           'data-comp-text': key,
+          'aria-describedby': `comp-len-${e.id}-${key}`,
           oninput: (ev) => showLen(ev.target.value),
           onchange: (ev) => {
             ev.target.value = C.setText(cat, e.id, key, ev.target.value);
