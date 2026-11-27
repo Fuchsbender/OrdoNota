@@ -1,5 +1,5 @@
 /* OrdoNota – Aufgaben einer Klassenarbeit aus der Begleitdatei übernehmen (seit 2.23, PLANUNG.md AQ-3).
- * Rein, ohne DOM. Die Begleitdatei „<KA-Datei> (Aufgaben).json“ schreibt das Bauskript der Klassenarbeit im Vault:
+ * Rein, ohne DOM. Die Begleitdatei „<KA-Datei> (Aufgaben).json“ schreibt das Bauskript der Klassenarbeit in der Materialsammlung:
  *   { format: "ordonota-ka-aufgaben", formatVersion: 1, katalog?: { id, version },
  *     arbeit: { name, bereich: "ka" | "sonstige" }, teile?: [ { name } ],
  *     aufgaben: [ { name, punkte, bonus?, teil?, kompetenzen?: [Kennung] } ] }
