@@ -2247,6 +2247,54 @@ def run_competency_tab_check(br, base):
 
 
 
+def run_comp_offer_check(br, base):
+    print("Einstieg Kompetenzen: Katalogangebot im Reiter „Tests“ (2.21):")
+    br.call("Emulation.setDeviceMetricsOverride", width=1440, height=1000, deviceScaleFactor=1, mobile=False)
+    br.open(f"{base}/index.html?demo")
+    br.wait(APP_READY, 30)
+    br.errors = []
+    res = br.eval("""(async () => {
+        const wait = (ms = 250) => new Promise((r) => setTimeout(r, ms));
+        const db = NM.app.db(), out = {};
+        const c = db.courses.find((x) => x.klasse === '8b'), other = db.courses.find((x) => x !== c);
+        const tabs = () => [...document.querySelectorAll('.tabs .tab')].map((b) => b.dataset.tab);
+        // Kurs mit Katalog: kein Angebot, kein Hinweis in „Aufgaben“
+        NM.app.select({ courseId: c.id, tab: 'tests' }); await wait();
+        out.withCat = [!document.querySelector('[data-comp-offer]'), !document.querySelector('[data-comp-nocat]')];
+        // Kurs ohne Katalog mit passendem Fach: Angebot, kein doppelter Hinweis
+        other.fach = 'Mathematik'; delete other.catalogId; delete other.catalogHintOff;
+        if (!other.assessments.some((a) => a.kind === 'test')) { const t = NM.model.newTest(other, NM.app.currentHalf(other), db.settings); other.assessments.push(t); }
+        NM.app.select({ courseId: other.id, tab: 'tests' }); await wait();
+        const offer = document.querySelector('[data-comp-offer]');
+        out.offer = [!!offer, !!offer && offer.textContent.includes('Mathematik Sek I'), !document.querySelector('[data-comp-nocat]'), !tabs().includes('competencies')];
+        // „Nicht jetzt“: Angebot weg, Feld am Kurs, leiser Hinweis in „Aufgaben“
+        document.querySelector('[data-comp-offer-off]').click(); await wait();
+        out.off = [!document.querySelector('[data-comp-offer]'), other.catalogHintOff === true, !!document.querySelector('[data-comp-nocat]')];
+        // migrate behält das Feld
+        const copy = JSON.parse(JSON.stringify(db)); NM.model.migrate(copy);
+        out.migrate = copy.courses.find((x) => x.id === other.id).catalogHintOff === true;
+        // Sprung in die Kursdaten zur Katalogauswahl
+        document.querySelector('[data-comp-nocat-go]').click(); await wait();
+        out.jump = [NM.app.state.ui.tab, document.activeElement && document.activeElement.hasAttribute('data-course-catalog')];
+        // Angebot wieder zeigen und annehmen: Reiter „Kompetenzen“ erscheint
+        delete other.catalogHintOff;
+        NM.app.select({ tab: 'tests' }); await wait();
+        document.querySelector('[data-comp-offer-take]').click(); await wait();
+        out.take = [other.catalogId === c.catalogId, !document.querySelector('[data-comp-offer]'), tabs().includes('competencies')];
+        // migrate entfernt das Feld, sobald ein Katalog gewählt ist
+        other.catalogHintOff = true; const c2 = JSON.parse(JSON.stringify(db)); NM.model.migrate(c2);
+        out.clean = c2.courses.find((x) => x.id === other.id).catalogHintOff === undefined;
+        delete other.catalogHintOff;
+        // Erklärung in den Einstellungen
+        NM.app.select({ tab: 'settings' }); await wait();
+        const how = document.querySelector('[data-comp-howto]');
+        out.howto = !!how && how.querySelectorAll('li').length >= 5;
+        return out; })()""")
+    ok = bool(res) and all(res["withCat"]) and all(res["offer"]) and all(res["off"]) and res["migrate"] \
+        and res["jump"] == ["course", True] and all(res["take"]) and res["clean"] and res["howto"]
+    report("Kompetenzen: Angebot im Reiter Tests, „Nicht jetzt“, Hinweis und Sprung zur Katalogauswahl, Erklärung", ok and not br.errors, str(res) + "; ".join(br.errors))
+
+
 def run_competency_history_check(br, base):
     print("Kompetenzen: Kurszeile, Verlauf je Person, Personenregister (2.12):")
     br.call("Emulation.setDeviceMetricsOverride", width=1440, height=1000, deviceScaleFactor=1, mobile=False)
@@ -4163,7 +4211,7 @@ def main():
         run_tests_view_check, run_competency_check, run_task_add_click_check, run_makeup_check, run_verbal_check, run_ausgleich_check, run_notes_check, run_foerder_check, run_people_check, run_people_page_check, run_unreachable_check,
         run_tabs_check, run_tab_order_check, run_overview_fold_check, run_overview_off_check, run_settings_layout_check,
         run_theme_check, run_demo_link_check, run_sleep_lock_check, run_old_db_check, run_parts_check, run_print_menu_check,
-        run_pres_check, run_group_check, run_groups_tab_check, run_moodle_check, run_moodle_comp_check, run_competency_tab_check, run_competency_history_check, run_competency_print_check, run_scripto_check,
+        run_pres_check, run_group_check, run_groups_tab_check, run_moodle_check, run_moodle_comp_check, run_competency_tab_check, run_comp_offer_check, run_competency_history_check, run_competency_print_check, run_scripto_check,
         run_decrypt_tool, run_launcher_check,
     ]
     srv, base = serve()

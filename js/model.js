@@ -12,7 +12,7 @@
   // 5 (2.4): Personenregister (db.people, students[].personId) – ältere Versionen würden neue Kurseinträge
   //    ohne Person anlegen und Personen beim Löschen nicht aufräumen.
   const SCHEMA = 5;
-  const APP_VERSION = '2.20.0';
+  const APP_VERSION = '2.21.0';
 
   class NewerSchemaError extends Error {}
 
@@ -205,6 +205,8 @@
       for (const s of c.students) if (s.einstufung !== undefined && (!EINSTUFUNG_IDS.includes(s.einstufung) || s.einstufung === c.einstufung)) delete s.einstufung;
       // 2.9: Kompetenzkatalog des Kurses (fehlt = keiner) und Kompetenzen je Aufgabe (fehlt = keine)
       if (typeof c.catalogId !== 'string' || !c.catalogId) delete c.catalogId;
+      // 2.21: „Nicht jetzt“ beim Katalogangebot im Reiter „Tests“ (fehlt = Angebot zeigen)
+      if (c.catalogHintOff !== true || c.catalogId) delete c.catalogHintOff;
       for (const a of c.assessments) {
         if (a.kind !== 'test' || !a.test || !Array.isArray(a.test.tasks)) continue;
         for (const t of a.test.tasks) {

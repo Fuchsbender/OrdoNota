@@ -39,6 +39,7 @@
 
     view.append(
       h('div', { class: 'view-head' }, h('h1', null, 'Tests'), UI.halfSwitch(course, false), filterSwitch),
+      catalogOffer(course, db),
       UI.pickerList({
         items: tests,
         currentId: cur && cur.id,
@@ -75,6 +76,76 @@
     const moodleCards = [t.moodle ? moodleCard(course, db, cur, null) : null, ...(G.hasParts(t) ? t.parts.filter((x) => x.moodle).map((x) => moodleCard(course, db, cur, x)) : [])];
     const scriptoCard = NM.scripto.dataOf(course, cur) ? scriptoCardFor(course, db, cur) : null;
     view.append(...[metaCard(course, cur, level), ...moodleCards, scriptoCard, G.hasParts(t) ? partsCard(course, db, cur, level) : null, tasksCard(course, db, cur), competenciesCard(course, db, cur), h('div', { class: 'test-layout' }, h('div', { class: 'tests-main' }, resultsCard(course, cur, level), verbalCard(course, cur, level)), keyCard(course, cur, level))].filter(Boolean));
+  }
+
+  // ---------- Einstieg Kompetenzen (2.21, PLANUNG.md AQ-1) ----------
+
+  /** Hinweis oben im Reiter: Für das Fach gibt es einen Kompetenzkatalog (nur ohne Katalog am Kurs). */
+  function catalogOffer(course, db) {
+    const C = NM.competencies;
+    const offer = C.offerFor(db, course);
+    if (!offer) return '';
+    return h(
+      'div',
+      { class: 'notice comp-offer', 'data-comp-offer': '' },
+      h('p', null, `Für ${course.fach} gibt es den Kompetenzkatalog „${offer.name}“. Damit tragen Aufgaben Kompetenzen, und der Reiter „Kompetenzen“ zeigt, was jede Person schon sicher kann.`),
+      h(
+        'div',
+        { class: 'inline' },
+        h(
+          'button',
+          {
+            class: 'btn btn-sm btn-primary',
+            'data-comp-offer-take': '',
+            onclick: () => {
+              const cat = C.takeOffer(db, course, offer);
+              NM.app.commit({ render: false });
+              NM.app.renderShell();
+              toast(`Kompetenzkatalog „${cat.name}“ gewählt. Die Kompetenzen tragen Sie in der Karte „Kompetenzen“ je Test ein.`, 'info', 6000);
+            },
+          },
+          'Katalog wählen'
+        ),
+        h(
+          'button',
+          {
+            class: 'btn btn-sm btn-ghost',
+            'data-comp-offer-off': '',
+            title: 'Später in den Kursdaten unter „Kompetenzkatalog“ wählen',
+            onclick: () => {
+              course.catalogHintOff = true;
+              NM.app.commit();
+            },
+          },
+          'Nicht jetzt'
+        )
+      )
+    );
+  }
+
+  /** Leiser Hinweis in der Karte „Aufgaben“, solange der Kurs keinen Katalog hat. */
+  function noCatalogHint(course, db) {
+    if (NM.competencies.forCourse(db, course) || NM.competencies.offerFor(db, course)) return null;
+    return h(
+      'p',
+      { class: 'muted small', 'data-comp-nocat': '' },
+      'Kompetenzen je Aufgabe gibt es mit einem Kompetenzkatalog am Kurs. ',
+      h(
+        'button',
+        {
+          class: 'link',
+          'data-comp-nocat-go': '',
+          onclick: () => {
+            NM.app.select({ tab: 'course' });
+            setTimeout(() => {
+              const el = document.querySelector('[data-course-catalog]');
+              if (el) el.focus();
+            }, 0);
+          },
+        },
+        'In den Kursdaten wählen'
+      )
+    );
   }
 
   /** Ändert sich, ob ein Test ein Kompetenztest ist, Umschalter auf „Alle“, damit er nicht aus der Liste verschwindet. */
@@ -565,6 +636,7 @@
           ? null
           : h('button', { class: 'btn btn-sm', 'data-scripto-prepare': '', title: 'Pseudonyme Test- und Schüler-IDs für die KI-Korrektur mit OrdoScripto vergeben; danach Trennblätter mit QR-Code drucken und die Import-CSV (ohne Namen) speichern', onclick: () => scriptoPrepare(course, db, a) }, icon('bookmark'), ' Für OrdoScripto vorbereiten')
       ),
+      noCatalogHint(course, db),
       G.taskGroups(t).map(({ part, tasks }) =>
         h(
           'div',

@@ -219,6 +219,28 @@
     return hits.length === 1 ? hits[0].id : null;
   }
 
+  /**
+   * Katalogangebot für einen Kurs ohne Katalog (2.21, PLANUNG.md AQ-1): ein vorhandener Katalog zum Fach,
+   * sonst eine passende Vorlage. null, wenn der Kurs schon einen Katalog hat, „Nicht jetzt“ gewählt wurde
+   * (course.catalogHintOff) oder nichts eindeutig passt.
+   * @returns { catalogId, name } | { templateKey, name } | null
+   */
+  function offerFor(db, course) {
+    if (!course || course.catalogId || course.catalogHintOff === true || !str(course.fach)) return null;
+    const id = guessForFach(db, course.fach);
+    if (id) return { catalogId: id, name: byId(db, id).name };
+    const tpls = TEMPLATES.filter((t) => fachMatches(course.fach, t.catalog.fach));
+    return tpls.length === 1 ? { templateKey: tpls[0].key, name: tpls[0].catalog.name } : null;
+  }
+
+  /** Angebot annehmen: Katalog am Kurs setzen, aus der Vorlage bei Bedarf erst anlegen. Gibt den Katalog zurück. */
+  function takeOffer(db, course, offer) {
+    const cat = offer.catalogId ? byId(db, offer.catalogId) : addFromTemplate(db, offer.templateKey);
+    course.catalogId = cat.id;
+    delete course.catalogHintOff;
+    return cat;
+  }
+
   // ---------- Ändern ----------
 
   /** Freie Katalog-id aus einem Wunsch („mathe-sek1“, sonst „mathe-sek1-2“, …). */
@@ -749,6 +771,8 @@
     inUse,
     fachMatches,
     guessForFach,
+    offerFor,
+    takeOffer,
     addFromTemplate,
     addEmpty,
     addKompetenz,

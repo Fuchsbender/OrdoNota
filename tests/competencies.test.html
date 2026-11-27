@@ -75,6 +75,25 @@
       ok('zwei passende Kataloge → keine Vorbelegung', C.guessForFach(db, 'Mathe') === null);
     }
 
+    // ---------- Katalogangebot (2.21, AQ-1) ----------
+    {
+      const db = M.newDb();
+      const c = { fach: 'Mathe' };
+      const o1 = C.offerFor(db, c);
+      ok('ohne Katalog: Angebot aus der Vorlage', o1 && o1.templateKey === 'mathe-sek1' && !o1.catalogId);
+      ok('Fach ohne Vorlage oder leer: kein Angebot', C.offerFor(db, { fach: 'Sport' }) === null && C.offerFor(db, { fach: '' }) === null);
+      const cat = C.takeOffer(db, c, o1);
+      ok('Annehmen legt den Katalog an und setzt ihn am Kurs', c.catalogId === cat.id && C.catalogs(db).length === 1);
+      ok('mit Katalog am Kurs: kein Angebot', C.offerFor(db, c) === null);
+      const c2 = { fach: 'Mathematik', catalogHintOff: true };
+      ok('„Nicht jetzt“: kein Angebot', C.offerFor(db, c2) === null);
+      delete c2.catalogHintOff;
+      const o2 = C.offerFor(db, c2);
+      ok('vorhandener Katalog vor der Vorlage', o2 && o2.catalogId === cat.id);
+      C.takeOffer(db, c2, o2);
+      ok('Annehmen nutzt den vorhandenen Katalog', c2.catalogId === cat.id && C.catalogs(db).length === 1);
+    }
+
     // ---------- Bearbeiten ----------
     {
       const db = M.newDb();

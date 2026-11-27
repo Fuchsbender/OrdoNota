@@ -310,6 +310,22 @@
       { class: 'card', 'data-comp-catalogs': '' },
       h('h2', null, 'Kompetenzkataloge'),
       h('p', { class: 'muted small' }, 'Aus dem Katalog eines Kurses wählen Sie in den Tests die Kompetenzen je Aufgabe. Den Katalog legen Sie in den Kursdaten fest.'),
+      // 2.21 (PLANUNG.md AQ-1): kurze Erklärung, wie Katalog, Aufgaben und Auswertung zusammenhängen
+      h(
+        'details',
+        { class: 'comp-howto', 'data-comp-howto': '' },
+        h('summary', null, 'So hängt es zusammen'),
+        h(
+          'ol',
+          { class: 'small' },
+          h('li', null, 'Ein Katalog hier enthält die Kompetenzen eines Fachs, z. B. die Bildungsstandards Mathematik.'),
+          h('li', null, 'In den Kursdaten wählen Sie den Katalog des Kurses. Erst dann erscheinen der Reiter „Kompetenzen“ und in jedem Test die Karte „Kompetenzen“.'),
+          h('li', null, 'In der Karte „Kompetenzen“ eines Tests haken Sie je Aufgabe an, welche Kompetenzen sie prüft. Der Moodle-Import kann das aus der Begleitdatei übernehmen.'),
+          h('li', null, 'Der Reiter „Kompetenzen“ rechnet aus den Punkten je Person und Kompetenz eine Stufe aus: sicher, teilweise oder noch nicht. Ein Klick auf den Namen zeigt den Verlauf.'),
+          h('li', null, 'Ein Test mit dem Haken „nicht gewertet“ und Kompetenzen ist ein Kompetenztest: Er zählt nicht zur Note, aber zur Auswertung.'),
+          h('li', null, 'Kompetenzbögen je Person druckt der Reiter „Kompetenzen“ über die Druckauswahl.')
+        )
+      ),
       cats.length
         ? h(
             'ul',

@@ -752,7 +752,7 @@ Wunsch: Integration von Kompetenztests, Schnittstelle zu Lehrplan und Arbeitsmat
 10. **Reihenliste später** (Q10) als eigener Schritt mit kurzer Klärungsrunde, wenn der KA-Import läuft.
 
 **Schritte:**
-- [ ] **AQ-1 (2.21.0) Einstieg Kompetenzen** – nach `/impeccable shape`:
+- [x] **AQ-1 (2.21.0) Einstieg Kompetenzen** – erledigt 27.11.2026 (lokal committet; ohne eigenes `/impeccable shape`, Muster `.notice` wie vorhandene Hinweise). Der Hinweis in der Reiterliste („braucht einen Kompetenzkatalog“) gab es schon seit 2.11. `tools/entschluesseln.py` unverändert: `catalogHintOff` ist nur ein Anzeigeschalter. Plan war:
   - Hinweis im Reiter „Tests“ (Entscheidung 6) mit „Wählen“ (setzt `course.catalogId`, legt die Vorlage bei Bedarf an) und „Nicht jetzt“ (`course.catalogHintOff = true`, Standard in `migrate()`, `tools/entschluesseln.py` mitziehen).
   - Ohne Katalog in der Testkarte „Aufgaben“ ein leiser Hinweis „Kompetenzen je Aufgabe gibt es mit einem Kompetenzkatalog am Kurs“ mit Sprung zu den Kurseinstellungen.
   - In der Reiterliste der Kurseinstellungen beim Reiter „Kompetenzen“: „erscheint, sobald ein Kompetenzkatalog gewählt ist“.
