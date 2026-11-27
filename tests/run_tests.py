@@ -2388,6 +2388,7 @@ def run_competency_print_check(br, base):
         const c = db.courses.find((x) => x.klasse === '8b');
         const cat = C.forCourse(db, c);
         NM.app.state.ui.half[c.id] = 'HJ1';
+        for (const b of cat.bereiche) for (const k of b.kompetenzen) delete k.texte; // ohne Erklärtexte (Demo hat seit 2.25 die der Vorlage)
         NM.app.select({ courseId: c.id, tab: 'competencies' }); await wait();
         const root = () => document.getElementById('print-root');
         const dlg = () => document.querySelector('dialog[open]');
@@ -2463,6 +2464,7 @@ def run_comp_texts_check(br, base):
         const c = db.courses.find((x) => x.klasse === '8b');
         const cat = C.forCourse(db, c);
         NM.app.state.ui.half[c.id] = 'HJ1';
+        for (const b of cat.bereiche) for (const k of b.kompetenzen) delete k.texte; // ohne Erklärtexte (Demo hat seit 2.25 die der Vorlage)
         const root = () => document.getElementById('print-root');
         const dlg = () => document.querySelector('dialog[open]');
         // Person mit einer Kompetenz unter „sicher“ und einer Moodle-Rückmeldung

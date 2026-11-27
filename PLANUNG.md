@@ -687,7 +687,7 @@ Mit dem Nutzer am 27.11.2026 geklärt (grill-me Q1–Q10, alle Empfehlungen ange
 - [x] **AO** EPO: Anzahl der angezeigten Stunden begrenzen – erledigt in 2.19.0 (27.11.2026, lokal committet); Auswahl erst ab 4 Stunden im Block
 - [x] **AP** Tool „Begriffe in Gruppen“ – erledigt in 2.20.0 (27.11.2026, lokal committet); „je Gruppe“ rundet die Gruppenzahl wie der Reiter „Gruppen“; Notfallwerkzeug unverändert (wie `randomCards` nur im Klartext-JSON)
 - [x] **AQ** Planung – geklärt am 27.11.2026 (grill-me Q1–Q11), AQ-1 bis AQ-3 erledigt in 2.21.0–2.23.0 (lokal committet); offen: Bauskript in der Materialsammlung (eigene Sitzung, Übergabedatei), AQ-4 später
-- [ ] **AR** Erklärtexte für den Kompetenzbogen – geklärt am 27.11.2026 (grill-me Q1–Q10), Schritte AR-1 und AR-2 siehe Abschnitt AR
+- [x] **AR** Erklärtexte für den Kompetenzbogen – geklärt am 27.11.2026 (grill-me Q1–Q10), AR-1 und AR-2 erledigt in 2.24.0–2.25.0 (lokal committet)
 
 ### AL) Sperre bei Standby
 
@@ -827,7 +827,7 @@ Rückmeldung des Nutzers nach dem ersten KA-Import: Der Kompetenzbogen bringt de
   - Ausgabe auf dem Kompetenzbogen (mit Haken „Erklärtexte“ und Aufgabenzeile) und in der Moodle-Rückmeldung.
   - Förderplan-Übernahme.
   - `entschluesseln.py`, Tests und Doku.
-- [ ] **AR-2 (2.25.0) Texte für die drei Vorlagen**:
+- [x] **AR-2 (2.25.0) Texte für die drei Vorlagen** – erledigt 27.11.2026 (lokal committet). 38 Kompetenzen mit je vier Texten, Entwurf vom Nutzer ohne Änderung freigegeben; Katalogversion der Vorlagen bleibt 1 (Kennungen unverändert). Plan war:
   - Entwurf zum Durchsehen.
   - Danach die Vorlagen in `js/competencies.js` und `vorlagen/kompetenzen/*.json` ergänzen.
   - Nachtragen über `migrate()`, dazu Tests.

@@ -396,6 +396,7 @@
 
       const db = M.newDb();
       const mc = C.addFromTemplate(db, 'mathe-sek1');
+      for (const b of mc.bereiche) for (const k of b.kompetenzen) delete k.texte; // Vorlage hat seit 2.25 Texte
       C.setText(mc, 'M-K1', 'teilweise', 'Übe Begründungen mit „weil“.');
       const c = withCourse(db, [task('1a', 4, { competencies: ['M-K1'] }), task('1b', 6, { competencies: ['M-L3'] }), task('2', 2, { competencies: ['M-K1'] })], 'mathe-sek1');
       c.assessments[0].date = '2026-09-10';
@@ -407,6 +408,29 @@
       ok('Bogen: Aufgaben aus dem letzten Test', w.last && w.last.name === 'KA 2' && w.last.tasks.join() === '3a');
       const lt = C.lastTasks(mc, c, ['HJ1'], 's1');
       ok('lastTasks: M-L3 nur im ersten Test, mehrere Aufgaben', lt.get('M-L3').name === 'KT 1' && lt.get('M-L3').tasks.join() === '1b');
+    }
+
+    // ---------- Erklärtexte der Vorlagen (2.25, PLANUNG AR-2) ----------
+    {
+      const n = (key) => C.TEMPLATES.find((t) => t.key === key).catalog.bereiche.flatMap((b) => b.kompetenzen);
+      const full = (k) => k.texte && C.TEXT_KEYS.every((x) => typeof k.texte[x] === 'string' && k.texte[x].length > 20 && k.texte[x].length <= C.TEXT_MAX);
+      ok('Vorlagen: jede Kompetenz hat vier Texte', ['mathe-sek1', 'mathe-mss', 'chemie-sek1'].every((key) => n(key).length && n(key).every(full)));
+      ok('Vorlagen: „sicher“ beginnt mit „Ich kann“', C.TEMPLATES.every((t) => t.catalog.bereiche.every((b) => b.kompetenzen.every((k) => k.texte.sicher.startsWith('Ich kann')))));
+      const db = M.newDb();
+      const cat = C.addFromTemplate(db, 'mathe-sek1');
+      ok('Kopie aus der Vorlage hat die Texte', C.textCount(cat, 'M-K4') === 4);
+      // ältere Kopie ohne Texte, mit einem eigenen Text und einer eigenen Kompetenz
+      const old = C.clean(JSON.parse(C.exportJson(cat)));
+      old.id = 'mathe-sek1-2';
+      for (const b of old.bereiche) for (const k of b.kompetenzen) delete k.texte;
+      C.setText(old, 'M-K1', 'noch', 'Mein eigener Text.');
+      old.bereiche[0].kompetenzen.push({ id: 'M-X9', name: 'Eigene' });
+      const fremd = C.clean({ id: 'physik', bereiche: [{ id: 'A', kompetenzen: [{ id: 'M-K1', name: 'gleiche Kennung' }] }] });
+      db.settings.competencyCatalogs.push(old, fremd);
+      const added = C.fillTemplateTexte(db);
+      ok('fillTemplateTexte: leere Felder ergänzt, eigener Text bleibt', C.texteOf(old, 'M-K1').noch === 'Mein eigener Text.' && C.texteOf(old, 'M-K1').worum === C.texteOf(cat, 'M-K1').worum && C.textCount(old, 'M-K7') === 4);
+      ok('fillTemplateTexte: eigene Kompetenz und fremder Katalog unberührt', C.textCount(old, 'M-X9') === 0 && C.textCount(fremd, 'M-K1') === 0 && added === 12 * 4 - 1);
+      ok('fillTemplateTexte: zweiter Lauf ändert nichts', C.fillTemplateTexte(db) === 0);
     }
   } catch (e) {
     fails++;

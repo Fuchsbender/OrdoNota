@@ -162,6 +162,250 @@
     },
   ];
 
+  // Erklärtexte der Vorlagen (seit 2.25, PLANUNG.md AR-2): je Kompetenz „Darum geht es“ und ein Text je Stufe,
+  // in der du-Form. Sie stehen in den Vorlagen und in vorlagen/kompetenzen/<key>.json (Test vergleicht beides).
+  const TEMPLATE_TEXTE = {
+    'mathe-sek1': {
+      'M-K1': {
+        worum: "Du zeigst, warum etwas in der Mathematik stimmt. Du begründest deine Schritte und prüfst, ob eine Aussage immer gilt.",
+        noch: "Fang klein an: Schreibe hinter jeden Rechenschritt einen kurzen Satz mit „weil …“. Prüfe eine Aussage zuerst an zwei Zahlenbeispielen.",
+        teilweise: "Deine Begründungen sind oft schon richtig. Achte darauf, keinen Schritt auszulassen, und suche ein Gegenbeispiel, wenn eine Aussage nicht immer gilt.",
+        sicher: "Ich kann meine Lösungswege vollständig begründen. Nächster Schritt: Finde Fehler in fremden Lösungen und erkläre, warum sie falsch sind.",
+      },
+      'M-K2': {
+        worum: "Du schreibst und sprichst über Mathematik so, dass andere dich verstehen. Dazu gehören die richtigen Fachwörter und ein klarer Lösungsweg.",
+        noch: "Schreibe deinen Lösungsweg Schritt für Schritt auf, nicht nur das Ergebnis. Lege dir eine Liste mit wichtigen Fachwörtern an und übe sie.",
+        teilweise: "Man kann deinem Weg schon gut folgen. Übe, Fachwörter genau zu benutzen, und lies deine Lösung einmal so, als wärst du jemand anderes.",
+        sicher: "Ich kann Lösungen klar aufschreiben und erklären. Nächster Schritt: Erkläre jemandem aus deiner Klasse eine schwierige Aufgabe.",
+      },
+      'M-K3': {
+        worum: "Du löst Aufgaben, bei denen der Weg nicht sofort klar ist. Du probierst, zeichnest, suchst Muster und wählst eine passende Strategie.",
+        noch: "Lies die Aufgabe zweimal und schreibe auf, was gegeben und was gesucht ist. Mach eine Skizze oder probiere mit einfachen Zahlen aus.",
+        teilweise: "Du findest oft einen Anfang. Übe, verschiedene Strategien auszuprobieren (rückwärts rechnen, Tabelle, Skizze) und dein Ergebnis am Ende zu prüfen.",
+        sicher: "Ich kann auch unbekannte Probleme lösen. Nächster Schritt: Suche einen zweiten Lösungsweg und vergleiche, welcher schneller ist.",
+      },
+      'M-K4': {
+        worum: "Du übersetzt eine Situation aus dem Alltag in Mathematik, rechnest und prüfst, ob dein Ergebnis zur Situation passt.",
+        noch: "Unterstreiche im Text die Zahlen und was gesucht ist. Überlege dann, welche Rechnung dazu passt, und schreibe am Ende einen Antwortsatz.",
+        teilweise: "Den Ansatz findest du oft schon. Übe, dein Ergebnis mit der Situation zu vergleichen: Ist die Zahl realistisch? Passt die Einheit?",
+        sicher: "Ich kann Alltagsprobleme mit Mathematik lösen und mein Ergebnis bewerten. Nächster Schritt: Überlege, was dein Modell vereinfacht.",
+      },
+      'M-K5': {
+        worum: "Du stellst Mathematik passend dar: als Tabelle, Graph, Skizze, Term oder Text. Du kannst zwischen diesen Darstellungen wechseln.",
+        noch: "Übe eine Darstellung nach der anderen: Lege zu einer Aufgabe eine Tabelle an und zeichne daraus einen Graphen. Achte auf Achsen und Beschriftung.",
+        teilweise: "Einzelne Darstellungen gelingen dir schon. Übe den Wechsel: Lies aus einem Graphen Werte ab oder schreibe zu einer Tabelle den passenden Term.",
+        sicher: "Ich kann Darstellungen erstellen und zwischen ihnen wechseln. Nächster Schritt: Begründe, welche Darstellung für eine Aufgabe am besten passt.",
+      },
+      'M-K6': {
+        worum: "Du rechnest sicher mit Zahlen, Termen, Gleichungen und Formeln und kennst die Regeln, nach denen das geht.",
+        noch: "Übe die Grundlagen in kleinen Schritten: Schreibe jeden Umformungsschritt in eine eigene Zeile und prüfe Ergebnisse durch Einsetzen.",
+        teilweise: "Viele Rechnungen gelingen dir schon. Suche deine typischen Fehler (z. B. Vorzeichen, Klammern) und übe genau diese Stellen.",
+        sicher: "Ich kann sicher mit Termen und Gleichungen umgehen. Nächster Schritt: Löse Aufgaben, bei denen du mehrere Regeln kombinieren musst.",
+      },
+      'M-K7': {
+        worum: "Du nutzt Hilfsmittel wie Taschenrechner, Geometrie-Software, Tabellenkalkulation oder Lernvideos sinnvoll für Mathematik.",
+        noch: "Lerne zuerst die wichtigsten Tasten und Befehle kennen. Schreibe dir auf, welche Eingabe du gemacht hast, und überschlage das Ergebnis im Kopf.",
+        teilweise: "Du kannst Hilfsmittel schon nutzen. Übe, Ergebnisse des Rechners zu prüfen, und überlege, wann ein Hilfsmittel wirklich hilft.",
+        sicher: "Ich kann digitale Hilfsmittel gezielt einsetzen. Nächster Schritt: Erstelle selbst eine Tabelle oder Zeichnung am Computer, die eine Aufgabe löst.",
+      },
+      'M-L1': {
+        worum: "Es geht um Zahlen und das Rechnen mit ihnen: Brüche, Dezimalzahlen, negative Zahlen, Prozent, Potenzen und Wurzeln.",
+        noch: "Wiederhole die Rechenregeln für die Zahlenart, die gerade dran ist, mit einfachen Beispielen. Überschlage vor dem Rechnen, was ungefähr herauskommt.",
+        teilweise: "Du rechnest schon vieles richtig. Übe gemischte Aufgaben, bei denen du erst entscheiden musst, welche Regel gilt, und kontrolliere mit einem Überschlag.",
+        sicher: "Ich kann sicher mit verschiedenen Zahlen rechnen. Nächster Schritt: Erkläre, warum eine Rechenregel gilt, zum Beispiel an einem Bild.",
+      },
+      'M-L2': {
+        worum: "Es geht um Größen wie Länge, Fläche, Volumen, Zeit, Masse und Geld: messen, schätzen, umrechnen und damit rechnen.",
+        noch: "Lerne die Umrechnungszahlen für die Einheiten auswendig und schreibe bei jedem Ergebnis die Einheit dazu. Schätze vorher, was ungefähr herauskommt.",
+        teilweise: "Du kannst schon mit Größen rechnen. Übe das Umrechnen bei Flächen und Volumen und prüfe, ob dein Ergebnis realistisch ist.",
+        sicher: "Ich kann Größen sicher schätzen, messen und umrechnen. Nächster Schritt: Löse Sachaufgaben, in denen du mehrere Größen verbinden musst.",
+      },
+      'M-L3': {
+        worum: "Es geht um Zusammenhänge zwischen Größen: Zuordnungen, Funktionen, Terme und Gleichungen und wie man sie beschreibt.",
+        noch: "Lege zu einem Zusammenhang eine Wertetabelle an und zeichne den Graphen. Beschreibe in einem Satz, was passiert, wenn x größer wird.",
+        teilweise: "Du erkennst viele Zusammenhänge schon. Übe, zwischen Tabelle, Graph und Funktionsgleichung zu wechseln und die Bedeutung von Steigung und Achsenabschnitten zu erklären.",
+        sicher: "Ich kann funktionale Zusammenhänge beschreiben und nutzen. Nächster Schritt: Stelle zu einer Situation aus dem Alltag selbst eine Funktion auf.",
+      },
+      'M-L4': {
+        worum: "Es geht um Figuren und Körper: erkennen, zeichnen, konstruieren, ihre Eigenschaften nutzen und Flächen und Volumen berechnen.",
+        noch: "Zeichne zu jeder Aufgabe eine saubere Skizze und beschrifte sie. Lerne die wichtigsten Formeln mit einem Bild dazu.",
+        teilweise: "Du kennst viele Figuren und Formeln. Übe, die passende Formel auszuwählen, und begründe Eigenschaften (z. B. Winkel) an der Zeichnung.",
+        sicher: "Ich kann mit Figuren und Körpern sicher umgehen. Nächster Schritt: Zerlege zusammengesetzte Figuren und berechne sie geschickt.",
+      },
+      'M-L5': {
+        worum: "Es geht um Daten und Zufall: Daten sammeln, darstellen und auswerten und Wahrscheinlichkeiten bestimmen.",
+        noch: "Übe, Daten in einer Strichliste und einem Diagramm darzustellen. Berechne den Mittelwert Schritt für Schritt.",
+        teilweise: "Du kannst Daten schon auswerten. Übe, Diagramme kritisch zu lesen, und bestimme Wahrscheinlichkeiten mit einem Baumdiagramm.",
+        sicher: "Ich kann Daten auswerten und Wahrscheinlichkeiten bestimmen. Nächster Schritt: Finde in Zeitungsgrafiken Stellen, die in die Irre führen.",
+      },
+    },
+    'mathe-mss': {
+      'MO-K1': {
+        worum: "Du begründest mathematische Aussagen schlüssig, prüfst Vermutungen und führst Begründungen über mehrere Schritte.",
+        noch: "Formuliere zuerst, was gezeigt werden soll. Schreibe dann jeden Schritt mit Begründung auf (Definition, Satz, Rechenregel) und prüfe an einem Beispiel.",
+        teilweise: "Deine Begründungen tragen oft schon. Achte auf Lücken in längeren Argumentationsketten und widerlege falsche Aussagen gezielt mit einem Gegenbeispiel.",
+        sicher: "Ich kann mehrschrittige Begründungen sauber führen. Nächster Schritt: Beurteile fremde Argumentationen und verbessere sie.",
+      },
+      'MO-K2': {
+        worum: "Du löst Probleme, für die kein Verfahren vorgegeben ist. Du wählst Strategien, kombinierst Wissen und prüfst den Lösungsweg.",
+        noch: "Zerlege das Problem in Teilfragen und notiere, was gegeben und gesucht ist. Erstelle eine Skizze und probiere einen Spezialfall aus.",
+        teilweise: "Du findest oft einen Ansatz. Übe, Strategien bewusst zu wechseln (Vorwärts-/Rückwärtsarbeiten, Hilfsgrößen) und den Weg am Ende zu reflektieren.",
+        sicher: "Ich kann auch offene Probleme strukturiert lösen. Nächster Schritt: Verallgemeinere deine Lösung oder vergleiche verschiedene Lösungswege.",
+      },
+      'MO-K3': {
+        worum: "Du übersetzt Sachsituationen in mathematische Modelle, arbeitest im Modell und deutest und prüfst die Ergebnisse in der Realität.",
+        noch: "Markiere die relevanten Informationen und triff die nötigen Annahmen ausdrücklich. Ordne dann eine passende Funktion oder Gleichung zu.",
+        teilweise: "Du stellst Modelle oft schon passend auf. Übe, die Ergebnisse im Sachzusammenhang zu deuten und Grenzen des Modells zu benennen.",
+        sicher: "Ich kann Modelle aufstellen, nutzen und kritisch bewerten. Nächster Schritt: Vergleiche zwei Modelle für dieselbe Situation.",
+      },
+      'MO-K4': {
+        worum: "Du nutzt Darstellungen wie Graphen, Tabellen, Diagramme und Skizzen, wählst passende aus und wechselst zwischen ihnen.",
+        noch: "Achte bei Graphen und Skizzen auf Achsen, Einheiten und Beschriftung. Übe, Werte und Eigenschaften genau aus einem Graphen abzulesen.",
+        teilweise: "Du kannst Darstellungen schon gut lesen. Übe den Wechsel zwischen Funktionsterm, Graph und Tabelle und begründe deine Wahl der Darstellung.",
+        sicher: "Ich kann Darstellungen sicher nutzen und wechseln. Nächster Schritt: Beurteile, welche Darstellung einen Sachverhalt am klarsten zeigt.",
+      },
+      'MO-K5': {
+        worum: "Du arbeitest sicher mit Termen, Gleichungen, Formeln und Verfahren und setzt den Taschenrechner (GTR/CAS) sinnvoll ein.",
+        noch: "Übe die Grundverfahren (Umformen, Ableiten, Gleichungen lösen) mit kurzen Aufgaben und notiere jeden Schritt. Prüfe Rechnerergebnisse mit einer Probe.",
+        teilweise: "Die Verfahren sitzen schon weitgehend. Arbeite gezielt an deinen typischen Fehlern und entscheide bewusst, wann du von Hand oder mit dem Rechner arbeitest.",
+        sicher: "Ich kann Verfahren sicher und effizient anwenden. Nächster Schritt: Löse komplexe Aufgaben, die mehrere Verfahren verbinden.",
+      },
+      'MO-K6': {
+        worum: "Du stellst mathematische Überlegungen verständlich und fachsprachlich korrekt dar und verstehst Texte mit mathematischem Inhalt.",
+        noch: "Schreibe Lösungen vollständig auf: Ansatz, Rechnung, Ergebnis und Antwortsatz. Lege dir eine Liste der Fachbegriffe mit Bedeutung an.",
+        teilweise: "Deine Lösungen sind meist nachvollziehbar. Übe, Fachbegriffe präzise zu verwenden und Ergebnisse knapp im Sachzusammenhang zu formulieren.",
+        sicher: "Ich kann mathematische Inhalte klar und präzise darstellen. Nächster Schritt: Präsentiere eine Lösung oder prüfe fremde Darstellungen auf Verständlichkeit.",
+      },
+      'MO-L1': {
+        worum: "Es geht um Zahlen, Näherungsverfahren und Algorithmen, z. B. Grenzwerte, Folgen und schrittweise Lösungsverfahren.",
+        noch: "Wiederhole die Grundbegriffe an konkreten Zahlenbeispielen. Führe ein Verfahren zuerst langsam Schritt für Schritt in einer Tabelle durch.",
+        teilweise: "Du kannst Verfahren schon anwenden. Übe, zu begründen, warum ein Verfahren funktioniert und wann es an Grenzen stößt.",
+        sicher: "Ich kann Algorithmen und Näherungsverfahren sicher nutzen. Nächster Schritt: Beschreibe selbst einen Algorithmus für ein neues Problem.",
+      },
+      'MO-L2': {
+        worum: "Es geht um das Messen im weiteren Sinn: Flächen und Volumen mit Integralen, Längen, Winkel und Abstände, auch im Raum.",
+        noch: "Mache dir an einer Skizze klar, welche Fläche oder welcher Abstand gesucht ist. Übe die Formeln und Grundintegrale mit einfachen Beispielen.",
+        teilweise: "Du berechnest vieles schon richtig. Übe, Flächen zwischen Graphen und Abstände im Raum sicher aufzustellen und das Ergebnis zu deuten.",
+        sicher: "Ich kann Größen mit Integralen und Vektoren sicher bestimmen. Nächster Schritt: Nutze diese Verfahren in Anwendungsaufgaben.",
+      },
+      'MO-L3': {
+        worum: "Es geht um Geometrie im Raum: Punkte, Geraden, Ebenen und Körper mit Vektoren beschreiben und ihre Lage untersuchen.",
+        noch: "Zeichne zu jeder Aufgabe eine Skizze im Koordinatensystem. Übe das Aufstellen von Geraden- und Ebenengleichungen aus Punkten.",
+        teilweise: "Du kannst Objekte im Raum schon beschreiben. Übe die Untersuchung von Lagebeziehungen und deute dein Rechenergebnis geometrisch.",
+        sicher: "Ich kann räumliche Probleme mit Vektoren lösen. Nächster Schritt: Löse Aufgaben, bei denen du den Lösungsweg selbst planen musst.",
+      },
+      'MO-L4': {
+        worum: "Es geht um Funktionen und Änderungen: Graphen untersuchen, Ableitungen und Integrale nutzen und Zusammenhänge beschreiben.",
+        noch: "Übe die Ableitungsregeln mit kurzen Aufgaben und skizziere zu jeder Funktion den Graphen. Lerne, was f′ und f″ über den Graphen sagen.",
+        teilweise: "Du kannst Funktionen schon untersuchen. Übe, Ergebnisse im Sachzusammenhang zu deuten (Änderungsrate, Bestand) und Funktionen aus Bedingungen aufzustellen.",
+        sicher: "Ich kann Funktionen sicher untersuchen und anwenden. Nächster Schritt: Arbeite an Funktionenscharen oder offenen Anwendungsaufgaben.",
+      },
+      'MO-L5': {
+        worum: "Es geht um Daten und Zufall: Wahrscheinlichkeiten berechnen, Verteilungen nutzen und Aussagen über Stichproben prüfen.",
+        noch: "Zeichne zu jedem Zufallsexperiment ein Baumdiagramm oder eine Vierfeldertafel. Lerne, wann die Binomialverteilung passt.",
+        teilweise: "Du kannst Wahrscheinlichkeiten schon berechnen. Übe, die passende Verteilung zu wählen und Ergebnisse im Sachzusammenhang zu deuten.",
+        sicher: "Ich kann stochastische Fragen sicher lösen. Nächster Schritt: Beurteile Aussagen aus Studien oder Medien mithilfe der Stochastik.",
+      },
+    },
+    'chemie-sek1': {
+      'C-S1': {
+        worum: "Du beschreibst, was man bei Stoffen und Reaktionen sehen, riechen und messen kann, also die Welt, wie sie vor dir liegt.",
+        noch: "Beobachte genau und schreibe auf, was du wirklich siehst (Farbe, Geruch, Gas, Wärme), noch ohne Erklärung. Lerne wichtige Stoffeigenschaften.",
+        teilweise: "Deine Beobachtungen sind oft genau. Übe, Beobachtung und Erklärung sauber zu trennen und Stoffe anhand ihrer Eigenschaften zu unterscheiden.",
+        sicher: "Ich kann Stoffe und Vorgänge genau beschreiben. Nächster Schritt: Ordne deine Beobachtungen einer passenden Erklärung zu.",
+      },
+      'C-S2': {
+        worum: "Du erklärst Stoffe und Reaktionen mit Teilchen: Atome, Ionen und Moleküle und was mit ihnen bei einer Reaktion passiert.",
+        noch: "Zeichne zu einem Stoff ein einfaches Teilchenbild. Lerne die Begriffe Atom, Molekül und Ion mit je einem Beispiel.",
+        teilweise: "Du kennst die Teilchen schon. Übe, eine Beobachtung mit dem Teilchenmodell zu erklären, z. B. warum sich ein Stoff löst oder schmilzt.",
+        sicher: "Ich kann Beobachtungen mit Teilchen erklären. Nächster Schritt: Erkläre damit auch Vorgänge aus deinem Alltag.",
+      },
+      'C-S3': {
+        worum: "Du nutzt die Sprache der Chemie: Formeln, Reaktionsgleichungen, Modelle und Skizzen, um Stoffe und Reaktionen darzustellen.",
+        noch: "Lerne die Symbole der wichtigsten Elemente und übe, einfache Formeln zu lesen. Schreibe Reaktionen zuerst als Wortgleichung.",
+        teilweise: "Du kannst Formeln schon nutzen. Übe, Reaktionsgleichungen auszugleichen und zwischen Wortgleichung, Formel und Teilchenbild zu wechseln.",
+        sicher: "Ich kann Formeln und Reaktionsgleichungen sicher nutzen. Nächster Schritt: Erkläre, was eine Formel über die Teilchen verrät.",
+      },
+      'C-E1': {
+        worum: "Du gewinnst Erkenntnisse mit Experimenten: Frage stellen, Vermutung aufschreiben, Versuch planen, durchführen und auswerten.",
+        noch: "Halte dich an den Ablauf: Frage, Vermutung, Durchführung, Beobachtung, Auswertung. Schreibe zu jedem Schritt mindestens einen Satz ins Protokoll.",
+        teilweise: "Deine Protokolle sind schon geordnet. Übe, selbst einen Versuch zu planen, der deine Vermutung prüft, und nur eine Größe zu verändern.",
+        sicher: "Ich kann Experimente planen, durchführen und auswerten. Nächster Schritt: Finde Fehlerquellen in deinem Versuch und verbessere ihn.",
+      },
+      'C-E2': {
+        worum: "Du nutzt Modelle, um Vorgänge zu erklären und vorherzusagen, und weißt, was ein Modell zeigt und was nicht.",
+        noch: "Lerne die Modelle aus dem Unterricht mit einem Bild (z. B. Teilchenmodell, Atommodell). Erkläre in einem Satz, wofür man das Modell nutzt.",
+        teilweise: "Du kannst Modelle schon anwenden. Übe, mit einem Modell eine Vorhersage zu machen und zu sagen, wo das Modell an seine Grenzen kommt.",
+        sicher: "Ich kann Modelle sicher nutzen und ihre Grenzen nennen. Nächster Schritt: Vergleiche zwei Modelle für denselben Vorgang.",
+      },
+      'C-E3': {
+        worum: "Du denkst über den Weg zur Erkenntnis nach: Wie sicher ist ein Ergebnis? Was spricht dafür? Was könnte es verfälschen?",
+        noch: "Überlege nach jedem Versuch: Hat das Ergebnis meine Vermutung bestätigt? Schreibe einen Grund auf, warum das Ergebnis ungenau sein könnte.",
+        teilweise: "Du kannst Ergebnisse schon kritisch betrachten. Übe, Messfehler und Störungen genau zu benennen und Verbesserungen vorzuschlagen.",
+        sicher: "Ich kann Ergebnisse und Vorgehen kritisch beurteilen. Nächster Schritt: Erkläre, wie man in der Chemie zu neuem Wissen kommt.",
+      },
+      'C-K1': {
+        worum: "Du findest Informationen zu chemischen Fragen in Texten, Tabellen, Diagrammen oder Videos und entnimmst das Wichtige.",
+        noch: "Lies einen Text abschnittsweise und markiere die Schlüsselwörter. Schreibe danach die wichtigste Aussage in einem eigenen Satz auf.",
+        teilweise: "Du findest wichtige Informationen schon. Übe, Werte aus Tabellen und Diagrammen abzulesen und Quellen auf Verlässlichkeit zu prüfen.",
+        sicher: "Ich kann Informationen gezielt finden und auswerten. Nächster Schritt: Vergleiche Informationen aus mehreren Quellen.",
+      },
+      'C-K2': {
+        worum: "Du bereitest Informationen so auf, dass andere sie verstehen: als Tabelle, Diagramm, Skizze, Steckbrief oder Text.",
+        noch: "Übe, Messwerte in eine Tabelle mit Überschrift und Einheiten einzutragen. Zeichne daraus ein Diagramm mit beschrifteten Achsen.",
+        teilweise: "Deine Darstellungen sind oft schon übersichtlich. Übe, die passende Darstellungsform zu wählen und Fachbegriffe korrekt zu verwenden.",
+        sicher: "Ich kann Informationen klar und fachlich richtig darstellen. Nächster Schritt: Gestalte ein Plakat oder eine kurze Präsentation.",
+      },
+      'C-K3': {
+        worum: "Du tauschst dich über Chemie aus: erklären, nachfragen, Argumente austauschen und auf andere eingehen.",
+        noch: "Übe, ein Ergebnis in zwei, drei Sätzen mit Fachbegriffen zu erklären. Stelle eine Rückfrage, wenn du etwas nicht verstehst.",
+        teilweise: "Du kannst Ergebnisse schon erklären. Übe, deine Meinung mit fachlichen Argumenten zu begründen und auf Einwände einzugehen.",
+        sicher: "Ich kann fachlich diskutieren und andere überzeugen. Nächster Schritt: Leite eine Diskussion in der Gruppe.",
+      },
+      'C-B1': {
+        worum: "Du bewertest Sachverhalte und Informationen nach Kriterien, z. B. Gesundheit, Umwelt, Kosten oder Sicherheit.",
+        noch: "Lege zu einer Frage eine Tabelle mit Vor- und Nachteilen an. Schreibe dazu, nach welchem Kriterium du jeweils urteilst.",
+        teilweise: "Du kannst schon Kriterien nennen. Übe, sie zu gewichten und fachliche Fakten von Meinungen und Werbung zu unterscheiden.",
+        sicher: "Ich kann Sachverhalte begründet nach Kriterien bewerten. Nächster Schritt: Bewerte eine aktuelle Nachricht zu einem Chemie-Thema.",
+      },
+      'C-B2': {
+        worum: "Du bildest dir eine eigene Meinung zu Fragen mit Chemie-Bezug und triffst begründete Entscheidungen.",
+        noch: "Schreibe deine Meinung als Satz auf und ergänze: „…, weil …“. Nenne mindestens ein fachliches Argument.",
+        teilweise: "Deine Meinung ist schon begründet. Übe, verschiedene Möglichkeiten abzuwägen und Gegenargumente in deine Entscheidung einzubeziehen.",
+        sicher: "Ich kann Entscheidungen fachlich begründen und abwägen. Nächster Schritt: Vertritt eine Position, die nicht deine eigene ist.",
+      },
+      'C-B3': {
+        worum: "Du denkst über Entscheidungen und ihre Folgen nach: für dich, für andere und für die Umwelt, heute und später.",
+        noch: "Überlege bei einer Entscheidung: Wer ist betroffen? Was passiert kurzfristig, was langfristig? Schreibe je eine Folge auf.",
+        teilweise: "Du kannst Folgen schon benennen. Übe, sie zu vergleichen und zu überlegen, ob eine Entscheidung überdacht werden sollte.",
+        sicher: "Ich kann Folgen von Entscheidungen umfassend reflektieren. Nächster Schritt: Entwickle Vorschläge, wie man es besser machen könnte.",
+      },
+      'C-BK1': {
+        worum: "Es geht darum, woraus Stoffe bestehen und warum sie bestimmte Eigenschaften haben, z. B. Schmelztemperatur oder Löslichkeit.",
+        noch: "Lerne zu wichtigen Stoffen einen Steckbrief mit Eigenschaften. Ordne jedem Stoff zu, aus welchen Teilchen er besteht.",
+        teilweise: "Du kennst Stoffe und Teilchen schon. Übe, eine Eigenschaft mit dem Aufbau der Teilchen und ihren Bindungen zu erklären.",
+        sicher: "Ich kann Eigenschaften von Stoffen mit ihrem Aufbau erklären. Nächster Schritt: Sage die Eigenschaften eines unbekannten Stoffes voraus.",
+      },
+      'C-BK2': {
+        worum: "Es geht um chemische Reaktionen: Aus Ausgangsstoffen entstehen neue Stoffe, die Teilchen ordnen sich neu, und es wird Energie umgesetzt.",
+        noch: "Lerne die Merkmale einer chemischen Reaktion (neue Stoffe, Energie). Schreibe zu jedem Versuch die Ausgangsstoffe und die Produkte auf.",
+        teilweise: "Du erkennst Reaktionen schon. Übe, sie mit Reaktionsgleichungen und Teilchen zu beschreiben und Reaktionsarten zu unterscheiden.",
+        sicher: "Ich kann chemische Reaktionen sicher beschreiben und erklären. Nächster Schritt: Plane, wie man ein bestimmtes Produkt herstellen kann.",
+      },
+      'C-BK3': {
+        worum: "Es geht um Energie bei chemischen Reaktionen: Sie wird frei oder muss zugeführt werden, zum Beispiel als Wärme oder Licht.",
+        noch: "Beobachte bei jedem Versuch, ob es wärmer oder kälter wird. Lerne die Begriffe exotherm und endotherm mit je einem Beispiel.",
+        teilweise: "Du kannst Energie bei Reaktionen schon beschreiben. Übe, Energiediagramme zu lesen und die Aktivierungsenergie zu erklären.",
+        sicher: "Ich kann Energieumsätze bei Reaktionen erklären. Nächster Schritt: Erkläre, wie Energie aus Reaktionen im Alltag genutzt wird.",
+      },
+    },
+  };
+  for (const tpl of TEMPLATES) for (const b of tpl.catalog.bereiche) for (const k of b.kompetenzen) {
+    const tx = (TEMPLATE_TEXTE[tpl.key] || {})[k.id];
+    if (tx) k.texte = Object.assign({}, tx);
+  }
+
+
   const str = (v, max = 200) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
   const copy = (x) => JSON.parse(JSON.stringify(x));
 
@@ -401,12 +645,38 @@
    * Kataloge ohne Stufe, die aus einer Vorlage stammen (Kennung = Vorlage oder „Vorlage-2“ …), bekommen deren Stufe.
    * Sonst böte die App für einen Sek-I-Kurs die Vorlage noch einmal an, obwohl die Kopie schon da ist (2.22, migrate).
    */
+  /** Vorlage, von der ein Katalog stammt (Kennung = Vorlage oder Vorlage plus „-N“), sonst null. */
+  const templateOf = (c) => TEMPLATES.find((x) => c.id === x.key || (c.id.startsWith(x.key + '-') && /^\d+$/.test(c.id.slice(x.key.length + 1)))) || null;
+
   function fillTemplateStufe(db) {
     for (const c of catalogs(db)) {
       if (c.stufe) continue;
-      const t = TEMPLATES.find((x) => c.id === x.key || (c.id.startsWith(x.key + '-') && /^\d+$/.test(c.id.slice(x.key.length + 1))));
+      const t = templateOf(c);
       if (t && t.catalog.stufe) c.stufe = t.catalog.stufe;
     }
+  }
+
+  /**
+   * Erklärtexte der Vorlage in Kopien nachtragen (seit 2.25, PLANUNG AR 5): nur Kompetenzen mit gleicher Kennung,
+   * nur leere Felder. Eigene Texte werden nie überschrieben. Gibt die Zahl der ergänzten Texte zurück.
+   */
+  function fillTemplateTexte(db) {
+    let n = 0;
+    for (const c of catalogs(db)) {
+      const t = templateOf(c);
+      if (!t) continue;
+      for (const b of c.bereiche || []) {
+        for (const k of b.kompetenzen || []) {
+          const tx = (TEMPLATE_TEXTE[t.key] || {})[k.id];
+          if (!tx) continue;
+          const own = Object.assign({}, k.texte);
+          for (const key of TEXT_KEYS) if (!own[key] && tx[key]) (own[key] = tx[key]), n++;
+          k.texte = cleanTexte(own) || undefined;
+          if (!k.texte) delete k.texte;
+        }
+      }
+    }
+    return n;
   }
 
   /** Angebot annehmen: Katalog am Kurs setzen, aus der Vorlage bei Bedarf erst anlegen. Gibt den Katalog zurück. */
@@ -979,6 +1249,7 @@
     guessForFach,
     offerFor,
     fillTemplateStufe,
+    fillTemplateTexte,
     takeOffer,
     addFromTemplate,
     addEmpty,

@@ -17,27 +17,63 @@
       "kompetenzen": [
         {
           "id": "MO-K1",
-          "name": "Mathematisch argumentieren"
+          "name": "Mathematisch argumentieren",
+          "texte": {
+            "worum": "Du begründest mathematische Aussagen schlüssig, prüfst Vermutungen und führst Begründungen über mehrere Schritte.",
+            "noch": "Formuliere zuerst, was gezeigt werden soll. Schreibe dann jeden Schritt mit Begründung auf (Definition, Satz, Rechenregel) und prüfe an einem Beispiel.",
+            "teilweise": "Deine Begründungen tragen oft schon. Achte auf Lücken in längeren Argumentationsketten und widerlege falsche Aussagen gezielt mit einem Gegenbeispiel.",
+            "sicher": "Ich kann mehrschrittige Begründungen sauber führen. Nächster Schritt: Beurteile fremde Argumentationen und verbessere sie."
+          }
         },
         {
           "id": "MO-K2",
-          "name": "Probleme mathematisch lösen"
+          "name": "Probleme mathematisch lösen",
+          "texte": {
+            "worum": "Du löst Probleme, für die kein Verfahren vorgegeben ist. Du wählst Strategien, kombinierst Wissen und prüfst den Lösungsweg.",
+            "noch": "Zerlege das Problem in Teilfragen und notiere, was gegeben und gesucht ist. Erstelle eine Skizze und probiere einen Spezialfall aus.",
+            "teilweise": "Du findest oft einen Ansatz. Übe, Strategien bewusst zu wechseln (Vorwärts-/Rückwärtsarbeiten, Hilfsgrößen) und den Weg am Ende zu reflektieren.",
+            "sicher": "Ich kann auch offene Probleme strukturiert lösen. Nächster Schritt: Verallgemeinere deine Lösung oder vergleiche verschiedene Lösungswege."
+          }
         },
         {
           "id": "MO-K3",
-          "name": "Mathematisch modellieren"
+          "name": "Mathematisch modellieren",
+          "texte": {
+            "worum": "Du übersetzt Sachsituationen in mathematische Modelle, arbeitest im Modell und deutest und prüfst die Ergebnisse in der Realität.",
+            "noch": "Markiere die relevanten Informationen und triff die nötigen Annahmen ausdrücklich. Ordne dann eine passende Funktion oder Gleichung zu.",
+            "teilweise": "Du stellst Modelle oft schon passend auf. Übe, die Ergebnisse im Sachzusammenhang zu deuten und Grenzen des Modells zu benennen.",
+            "sicher": "Ich kann Modelle aufstellen, nutzen und kritisch bewerten. Nächster Schritt: Vergleiche zwei Modelle für dieselbe Situation."
+          }
         },
         {
           "id": "MO-K4",
-          "name": "Mathematische Darstellungen verwenden"
+          "name": "Mathematische Darstellungen verwenden",
+          "texte": {
+            "worum": "Du nutzt Darstellungen wie Graphen, Tabellen, Diagramme und Skizzen, wählst passende aus und wechselst zwischen ihnen.",
+            "noch": "Achte bei Graphen und Skizzen auf Achsen, Einheiten und Beschriftung. Übe, Werte und Eigenschaften genau aus einem Graphen abzulesen.",
+            "teilweise": "Du kannst Darstellungen schon gut lesen. Übe den Wechsel zwischen Funktionsterm, Graph und Tabelle und begründe deine Wahl der Darstellung.",
+            "sicher": "Ich kann Darstellungen sicher nutzen und wechseln. Nächster Schritt: Beurteile, welche Darstellung einen Sachverhalt am klarsten zeigt."
+          }
         },
         {
           "id": "MO-K5",
-          "name": "Mit symbolischen, formalen und technischen Elementen umgehen"
+          "name": "Mit symbolischen, formalen und technischen Elementen umgehen",
+          "texte": {
+            "worum": "Du arbeitest sicher mit Termen, Gleichungen, Formeln und Verfahren und setzt den Taschenrechner (GTR/CAS) sinnvoll ein.",
+            "noch": "Übe die Grundverfahren (Umformen, Ableiten, Gleichungen lösen) mit kurzen Aufgaben und notiere jeden Schritt. Prüfe Rechnerergebnisse mit einer Probe.",
+            "teilweise": "Die Verfahren sitzen schon weitgehend. Arbeite gezielt an deinen typischen Fehlern und entscheide bewusst, wann du von Hand oder mit dem Rechner arbeitest.",
+            "sicher": "Ich kann Verfahren sicher und effizient anwenden. Nächster Schritt: Löse komplexe Aufgaben, die mehrere Verfahren verbinden."
+          }
         },
         {
           "id": "MO-K6",
-          "name": "Mathematisch kommunizieren"
+          "name": "Mathematisch kommunizieren",
+          "texte": {
+            "worum": "Du stellst mathematische Überlegungen verständlich und fachsprachlich korrekt dar und verstehst Texte mit mathematischem Inhalt.",
+            "noch": "Schreibe Lösungen vollständig auf: Ansatz, Rechnung, Ergebnis und Antwortsatz. Lege dir eine Liste der Fachbegriffe mit Bedeutung an.",
+            "teilweise": "Deine Lösungen sind meist nachvollziehbar. Übe, Fachbegriffe präzise zu verwenden und Ergebnisse knapp im Sachzusammenhang zu formulieren.",
+            "sicher": "Ich kann mathematische Inhalte klar und präzise darstellen. Nächster Schritt: Präsentiere eine Lösung oder prüfe fremde Darstellungen auf Verständlichkeit."
+          }
         }
       ]
     },
@@ -47,23 +83,53 @@
       "kompetenzen": [
         {
           "id": "MO-L1",
-          "name": "Algorithmus und Zahl"
+          "name": "Algorithmus und Zahl",
+          "texte": {
+            "worum": "Es geht um Zahlen, Näherungsverfahren und Algorithmen, z. B. Grenzwerte, Folgen und schrittweise Lösungsverfahren.",
+            "noch": "Wiederhole die Grundbegriffe an konkreten Zahlenbeispielen. Führe ein Verfahren zuerst langsam Schritt für Schritt in einer Tabelle durch.",
+            "teilweise": "Du kannst Verfahren schon anwenden. Übe, zu begründen, warum ein Verfahren funktioniert und wann es an Grenzen stößt.",
+            "sicher": "Ich kann Algorithmen und Näherungsverfahren sicher nutzen. Nächster Schritt: Beschreibe selbst einen Algorithmus für ein neues Problem."
+          }
         },
         {
           "id": "MO-L2",
-          "name": "Messen"
+          "name": "Messen",
+          "texte": {
+            "worum": "Es geht um das Messen im weiteren Sinn: Flächen und Volumen mit Integralen, Längen, Winkel und Abstände, auch im Raum.",
+            "noch": "Mache dir an einer Skizze klar, welche Fläche oder welcher Abstand gesucht ist. Übe die Formeln und Grundintegrale mit einfachen Beispielen.",
+            "teilweise": "Du berechnest vieles schon richtig. Übe, Flächen zwischen Graphen und Abstände im Raum sicher aufzustellen und das Ergebnis zu deuten.",
+            "sicher": "Ich kann Größen mit Integralen und Vektoren sicher bestimmen. Nächster Schritt: Nutze diese Verfahren in Anwendungsaufgaben."
+          }
         },
         {
           "id": "MO-L3",
-          "name": "Raum und Form"
+          "name": "Raum und Form",
+          "texte": {
+            "worum": "Es geht um Geometrie im Raum: Punkte, Geraden, Ebenen und Körper mit Vektoren beschreiben und ihre Lage untersuchen.",
+            "noch": "Zeichne zu jeder Aufgabe eine Skizze im Koordinatensystem. Übe das Aufstellen von Geraden- und Ebenengleichungen aus Punkten.",
+            "teilweise": "Du kannst Objekte im Raum schon beschreiben. Übe die Untersuchung von Lagebeziehungen und deute dein Rechenergebnis geometrisch.",
+            "sicher": "Ich kann räumliche Probleme mit Vektoren lösen. Nächster Schritt: Löse Aufgaben, bei denen du den Lösungsweg selbst planen musst."
+          }
         },
         {
           "id": "MO-L4",
-          "name": "Funktionaler Zusammenhang"
+          "name": "Funktionaler Zusammenhang",
+          "texte": {
+            "worum": "Es geht um Funktionen und Änderungen: Graphen untersuchen, Ableitungen und Integrale nutzen und Zusammenhänge beschreiben.",
+            "noch": "Übe die Ableitungsregeln mit kurzen Aufgaben und skizziere zu jeder Funktion den Graphen. Lerne, was f′ und f″ über den Graphen sagen.",
+            "teilweise": "Du kannst Funktionen schon untersuchen. Übe, Ergebnisse im Sachzusammenhang zu deuten (Änderungsrate, Bestand) und Funktionen aus Bedingungen aufzustellen.",
+            "sicher": "Ich kann Funktionen sicher untersuchen und anwenden. Nächster Schritt: Arbeite an Funktionenscharen oder offenen Anwendungsaufgaben."
+          }
         },
         {
           "id": "MO-L5",
-          "name": "Daten und Zufall"
+          "name": "Daten und Zufall",
+          "texte": {
+            "worum": "Es geht um Daten und Zufall: Wahrscheinlichkeiten berechnen, Verteilungen nutzen und Aussagen über Stichproben prüfen.",
+            "noch": "Zeichne zu jedem Zufallsexperiment ein Baumdiagramm oder eine Vierfeldertafel. Lerne, wann die Binomialverteilung passt.",
+            "teilweise": "Du kannst Wahrscheinlichkeiten schon berechnen. Übe, die passende Verteilung zu wählen und Ergebnisse im Sachzusammenhang zu deuten.",
+            "sicher": "Ich kann stochastische Fragen sicher lösen. Nächster Schritt: Beurteile Aussagen aus Studien oder Medien mithilfe der Stochastik."
+          }
         }
       ]
     }

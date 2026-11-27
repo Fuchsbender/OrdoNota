@@ -17,31 +17,73 @@
       "kompetenzen": [
         {
           "id": "M-K1",
-          "name": "Mathematisch argumentieren"
+          "name": "Mathematisch argumentieren",
+          "texte": {
+            "worum": "Du zeigst, warum etwas in der Mathematik stimmt. Du begründest deine Schritte und prüfst, ob eine Aussage immer gilt.",
+            "noch": "Fang klein an: Schreibe hinter jeden Rechenschritt einen kurzen Satz mit „weil …“. Prüfe eine Aussage zuerst an zwei Zahlenbeispielen.",
+            "teilweise": "Deine Begründungen sind oft schon richtig. Achte darauf, keinen Schritt auszulassen, und suche ein Gegenbeispiel, wenn eine Aussage nicht immer gilt.",
+            "sicher": "Ich kann meine Lösungswege vollständig begründen. Nächster Schritt: Finde Fehler in fremden Lösungen und erkläre, warum sie falsch sind."
+          }
         },
         {
           "id": "M-K2",
-          "name": "Mathematisch kommunizieren"
+          "name": "Mathematisch kommunizieren",
+          "texte": {
+            "worum": "Du schreibst und sprichst über Mathematik so, dass andere dich verstehen. Dazu gehören die richtigen Fachwörter und ein klarer Lösungsweg.",
+            "noch": "Schreibe deinen Lösungsweg Schritt für Schritt auf, nicht nur das Ergebnis. Lege dir eine Liste mit wichtigen Fachwörtern an und übe sie.",
+            "teilweise": "Man kann deinem Weg schon gut folgen. Übe, Fachwörter genau zu benutzen, und lies deine Lösung einmal so, als wärst du jemand anderes.",
+            "sicher": "Ich kann Lösungen klar aufschreiben und erklären. Nächster Schritt: Erkläre jemandem aus deiner Klasse eine schwierige Aufgabe."
+          }
         },
         {
           "id": "M-K3",
-          "name": "Probleme mathematisch lösen"
+          "name": "Probleme mathematisch lösen",
+          "texte": {
+            "worum": "Du löst Aufgaben, bei denen der Weg nicht sofort klar ist. Du probierst, zeichnest, suchst Muster und wählst eine passende Strategie.",
+            "noch": "Lies die Aufgabe zweimal und schreibe auf, was gegeben und was gesucht ist. Mach eine Skizze oder probiere mit einfachen Zahlen aus.",
+            "teilweise": "Du findest oft einen Anfang. Übe, verschiedene Strategien auszuprobieren (rückwärts rechnen, Tabelle, Skizze) und dein Ergebnis am Ende zu prüfen.",
+            "sicher": "Ich kann auch unbekannte Probleme lösen. Nächster Schritt: Suche einen zweiten Lösungsweg und vergleiche, welcher schneller ist."
+          }
         },
         {
           "id": "M-K4",
-          "name": "Mathematisch modellieren"
+          "name": "Mathematisch modellieren",
+          "texte": {
+            "worum": "Du übersetzt eine Situation aus dem Alltag in Mathematik, rechnest und prüfst, ob dein Ergebnis zur Situation passt.",
+            "noch": "Unterstreiche im Text die Zahlen und was gesucht ist. Überlege dann, welche Rechnung dazu passt, und schreibe am Ende einen Antwortsatz.",
+            "teilweise": "Den Ansatz findest du oft schon. Übe, dein Ergebnis mit der Situation zu vergleichen: Ist die Zahl realistisch? Passt die Einheit?",
+            "sicher": "Ich kann Alltagsprobleme mit Mathematik lösen und mein Ergebnis bewerten. Nächster Schritt: Überlege, was dein Modell vereinfacht."
+          }
         },
         {
           "id": "M-K5",
-          "name": "Mathematisch darstellen"
+          "name": "Mathematisch darstellen",
+          "texte": {
+            "worum": "Du stellst Mathematik passend dar: als Tabelle, Graph, Skizze, Term oder Text. Du kannst zwischen diesen Darstellungen wechseln.",
+            "noch": "Übe eine Darstellung nach der anderen: Lege zu einer Aufgabe eine Tabelle an und zeichne daraus einen Graphen. Achte auf Achsen und Beschriftung.",
+            "teilweise": "Einzelne Darstellungen gelingen dir schon. Übe den Wechsel: Lies aus einem Graphen Werte ab oder schreibe zu einer Tabelle den passenden Term.",
+            "sicher": "Ich kann Darstellungen erstellen und zwischen ihnen wechseln. Nächster Schritt: Begründe, welche Darstellung für eine Aufgabe am besten passt."
+          }
         },
         {
           "id": "M-K6",
-          "name": "Mit mathematischen Objekten umgehen"
+          "name": "Mit mathematischen Objekten umgehen",
+          "texte": {
+            "worum": "Du rechnest sicher mit Zahlen, Termen, Gleichungen und Formeln und kennst die Regeln, nach denen das geht.",
+            "noch": "Übe die Grundlagen in kleinen Schritten: Schreibe jeden Umformungsschritt in eine eigene Zeile und prüfe Ergebnisse durch Einsetzen.",
+            "teilweise": "Viele Rechnungen gelingen dir schon. Suche deine typischen Fehler (z. B. Vorzeichen, Klammern) und übe genau diese Stellen.",
+            "sicher": "Ich kann sicher mit Termen und Gleichungen umgehen. Nächster Schritt: Löse Aufgaben, bei denen du mehrere Regeln kombinieren musst."
+          }
         },
         {
           "id": "M-K7",
-          "name": "Mit Medien mathematisch arbeiten"
+          "name": "Mit Medien mathematisch arbeiten",
+          "texte": {
+            "worum": "Du nutzt Hilfsmittel wie Taschenrechner, Geometrie-Software, Tabellenkalkulation oder Lernvideos sinnvoll für Mathematik.",
+            "noch": "Lerne zuerst die wichtigsten Tasten und Befehle kennen. Schreibe dir auf, welche Eingabe du gemacht hast, und überschlage das Ergebnis im Kopf.",
+            "teilweise": "Du kannst Hilfsmittel schon nutzen. Übe, Ergebnisse des Rechners zu prüfen, und überlege, wann ein Hilfsmittel wirklich hilft.",
+            "sicher": "Ich kann digitale Hilfsmittel gezielt einsetzen. Nächster Schritt: Erstelle selbst eine Tabelle oder Zeichnung am Computer, die eine Aufgabe löst."
+          }
         }
       ]
     },
@@ -51,23 +93,53 @@
       "kompetenzen": [
         {
           "id": "M-L1",
-          "name": "Zahl und Operation"
+          "name": "Zahl und Operation",
+          "texte": {
+            "worum": "Es geht um Zahlen und das Rechnen mit ihnen: Brüche, Dezimalzahlen, negative Zahlen, Prozent, Potenzen und Wurzeln.",
+            "noch": "Wiederhole die Rechenregeln für die Zahlenart, die gerade dran ist, mit einfachen Beispielen. Überschlage vor dem Rechnen, was ungefähr herauskommt.",
+            "teilweise": "Du rechnest schon vieles richtig. Übe gemischte Aufgaben, bei denen du erst entscheiden musst, welche Regel gilt, und kontrolliere mit einem Überschlag.",
+            "sicher": "Ich kann sicher mit verschiedenen Zahlen rechnen. Nächster Schritt: Erkläre, warum eine Rechenregel gilt, zum Beispiel an einem Bild."
+          }
         },
         {
           "id": "M-L2",
-          "name": "Größen und Messen"
+          "name": "Größen und Messen",
+          "texte": {
+            "worum": "Es geht um Größen wie Länge, Fläche, Volumen, Zeit, Masse und Geld: messen, schätzen, umrechnen und damit rechnen.",
+            "noch": "Lerne die Umrechnungszahlen für die Einheiten auswendig und schreibe bei jedem Ergebnis die Einheit dazu. Schätze vorher, was ungefähr herauskommt.",
+            "teilweise": "Du kannst schon mit Größen rechnen. Übe das Umrechnen bei Flächen und Volumen und prüfe, ob dein Ergebnis realistisch ist.",
+            "sicher": "Ich kann Größen sicher schätzen, messen und umrechnen. Nächster Schritt: Löse Sachaufgaben, in denen du mehrere Größen verbinden musst."
+          }
         },
         {
           "id": "M-L3",
-          "name": "Strukturen und funktionaler Zusammenhang"
+          "name": "Strukturen und funktionaler Zusammenhang",
+          "texte": {
+            "worum": "Es geht um Zusammenhänge zwischen Größen: Zuordnungen, Funktionen, Terme und Gleichungen und wie man sie beschreibt.",
+            "noch": "Lege zu einem Zusammenhang eine Wertetabelle an und zeichne den Graphen. Beschreibe in einem Satz, was passiert, wenn x größer wird.",
+            "teilweise": "Du erkennst viele Zusammenhänge schon. Übe, zwischen Tabelle, Graph und Funktionsgleichung zu wechseln und die Bedeutung von Steigung und Achsenabschnitten zu erklären.",
+            "sicher": "Ich kann funktionale Zusammenhänge beschreiben und nutzen. Nächster Schritt: Stelle zu einer Situation aus dem Alltag selbst eine Funktion auf."
+          }
         },
         {
           "id": "M-L4",
-          "name": "Raum und Form"
+          "name": "Raum und Form",
+          "texte": {
+            "worum": "Es geht um Figuren und Körper: erkennen, zeichnen, konstruieren, ihre Eigenschaften nutzen und Flächen und Volumen berechnen.",
+            "noch": "Zeichne zu jeder Aufgabe eine saubere Skizze und beschrifte sie. Lerne die wichtigsten Formeln mit einem Bild dazu.",
+            "teilweise": "Du kennst viele Figuren und Formeln. Übe, die passende Formel auszuwählen, und begründe Eigenschaften (z. B. Winkel) an der Zeichnung.",
+            "sicher": "Ich kann mit Figuren und Körpern sicher umgehen. Nächster Schritt: Zerlege zusammengesetzte Figuren und berechne sie geschickt."
+          }
         },
         {
           "id": "M-L5",
-          "name": "Daten und Zufall"
+          "name": "Daten und Zufall",
+          "texte": {
+            "worum": "Es geht um Daten und Zufall: Daten sammeln, darstellen und auswerten und Wahrscheinlichkeiten bestimmen.",
+            "noch": "Übe, Daten in einer Strichliste und einem Diagramm darzustellen. Berechne den Mittelwert Schritt für Schritt.",
+            "teilweise": "Du kannst Daten schon auswerten. Übe, Diagramme kritisch zu lesen, und bestimme Wahrscheinlichkeiten mit einem Baumdiagramm.",
+            "sicher": "Ich kann Daten auswerten und Wahrscheinlichkeiten bestimmen. Nächster Schritt: Finde in Zeitungsgrafiken Stellen, die in die Irre führen."
+          }
         }
       ]
     }

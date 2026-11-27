@@ -17,15 +17,33 @@
       "kompetenzen": [
         {
           "id": "C-S1",
-          "name": "Die makroskopische Ebene"
+          "name": "Die makroskopische Ebene",
+          "texte": {
+            "worum": "Du beschreibst, was man bei Stoffen und Reaktionen sehen, riechen und messen kann, also die Welt, wie sie vor dir liegt.",
+            "noch": "Beobachte genau und schreibe auf, was du wirklich siehst (Farbe, Geruch, Gas, Wärme), noch ohne Erklärung. Lerne wichtige Stoffeigenschaften.",
+            "teilweise": "Deine Beobachtungen sind oft genau. Übe, Beobachtung und Erklärung sauber zu trennen und Stoffe anhand ihrer Eigenschaften zu unterscheiden.",
+            "sicher": "Ich kann Stoffe und Vorgänge genau beschreiben. Nächster Schritt: Ordne deine Beobachtungen einer passenden Erklärung zu."
+          }
         },
         {
           "id": "C-S2",
-          "name": "Die submikroskopische Ebene"
+          "name": "Die submikroskopische Ebene",
+          "texte": {
+            "worum": "Du erklärst Stoffe und Reaktionen mit Teilchen: Atome, Ionen und Moleküle und was mit ihnen bei einer Reaktion passiert.",
+            "noch": "Zeichne zu einem Stoff ein einfaches Teilchenbild. Lerne die Begriffe Atom, Molekül und Ion mit je einem Beispiel.",
+            "teilweise": "Du kennst die Teilchen schon. Übe, eine Beobachtung mit dem Teilchenmodell zu erklären, z. B. warum sich ein Stoff löst oder schmilzt.",
+            "sicher": "Ich kann Beobachtungen mit Teilchen erklären. Nächster Schritt: Erkläre damit auch Vorgänge aus deinem Alltag."
+          }
         },
         {
           "id": "C-S3",
-          "name": "Die Ebene der Repräsentationen"
+          "name": "Die Ebene der Repräsentationen",
+          "texte": {
+            "worum": "Du nutzt die Sprache der Chemie: Formeln, Reaktionsgleichungen, Modelle und Skizzen, um Stoffe und Reaktionen darzustellen.",
+            "noch": "Lerne die Symbole der wichtigsten Elemente und übe, einfache Formeln zu lesen. Schreibe Reaktionen zuerst als Wortgleichung.",
+            "teilweise": "Du kannst Formeln schon nutzen. Übe, Reaktionsgleichungen auszugleichen und zwischen Wortgleichung, Formel und Teilchenbild zu wechseln.",
+            "sicher": "Ich kann Formeln und Reaktionsgleichungen sicher nutzen. Nächster Schritt: Erkläre, was eine Formel über die Teilchen verrät."
+          }
         }
       ]
     },
@@ -35,15 +53,33 @@
       "kompetenzen": [
         {
           "id": "C-E1",
-          "name": "Erkenntnisse mithilfe von Experimenten gewinnen"
+          "name": "Erkenntnisse mithilfe von Experimenten gewinnen",
+          "texte": {
+            "worum": "Du gewinnst Erkenntnisse mit Experimenten: Frage stellen, Vermutung aufschreiben, Versuch planen, durchführen und auswerten.",
+            "noch": "Halte dich an den Ablauf: Frage, Vermutung, Durchführung, Beobachtung, Auswertung. Schreibe zu jedem Schritt mindestens einen Satz ins Protokoll.",
+            "teilweise": "Deine Protokolle sind schon geordnet. Übe, selbst einen Versuch zu planen, der deine Vermutung prüft, und nur eine Größe zu verändern.",
+            "sicher": "Ich kann Experimente planen, durchführen und auswerten. Nächster Schritt: Finde Fehlerquellen in deinem Versuch und verbessere ihn."
+          }
         },
         {
           "id": "C-E2",
-          "name": "Modelle im Rahmen der Erkenntnisgewinnung nutzen"
+          "name": "Modelle im Rahmen der Erkenntnisgewinnung nutzen",
+          "texte": {
+            "worum": "Du nutzt Modelle, um Vorgänge zu erklären und vorherzusagen, und weißt, was ein Modell zeigt und was nicht.",
+            "noch": "Lerne die Modelle aus dem Unterricht mit einem Bild (z. B. Teilchenmodell, Atommodell). Erkläre in einem Satz, wofür man das Modell nutzt.",
+            "teilweise": "Du kannst Modelle schon anwenden. Übe, mit einem Modell eine Vorhersage zu machen und zu sagen, wo das Modell an seine Grenzen kommt.",
+            "sicher": "Ich kann Modelle sicher nutzen und ihre Grenzen nennen. Nächster Schritt: Vergleiche zwei Modelle für denselben Vorgang."
+          }
         },
         {
           "id": "C-E3",
-          "name": "Erkenntnisprozesse reflektieren"
+          "name": "Erkenntnisprozesse reflektieren",
+          "texte": {
+            "worum": "Du denkst über den Weg zur Erkenntnis nach: Wie sicher ist ein Ergebnis? Was spricht dafür? Was könnte es verfälschen?",
+            "noch": "Überlege nach jedem Versuch: Hat das Ergebnis meine Vermutung bestätigt? Schreibe einen Grund auf, warum das Ergebnis ungenau sein könnte.",
+            "teilweise": "Du kannst Ergebnisse schon kritisch betrachten. Übe, Messfehler und Störungen genau zu benennen und Verbesserungen vorzuschlagen.",
+            "sicher": "Ich kann Ergebnisse und Vorgehen kritisch beurteilen. Nächster Schritt: Erkläre, wie man in der Chemie zu neuem Wissen kommt."
+          }
         }
       ]
     },
@@ -53,15 +89,33 @@
       "kompetenzen": [
         {
           "id": "C-K1",
-          "name": "Informationen erschließen"
+          "name": "Informationen erschließen",
+          "texte": {
+            "worum": "Du findest Informationen zu chemischen Fragen in Texten, Tabellen, Diagrammen oder Videos und entnimmst das Wichtige.",
+            "noch": "Lies einen Text abschnittsweise und markiere die Schlüsselwörter. Schreibe danach die wichtigste Aussage in einem eigenen Satz auf.",
+            "teilweise": "Du findest wichtige Informationen schon. Übe, Werte aus Tabellen und Diagrammen abzulesen und Quellen auf Verlässlichkeit zu prüfen.",
+            "sicher": "Ich kann Informationen gezielt finden und auswerten. Nächster Schritt: Vergleiche Informationen aus mehreren Quellen."
+          }
         },
         {
           "id": "C-K2",
-          "name": "Informationen aufbereiten"
+          "name": "Informationen aufbereiten",
+          "texte": {
+            "worum": "Du bereitest Informationen so auf, dass andere sie verstehen: als Tabelle, Diagramm, Skizze, Steckbrief oder Text.",
+            "noch": "Übe, Messwerte in eine Tabelle mit Überschrift und Einheiten einzutragen. Zeichne daraus ein Diagramm mit beschrifteten Achsen.",
+            "teilweise": "Deine Darstellungen sind oft schon übersichtlich. Übe, die passende Darstellungsform zu wählen und Fachbegriffe korrekt zu verwenden.",
+            "sicher": "Ich kann Informationen klar und fachlich richtig darstellen. Nächster Schritt: Gestalte ein Plakat oder eine kurze Präsentation."
+          }
         },
         {
           "id": "C-K3",
-          "name": "Informationen austauschen und diskutieren"
+          "name": "Informationen austauschen und diskutieren",
+          "texte": {
+            "worum": "Du tauschst dich über Chemie aus: erklären, nachfragen, Argumente austauschen und auf andere eingehen.",
+            "noch": "Übe, ein Ergebnis in zwei, drei Sätzen mit Fachbegriffen zu erklären. Stelle eine Rückfrage, wenn du etwas nicht verstehst.",
+            "teilweise": "Du kannst Ergebnisse schon erklären. Übe, deine Meinung mit fachlichen Argumenten zu begründen und auf Einwände einzugehen.",
+            "sicher": "Ich kann fachlich diskutieren und andere überzeugen. Nächster Schritt: Leite eine Diskussion in der Gruppe."
+          }
         }
       ]
     },
@@ -71,15 +125,33 @@
       "kompetenzen": [
         {
           "id": "C-B1",
-          "name": "Sachverhalte und Informationen kriteriengeleitet bewerten"
+          "name": "Sachverhalte und Informationen kriteriengeleitet bewerten",
+          "texte": {
+            "worum": "Du bewertest Sachverhalte und Informationen nach Kriterien, z. B. Gesundheit, Umwelt, Kosten oder Sicherheit.",
+            "noch": "Lege zu einer Frage eine Tabelle mit Vor- und Nachteilen an. Schreibe dazu, nach welchem Kriterium du jeweils urteilst.",
+            "teilweise": "Du kannst schon Kriterien nennen. Übe, sie zu gewichten und fachliche Fakten von Meinungen und Werbung zu unterscheiden.",
+            "sicher": "Ich kann Sachverhalte begründet nach Kriterien bewerten. Nächster Schritt: Bewerte eine aktuelle Nachricht zu einem Chemie-Thema."
+          }
         },
         {
           "id": "C-B2",
-          "name": "Meinungen bilden und Entscheidungen treffen"
+          "name": "Meinungen bilden und Entscheidungen treffen",
+          "texte": {
+            "worum": "Du bildest dir eine eigene Meinung zu Fragen mit Chemie-Bezug und triffst begründete Entscheidungen.",
+            "noch": "Schreibe deine Meinung als Satz auf und ergänze: „…, weil …“. Nenne mindestens ein fachliches Argument.",
+            "teilweise": "Deine Meinung ist schon begründet. Übe, verschiedene Möglichkeiten abzuwägen und Gegenargumente in deine Entscheidung einzubeziehen.",
+            "sicher": "Ich kann Entscheidungen fachlich begründen und abwägen. Nächster Schritt: Vertritt eine Position, die nicht deine eigene ist."
+          }
         },
         {
           "id": "C-B3",
-          "name": "Entscheidungen und deren Folgen reflektieren"
+          "name": "Entscheidungen und deren Folgen reflektieren",
+          "texte": {
+            "worum": "Du denkst über Entscheidungen und ihre Folgen nach: für dich, für andere und für die Umwelt, heute und später.",
+            "noch": "Überlege bei einer Entscheidung: Wer ist betroffen? Was passiert kurzfristig, was langfristig? Schreibe je eine Folge auf.",
+            "teilweise": "Du kannst Folgen schon benennen. Übe, sie zu vergleichen und zu überlegen, ob eine Entscheidung überdacht werden sollte.",
+            "sicher": "Ich kann Folgen von Entscheidungen umfassend reflektieren. Nächster Schritt: Entwickle Vorschläge, wie man es besser machen könnte."
+          }
         }
       ]
     },
@@ -89,15 +161,33 @@
       "kompetenzen": [
         {
           "id": "C-BK1",
-          "name": "Aufbau und Eigenschaften der Stoffe und ihrer Teilchen"
+          "name": "Aufbau und Eigenschaften der Stoffe und ihrer Teilchen",
+          "texte": {
+            "worum": "Es geht darum, woraus Stoffe bestehen und warum sie bestimmte Eigenschaften haben, z. B. Schmelztemperatur oder Löslichkeit.",
+            "noch": "Lerne zu wichtigen Stoffen einen Steckbrief mit Eigenschaften. Ordne jedem Stoff zu, aus welchen Teilchen er besteht.",
+            "teilweise": "Du kennst Stoffe und Teilchen schon. Übe, eine Eigenschaft mit dem Aufbau der Teilchen und ihren Bindungen zu erklären.",
+            "sicher": "Ich kann Eigenschaften von Stoffen mit ihrem Aufbau erklären. Nächster Schritt: Sage die Eigenschaften eines unbekannten Stoffes voraus."
+          }
         },
         {
           "id": "C-BK2",
-          "name": "Chemische Reaktion"
+          "name": "Chemische Reaktion",
+          "texte": {
+            "worum": "Es geht um chemische Reaktionen: Aus Ausgangsstoffen entstehen neue Stoffe, die Teilchen ordnen sich neu, und es wird Energie umgesetzt.",
+            "noch": "Lerne die Merkmale einer chemischen Reaktion (neue Stoffe, Energie). Schreibe zu jedem Versuch die Ausgangsstoffe und die Produkte auf.",
+            "teilweise": "Du erkennst Reaktionen schon. Übe, sie mit Reaktionsgleichungen und Teilchen zu beschreiben und Reaktionsarten zu unterscheiden.",
+            "sicher": "Ich kann chemische Reaktionen sicher beschreiben und erklären. Nächster Schritt: Plane, wie man ein bestimmtes Produkt herstellen kann."
+          }
         },
         {
           "id": "C-BK3",
-          "name": "Energie"
+          "name": "Energie",
+          "texte": {
+            "worum": "Es geht um Energie bei chemischen Reaktionen: Sie wird frei oder muss zugeführt werden, zum Beispiel als Wärme oder Licht.",
+            "noch": "Beobachte bei jedem Versuch, ob es wärmer oder kälter wird. Lerne die Begriffe exotherm und endotherm mit je einem Beispiel.",
+            "teilweise": "Du kannst Energie bei Reaktionen schon beschreiben. Übe, Energiediagramme zu lesen und die Aktivierungsenergie zu erklären.",
+            "sicher": "Ich kann Energieumsätze bei Reaktionen erklären. Nächster Schritt: Erkläre, wie Energie aus Reaktionen im Alltag genutzt wird."
+          }
         }
       ]
     }
