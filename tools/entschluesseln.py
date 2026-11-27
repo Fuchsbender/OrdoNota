@@ -161,6 +161,8 @@ def schreibe_csv(daten, ordner):
                 titel += f' – Nachschreibtermin zu „{namen[a["makeupOf"]]}“'
             if a.get("kind") == "test" and scripto(a).get("testId"):
                 titel += f' – OrdoScripto {scripto(a)["testId"]}'
+            if a.get("ungraded"):
+                titel += " – nicht gewertet"
             kopf.append(titel)
             if a.get("id") in verbal_tests:
                 kopf.append(titel + " – Verbalbeurteilung")
@@ -176,9 +178,11 @@ def schreibe_csv(daten, ordner):
             z = [s.get("last", ""), s.get("first", ""), "ja" if s.get("active", True) else "nein",
                  "undifferenziert" if stufe == "U" else stufe]
             for a in spalten:
+                # 2.18: einzeln abgeschaltete Note (EPO, eigene Spalten)
+                aus = " (nicht gewertet)" if (a.get("off") or {}).get(sid) is True else ""
                 if a.get("kind") == "manual":
                     g = a.get("manual", {}).get("grades", {}).get(sid, {})
-                    z.append(g.get("status") or _label(g.get("p"), mss))
+                    z.append(((g.get("status") or _label(g.get("p"), mss) or "") + aus).strip())
                 elif a.get("kind") == "test":
                     t = a.get("test", {})
                     r = t.get("results", {}).get(sid, {})
@@ -207,7 +211,7 @@ def schreibe_csv(daten, ordner):
                     z.append(r.get("status") or (f"{text} ({thema})" if text and thema else text))
                 else:
                     e = a.get("epo", {}).get("entries", {}).get(sid, {})
-                    z.append(" ".join((c.get("r", "") + c.get("hw", "") + ("m" if c.get("m") else "")) for c in e.values()))
+                    z.append((" ".join((c.get("r", "") + c.get("hw", "") + ("m" if c.get("m") else "")) for c in e.values()) + aus).strip())
             for k in override_keys:
                 z.append(_label(kurs["overrides"][k].get(sid, {}).get("p"), mss))
             for hj in fehl_halbjahre:

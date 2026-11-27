@@ -208,6 +208,36 @@
     ok('Demo: KA 1 mit Nachschreibtermin', dc.assessments.some((a) => NM.grades.isMakeup(dc, a)));
   }
 
+  // 2.18: einzelne Noten nicht werten (PLANUNG AN)
+  {
+    const c = M.newCourse('y', { klasse: '7a', fach: 'M', jahrgang: 7, type: 'sek1' });
+    c.students = M.parseNames('A, a\nB, b');
+    const [s1, s2] = c.students;
+    const n1 = M.newManual('HJ1', 'other', 'HÜ 1'); n1.manual.grades = { [s1.id]: { p: 14 }, [s2.id]: { p: 5 } };
+    const n2 = M.newManual('HJ1', 'other', 'HÜ 2'); n2.manual.grades = { [s1.id]: { p: 2 }, [s2.id]: { p: 5 } };
+    c.assessments.push(n1, n2);
+    const before = G.halfResult(c, 'HJ1', s1.id).other;
+    ok('eigene Spalte: Note abschalten nimmt sie aus dem Schnitt, Note bleibt', M.toggleOff(c, n2, s1.id) === null && n2.off[s1.id] === true && G.ungradedFor(n2, s1.id, c) && n2.manual.grades[s1.id].p === 2
+      && G.halfResult(c, 'HJ1', s1.id).other === G.calcValue(14, 'sek1') && before !== G.halfResult(c, 'HJ1', s1.id).other);
+    ok('andere Person bleibt gewertet', !G.ungradedFor(n2, s2.id, c));
+    ok('wieder einschalten entfernt das Feld', M.toggleOff(c, n2, s1.id) === null && n2.off === undefined && G.halfResult(c, 'HJ1', s1.id).other === before);
+    const t = M.newTest(c, 'HJ1', {});
+    c.assessments.push(t);
+    ok('Test ohne Eintrag: Status „nicht gewertet“ statt a.off', M.toggleOff(c, t, s1.id) === null && t.test.results[s1.id].status === 'ungewertet' && t.off === undefined && G.ungradedFor(t, s1.id, c));
+    t.test.results[s1.id].scores = { x: 3 };
+    ok('Test: wieder werten entfernt nur den Status, Punkte bleiben', M.toggleOff(c, t, s1.id) === null && !t.test.results[s1.id].status && t.test.results[s1.id].scores.x === 3);
+    t.test.results[s2.id] = { scores: {}, status: 'fehlt' };
+    ok('Test mit Status „fehlt“: nicht umschalten, Meldung', typeof M.toggleOff(c, t, s2.id) === 'string' && t.test.results[s2.id].status === 'fehlt');
+    const e = M.newEpo(c, 'HJ1', {});
+    c.assessments.push(e);
+    ok('EPO: a.off', M.toggleOff(c, e, s2.id) === null && e.off[s2.id] === true && G.ungradedFor(e, s2.id, c));
+    n1.off = { [s1.id]: true, [s2.id]: 'x' };
+    t.off = { [s1.id]: true };
+    const mc = M.migrate({ schema: 5, years: [], people: [], courses: [JSON.parse(JSON.stringify(c))] }).courses[0];
+    const find = (id) => mc.assessments.find((a) => a.id === id);
+    ok('Migration: nur echte Haken bei EPO/eigenen Spalten, bei Tests weg', JSON.stringify(find(n1.id).off) === JSON.stringify({ [s1.id]: true }) && find(t.id).off === undefined && find(e.id).off[s2.id] === true);
+  }
+
   lines.unshift(fails === 0 ? 'ALLE TESTS BESTANDEN' : fails + ' FEHLGESCHLAGEN');
   document.getElementById('out').textContent = lines.join('\n');
   document.title = 'fertig';

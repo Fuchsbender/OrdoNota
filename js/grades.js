@@ -497,11 +497,16 @@
     return keyForTest(presAsTest(pres), level);
   }
 
-  /** Zählt diese Leistung für diese Person nicht? (ganze Leistung oder einzelne Testarbeit „nicht gewertet“) */
+  /** Einzeln abgeschaltete Note bei EPO-Blöcken und eigenen Spalten (seit 2.18): a.off = { sid: true }. */
+  function offFor(a, sid) {
+    return !!(a && a.off && a.off[sid]);
+  }
+
+  /** Zählt diese Leistung für diese Person nicht? (ganze Leistung, einzelne Testarbeit „nicht gewertet“ oder abgeschaltete Note) */
   function ungradedFor(a, sid, course) {
     const src = countingFor(course, a, sid);
     const results = src.kind === 'test' ? src.test.results : src.kind === 'pres' ? src.pres.results : null;
-    return !!a.ungraded || (!!results && ((results || {})[sid] || {}).status === 'ungewertet');
+    return !!a.ungraded || offFor(a, sid) || (!!results && ((results || {})[sid] || {}).status === 'ungewertet');
   }
 
   // ---------- Nachschreibtermine ----------
@@ -920,6 +925,7 @@
     assessmentPoints,
     assessmentStatus,
     ungradedFor,
+    offFor,
     makeupTarget,
     isMakeup,
     makeupsOf,

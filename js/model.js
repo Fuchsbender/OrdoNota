@@ -12,7 +12,7 @@
   // 5 (2.4): Personenregister (db.people, students[].personId) – ältere Versionen würden neue Kurseinträge
   //    ohne Person anlegen und Personen beim Löschen nicht aufräumen.
   const SCHEMA = 5;
-  const APP_VERSION = '2.17.0';
+  const APP_VERSION = '2.18.0';
 
   class NewerSchemaError extends Error {}
 
@@ -211,6 +211,13 @@
           if (ids.length) t.competencies = ids;
           else delete t.competencies;
         }
+      }
+      // 2.18: einzeln abgeschaltete Noten (EPO, eigene Spalten); fehlt = keine, nur echte Haken bleiben
+      for (const a of c.assessments) {
+        if (a.off === undefined) continue;
+        const ids = a.off && typeof a.off === 'object' && (a.kind === 'manual' || a.kind === 'epo') ? Object.keys(a.off).filter((sid) => a.off[sid] === true) : [];
+        if (ids.length) a.off = Object.fromEntries(ids.map((sid) => [sid, true]));
+        else delete a.off;
       }
       // 1.40: Nachschreibtermine übernehmen Halbjahr, Bereich, Gewicht und Wertung der Original-Arbeit
       syncMakeups(c);
@@ -970,7 +977,30 @@
     return db;
   }
 
+  /**
+   * Note einer Person bei einer Leistung ab- bzw. wieder einschalten (seit 2.18, PLANUNG AN).
+   * Tests und Präsentationen: Status „nicht gewertet“ (beim zählenden Termin, Punkte bleiben);
+   * EPO-Blöcke und eigene Spalten: a.off. Gibt eine Fehlermeldung zurück oder null.
+   */
+  function toggleOff(course, a, sid) {
+    if (a.kind === 'test' || a.kind === 'pres') {
+      const src = G.countingFor(course, a, sid);
+      const results = src[src.kind].results;
+      const r = results[sid];
+      if (r && r.status && r.status !== 'ungewertet') return `Status „${{ fehlt: 'fehlt', nachschreiben: 'nachschreiben', taeuschung: 'Täuschung/Verweigerung' }[r.status] || r.status}“ – bitte im Reiter ändern.`;
+      if (r && r.status === 'ungewertet') delete r.status;
+      else results[sid] = Object.assign(r || { scores: {} }, { status: 'ungewertet' });
+      return null;
+    }
+    a.off = a.off || {};
+    if (a.off[sid]) delete a.off[sid];
+    else a.off[sid] = true;
+    if (!Object.keys(a.off).length) delete a.off;
+    return null;
+  }
+
   NM.model = {
+    toggleOff,
     SCHEMA,
     APP_VERSION,
     POMODORO_DEFAULTS,

@@ -122,6 +122,19 @@
       NM.app.rerender();
     };
     const drawCols = other.filter((a) => a.kind === 'manual' && drawn.has(a.id));
+    // 2.18: Modus „Noten abschalten“ (nur für diese Sitzung, nicht gespeichert): Klick auf eine Note bzw. einen Spaltenkopf schaltet sie ab oder an
+    const offMode = !!NM.app.state.ovOffMode;
+    const toggleCell = (a, s) => {
+      const err = M.toggleOff(course, a, s.id);
+      if (err) return toast(err, 'warn');
+      NM.app.commit();
+    };
+    const toggleColumn = (a) => {
+      if (a.ungraded) delete a.ungraded;
+      else a.ungraded = true;
+      if (a.kind === 'test') M.syncMakeups(course);
+      NM.app.commit();
+    };
     const BUNDLE = { bundle: true };
     const kaCols = fold.ka ? [] : ka;
     let otherCols = fold.other ? [] : other;
@@ -145,11 +158,17 @@
       h(
         'th',
         { class: 'center assess-head kind-' + a.kind + (a.ungraded ? ' ungraded' : ''), title: a.ungraded ? 'Nicht gewertet – zählt nicht zur Note' : null },
-        h(
-          'button',
-          { class: 'link head-btn', title: 'Bearbeiten (Name, Datum, Gewicht, Bereich)', onclick: () => UI.editAssessmentMeta(course, a) },
-          UI.assessmentHeader(a, poolSub(course, a))
-        ),
+        offMode
+          ? h(
+              'button',
+              { class: 'link head-btn off-toggle', 'aria-pressed': String(!!a.ungraded), 'data-ov-off-col': a.id, title: a.ungraded ? 'Ganze Spalte wieder werten' : 'Ganze Spalte nicht werten', onclick: () => toggleColumn(a) },
+              UI.assessmentHeader(a, poolSub(course, a))
+            )
+          : h(
+              'button',
+              { class: 'link head-btn', title: 'Bearbeiten (Name, Datum, Gewicht, Bereich)', onclick: () => UI.editAssessmentMeta(course, a) },
+              UI.assessmentHeader(a, poolSub(course, a))
+            ),
         a.kind !== 'manual' && NM.app.tabOn(course, JUMP[a.kind][2])
           ? h(
               'button',
@@ -203,21 +222,47 @@
       h('th', { class: 'result' }, '')
     );
 
+    /** Inhalt einer Zelle im Modus „Noten abschalten“: Knopf, der die Note dieser Person ab- oder einschaltet. */
+    const offButton = (a, s, content, single) =>
+      h(
+        'button',
+        {
+          type: 'button',
+          class: 'off-toggle off-cell-btn',
+          'aria-pressed': String(single),
+          'data-ov-off': `${a.id}-${s.id}`,
+          'aria-label': `${M.studentName(s)}, ${a.name}: ${single ? 'wieder werten' : 'nicht werten'}`,
+          title: a.ungraded ? 'Die ganze Spalte ist nicht gewertet – am Spaltenkopf wieder einschalten' : single ? 'Wieder werten' : 'Nicht werten',
+          disabled: !!a.ungraded,
+          onclick: () => toggleCell(a, s),
+        },
+        content
+      );
+
     const cell = (a, s, ri) => {
+      const off = G.ungradedFor(a, s.id, course);
+      // einzeln abgeschaltet (nicht über die ganze Spalte): durchgestrichen
+      const single = off && !a.ungraded;
       if (a.kind !== 'manual') {
         const p = G.assessmentPoints(a, s.id, level, course);
         const status = G.assessmentStatus(a, s.id, course);
-        const off = G.ungradedFor(a, s.id, course);
         const src = G.countingFor(course, a, s.id);
-        const tip = [src !== a ? 'Nachgeschrieben (' + src.name + ', ' + NM.util.fmtDate(src.date) + ')' : null, off && !a.ungraded ? 'Nicht gewertet – zählt nicht zur Note' : null].filter(Boolean).join(' · ') || null;
-        return h('td', { class: 'center' + (off ? ' ungraded' : '') + (src !== a ? ' makeup-cell' : ''), title: tip }, p === null ? (status ? h('span', { class: 'muted small' }, UI.STATUS_SHORT[status]) : h('span', { class: 'muted' }, '·')) : UI.gradeBadge(p, level, 'ro'));
+        const tip = [src !== a ? 'Nachgeschrieben (' + src.name + ', ' + NM.util.fmtDate(src.date) + ')' : null, single ? 'Nicht gewertet – zählt nicht zur Note' : null].filter(Boolean).join(' · ') || null;
+        const content = p === null ? (status && status !== 'ungewertet' ? h('span', { class: 'muted small' }, UI.STATUS_SHORT[status]) : h('span', { class: 'muted' }, '·')) : UI.gradeBadge(p, level, 'ro');
+        return h('td', { class: 'center' + (off ? ' ungraded' : '') + (single ? ' off-single' : '') + (src !== a ? ' makeup-cell' : ''), title: tip }, offMode ? offButton(a, s, content, single) : content);
       }
       const g = a.manual.grades[s.id] || {};
       const shown = g.status ? UI.STATUS_SHORT[g.status] : g.p === undefined || g.p === null ? '' : G.label(g.p, level);
       const notDrawn = drawn.has(a.id) && !drawn.get(a.id).has(s.id) && !shown;
+      if (offMode)
+        return h(
+          'td',
+          { class: 'center' + (off ? ' ungraded' : '') + (single ? ' off-single' : '') + (notDrawn ? ' not-drawn' : '') },
+          offButton(a, s, shown ? h('span', { class: g.status ? 'muted small' : 'grade-text', style: g.status ? null : gradeStyle(g.p) }, shown) : h('span', { class: 'muted' }, '·'), single)
+        );
       return h(
         'td',
-        { class: 'center' + (notDrawn ? ' not-drawn' : ''), title: notDrawn ? 'Nicht gezogen – bei Bedarf trotzdem eintragbar' : null },
+        { class: 'center' + (off ? ' ungraded' : '') + (single ? ' off-single' : '') + (notDrawn ? ' not-drawn' : ''), title: single ? 'Nicht gewertet – zählt nicht zur Note' : notDrawn ? 'Nicht gezogen – bei Bedarf trotzdem eintragbar' : null },
         h('input', {
           class: 'cell-input grade-input' + (g.status ? ' status' : ''),
           value: shown,
@@ -298,6 +343,22 @@
         { class: 'card-head' },
         h('h2', null, half),
         weightsLine(course),
+        h(
+          'button',
+          {
+            type: 'button',
+            class: 'btn btn-sm' + (offMode ? ' btn-primary' : ''),
+            'aria-pressed': String(offMode),
+            'data-ov-off-mode': '',
+            title: 'Einzelne Noten oder ganze Spalten aus der Rechnung nehmen (die Noten bleiben gespeichert)',
+            onclick: () => {
+              NM.app.state.ovOffMode = !offMode;
+              NM.app.rerender();
+            },
+          },
+          icon('eye-off'),
+          offMode ? ' Fertig' : ' Noten abschalten'
+        ),
         compTests.length
           ? h(
               'label',
@@ -318,7 +379,9 @@
             )
           : null
       ),
-      addBtns,
+      offMode
+        ? h('p', { class: 'off-hint', role: 'status' }, 'Klick auf eine Note: nicht werten bzw. wieder werten. Klick auf einen Spaltenkopf: die ganze Spalte. Abgeschaltete Noten bleiben gespeichert und zählen nicht zur Note.')
+        : addBtns,
       students.length === 0
         ? h('p', { class: 'muted' }, 'Bitte zuerst im Reiter „Kurs & Schüler“ Namen eintragen.')
         : h('div', { class: 'table-wrap', 'data-scroll-key': 'ov-' + half }, h('table', { class: 'table grid-table overview-table' }, h('thead', null, head1, head2), h('tbody', null, rows))),

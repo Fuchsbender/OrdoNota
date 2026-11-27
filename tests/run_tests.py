@@ -2631,6 +2631,58 @@ def run_tab_order_check(br, base):
     report("Reiter: ▲▼ in den Einstellungen, Ziehen in der Reiterleiste, Haken in derselben Reihenfolge, Standardreihenfolge", ok and not br.errors, str(res) + "; ".join(br.errors))
 
 
+def run_overview_off_check(br, base):
+    """2.18: Notenübersicht – einzelne Noten und ganze Spalten nicht werten (Modus „Noten abschalten“)."""
+    print("Notenübersicht: Noten abschalten:")
+    br.open(f"{base}/index.html?demo")
+    br.wait(APP_READY, 30)
+    br.errors = []
+    res = br.eval("""(async () => {
+        const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms));
+        const db = NM.app.db(), c = db.courses[0], G = NM.grades;
+        NM.app.state.ui.ovFold = {};
+        NM.app.select({ courseId: c.id, tab: 'overview' }); await wait();
+        const half = NM.app.currentHalf(c, true);
+        const [s1, s2] = NM.model.activeStudents(c);
+        const n = NM.model.newManual(half, 'other', 'HÜ Abschalten'); n.manual.grades[s1.id] = { p: 1 }; n.manual.grades[s2.id] = { p: 13 };
+        c.assessments.push(n); NM.app.commit(); await wait();
+        const q = (sel) => document.querySelector(sel);
+        const out = {};
+        const raw = () => G.halfResult(c, half, s1.id).raw;
+        const r0 = raw();
+        out.noModeInput = !!q(`[data-focus-key="ov-${n.id}-${s1.id}"]`) && !q('[data-ov-off]');
+        q('[data-ov-off-mode]').click(); await wait();
+        out.mode = [!!q('.off-hint'), q('[data-ov-off-mode]').getAttribute('aria-pressed'), !q(`[data-focus-key="ov-${n.id}-${s1.id}"]`)];
+        q(`[data-ov-off="${n.id}-${s1.id}"]`).click(); await wait();
+        const cellTd = q(`[data-ov-off="${n.id}-${s1.id}"]`).closest('td');
+        out.single = [n.off && n.off[s1.id] === true, raw() !== r0, cellTd.classList.contains('off-single'), q(`[data-ov-off="${n.id}-${s1.id}"]`).getAttribute('aria-pressed'), n.manual.grades[s1.id].p];
+        // Test aus dem Reiter „Tests“: Status „nicht gewertet“
+        const t = c.assessments.find((a) => a.kind === 'test' && a.half === half && !a.ungraded && !G.isMakeup(c, a));
+        if (t) {
+            const sid = Object.keys(t.test.results).find((k) => !t.test.results[k].status && NM.model.activeStudents(c).some((s) => s.id === k));
+            const btn = sid && q(`[data-ov-off="${t.id}-${sid}"]`);
+            if (btn) { btn.click(); await wait(); }
+            out.test = !!btn && G.countingFor(c, t, sid).test.results[sid].status === 'ungewertet' && t.off === undefined;
+            if (btn) { q(`[data-ov-off="${t.id}-${sid}"]`).click(); await wait(); }
+            out.testBack = !!btn && !G.countingFor(c, t, sid).test.results[sid].status;
+        } else { out.test = out.testBack = 'kein Test'; }
+        // Ganze Spalte
+        q(`[data-ov-off-col="${n.id}"]`).click(); await wait();
+        out.col = [n.ungraded === true, q(`[data-ov-off="${n.id}-${s2.id}"]`).disabled, G.ungradedFor(n, s2.id, c)];
+        q(`[data-ov-off-col="${n.id}"]`).click(); await wait();
+        out.colBack = [n.ungraded === undefined, !G.ungradedFor(n, s2.id, c), G.ungradedFor(n, s1.id, c)];
+        // Fertig: wieder Eingabefelder, abgeschaltete Note durchgestrichen
+        q('[data-ov-off-mode]').click(); await wait();
+        const inp = q(`[data-focus-key="ov-${n.id}-${s1.id}"]`);
+        out.done = [!q('.off-hint'), !!inp, inp && inp.closest('td').classList.contains('off-single'), getComputedStyle(inp).textDecorationLine];
+        out.dbcheck = NM.model.check(NM.model.migrate(JSON.parse(JSON.stringify(db)))).filter((p) => p.level === 'fehler').length;
+        return out; })()""")
+    ok = bool(res) and res["noModeInput"] and res["mode"] == [True, "true", True] and res["single"] == [True, True, True, "true", 1] \
+        and res["test"] is True and res["testBack"] is True and res["col"] == [True, True, True] and res["colBack"] == [True, True, True] \
+        and res["done"][:3] == [True, True, True] and "line-through" in res["done"][3] and res["dbcheck"] == 0
+    report("Notenübersicht: Modus „Noten abschalten“, einzelne Note (eigene Spalte a.off, Test mit Status), ganze Spalte, durchgestrichen, Note bleibt", ok and not br.errors, str(res) + "; ".join(br.errors))
+
+
 def run_overview_fold_check(br, base):
     print("Notenübersicht: Gruppen einklappen, Ziehungen bündeln:")
     br.open(f"{base}/index.html?demo")
@@ -4020,7 +4072,7 @@ def main():
         run_draw_check, run_draw_pools_check, run_random_check, run_timer_check, run_tools_layout_check,
         run_tools_menu_check, run_pomodoro_check, run_transition_check, run_sidebar_check,
         run_tests_view_check, run_competency_check, run_task_add_click_check, run_makeup_check, run_verbal_check, run_ausgleich_check, run_notes_check, run_foerder_check, run_people_check, run_people_page_check, run_unreachable_check,
-        run_tabs_check, run_tab_order_check, run_overview_fold_check, run_settings_layout_check,
+        run_tabs_check, run_tab_order_check, run_overview_fold_check, run_overview_off_check, run_settings_layout_check,
         run_theme_check, run_demo_link_check, run_sleep_lock_check, run_old_db_check, run_parts_check, run_print_menu_check,
         run_pres_check, run_group_check, run_groups_tab_check, run_moodle_check, run_moodle_comp_check, run_competency_tab_check, run_competency_history_check, run_competency_print_check, run_scripto_check,
         run_decrypt_tool, run_launcher_check,

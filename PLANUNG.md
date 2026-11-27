@@ -683,7 +683,7 @@ Mit dem Nutzer am 27.11.2026 geklärt (grill-me Q1–Q10, alle Empfehlungen ange
 **To-do:**
 - [x] **AL** Sperre bei Standby – erledigt in 2.16.0 (27.11.2026, lokal committet). Abweichung: Lücke 2 Min. statt 60 s, weil Browser Hintergrund-Tabs auf einen Zeitgeber pro Minute drosseln
 - [x] **AM** Ältere Ziehungen löschen – erledigt in 2.17.0 (27.11.2026, lokal committet)
-- [ ] **AN** Einzelne Noten in der Notenübersicht nicht werten
+- [x] **AN** Einzelne Noten in der Notenübersicht nicht werten – erledigt in 2.18.0 (27.11.2026, lokal committet), Q11/Q12 siehe Abschnitt AN
 - [ ] **AO** EPO: Anzahl der angezeigten Stunden begrenzen
 - [ ] **AP** Tool „Begriffe in Gruppen“
 - [ ] **AQ** Planung (eigener Klärungsdurchgang nach AL–AP)
@@ -710,7 +710,8 @@ Ausgangslage: Rückgängig gibt es nur für die letzte Ziehung je Pool bzw. klas
 
 Ausgangslage: „nicht gewertet“ gibt es für ganze Tests/Präsentationen (`a.ungraded`) und je Person als Status „ungewertet“ (Tests, Präsentationen). Für EPO- und Ziehungsnoten und in der Notenübersicht fehlt es.
 
-- **Zelle:** Klick auf eine Zelle der Notenübersicht öffnet ein kleines Menü „Nicht werten“ / „Wieder werten“. Gilt für diese Person in dieser Spalte, für jede Art von Leistung. Die Zelle ist grau und durchgestrichen und zählt nicht im Schnitt. Rohdaten bleiben unverändert.
+- **Nachgeklärt am 27.11.2026 (Q11, Q12):** Eigene Spalten sind Eingabefelder, ein Klick kann dort kein Menü öffnen. Deshalb Knopf **„Noten abschalten“** als Modus (Klick auf Zelle bzw. Spaltenkopf schaltet um, Eintippen solange gesperrt). Tests aus dem Reiter „Tests“ und Präsentationen: Status „nicht gewertet“; von Hand eingetragene Noten (auch Arbeiten mit „Note direkt“), Ziehungsspalten und EPO: neues Feld `a.off` statt `course.excluded`. Ganze Spalte = vorhandenes `a.ungraded` für alle Arten.
+- *(ursprünglich geplant)* **Zelle:** Klick auf eine Zelle der Notenübersicht öffnet ein kleines Menü „Nicht werten“ / „Wieder werten“. Gilt für diese Person in dieser Spalte, für jede Art von Leistung. Die Zelle ist grau und durchgestrichen und zählt nicht im Schnitt. Rohdaten bleiben unverändert.
 - **Spalte:** dasselbe Menü am Spaltenkopf. Für Tests und Präsentationen setzt es den vorhandenen Haken `a.ungraded` (kein zweiter Weg); für EPO-Blöcke und Ziehungsspalten das neue Feld.
 - **Datenmodell:** neues Feld je Kurs `course.excluded` (Liste aus Spalte und Person bzw. ganzer Spalte), Standard `[]` in `migrate()`, `tools/entschluesseln.py` mitziehen, kein neues `SCHEMA`. Auswertung in `js/grades.js` (`halfResult`/`ungradedFor`), nicht gespeichert.
 - Ausdrucke zeigen es wie „nicht gewertet“.
