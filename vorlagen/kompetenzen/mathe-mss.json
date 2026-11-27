@@ -1,0 +1,71 @@
+{
+  "format": "ordonota-kompetenzkatalog",
+  "formatVersion": 1,
+  "id": "mathe-mss",
+  "name": "Mathematik MSS",
+  "fach": "Mathematik",
+  "stufe": "mss",
+  "version": 1,
+  "stufen": {
+    "teilweise": 50,
+    "sicher": 80
+  },
+  "bereiche": [
+    {
+      "id": "K",
+      "name": "Prozessbezogen",
+      "kompetenzen": [
+        {
+          "id": "MO-K1",
+          "name": "Mathematisch argumentieren"
+        },
+        {
+          "id": "MO-K2",
+          "name": "Probleme mathematisch lösen"
+        },
+        {
+          "id": "MO-K3",
+          "name": "Mathematisch modellieren"
+        },
+        {
+          "id": "MO-K4",
+          "name": "Mathematische Darstellungen verwenden"
+        },
+        {
+          "id": "MO-K5",
+          "name": "Mit symbolischen, formalen und technischen Elementen umgehen"
+        },
+        {
+          "id": "MO-K6",
+          "name": "Mathematisch kommunizieren"
+        }
+      ]
+    },
+    {
+      "id": "L",
+      "name": "Inhaltlich (Leitideen)",
+      "kompetenzen": [
+        {
+          "id": "MO-L1",
+          "name": "Algorithmus und Zahl"
+        },
+        {
+          "id": "MO-L2",
+          "name": "Messen"
+        },
+        {
+          "id": "MO-L3",
+          "name": "Raum und Form"
+        },
+        {
+          "id": "MO-L4",
+          "name": "Funktionaler Zusammenhang"
+        },
+        {
+          "id": "MO-L5",
+          "name": "Daten und Zufall"
+        }
+      ]
+    }
+  ]
+}

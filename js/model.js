@@ -12,7 +12,7 @@
   // 5 (2.4): Personenregister (db.people, students[].personId) – ältere Versionen würden neue Kurseinträge
   //    ohne Person anlegen und Personen beim Löschen nicht aufräumen.
   const SCHEMA = 5;
-  const APP_VERSION = '2.21.0';
+  const APP_VERSION = '2.22.0';
 
   class NewerSchemaError extends Error {}
 
@@ -181,6 +181,7 @@
     db.settings.epoDefault = Object.assign({ sek1: 'bef', mss: 'bef' }, db.settings.epoDefault && typeof db.settings.epoDefault === 'object' ? db.settings.epoDefault : {});
     // 2.9: Kompetenzkataloge
     db.settings.competencyCatalogs = NM.competencies.cleanList(db.settings.competencyCatalogs);
+    NM.competencies.fillTemplateStufe(db); // 2.22: Kopien älterer Vorlagen bekommen die Stufe der Vorlage
     // 1.20: Kriterienpool für Präsentationen (Startbestand nur, wenn es noch keinen gibt)
     if (!Array.isArray(db.criteriaPool)) db.criteriaPool = defaultCriteriaPool();
     // 1.21: Vorlagen für Präsentationen (benannte Kriteriensätze); 1.22: mit Standardvorlagen

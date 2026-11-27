@@ -12,10 +12,12 @@
   const FORMAT_VERSION = 1;
   const ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,31}$/;
   const STUFEN = { teilweise: 50, sicher: 80 };
+  const STUFE_IDS = ['sek1', 'mss']; // Kursstufe eines Katalogs (seit 2.22, fehlt = beide)
   const FEW_POINTS = 3; // weniger mögliche Punkte → Hinweis „wenig Daten“
 
   // Bildungsstandards Mathematik ESA/MSA (KMK, 23.06.2022). Das Dokument nummeriert nicht;
-  // die Kennungen folgen der Reihenfolge dort. Muss mit vorlagen/kompetenzen/mathe-sek1.json übereinstimmen (Test).
+  // die Kennungen folgen der Reihenfolge dort. Jede Vorlage muss mit vorlagen/kompetenzen/<key>.json übereinstimmen (Test).
+  // stufe (seit 2.22): 'sek1' | 'mss' | fehlt = beide; damit wählt die App je Kursstufe den passenden Katalog.
   const TEMPLATES = [
     {
       key: 'mathe-sek1',
@@ -24,6 +26,7 @@
         id: 'mathe-sek1',
         name: 'Mathematik Sek I',
         fach: 'Mathematik',
+        stufe: 'sek1',
         version: 1,
         stufen: { teilweise: 50, sicher: 80 },
         bereiche: [
@@ -49,6 +52,105 @@
               { id: 'M-L3', name: 'Strukturen und funktionaler Zusammenhang' },
               { id: 'M-L4', name: 'Raum und Form' },
               { id: 'M-L5', name: 'Daten und Zufall' },
+            ],
+          },
+        ],
+      },
+    },
+    // Bildungsstandards Mathematik Allgemeine Hochschulreife (KMK, 18.10.2012), K1–K6 und L1–L5 wie im Beschluss (2.22).
+    {
+      key: 'mathe-mss',
+      label: 'Mathematik MSS (Bildungsstandards Abitur 2012)',
+      catalog: {
+        id: 'mathe-mss',
+        name: 'Mathematik MSS',
+        fach: 'Mathematik',
+        stufe: 'mss',
+        version: 1,
+        stufen: { teilweise: 50, sicher: 80 },
+        bereiche: [
+          {
+            id: 'K',
+            name: 'Prozessbezogen',
+            kompetenzen: [
+              { id: 'MO-K1', name: 'Mathematisch argumentieren' },
+              { id: 'MO-K2', name: 'Probleme mathematisch lösen' },
+              { id: 'MO-K3', name: 'Mathematisch modellieren' },
+              { id: 'MO-K4', name: 'Mathematische Darstellungen verwenden' },
+              { id: 'MO-K5', name: 'Mit symbolischen, formalen und technischen Elementen umgehen' },
+              { id: 'MO-K6', name: 'Mathematisch kommunizieren' },
+            ],
+          },
+          {
+            id: 'L',
+            name: 'Inhaltlich (Leitideen)',
+            kompetenzen: [
+              { id: 'MO-L1', name: 'Algorithmus und Zahl' },
+              { id: 'MO-L2', name: 'Messen' },
+              { id: 'MO-L3', name: 'Raum und Form' },
+              { id: 'MO-L4', name: 'Funktionaler Zusammenhang' },
+              { id: 'MO-L5', name: 'Daten und Zufall' },
+            ],
+          },
+        ],
+      },
+    },
+    // Weiterentwickelte Bildungsstandards Chemie MSA (KMK, 13.06.2024): vier Kompetenzbereiche mit ihren
+    // Teilkompetenzbereichen (S 1–S 3, E 1–E 3, K 1–K 3, B 1–B 3; S 0 ist übergeordnet) und drei Basiskonzepte (2.22).
+    {
+      key: 'chemie-sek1',
+      label: 'Chemie Sek I (Bildungsstandards 2024)',
+      catalog: {
+        id: 'chemie-sek1',
+        name: 'Chemie Sek I',
+        fach: 'Chemie',
+        stufe: 'sek1',
+        version: 1,
+        stufen: { teilweise: 50, sicher: 80 },
+        bereiche: [
+          {
+            id: 'S',
+            name: 'Sachkompetenz',
+            kompetenzen: [
+              { id: 'C-S1', name: 'Die makroskopische Ebene' },
+              { id: 'C-S2', name: 'Die submikroskopische Ebene' },
+              { id: 'C-S3', name: 'Die Ebene der Repräsentationen' },
+            ],
+          },
+          {
+            id: 'E',
+            name: 'Erkenntnisgewinnungskompetenz',
+            kompetenzen: [
+              { id: 'C-E1', name: 'Erkenntnisse mithilfe von Experimenten gewinnen' },
+              { id: 'C-E2', name: 'Modelle im Rahmen der Erkenntnisgewinnung nutzen' },
+              { id: 'C-E3', name: 'Erkenntnisprozesse reflektieren' },
+            ],
+          },
+          {
+            id: 'K',
+            name: 'Kommunikationskompetenz',
+            kompetenzen: [
+              { id: 'C-K1', name: 'Informationen erschließen' },
+              { id: 'C-K2', name: 'Informationen aufbereiten' },
+              { id: 'C-K3', name: 'Informationen austauschen und diskutieren' },
+            ],
+          },
+          {
+            id: 'B',
+            name: 'Bewertungskompetenz',
+            kompetenzen: [
+              { id: 'C-B1', name: 'Sachverhalte und Informationen kriteriengeleitet bewerten' },
+              { id: 'C-B2', name: 'Meinungen bilden und Entscheidungen treffen' },
+              { id: 'C-B3', name: 'Entscheidungen und deren Folgen reflektieren' },
+            ],
+          },
+          {
+            id: 'BK',
+            name: 'Basiskonzepte',
+            kompetenzen: [
+              { id: 'C-BK1', name: 'Aufbau und Eigenschaften der Stoffe und ihrer Teilchen' },
+              { id: 'C-BK2', name: 'Chemische Reaktion' },
+              { id: 'C-BK3', name: 'Energie' },
             ],
           },
         ],
@@ -109,7 +211,9 @@
       bereiche.push({ id: bid, name: str(b.name) || bid, kompetenzen });
     }
     const v = Math.floor(Number(cat.version));
-    return { id, name: str(cat.name) || str(cat.fach) || id, fach: str(cat.fach), version: v >= 1 ? v : 1, stufen: cleanStufen(cat.stufen), bereiche };
+    const out = { id, name: str(cat.name) || str(cat.fach) || id, fach: str(cat.fach) };
+    if (STUFE_IDS.includes(cat.stufe)) out.stufe = cat.stufe; // seit 2.22
+    return Object.assign(out, { version: v >= 1 ? v : 1, stufen: cleanStufen(cat.stufen), bereiche });
   }
 
   function cleanList(list) {
@@ -213,24 +317,60 @@
     return s.length >= 4 && l.startsWith(s);
   }
 
-  /** Katalog-id zum Fach oder null (nur bei genau einem passenden Katalog). */
-  function guessForFach(db, fach) {
-    const hits = catalogs(db).filter((c) => fachMatches(fach, c.fach) || fachMatches(fach, c.name));
-    return hits.length === 1 ? hits[0].id : null;
+  /**
+   * Bester Treffer zum Fach und zur Stufe: zuerst genau die Stufe, dann ohne Stufe (gilt für beide);
+   * Einträge einer anderen Stufe nie. Nur eindeutig, sonst null. get(x) liefert den Katalog eines Eintrags.
+   */
+  function pickFor(list, get, fach, level) {
+    const hits = list.filter((x) => fachMatches(fach, get(x).fach) || fachMatches(fach, get(x).name));
+    const tiers = level ? [hits.filter((x) => get(x).stufe === level), hits.filter((x) => !get(x).stufe)] : [hits.filter((x) => !get(x).stufe), hits];
+    for (const t of tiers) if (t.length) return t.length === 1 ? t[0] : null;
+    return null;
+  }
+
+  /** Katalog-id zum Fach (und zur Kursstufe 'sek1' | 'mss', seit 2.22) oder null (nur bei genau einem passenden Katalog). */
+  function guessForFach(db, fach, level) {
+    const hit = pickFor(catalogs(db), (c) => c, fach, level);
+    return hit ? hit.id : null;
   }
 
   /**
-   * Katalogangebot für einen Kurs ohne Katalog (2.21, PLANUNG.md AQ-1): ein vorhandener Katalog zum Fach,
-   * sonst eine passende Vorlage. null, wenn der Kurs schon einen Katalog hat, „Nicht jetzt“ gewählt wurde
-   * (course.catalogHintOff) oder nichts eindeutig passt.
+   * Katalogangebot für einen Kurs ohne Katalog (2.21, PLANUNG.md AQ-1): ein vorhandener Katalog zum Fach und zur Stufe,
+   * sonst eine passende Vorlage; ein vorhandener Katalog ohne Stufe erst, wenn es keine Vorlage genau für die Stufe gibt.
+   * null, wenn der Kurs schon einen Katalog hat, „Nicht jetzt“ gewählt wurde (course.catalogHintOff) oder nichts eindeutig passt.
    * @returns { catalogId, name } | { templateKey, name } | null
    */
   function offerFor(db, course) {
     if (!course || course.catalogId || course.catalogHintOff === true || !str(course.fach)) return null;
-    const id = guessForFach(db, course.fach);
-    if (id) return { catalogId: id, name: byId(db, id).name };
-    const tpls = TEMPLATES.filter((t) => fachMatches(course.fach, t.catalog.fach));
-    return tpls.length === 1 ? { templateKey: tpls[0].key, name: tpls[0].catalog.name } : null;
+    const level = courseLevel(course);
+    const cats = catalogs(db);
+    const tpls = TEMPLATES.map((t) => Object.assign({ key: t.key }, t.catalog));
+    const steps = [
+      [cats, (c) => c.stufe === level],
+      [tpls, (c) => c.stufe === level],
+      [cats, (c) => !c.stufe],
+      [tpls, (c) => !c.stufe],
+    ];
+    for (const [list, ok] of steps) {
+      const hit = pickFor(list.filter(ok), (c) => c, course.fach, level);
+      if (hit) return list === cats ? { catalogId: hit.id, name: hit.name } : { templateKey: hit.key, name: hit.name };
+    }
+    return null;
+  }
+
+  /** Stufe eines Kurses ('sek1' | 'mss'); ohne NM.grades (Testseite) 'sek1'. */
+  const courseLevel = (course) => (NM.grades && NM.grades.courseLevel ? NM.grades.courseLevel(course) : Number(course.jahrgang) >= 11 ? 'mss' : 'sek1');
+
+  /**
+   * Kataloge ohne Stufe, die aus einer Vorlage stammen (Kennung = Vorlage oder „Vorlage-2“ …), bekommen deren Stufe.
+   * Sonst böte die App für einen Sek-I-Kurs die Vorlage noch einmal an, obwohl die Kopie schon da ist (2.22, migrate).
+   */
+  function fillTemplateStufe(db) {
+    for (const c of catalogs(db)) {
+      if (c.stufe) continue;
+      const t = TEMPLATES.find((x) => c.id === x.key || (c.id.startsWith(x.key + '-') && /^\d+$/.test(c.id.slice(x.key.length + 1))));
+      if (t && t.catalog.stufe) c.stufe = t.catalog.stufe;
+    }
   }
 
   /** Angebot annehmen: Katalog am Kurs setzen, aus der Vorlage bei Bedarf erst anlegen. Gibt den Katalog zurück. */
@@ -752,6 +892,7 @@
     FORMAT,
     FORMAT_VERSION,
     STUFEN,
+    STUFE_IDS,
     FEW_POINTS,
     TEMPLATES,
     ID_RE,
@@ -772,6 +913,7 @@
     fachMatches,
     guessForFach,
     offerFor,
+    fillTemplateStufe,
     takeOffer,
     addFromTemplate,
     addEmpty,

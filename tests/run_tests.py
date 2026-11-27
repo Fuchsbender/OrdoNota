@@ -183,7 +183,7 @@ def run_test_pages(br, base):
         fails = [l for l in text.split("\n") if l.startswith("FAIL")]
         report(f"{page}.test.html  ({first or 'keine Ausgabe'})", ok, "; ".join(fails + br.errors)[:500])
     # 2.9: Vorlage im Repo (für moodle.py) = eingebaute Vorlage in js/competencies.js
-    for key in ["mathe-sek1"]:
+    for key in ["mathe-sek1", "mathe-mss", "chemie-sek1"]:
         built = br.eval(f"NM.competencies.templateFile('{key}')") or "null"
         with open(os.path.join(ROOT, "vorlagen", "kompetenzen", f"{key}.json"), encoding="utf-8") as f:
             on_disk = json.load(f)
@@ -2248,7 +2248,7 @@ def run_competency_tab_check(br, base):
 
 
 def run_comp_offer_check(br, base):
-    print("Einstieg Kompetenzen: Katalogangebot im Reiter „Tests“ (2.21):")
+    print("Einstieg Kompetenzen: Katalogangebot im Reiter „Tests“ (2.21), Stufe der Kataloge (2.22):")
     br.call("Emulation.setDeviceMetricsOverride", width=1440, height=1000, deviceScaleFactor=1, mobile=False)
     br.open(f"{base}/index.html?demo")
     br.wait(APP_READY, 30)
@@ -2266,7 +2266,7 @@ def run_comp_offer_check(br, base):
         if (!other.assessments.some((a) => a.kind === 'test')) { const t = NM.model.newTest(other, NM.app.currentHalf(other), db.settings); other.assessments.push(t); }
         NM.app.select({ courseId: other.id, tab: 'tests' }); await wait();
         const offer = document.querySelector('[data-comp-offer]');
-        out.offer = [!!offer, !!offer && offer.textContent.includes('Mathematik Sek I'), !document.querySelector('[data-comp-nocat]'), !tabs().includes('competencies')];
+        out.offer = [!!offer, !!offer && offer.textContent.includes('Mathematik MSS'), !document.querySelector('[data-comp-nocat]'), !tabs().includes('competencies')];
         // „Nicht jetzt“: Angebot weg, Feld am Kurs, leiser Hinweis in „Aufgaben“
         document.querySelector('[data-comp-offer-off]').click(); await wait();
         out.off = [!document.querySelector('[data-comp-offer]'), other.catalogHintOff === true, !!document.querySelector('[data-comp-nocat]')];
@@ -2280,7 +2280,7 @@ def run_comp_offer_check(br, base):
         delete other.catalogHintOff;
         NM.app.select({ tab: 'tests' }); await wait();
         document.querySelector('[data-comp-offer-take]').click(); await wait();
-        out.take = [other.catalogId === c.catalogId, !document.querySelector('[data-comp-offer]'), tabs().includes('competencies')];
+        out.take = [other.catalogId === 'mathe-mss' && NM.competencies.byId(db, 'mathe-mss').stufe === 'mss', !document.querySelector('[data-comp-offer]'), tabs().includes('competencies')];
         // migrate entfernt das Feld, sobald ein Katalog gewählt ist
         other.catalogHintOff = true; const c2 = JSON.parse(JSON.stringify(db)); NM.model.migrate(c2);
         out.clean = c2.courses.find((x) => x.id === other.id).catalogHintOff === undefined;
@@ -2289,9 +2289,18 @@ def run_comp_offer_check(br, base):
         NM.app.select({ tab: 'settings' }); await wait();
         const how = document.querySelector('[data-comp-howto]');
         out.howto = !!how && how.querySelectorAll('li').length >= 5;
+        // 2.22: Stufe im Dialog „Katalog bearbeiten“
+        const cat = NM.competencies.byId(db, c.catalogId), v0 = cat.version;
+        document.querySelector(`[data-comp-catalog="${cat.id}"] .icon-btn`).click(); await wait();
+        const sel = document.querySelector('[data-comp-stufe]');
+        out.stufe0 = sel && sel.value;
+        sel.value = ''; sel.dispatchEvent(new Event('change')); await wait();
+        out.stufe = [cat.stufe === undefined, cat.version === v0 + 1];
+        cat.stufe = 'sek1';
+        document.querySelector('.modal .btn-primary, dialog .btn-primary').click(); await wait();
         return out; })()""")
     ok = bool(res) and all(res["withCat"]) and all(res["offer"]) and all(res["off"]) and res["migrate"] \
-        and res["jump"] == ["course", True] and all(res["take"]) and res["clean"] and res["howto"]
+        and res["jump"] == ["course", True] and all(res["take"]) and res["clean"] and res["howto"] and res["stufe0"] == "sek1" and all(res["stufe"])
     report("Kompetenzen: Angebot im Reiter Tests, „Nicht jetzt“, Hinweis und Sprung zur Katalogauswahl, Erklärung", ok and not br.errors, str(res) + "; ".join(br.errors))
 
 
@@ -4195,7 +4204,7 @@ def run_decrypt_tool(br, base):
         lies = lambda name: next(([z.rstrip("\n").split(";") for z in open(x, encoding="utf-8-sig")] for x in pfade if x.endswith(name)), [])
         zk, za = lies("Kompetenzkataloge.csv"), lies("Kompetenzen.csv")
         report("CSV: Kompetenzkataloge.csv und Kompetenzen.csv (Zuordnung je Aufgabe)",
-               zk[1:] == [["mathe", "Mathe Sek I", "Mathematik", "3", "Prozess", "M-K1", "Argumentieren", "Kompetenz", ""], ["mathe", "Mathe Sek I", "Mathematik", "3", "Prozess", "M-K1.1", "Begründen", "Teil", "ja"]]
+               zk[1:] == [["mathe", "Mathe Sek I", "Mathematik", "3", "Prozess", "M-K1", "Argumentieren", "Kompetenz", "", ""], ["mathe", "Mathe Sek I", "Mathematik", "3", "Prozess", "M-K1.1", "Begründen", "Teil", "ja", ""]]
                and za[1:] == [["2026/27 8b M", "mathe", "HJ1", "KT 1", "A1", "4", "", "M-K1, M-K1.1"], ["2026/27 8b M", "mathe", "HJ1", "KT 1", "A3", "1", "ja", "M-K1"]]
                and not any(x.endswith("Kompetenzen.csv") for x in tool.schreibe_csv({"years": [], "courses": []}, tmp + "/leer")), str(zk) + str(za))
     finally:

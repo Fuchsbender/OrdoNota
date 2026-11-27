@@ -30,7 +30,7 @@
     const setFach = (e) => {
       course.fach = e.target.value;
       if (!course.catalogId) {
-        const id = C.guessForFach(db, course.fach);
+        const id = C.guessForFach(db, course.fach, NM.grades.courseLevel(course));
         if (id) {
           course.catalogId = id;
           toast(`Kompetenzkatalog „${C.byId(db, id).name}“ gewählt (änderbar unter „Kompetenzkatalog“).`, 'info', 5000);

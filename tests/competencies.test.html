@@ -75,6 +75,37 @@
       ok('zwei passende Kataloge → keine Vorbelegung', C.guessForFach(db, 'Mathe') === null);
     }
 
+    // ---------- Vorlagen und Stufe (2.22, AQ-2) ----------
+    {
+      const keys = C.TEMPLATES.map((t) => t.key).join();
+      ok('drei Vorlagen', keys === 'mathe-sek1,mathe-mss,chemie-sek1');
+      const n = (k) => C.TEMPLATES.find((t) => t.key === k).catalog.bereiche.map((b) => b.kompetenzen.length).join('+');
+      ok('Mathe MSS: K1–K6, L1–L5', n('mathe-mss') === '6+5');
+      ok('Chemie Sek I: S, E, K, B je 3, drei Basiskonzepte', n('chemie-sek1') === '3+3+3+3+3');
+      ok('Vorlagen bestehen clean() unverändert', C.TEMPLATES.every((t) => JSON.stringify(C.clean(t.catalog)) === JSON.stringify(t.catalog)));
+      ok('clean: gültige Stufe bleibt, ungültige fällt weg', C.clean({ id: 'x', stufe: 'mss', bereiche: [] }).stufe === 'mss' && C.clean({ id: 'x', stufe: 'abi', bereiche: [] }).stufe === undefined);
+      const db = M.newDb();
+      const sek = C.addFromTemplate(db, 'mathe-sek1');
+      const mssCat = C.addFromTemplate(db, 'mathe-mss');
+      ok('Fach + Stufe → passender Katalog', C.guessForFach(db, 'Mathe', 'sek1') === sek.id && C.guessForFach(db, 'Mathematik', 'mss') === mssCat.id);
+      ok('ohne Stufe bei zwei Katalogen → keiner', C.guessForFach(db, 'Mathe') === null);
+      const db2 = M.newDb();
+      const sek2 = C.addFromTemplate(db2, 'mathe-sek1');
+      const o = C.offerFor(db2, { fach: 'Mathematik', jahrgang: 12 });
+      ok('MSS-Kurs: Vorlage MSS statt des Sek-I-Katalogs', o && o.templateKey === 'mathe-mss');
+      const o2 = C.offerFor(db2, { fach: 'Mathematik', jahrgang: 8 });
+      ok('Sek-I-Kurs: vorhandener Sek-I-Katalog', o2 && o2.catalogId === sek2.id);
+      ok('Chemie: Vorlage Chemie Sek I', C.offerFor(db2, { fach: 'Chemie', jahrgang: 9 }).templateKey === 'chemie-sek1');
+      ok('Chemie in der MSS: keine Vorlage einer anderen Stufe', C.offerFor(db2, { fach: 'Chemie', jahrgang: 11 }) === null);
+      // Kopie einer älteren Vorlage ohne Stufe: migrate ergänzt sie, sonst käme die Vorlage doppelt
+      const db3 = M.newDb();
+      const old = C.addFromTemplate(db3, 'mathe-sek1'); delete old.stufe;
+      const old2 = C.addFromTemplate(db3, 'mathe-sek1'); delete old2.stufe;
+      const own = C.addEmpty(db3, 'Mathe eigen', 'Mathematik'); own.id = 'mathe-sek1x';
+      C.fillTemplateStufe(db3);
+      ok('fillTemplateStufe: Kopien der Vorlage, nicht fremde Kennungen', old.stufe === 'sek1' && old2.id === 'mathe-sek1-2' && old2.stufe === 'sek1' && own.stufe === undefined);
+    }
+
     // ---------- Katalogangebot (2.21, AQ-1) ----------
     {
       const db = M.newDb();

@@ -4,6 +4,7 @@
   "id": "mathe-sek1",
   "name": "Mathematik Sek I",
   "fach": "Mathematik",
+  "stufe": "sek1",
   "version": 1,
   "stufen": {
     "teilweise": 50,

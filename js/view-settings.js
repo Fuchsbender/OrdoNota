@@ -514,6 +514,25 @@
           { class: 'form-grid' },
           textField('Name', cat.name, (v, el) => { cat.name = v || cat.id; el.value = cat.name; changed(); }, { 'data-comp-name': '' }),
           textField('Fach', cat.fach, (v) => { cat.fach = v; changed(); }, { placeholder: 'z. B. Mathematik' }),
+          // 2.22: Stufe, damit Kurse der Sek I und der MSS den passenden Katalog vorgeschlagen bekommen
+          h(
+            'label',
+            { class: 'field' },
+            h('span', null, 'Für Kurse'),
+            h(
+              'select',
+              {
+                class: 'input',
+                'data-comp-stufe': '',
+                onchange: (e) => {
+                  if (e.target.value) cat.stufe = e.target.value;
+                  else delete cat.stufe;
+                  changed();
+                },
+              },
+              [['', 'Sek I und MSS'], ['sek1', 'nur Sek I'], ['mss', 'nur MSS']].map(([v, l]) => h('option', { value: v, selected: (cat.stufe || '') === v }, l))
+            )
+          ),
           pctField('„teilweise“ ab (%)', 'teilweise'),
           pctField('„sicher“ ab (%)', 'sicher')
         ),

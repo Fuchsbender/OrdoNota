@@ -237,14 +237,15 @@ def schreibe_csv(daten, ordner):
     # hier die Rohdaten: die Kataloge und welche Aufgabe welche Kompetenzen trägt.
     kataloge = [k for k in ((daten.get("settings") or {}).get("competencyCatalogs") or []) if isinstance(k, dict)]
     if kataloge:
-        zk = [["Katalog", "Katalogname", "Fach", "Version", "Bereich", "Kennung", "Name", "Ebene", "ausgeblendet"]]
+        zk = [["Katalog", "Katalogname", "Fach", "Version", "Bereich", "Kennung", "Name", "Ebene", "ausgeblendet", "Stufe"]]
         for k in kataloge:
             for b in k.get("bereiche") or []:
                 for ko in b.get("kompetenzen") or []:
                     eintraege = [(ko, "Kompetenz")] + [(t, "Teil") for t in ko.get("teil") or []]
                     for e, ebene in eintraege:
                         zk.append([k.get("id", ""), k.get("name", ""), k.get("fach", ""), k.get("version", ""), b.get("name", ""),
-                                   e.get("id", ""), e.get("name", ""), ebene, "ja" if e.get("ausgeblendet") or ko.get("ausgeblendet") else ""])
+                                   e.get("id", ""), e.get("name", ""), ebene, "ja" if e.get("ausgeblendet") or ko.get("ausgeblendet") else "",
+                                   {"sek1": "Sek I", "mss": "MSS"}.get(k.get("stufe"), "")])  # Stufe seit 2.22
         pfad = os.path.join(ordner, "Kompetenzkataloge.csv")
         with open(pfad, "w", newline="", encoding="utf-8-sig") as f:
             csv.writer(f, delimiter=";").writerows(zk)

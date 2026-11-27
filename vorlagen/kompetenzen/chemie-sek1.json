@@ -1,0 +1,105 @@
+{
+  "format": "ordonota-kompetenzkatalog",
+  "formatVersion": 1,
+  "id": "chemie-sek1",
+  "name": "Chemie Sek I",
+  "fach": "Chemie",
+  "stufe": "sek1",
+  "version": 1,
+  "stufen": {
+    "teilweise": 50,
+    "sicher": 80
+  },
+  "bereiche": [
+    {
+      "id": "S",
+      "name": "Sachkompetenz",
+      "kompetenzen": [
+        {
+          "id": "C-S1",
+          "name": "Die makroskopische Ebene"
+        },
+        {
+          "id": "C-S2",
+          "name": "Die submikroskopische Ebene"
+        },
+        {
+          "id": "C-S3",
+          "name": "Die Ebene der Repräsentationen"
+        }
+      ]
+    },
+    {
+      "id": "E",
+      "name": "Erkenntnisgewinnungskompetenz",
+      "kompetenzen": [
+        {
+          "id": "C-E1",
+          "name": "Erkenntnisse mithilfe von Experimenten gewinnen"
+        },
+        {
+          "id": "C-E2",
+          "name": "Modelle im Rahmen der Erkenntnisgewinnung nutzen"
+        },
+        {
+          "id": "C-E3",
+          "name": "Erkenntnisprozesse reflektieren"
+        }
+      ]
+    },
+    {
+      "id": "K",
+      "name": "Kommunikationskompetenz",
+      "kompetenzen": [
+        {
+          "id": "C-K1",
+          "name": "Informationen erschließen"
+        },
+        {
+          "id": "C-K2",
+          "name": "Informationen aufbereiten"
+        },
+        {
+          "id": "C-K3",
+          "name": "Informationen austauschen und diskutieren"
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "name": "Bewertungskompetenz",
+      "kompetenzen": [
+        {
+          "id": "C-B1",
+          "name": "Sachverhalte und Informationen kriteriengeleitet bewerten"
+        },
+        {
+          "id": "C-B2",
+          "name": "Meinungen bilden und Entscheidungen treffen"
+        },
+        {
+          "id": "C-B3",
+          "name": "Entscheidungen und deren Folgen reflektieren"
+        }
+      ]
+    },
+    {
+      "id": "BK",
+      "name": "Basiskonzepte",
+      "kompetenzen": [
+        {
+          "id": "C-BK1",
+          "name": "Aufbau und Eigenschaften der Stoffe und ihrer Teilchen"
+        },
+        {
+          "id": "C-BK2",
+          "name": "Chemische Reaktion"
+        },
+        {
+          "id": "C-BK3",
+          "name": "Energie"
+        }
+      ]
+    }
+  ]
+}
